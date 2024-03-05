@@ -29,9 +29,9 @@
 #include <debug.h>
 
 #include <nuttx/mm/mm.h>
+#include <nuttx/mm/kasan.h>
 
 #include "mm_heap/mm.h"
-#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -127,6 +127,12 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
    */
 
   DEBUGASSERT(heapsize <= MMSIZE_MAX + 1);
+#endif
+
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+  /* Use the fill value to mark uninitialized user memory */
+
+  memset(heapstart, MM_INIT_MAGIC, heapsize);
 #endif
 
   /* Register to KASan for access check */
