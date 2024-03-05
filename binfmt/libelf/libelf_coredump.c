@@ -370,10 +370,6 @@ static void elf_emit_tcb_stack(FAR struct elf_dumpinfo_s *cinfo,
             (tcb->stack_base_ptr - tcb->stack_alloc_ptr);
     }
 
-  sp  = ROUNDDOWN(buf, PROGRAM_ALIGNMENT);
-  len = ROUNDUP(len + (buf - sp), PROGRAM_ALIGNMENT);
-  buf = sp;
-
   elf_emit(cinfo, (FAR void *)buf, len);
 
   /* Align to page */
@@ -423,9 +419,34 @@ static void elf_emit_memory(FAR struct elf_dumpinfo_s *cinfo, int memsegs)
 
   for (i = 0; i < memsegs; i++)
     {
-      elf_emit(cinfo, (FAR void *)cinfo->regions[i].start,
-               cinfo->regions[i].end -
-               cinfo->regions[i].start);
+      if (cinfo->regions[i].flags & PF_REGISTER)
+        {
+          FAR uintptr_t *start = (FAR uintptr_t *)cinfo->regions[i].start;
+          FAR uintptr_t *end = (FAR uintptr_t *)cinfo->regions[i].end;
+          uintptr_t buf[64];
+          size_t offset = 0;
+
+          while (start < end)
+            {
+              buf[offset++] = *start++;
+
+              if (offset % (sizeof(buf) / sizeof(uintptr_t)) == 0)
+                {
+                  elf_emit(cinfo, buf, sizeof(buf));
+                  offset = 0;
+                }
+            }
+
+          if (offset != 0)
+            {
+              elf_emit(cinfo, buf, offset * sizeof(uintptr_t));
+            }
+        }
+      else
+        {
+          elf_emit(cinfo, (FAR void *)cinfo->regions[i].start,
+                   cinfo->regions[i].end - cinfo->regions[i].start);
+        }
 
       /* Align to page */
 
