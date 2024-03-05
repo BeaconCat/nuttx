@@ -13,6 +13,38 @@ menuconfig INPUT
 
 if INPUT
 
+config INPUT_GOLDFISH_EVENTS
+	bool "Goldfish input events driver"
+	default n
+
+config INPUT_GOLDFISH_NBUFFER
+	int "Number of goldfish events buffer"
+	depends on INPUT_GOLDFISH_EVENTS
+	default 8
+
+config INPUT_FF
+	bool "Support Force Feedback device"
+	default n
+	---help---
+		Enable support for force feedback devices.
+
+if INPUT_FF
+
+config FF_AW86225
+	bool "Enable aw86225 driver"
+	default n
+	---help---
+		Enable aw86225 haptic controller chip.
+
+config FF_RTP_FILE_PATH
+	string "Path of aw86225 rtp file"
+	default "/etc"
+	depends on FF_AW86225
+	---help---
+		File path depend on the opening of FF_AW86225.
+
+endif # INPUT_FF
+
 config INPUT_MOUSE
 	bool
 	default n
@@ -45,9 +77,9 @@ config INPUT_UINPUT
 		Enable support virtual input device driver
 
 config UINPUT_RPMSG
-	bool "Enable uinput RPMSG"
+	bool "Enable uinput rpmsg"
 	depends on INPUT_UINPUT
-	depends on RPMSG
+	depends on RPTUN
 	default n
 	---help---
 		Enable support uinput cross core communication
