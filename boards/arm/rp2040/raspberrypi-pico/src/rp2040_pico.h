@@ -27,10 +27,6 @@
 
 #include <nuttx/config.h>
 
-/* LEDs */
-
-#define GPIO_LED1       25 /* The board's LED is connected to this pin */
-
 int rp2040_bringup(void);
 
 #ifdef CONFIG_DEV_GPIO
