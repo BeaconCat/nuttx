@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
@@ -308,7 +309,6 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
                              struct audio_caps_s *caps)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
-  uint16_t *ptr;
   long val;
 
   caps->ac_format.hw  = 0;
@@ -369,16 +369,14 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
 
               /* Report the Sample rates we support */
 
-              ptr  = (uint16_t *)caps->ac_controls.b;
-              *ptr = AUDIO_SAMP_RATE_8K |
-                     AUDIO_SAMP_RATE_11K |
-                     AUDIO_SAMP_RATE_12K |
-                     AUDIO_SAMP_RATE_16K |
-                     AUDIO_SAMP_RATE_22K |
-                     AUDIO_SAMP_RATE_24K |
-                     AUDIO_SAMP_RATE_32K |
-                     AUDIO_SAMP_RATE_44K |
-                     AUDIO_SAMP_RATE_48K;
+              caps->ac_controls.b[0] = AUDIO_SAMP_RATE_8K |
+                                       AUDIO_SAMP_RATE_11K |
+                                       AUDIO_SAMP_RATE_16K |
+                                       AUDIO_SAMP_RATE_22K |
+                                       AUDIO_SAMP_RATE_24K |
+                                       AUDIO_SAMP_RATE_32K |
+                                       AUDIO_SAMP_RATE_44K |
+                                       AUDIO_SAMP_RATE_48K;
               break;
 
             default:
@@ -464,16 +462,9 @@ static int sim_audio_configure(struct audio_lowerhalf_s *dev,
         priv->sample_rate = caps->ac_controls.hw[0] |
                             (caps->ac_controls.b[3] << 16);
         priv->channels    = caps->ac_channels;
-
-        /* offload mode, bps keep default value */
-
-        priv->bps = 16;
-        if (!priv->offload)
-          {
-            priv->bps = caps->ac_controls.b[2];
-          }
-
+        priv->bps         = caps->ac_controls.b[2];
         priv->frame_size  = priv->bps / 8 * priv->channels;
+
         sim_audio_config_ops(priv, caps->ac_subtype);
 
         info.samplerate = priv->sample_rate;
@@ -561,17 +552,11 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
   priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, OK);
 #endif
 
-  if (priv->aux)
-    {
-      apb_free(priv->aux);
-      priv->aux = NULL;
-    }
+  apb_free(priv->aux);
+  priv->aux = NULL;
 
-  if (priv->ops)
-    {
-      priv->ops->uninit(priv->codec);
-      priv->ops = NULL;
-    }
+  priv->ops->uninit(priv->codec);
+  priv->ops = NULL;
 
   return 0;
 }
@@ -634,7 +619,6 @@ static int sim_audio_flush(struct audio_lowerhalf_s *dev)
       struct ap_buffer_s *apb;
 
       apb = (struct ap_buffer_s *)dq_remfirst(&priv->pendq);
-      apb->flags &= ~AUDIO_APB_FINAL;
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK, NULL);
 #else
@@ -732,21 +716,15 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
           struct ap_buffer_info_s *info =
               (struct ap_buffer_info_s *)arg;
 
-          if (priv->offload && priv->playback)
-            {
-              priv->nbuffers = CONFIG_SIM_OFFLOAD_NUM_BUFFERS;
-              priv->buffer_size = CONFIG_SIM_OFFLOAD_BUFFER_NUMBYTES;
-            }
+          info->nbuffers    = priv->nbuffers;
+          info->buffer_size = priv->buffer_size;
 
-          if (priv->ops && priv->ops->get_samples)
+          if (priv->ops->get_samples)
             {
-              priv->buffer_size = MAX(priv->buffer_size,
+              info->buffer_size = MAX(info->buffer_size,
                                       priv->ops->get_samples(priv->codec) *
                                       priv->frame_size);
             }
-
-          info->nbuffers    = priv->nbuffers;
-          info->buffer_size = priv->buffer_size;
         }
         break;
 
