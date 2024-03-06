@@ -411,7 +411,7 @@ DIRLINKS_FILE += $(DIRLINKS_EXTERNAL_DEP)
 # The symlink subfolders need to be removed before the parent symlinks
 
 .PHONY: clean_dirlinks
-clean_dirlinks: tools/incdir$(HOSTEXEEXT)
+clean_dirlinks:
 	$(Q) $(call DELFILE, $(DIRLINKS_FILE))
 	$(Q) $(call DELFILE, .dirlinks)
 	$(Q) $(DIRUNLINK) drivers/platform
@@ -740,7 +740,8 @@ savedefconfig: apps_preconfig
 # that the archiver is 'ar'
 
 export: $(NUTTXLIBS)
-	$(Q) MAKE="${MAKE}" $(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
+	$(Q) ZIG="${ZIG}" ZIGFLAGS="${ZIGFLAGS}" MAKE="${MAKE}" \
+		$(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
 
 # General housekeeping targets:  dependencies, cleaning, etc.
 #
@@ -807,7 +808,7 @@ endif
 # apps_distclean: Perform the distclean operation only in the user application
 #                 directory.
 
-apps_preconfig: tools/incdir$(HOSTEXEEXT) .dirlinks
+apps_preconfig: .dirlinks
 ifneq ($(APPDIR),)
 	$(Q) $(MAKE) -C $(APPDIR) preconfig
 endif

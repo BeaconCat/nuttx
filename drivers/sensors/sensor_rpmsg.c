@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -1215,11 +1216,7 @@ static void sensor_rpmsg_ns_unbind_cb(FAR struct rpmsg_endpoint *ept)
   nxrmutex_unlock(&g_dev_lock);
 
   nxrmutex_lock(&g_ept_lock);
-  if (list_in_list(&sre->node))
-    {
-      list_delete(&sre->node);
-    }
-
+  list_delete(&sre->node);
   nxrmutex_unlock(&g_ept_lock);
 
   nxrmutex_destroy(&sre->lock);
