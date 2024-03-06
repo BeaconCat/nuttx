@@ -1158,11 +1158,11 @@ static void nrf91_spi_exchange(struct spi_dev_s *dev,
       nxsem_wait_uninterruptible(&priv->sem_isr);
 #endif
 
-      regval = nrf91_spi_getreg(priv, NRF91_SPIM_TXDAMOUNT_OFFSET);
-      if (regval != transfer_size)
+      if (nrf91_spi_getreg(priv, NRF91_SPIM_TXDAMOUNT_OFFSET) !=
+          transfer_size)
         {
           spierr("Incomplete transfer wrote %" PRId32 " expected %zu\n",
-                 regval, transfer_size);
+                 regval, nwords);
         }
 
       /* SPI stop */
