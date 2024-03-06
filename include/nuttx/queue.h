@@ -162,6 +162,9 @@
   for((p) = (q)->head, (tmp) = (p) ? (p)->flink : NULL; \
       (p) != NULL; (p) = (tmp), (tmp) = (p) ? (p)->flink : NULL)
 
+#define dq_for_every(q, p) sq_for_every(q, p)
+#define dq_for_every_safe(q, p, tmp) sq_for_every_safe(q, p, tmp)
+
 #define sq_rem(p, q) \
   do \
     { \
@@ -289,14 +292,6 @@
       ((p)->flink || sq_tail(q) == (p))
 #define dq_inqueue(p, q) \
       ((p)->flink || dq_tail(q) == (p))
-
-/* sq/dq_is_singular - tests whether a list has just one entry.  */
-
-#define sq_is_singular(q) \
-      (!sq_empty(q) && (q)->head->flink == NULL)
-
-#define dq_is_singular(q) \
-      (!dq_empty(q) && (q)->head->flink == NULL)
 
 /****************************************************************************
  * Public Type Definitions
