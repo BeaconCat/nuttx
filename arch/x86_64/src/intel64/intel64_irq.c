@@ -83,8 +83,8 @@ uint8_t *g_isr_stack_end = g_isr_stack + IRQ_STACK_SIZE - 16;
  * Private Data
  ****************************************************************************/
 
-static struct idt_entry_s        g_idt_entries[NR_IRQS];
-static struct intel64_irq_priv_s g_irq_priv[NR_IRQS];
+static struct idt_entry_s        g_idt_entries[MAX_NR_IRQS];
+static struct intel64_irq_priv_s g_irq_priv[MAX_NR_IRQS];
 static spinlock_t                g_irq_spin;
 
 /****************************************************************************
@@ -369,8 +369,8 @@ static void up_ioapic_init(void)
 
   for (i = 0; i < maxintr; i++)
     {
-      up_ioapic_pin_set_vector(i, TRIGGER_RISING_EDGE |
-                               IOAPIC_PIN_DISABLE, IRQ0 + i);
+      up_ioapic_pin_set_vector(i, TRIGGER_RISING_EDGE, IRQ0 + i);
+      up_ioapic_mask_pin(i);
     }
 }
 #endif
@@ -413,13 +413,11 @@ static void up_idtentry(unsigned int index, uint64_t base, uint16_t sel,
  *
  ****************************************************************************/
 
+struct idt_ptr_s idt_ptr;
+
 static inline void up_idtinit(void)
 {
-  size_t   offset = 0;
-  uint64_t vector = 0;
-  int      irq    = 0;
-
-  memset(&g_idt_entries, 0, sizeof(g_idt_entries));
+  memset(&g_idt_entries, 0, sizeof(struct idt_entry_s) * MAX_NR_IRQS);
 
   /* Set each ISR/IRQ to the appropriate vector with selector=8 and with
    * 32-bit interrupt gate.  Interrupt gate (vs. trap gate) will leave
@@ -459,16 +457,22 @@ static inline void up_idtinit(void)
   up_idtentry(ISR30, (uint64_t)vector_isr30, 0x08, 0x8e, 0x2);
   up_idtentry(ISR31, (uint64_t)vector_isr31, 0x08, 0x8e, 0x2);
 
-  /* Set all IRQ vectors */
-
-  offset = (uint64_t)vector_irq1 - (uint64_t)vector_irq0;
-
-  for (irq = IRQ0, vector = (uint64_t)vector_irq0;
-       irq <= IRQ255;
-       irq += 1, vector += offset)
-    {
-      up_idtentry(irq,  (uint64_t)vector,  0x08, 0x8e, 0x1);
-    }
+  up_idtentry(IRQ0,  (uint64_t)vector_irq0,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ1,  (uint64_t)vector_irq1,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ2,  (uint64_t)vector_irq2,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ3,  (uint64_t)vector_irq3,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ4,  (uint64_t)vector_irq4,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ5,  (uint64_t)vector_irq5,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ6,  (uint64_t)vector_irq6,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ7,  (uint64_t)vector_irq7,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ8,  (uint64_t)vector_irq8,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ9,  (uint64_t)vector_irq9,  0x08, 0x8e, 0x1);
+  up_idtentry(IRQ10, (uint64_t)vector_irq10, 0x08, 0x8e, 0x1);
+  up_idtentry(IRQ11, (uint64_t)vector_irq11, 0x08, 0x8e, 0x1);
+  up_idtentry(IRQ12, (uint64_t)vector_irq12, 0x08, 0x8e, 0x1);
+  up_idtentry(IRQ13, (uint64_t)vector_irq13, 0x08, 0x8e, 0x1);
+  up_idtentry(IRQ14, (uint64_t)vector_irq14, 0x08, 0x8e, 0x1);
+  up_idtentry(IRQ15, (uint64_t)vector_irq15, 0x08, 0x8e, 0x1);
 
   /* Then program the IDT */
 
@@ -529,7 +533,7 @@ void up_disable_irq(int irq)
 #ifndef CONFIG_ARCH_INTEL64_DISABLE_INT_INIT
   irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
 
-  if (irq > IRQ255)
+  if (irq > IRQ15)
     {
       /* Not supported yet */
 
@@ -577,7 +581,7 @@ void up_enable_irq(int irq)
     }
 #  endif
 
-  if (irq > IRQ255)
+  if (irq > IRQ15)
     {
       /* Not supported yet */
 
