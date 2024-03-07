@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/clock/clock_gettime.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
@@ -47,23 +50,27 @@
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
 static clock_t clock_process_runtime(FAR struct tcb_s *tcb)
 {
-  FAR struct task_group_s *group = tcb->group;
+# ifdef HAVE_GROUP_MEMBERS
+  FAR struct task_group_s *group;
+  FAR sq_entry_t *curr;
   clock_t runtime = 0;
   irqstate_t flags;
-  int i;
 
-  flags = enter_critical_section();
-  for (i = group->tg_nmembers - 1; i >= 0; i--)
+  group = tcb->group;
+
+  flags = spin_lock_irqsave(NULL);
+  sq_for_every(&group->tg_members, curr)
     {
-      tcb = nxsched_get_tcb(group->tg_members[i]);
-      if (tcb != NULL)
-        {
-          runtime += tcb->run_time;
-        }
+      tcb = container_of(curr, struct tcb_s, member);
+
+      runtime += tcb->run_time;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
   return runtime;
+# else  /* HAVE_GROUP_MEMBERS */
+  return tcb->run_time;
+# endif /* HAVE_GROUP_MEMBERS */
 }
 #endif
 
@@ -79,7 +86,7 @@ static clock_t clock_process_runtime(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-void nxclock_gettime(clockid_t clock_id, struct timespec *tp)
+void nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
 {
   if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_BOOTTIME)
     {
@@ -129,11 +136,11 @@ void nxclock_gettime(clockid_t clock_id, struct timespec *tp)
         {
           if (clock_type == CLOCK_PROCESS_CPUTIME_ID)
             {
-              perf_convert(clock_process_runtime(tcb), tp);
+              up_perf_convert(clock_process_runtime(tcb), tp);
             }
           else if (clock_type == CLOCK_THREAD_CPUTIME_ID)
             {
-              perf_convert(tcb->run_time, tp);
+              up_perf_convert(tcb->run_time, tp);
             }
         }
 #endif
@@ -164,7 +171,7 @@ void nxclock_gettime(clockid_t clock_id, struct timespec *tp)
  *
  ****************************************************************************/
 
-int clock_gettime(clockid_t clock_id, struct timespec *tp)
+int clock_gettime(clockid_t clock_id, FAR struct timespec *tp)
 {
   if (tp == NULL || clock_id < 0 || clock_id > CLOCK_BOOTTIME)
     {

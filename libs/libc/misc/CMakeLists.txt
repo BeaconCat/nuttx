@@ -25,7 +25,6 @@ list(
   APPEND
   SRCS
   lib_bitmap.c
-  lib_circbuf.c
   lib_mknod.c
   lib_umask.c
   lib_utsname.c
@@ -44,10 +43,9 @@ list(
   lib_openat.c
   lib_mkdirat.c
   lib_utimensat.c
-  lib_mallopt.c
   lib_memoryregion.c
-  lib_pathbuffer.c
-  lib_getnprocs.c)
+  lib_getnprocs.c
+  lib_pathbuffer.c)
 
 # Support for platforms that do not have long long types
 
@@ -81,10 +79,9 @@ list(
   lib_crc16ccitt.c
   lib_crc8.c
   lib_crc8ccitt.c
-  lib_crc8rohc.c
   lib_crc8table.c
   lib_glob.c
-  lib_backtrace.c
+  lib_execinfo.c
   lib_ftok.c
   lib_err.c
   lib_instrument.c)
@@ -115,10 +112,12 @@ if(CONFIG_FDCHECK)
   list(APPEND SRCS lib_fdcheck.c)
 endif()
 
-add_custom_target(
-  always_rebuild_lib_utsname COMMAND ${CMAKE_COMMAND} -E touch
-                                     ${CMAKE_CURRENT_SOURCE_DIR}/lib_utsname.c)
+if(NOT CONFIG_LIBC_UNAME_DISABLE_TIMESTAMP)
+  add_custom_target(
+    always_rebuild_lib_utsname
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/lib_utsname.c)
 
-add_dependencies(c always_rebuild_lib_utsname)
+  add_dependencies(c always_rebuild_lib_utsname)
+endif()
 
 target_sources(c PRIVATE ${SRCS})

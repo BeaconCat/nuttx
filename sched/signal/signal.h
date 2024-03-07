@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/signal/signal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +33,6 @@
 #include <stdbool.h>
 #include <sched.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 
@@ -43,7 +44,6 @@
  * allocate in a block
  */
 
-#define NUM_SIGNAL_ACTIONS       4
 #define NUM_PENDING_ACTIONS      4
 #define NUM_SIGNALS_PENDING      4
 
