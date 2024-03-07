@@ -81,16 +81,16 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   /* Refuse to handle nested signal actions */
 
-  if (!tcb->xcp.sigdeliver)
+  if (!tcb->sigdeliver)
     {
-      tcb->xcp.sigdeliver = sigdeliver;
+      tcb->sigdeliver = sigdeliver;
 
       /* First, handle some special cases when the signal is
        * being delivered to the currently executing task.
        */
 
-      sinfo("rtcb=%p g_current_regs=%p\n",
-            this_task(), g_current_regs);
+      sinfo("rtcb=%p current_regs=%p\n",
+            this_task(), up_current_regs());
 
       if (tcb == this_task())
         {
@@ -98,12 +98,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!g_current_regs)
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now. */
 
               sigdeliver(tcb);
-              tcb->xcp.sigdeliver = NULL;
+              tcb->sigdeliver = NULL;
             }
 
           /* CASE 2:  We are in an interrupt handler AND the
@@ -125,14 +125,14 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * been delivered.
                */
 
-             tcb->xcp.saved_epc           = g_current_regs[REG_EPC];
+             tcb->xcp.saved_epc = up_current_regs()[REG_EPC];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              g_current_regs[REG_EPC]     = (uint32_t)lm32_sigdeliver;
-              g_current_regs[REG_INT_CTX] = 0;
+              up_current_regs()[REG_EPC]     = (uint32_t)lm32_sigdeliver;
+              up_current_regs()[REG_INT_CTX] = 0;
 
               /* And make sure that the saved context in the TCB
                * is the same as the interrupt return context.
@@ -142,7 +142,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               sinfo("PC/STATUS Saved: %08x/%08x New: %08x/%08x\n",
                     tcb->xcp.saved_epc, tcb->xcp.saved_status,
-                    g_current_regs[REG_EPC], g_current_regs[REG_STATUS]);
+                    up_current_regs()[REG_EPC],
+                    up_current_regs()[REG_STATUS]);
             }
         }
 

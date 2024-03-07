@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/signal/sig_notification.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -110,11 +108,9 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
   /* Notify client via a signal? */
 
-  if (event->sigev_notify == SIGEV_SIGNAL)
+  if (event->sigev_notify & SIGEV_SIGNAL)
     {
-#ifdef CONFIG_SCHED_HAVE_PARENT
       FAR struct tcb_s *rtcb = this_task();
-#endif
       siginfo_t info;
 
       /* Yes.. Create the siginfo structure */
@@ -126,6 +122,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
       info.si_pid    = rtcb->pid;
       info.si_status = OK;
 #endif
+      info.si_user   = NULL;
 
       /* Some compilers (e.g., SDCC), do not permit assignment of aggregates.
        * Use of memcpy() is overkill;  We could just copy the larger of the
@@ -135,6 +132,23 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
       memcpy(&info.si_value, &event->sigev_value, sizeof(union sigval));
 
+      /* Used only by POSIX timer. Notice that it is UNSAFE, unless
+       * we GUARANTEE that event->sigev_notify_thread_id is valid.
+       */
+
+      if (event->sigev_notify & SIGEV_THREAD_ID)
+        {
+          rtcb = nxsched_get_tcb(event->sigev_notify_thread_id);
+          if (rtcb != NULL)
+            {
+              return nxsig_tcbdispatch(rtcb, &info);
+            }
+          else
+            {
+              return -ENOENT;
+            }
+        }
+
       /* Send the signal */
 
       return nxsig_dispatch(pid, &info);
@@ -143,7 +157,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 #ifdef CONFIG_SIG_EVTHREAD
   /* Notify the client via a function call */
 
-  else if (event->sigev_notify == SIGEV_THREAD)
+  else if (event->sigev_notify & SIGEV_THREAD)
     {
       /* Initialize the work information */
 
