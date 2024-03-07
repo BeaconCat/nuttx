@@ -81,12 +81,12 @@
  * Private Types
  ****************************************************************************/
 
-typedef enum
+enum slashmode_e
 {
-  COMPILER_GNU      = 0,
-  COMPILER_TASKING  = 1,
-  COMPILER_NUM      = 2
-} compiler_t;
+  MODE_FSLASH  = 0,
+  MODE_BSLASH  = 1,
+  MODE_DBLBACK = 2
+};
 
 /****************************************************************************
  * Private Data
@@ -115,36 +115,9 @@ static char g_posixpath[MAX_PATH];
 static char g_shquote[MAX_SHQUOTE];
 #endif
 
-static const char * const g_moptions[COMPILER_NUM][2] =
-{
-  /* GNU C/C++ Compiler */
-
-  {
-    " -M ",
-    " -MT "
-  },
-
-  /* Tasking C/C++ Compiler */
-
-  {
-    " -Em ",
-    " --pass-c=--make-target="
-  }
-};
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static compiler_t get_compiler(char *ccname)
-{
-  if (strstr(ccname, "ctc") != NULL)
-    {
-      return COMPILER_TASKING;
-    }
-
-  return COMPILER_GNU;
-}
 
 /* MinGW does not seem to provide strtok_r */
 
@@ -387,6 +360,10 @@ static void parse_args(int argc, char **argv)
   /* Always look in the current directory */
 
   g_altpath = strdup(".");
+
+  /* Ensure dep target obj path has a default value */
+
+  g_objpath = strdup(".");
 
   /* Accumulate CFLAGS up to "--" */
 
@@ -711,7 +688,7 @@ static const char *convert_path(const char *path)
 
 static void do_dependency(const char *file)
 {
-  const char * const * moption;
+  static const char moption[] = " -M ";
   struct stat buf;
   char *alloc;
   char *altpath;
@@ -731,8 +708,6 @@ static void do_dependency(const char *file)
 #else
   separator =  g_winnative ? '\\' : '/';
 #endif
-
-  moption = g_moptions[get_compiler(g_cc)];
 
   /* Copy the compiler into the command buffer */
 
@@ -763,22 +738,34 @@ static void do_dependency(const char *file)
           exit(EXIT_FAILURE);
         }
 
-      objname = basename(dupname);
+      /* Check g_altpath. If only the CURRENT path is included,
+       * the obj target use its own full path.
+       */
+
+      if (strcmp(g_altpath, ".") == 0)
+        {
+          objname = dupname;
+        }
+      else
+        {
+          objname = basename(dupname);
+        }
+
       dotptr  = strrchr(objname, '.');
       if (dotptr)
         {
           *dotptr = '\0';
         }
 
-      snprintf(tmp, NAME_MAX + 6, "%s%s%c%s%s ",
-               moption[1], g_objpath, separator, objname, g_suffix);
+      snprintf(tmp, NAME_MAX + 6, " -MT %s%c%s%s ",
+               g_objpath, separator, objname, g_suffix);
       expanded = do_expand(tmp);
 
       cmdlen += strlen(expanded);
       if (cmdlen >= MAX_BUFFER)
         {
           fprintf(stderr, "ERROR: Option string is too long [%d/%d]: %s\n",
-                  cmdlen, MAX_BUFFER, moption[0]);
+                  cmdlen, MAX_BUFFER, moption);
           exit(EXIT_FAILURE);
         }
 
@@ -788,15 +775,15 @@ static void do_dependency(const char *file)
 
   /* Copy " -M " */
 
-  cmdlen += strlen(moption[0]);
+  cmdlen += strlen(moption);
   if (cmdlen >= MAX_BUFFER)
     {
       fprintf(stderr, "ERROR: Option string is too long [%d/%d]: %s\n",
-              cmdlen, MAX_BUFFER, moption[0]);
+              cmdlen, MAX_BUFFER, moption);
       exit(EXIT_FAILURE);
     }
 
-  strcat(g_command, moption[0]);
+  strcat(g_command, moption);
 
   /* Copy the CFLAGS into the command buffer */
 
