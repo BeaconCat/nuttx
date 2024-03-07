@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#if defined(CONFIG_NET) && defined(CONFIG_NET_LOCAL)
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -177,17 +178,18 @@ static ssize_t local_send(FAR struct socket *psock,
       case SOCK_DGRAM:
 #endif /* CONFIG_NET_LOCAL_DGRAM */
         {
-          FAR struct local_conn_s *conn = psock->s_conn;
+          FAR struct local_conn_s *peer;
 
           /* Local TCP packet send */
 
           DEBUGASSERT(buf);
+          peer = psock->s_conn;
 
           /* Verify that this is a connected peer socket and that it has
            * opened the outgoing FIFO for write-only access.
            */
 
-          if (conn->lc_state != LOCAL_STATE_CONNECTED)
+          if (peer->lc_state != LOCAL_STATE_CONNECTED)
             {
               nerr("ERROR: not connected\n");
               return -ENOTCONN;
@@ -195,14 +197,14 @@ static ssize_t local_send(FAR struct socket *psock,
 
           /* Check shutdown state */
 
-          if (conn->lc_outfile.f_inode == NULL)
+          if (peer->lc_outfile.f_inode == NULL)
             {
               return -EPIPE;
             }
 
           /* Send the packet */
 
-          ret = nxmutex_lock(&conn->lc_sendlock);
+          ret = nxmutex_lock(&peer->lc_sendlock);
           if (ret < 0)
             {
               /* May fail because the task was canceled. */
@@ -210,8 +212,9 @@ static ssize_t local_send(FAR struct socket *psock,
               return ret;
             }
 
-          ret = local_send_packet(&conn->lc_outfile, buf, len);
-          nxmutex_unlock(&conn->lc_sendlock);
+          ret = local_send_packet(&peer->lc_outfile, buf, len,
+                                  psock->s_type == SOCK_DGRAM);
+          nxmutex_unlock(&peer->lc_sendlock);
         }
         break;
       default:
@@ -261,7 +264,7 @@ static ssize_t local_sendto(FAR struct socket *psock,
 {
 #ifdef CONFIG_NET_LOCAL_DGRAM
   FAR struct local_conn_s *conn = psock->s_conn;
-  FAR const struct sockaddr_un *unaddr = (FAR const struct sockaddr_un *)to;
+  FAR struct sockaddr_un *unaddr = (FAR struct sockaddr_un *)to;
   ssize_t ret;
 
   /* Verify that a valid address has been provided */
@@ -295,12 +298,6 @@ static ssize_t local_sendto(FAR struct socket *psock,
       return -EISCONN;
     }
 
-  if (local_findconn(conn, unaddr) == NULL)
-    {
-      nerr("ERROR: No such file or directory\n");
-      return -ENOENT;
-    }
-
   /* The outgoing FIFO should not be open */
 
   DEBUGASSERT(conn->lc_outfile.f_inode == NULL);
@@ -324,7 +321,7 @@ static ssize_t local_sendto(FAR struct socket *psock,
   if (ret < 0)
     {
       nerr("ERROR: Failed to create FIFO for %s: %zd\n",
-           unaddr->sun_path, ret);
+           conn->lc_path, ret);
       return ret;
     }
 
@@ -351,17 +348,9 @@ static ssize_t local_sendto(FAR struct socket *psock,
       goto errout_with_sender;
     }
 
-  /* Send the preamble */
-
-  ret = local_send_preamble(conn, &conn->lc_outfile, buf, len);
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to send the preamble: %zd\n", ret);
-    }
-
   /* Send the packet */
 
-  ret = local_send_packet(&conn->lc_outfile, buf, len);
+  ret = local_send_packet(&conn->lc_outfile, buf, len, true);
   if (ret < 0)
     {
       nerr("ERROR: Failed to send the packet: %zd\n", ret);
@@ -429,20 +418,20 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           return count;
         }
     }
+#endif /* CONFIG_NET_LOCAL_SCM */
 
   len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
              local_send(psock, buf, len, flags);
-
+#ifdef CONFIG_NET_LOCAL_SCM
   if (len < 0 && count > 0)
     {
       net_lock();
       local_freectl(conn, count);
       net_unlock();
     }
-#else
-  len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
-             local_send(psock, buf, len, flags);
 #endif
 
   return len;
 }
+
+#endif /* CONFIG_NET && CONFIG_NET_LOCAL */

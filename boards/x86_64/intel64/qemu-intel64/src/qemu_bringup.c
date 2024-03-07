@@ -36,7 +36,6 @@
 #  include <nuttx/timers/oneshot.h>
 #endif
 
-#include "x86_64_internal.h"
 #include "qemu_intel64.h"
 
 /****************************************************************************
@@ -54,12 +53,6 @@ int qemu_bringup(void)
 #endif
 
   int ret = OK;
-
-  /* Initialize the PCI bus */
-
-#ifdef CONFIG_PCI
-  x86_64_pci_init();
-#endif
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */

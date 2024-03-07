@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#if defined(CONFIG_NET) && defined(CONFIG_NET_LOCAL)
 
 #include <string.h>
 #include <assert.h>
@@ -66,38 +67,6 @@ FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn)
     }
 
   return (FAR struct local_conn_s *)conn->lc_conn.node.flink;
-}
-
-/****************************************************************************
- * Name: local_findconn
- *
- * Description:
- *   Traverse the connections list to find the local connection
- *
- * Assumptions:
- *   This function must be called with the network locked.
- *
- ****************************************************************************/
-
-FAR struct local_conn_s *
-local_findconn(FAR const struct local_conn_s *local_conn,
-               FAR const struct sockaddr_un *unaddr)
-{
-  FAR struct local_conn_s *conn = NULL;
-
-  int index = unaddr->sun_path[0] == '\0' ? 1 : 0;
-
-  while ((conn = local_nextconn(conn)) != NULL)
-    {
-      if (local_conn->lc_proto == conn->lc_proto &&
-          strncmp(conn->lc_path, &unaddr->sun_path[index],
-                  UNIX_PATH_MAX - 1) == 0)
-        {
-          return conn;
-        }
-    }
-
-  return NULL;
 }
 
 /****************************************************************************
@@ -378,3 +347,5 @@ void local_subref(FAR struct local_conn_s *conn)
       local_release(conn);
     }
 }
+
+#endif /* CONFIG_NET && CONFIG_NET_LOCAL */

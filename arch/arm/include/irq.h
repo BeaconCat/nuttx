@@ -83,7 +83,7 @@ extern "C"
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
+ * register storage structure.  It is non-NULL only during interrupt
  * processing.  Access to g_current_regs[] must be through the macro
  * CURRENT_REGS for portability.
  */
@@ -116,7 +116,7 @@ EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int up_cpu_index(void) noinstrument_function ;
+int up_cpu_index(void) noinstrument_function;
 #else
 #  define up_cpu_index() (0)
 #endif

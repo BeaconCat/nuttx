@@ -44,7 +44,7 @@
 #include "arm64_internal.h"
 #include "arm64_gic.h"
 
-#if CONFIG_ARM64_GIC_VERSION == 2
+#if CONFIG_ARM_GIC_VERSION == 2
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -647,7 +647,7 @@ static inline unsigned int arm_gic_nlines(void)
   return (field + 1) << 5;
 }
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 /****************************************************************************
  * Name: up_set_secure_irq
  *
@@ -765,24 +765,14 @@ static int gic_validate_dist_version(void)
   if (reg == (0x2 << GIC_ICCIDR_ARCHNO_SHIFT))
     {
       sinfo("GICv2 detected\n");
-      return 0;
     }
-
-  /* Read the Peripheral ID2 Register (ICPIDR2) */
-
-  reg = getreg32(GIC_ICDPIDR(GIC_ICPIDR2)) & GICD_PIDR2_ARCH_MASK;
-
-  /* GIC Version should be 2 */
-
-  if (reg == GICD_PIDR2_ARCH_GICV2)
+  else
     {
-      sinfo("GICv2 detected\n");
-      return 0;
+      sinfo("GICv2 not detected\n");
+      return -ENODEV;
     }
 
-  sinfo("GICv2 not detected\n");
-
-  return -ENODEV;
+  return 0;
 }
 
 /****************************************************************************
@@ -1473,4 +1463,4 @@ int arm64_gic_raise_sgi(unsigned int sgi, uint16_t cpuset)
 }
 #endif /* CONFIG_SMP */
 
-#endif /* CONFIG_ARM64_GIC_VERSION == 2 */
+#endif /* CONFIG_ARM_GIC_VERSION == 2 */
