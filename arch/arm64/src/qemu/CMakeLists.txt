@@ -17,15 +17,12 @@
 # the License.
 #
 # ##############################################################################
-set(SRCS qemu_boot.c qemu_serial.c qemu_timer.c)
+set(SRCS qemu_boot.c qemu_serial.c)
 
 if(CONFIG_ARCH_EARLY_PRINT)
   list(APPEND SRCS qemu_lowputc.S)
 endif()
 if(CONFIG_ARCH_USE_TEXT_HEAP)
   list(APPEND SRCS qemu_textheap.c)
-endif()
-if(CONFIG_PM)
-  list(APPEND SRCS qemu_initialize.c)
 endif()
 target_sources(arch PRIVATE ${SRCS})

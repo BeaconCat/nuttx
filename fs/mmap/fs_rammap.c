@@ -39,7 +39,6 @@
 
 #include "fs_rammap.h"
 #include "sched/sched.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Public Data
@@ -166,7 +165,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
 
       if (type == MAP_KERNEL)
         {
-          fs_heap_free(entry->vaddr);
+          kmm_free(entry->vaddr);
         }
       else if (type == MAP_USER)
         {
@@ -188,7 +187,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
     {
       if (type == MAP_KERNEL)
         {
-          newaddr = fs_heap_realloc(entry->vaddr, length);
+          newaddr = kmm_realloc(entry->vaddr, length);
         }
       else if (type == MAP_USER)
         {
@@ -217,7 +216,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
  *   filep   file descriptor of the backing file -- required.
  *   entry   mmap entry information.
  *           field offset and length must be initialized correctly.
- *   type    fs_heap_zalloc or kumm_zalloc or xip_base
+ *   type    kmm_zalloc or kumm_zalloc or xip_base
  *
  * Returned Value:
  *  On success, rammap returns 0 and entry->vaddr points to memory mapped.
@@ -263,8 +262,7 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Allocate a region of memory of the specified size */
 
-  rdbuffer = type == MAP_KERNEL ? fs_heap_malloc(length)
-                                : kumm_malloc(length);
+  rdbuffer = type == MAP_KERNEL ? kmm_malloc(length) : kumm_malloc(length);
   if (!rdbuffer)
     {
       ferr("ERROR: Region allocation failed, length: %zu\n", length);
@@ -346,7 +344,7 @@ out:
 errout_with_region:
   if (type == MAP_KERNEL)
     {
-      fs_heap_free(entry->vaddr);
+      kmm_free(entry->vaddr);
     }
   else if (type == MAP_USER)
     {
