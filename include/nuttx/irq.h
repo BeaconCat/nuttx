@@ -234,9 +234,9 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-void restore_critical_section(void);
+void restore_critical_section(FAR void *tcb, int cpu);
 #else
-#  define restore_critical_section()
+#  define restore_critical_section(tcb, cpu)
 #endif
 
 #undef EXTERN
