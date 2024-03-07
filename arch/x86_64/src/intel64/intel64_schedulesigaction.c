@@ -74,13 +74,13 @@
 void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
   sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
-  sinfo("rtcb=%p g_current_regs=%p\n", this_task(), up_current_regs());
+  sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
 
   /* Refuse to handle nested signal actions */
 
-  if (!tcb->xcp.sigdeliver)
+  if (!tcb->sigdeliver)
     {
-      tcb->xcp.sigdeliver = sigdeliver;
+      tcb->sigdeliver = sigdeliver;
 
       /* First, handle some special cases when the signal is being delivered
        * to the currently executing task.
@@ -99,7 +99,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               sigdeliver(tcb);
-              tcb->xcp.sigdeliver = NULL;
+              tcb->sigdeliver = NULL;
             }
 
           /* CASE 2:  We are in an interrupt handler AND the interrupted task
@@ -121,15 +121,16 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * have been delivered.
                */
 
-              tcb->xcp.saved_rip         = up_current_regs()[REG_RIP];
-              tcb->xcp.saved_rsp         = up_current_regs()[REG_RSP];
-              tcb->xcp.saved_rflags      = up_current_regs()[REG_RFLAGS];
+              tcb->xcp.saved_rip    = up_current_regs()[REG_RIP];
+              tcb->xcp.saved_rsp    = up_current_regs()[REG_RSP];
+              tcb->xcp.saved_rflags = up_current_regs()[REG_RFLAGS];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
               up_current_regs()[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+              up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
               up_current_regs()[REG_RFLAGS] = 0;
 
               /* And make sure that the saved context in the TCB
@@ -162,6 +163,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+          tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
           tcb->xcp.regs[REG_RFLAGS] = 0;
         }
     }
@@ -176,9 +178,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   /* Refuse to handle nested signal actions */
 
-  if (tcb->xcp.sigdeliver == NULL)
+  if (tcb->sigdeliver == NULL)
     {
-      tcb->xcp.sigdeliver = sigdeliver;
+      tcb->sigdeliver = sigdeliver;
 
       /* First, handle some special cases when the signal is being delivered
        * to task that is currently executing on any CPU.
@@ -203,7 +205,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               sigdeliver(tcb);
-              tcb->xcp.sigdeliver = NULL;
+              tcb->sigdeliver = NULL;
             }
 
           /* CASE 2:  The task that needs to receive the signal is running.
@@ -220,7 +222,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * to PAUSE the other CPU.
                */
 
-              if (cpu != me)
+              if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   /* Pause the CPU */
 
@@ -242,6 +244,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    */
 
                   tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+                  tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
                   tcb->xcp.regs[REG_RFLAGS] = 0;
                 }
               else
@@ -261,7 +264,10 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * disabled
                    */
 
-                  up_current_regs()[REG_RIP]  = (uint64_t)x86_64_sigdeliver;
+                  up_current_regs()[REG_RIP] = (uint64_t)x86_64_sigdeliver;
+                  up_current_regs()[REG_RSP] =
+                    up_current_regs()[REG_RSP] - 8;
+
                   up_current_regs()[REG_RFLAGS] = 0;
 
                   /* And make sure that the saved context in the TCB
@@ -280,7 +286,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* RESUME the other CPU if it was PAUSED */
 
-              if (cpu != me)
+              if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   up_cpu_resume(cpu);
                 }
@@ -308,6 +314,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+          tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
           tcb->xcp.regs[REG_RFLAGS] = 0;
         }
     }

@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/tcp/tcp_devpoll.c
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * Driver poll for the availability of TCP TX data
  *
  *   Copyright (C) 2007-2009, 2016-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
