@@ -117,15 +117,13 @@
 #define CRYPTO_CHACHA20_POLY1305 24
 #define CRYPTO_CHACHA20_POLY1305_MAC 25
 #define CRYPTO_MD5              26
-#define CRYPTO_POLY1305         27
-#define CRYPTO_RIPEMD160        28
-#define CRYPTO_SHA1             29
-#define CRYPTO_SHA2_224         30
-#define CRYPTO_SHA2_256         31
-#define CRYPTO_SHA2_384         32
-#define CRYPTO_SHA2_512         33
-#define CRYPTO_ESN              34 /* Support for Extended Sequence Numbers */
-#define CRYPTO_ALGORITHM_MAX    34 /* Keep updated */
+#define CRYPTO_SHA1             27
+#define CRYPTO_SHA2_224         28
+#define CRYPTO_SHA2_256         29
+#define CRYPTO_SHA2_384         30
+#define CRYPTO_SHA2_512         31
+#define CRYPTO_ESN              32 /* Support for Extended Sequence Numbers */
+#define CRYPTO_ALGORITHM_MAX    32 /* Keep updated */
 
 /* Algorithm flags */
 
@@ -140,7 +138,6 @@ struct cryptoini
   int cri_alg;       /* Algorithm to use */
   int cri_klen;      /* Key length, in bits */
   int cri_rnd;       /* Algorithm rounds, where relevant */
-  int cri_sid;
   caddr_t cri_key;   /* key to use */
   union
   {
@@ -248,7 +245,7 @@ struct crypt_kop
 #define CRK_DSA_SIGN          2
 #define CRK_DSA_VERIFY        3
 #define CRK_DH_COMPUTE_KEY    4
-#define CRK_RSA_PKCS15_VERIFY 5
+#define CRK_RSA_PCKS15_VERIFY 5
 #define CRK_ALGORITHM_MAX     5 /* Keep updated */
 
 #define CRF_MOD_EXP           (1 << CRK_MOD_EXP)
@@ -256,7 +253,7 @@ struct crypt_kop
 #define CRF_DSA_SIGN          (1 << CRK_DSA_SIGN)
 #define CRF_DSA_VERIFY        (1 << CRK_DSA_VERIFY)
 #define CRF_DH_COMPUTE_KEY    (1 << CRK_DH_COMPUTE_KEY)
-#define CRF_RSA_PKCS15_VERIFY (1 << CRK_RSA_PKCS15_VERIFY)
+#define CRF_RSA_PCKS15_VERIFY (1 << CRK_RSA_PCKS15_VERIFY)
 
 struct cryptkop
 {
