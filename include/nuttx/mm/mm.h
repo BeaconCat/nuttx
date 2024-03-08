@@ -139,10 +139,6 @@
 #define MM_DUMP_LEAK(dump, pid) \
     ((dump) == PID_MM_LEAK && (pid) >= 0 && nxsched_get_tcb(pid) == NULL)
 
-#define MM_INIT_MAGIC    0xcc
-#define MM_ALLOC_MAGIC   0xaa
-#define MM_FREE_MAGIC    0x55
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -361,8 +357,6 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap);
 struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
                                       FAR const struct malltask *task);
 
-size_t mm_heapfree(FAR struct mm_heap_s *heap);
-
 /* Functions contained in kmm_mallinfo.c ************************************/
 
 #ifdef CONFIG_MM_KERNEL_HEAP
@@ -405,14 +399,6 @@ FAR void kmm_checkcorruption(void);
 #define kmm_checkcorruption()
 
 #endif /* CONFIG_DEBUG_MM */
-
-/* Functions contained in fs_procfspressure.c *******************************/
-
-#ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
-void mm_notify_pressure(size_t remaining);
-#else
-#  define mm_notify_pressure(remaining)
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus
