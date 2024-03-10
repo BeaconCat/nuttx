@@ -32,7 +32,6 @@
 
 #include <nuttx/fs/fs.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -166,9 +165,6 @@ int mkdir(const char *pathname, mode_t mode)
   /* Directory successfully created */
 
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_mkdir(pathname);
-#endif
   return OK;
 
 errout_with_inode:
