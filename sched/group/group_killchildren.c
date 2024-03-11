@@ -152,6 +152,7 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
 int group_kill_children(FAR struct tcb_s *tcb)
 {
+  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(tcb->group);
@@ -161,19 +162,7 @@ int group_kill_children(FAR struct tcb_s *tcb)
       return 0;
     }
 
-#ifdef CONFIG_SMP
-  /* NOTE: sched_lock() is not enough for SMP
-   * because tcb->group will be accessed from the child tasks
-   */
-
-  irqstate_t flags = enter_critical_section();
-#else
-  /* Lock the scheduler so that there this thread will not lose priority
-   * until all of its children are suspended.
-   */
-
-  sched_lock();
-#endif
+  flags = enter_critical_section();
 
   /* Tell the children that this group has started exiting */
 
@@ -191,8 +180,7 @@ int group_kill_children(FAR struct tcb_s *tcb)
   ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
   while (1)
     {
-      if (sq_empty(&tcb->group->tg_members) ||
-          sq_is_singular(&tcb->group->tg_members))
+      if (tcb->group->tg_nmembers <= 1)
         {
           break;
         }
@@ -212,12 +200,8 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
   ret = group_foreachchild(tcb->group, group_cancel_children_handler,
                            (FAR void *)((uintptr_t)tcb->pid));
-
-#ifdef CONFIG_SMP
   leave_critical_section(flags);
-#else
-  sched_unlock();
-#endif
+
   return ret;
 }
 
