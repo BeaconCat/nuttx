@@ -120,8 +120,6 @@ goldfish_camera_data_start_capture(FAR struct imgdata_s *data,
                                    FAR void *arg);
 static int goldfish_camera_data_stop_capture(FAR struct imgdata_s *data);
 static int goldfish_camera_data_set_buf(FAR struct imgdata_s *data,
-                                        uint8_t nr_datafmts,
-                                        FAR imgdata_format_t *datafmts,
                                         FAR uint8_t *addr,
                                         uint32_t size);
 
@@ -656,8 +654,6 @@ static int goldfish_camera_data_validate_buf(FAR uint8_t *addr,
 }
 
 static int goldfish_camera_data_set_buf(FAR struct imgdata_s *data,
-                                        uint8_t nr_datafmts,
-                                        FAR imgdata_format_t *datafmts,
                                         FAR uint8_t *addr,
                                         uint32_t size)
 {

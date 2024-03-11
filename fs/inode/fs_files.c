@@ -154,7 +154,7 @@ static int files_extend(FAR struct filelist *list, size_t row)
 
   spin_unlock_irqrestore(&list->fl_lock, flags);
 
-  if (tmp != NULL && tmp != &list->fl_prefile)
+  if (tmp != NULL)
     {
       kmm_free(tmp);
     }
@@ -298,13 +298,7 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
 
 void files_initlist(FAR struct filelist *list)
 {
-  /* The first row will reuse pre-allocated files, which will avoid
-   * unnecessary allocator accesses during file initialization.
-   */
-
-  list->fl_rows = 1;
-  list->fl_files = &list->fl_prefile;
-  list->fl_prefile = list->fl_prefiles;
+  DEBUGASSERT(list);
 }
 
 /****************************************************************************
@@ -334,32 +328,24 @@ void files_releaselist(FAR struct filelist *list)
           file_close(&list->fl_files[i][j]);
         }
 
-      if (i != 0)
-        {
-          kmm_free(list->fl_files[i]);
-        }
+      kmm_free(list->fl_files[i]);
+      list->fl_rows--;
     }
 
-  if (list->fl_files != &list->fl_prefile)
-    {
-      kmm_free(list->fl_files);
-    }
+  kmm_free(list->fl_files);
 }
 
 /****************************************************************************
  * Name: files_countlist
  *
  * Description:
- *   Given a file descriptor, return the corresponding instance of struct
- *   file.
+ *   Get file count from file list.
  *
  * Input Parameters:
- *   fd    - The file descriptor
- *   filep - The location to return the struct file instance
+ *   list - Pointer to the file list structure.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
+ *   file count of file list.
  *
  ****************************************************************************/
 
