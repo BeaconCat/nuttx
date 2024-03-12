@@ -1,7 +1,5 @@
 /****************************************************************************
- * sched/task/task.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * sched/task/task_join.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -20,61 +18,47 @@
  *
  ****************************************************************************/
 
-#ifndef __SCHED_TASK_TASK_H
-#define __SCHED_TASK_TASK_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
 
+#include <nuttx/nuttx.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <pthread.h>
+#include <assert.h>
+#include <errno.h>
+#include <debug.h>
 
-#include <nuttx/sched.h>
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-struct tcb_s; /* Forward reference */
-
-/* Task start-up */
-
-void nxtask_start(void);
-int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
-                           FAR const char *name,
-                           FAR char * const argv[]);
-int nxtask_setup_scheduler(FAR struct task_tcb_s *tcb, int priority,
-                           start_t start, main_t main, uint8_t ttype,
-                           FAR struct tcb_s *rtcb);
-#if CONFIG_TASK_NAME_SIZE > 0
-void nxtask_setup_name(FAR struct task_tcb_s *tcb, FAR const char *name);
-#else
-# define nxtask_setup_name(tcb, name)
-#endif
-
-/* Task exit */
-
-int  nxtask_exit(void);
-int  nxtask_terminate(pid_t pid);
-void nxtask_exithook(FAR struct tcb_s *tcb, int status);
-void nxtask_recover(FAR struct tcb_s *tcb);
-
-/* Cancellation points */
-
-bool nxnotify_cancellation(FAR struct tcb_s *tcb);
-
-/* Task Join */
+#include "sched/sched.h"
+#include "group/group.h"
+#include "pthread/pthread.h"
 
 #ifndef CONFIG_DISABLE_PTHREAD
-void nxtask_joininit(FAR struct tcb_s *tcb);
-void nxtask_joindestroy(FAR struct tcb_s *tcb);
-#else
-#  define nxtask_joininit(tcb)
-#  define nxtask_joindestroy(tcb)
-#endif
 
-#endif /* __SCHED_TASK_TASK_H */
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxtask_joindestroy
+ ****************************************************************************/
+
+void nxtask_joindestroy(FAR struct tcb_s *tcb)
+{
+  nxsem_destroy(&tcb->join_sem);
+}
+
+/****************************************************************************
+ * Name: nxtask_joininit
+ ****************************************************************************/
+
+void nxtask_joininit(FAR struct tcb_s *tcb)
+{
+  sq_init(&tcb->join_queue);
+  nxsem_init(&tcb->join_sem, 0, 0);
+}
+
+#endif /* !CONFIG_DISABLE_PTHREAD */
