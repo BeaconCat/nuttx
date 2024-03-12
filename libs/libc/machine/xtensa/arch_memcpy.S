@@ -53,9 +53,9 @@
   .local  .Lbytecopy
 
   .align  4
-  .global ARCH_LIBCFUN(memcpy)
-  .type ARCH_LIBCFUN(memcpy), @function
-ARCH_LIBCFUN(memcpy):
+  .global memcpy
+  .type memcpy, @function
+memcpy:
   ENTRY(16)
   /* a2 = dst, a3 = src, a4 = len */
 
@@ -279,6 +279,6 @@ __memcpy_aux:
 
   .end schedule
 
-  .size ARCH_LIBCFUN(memcpy), . - ARCH_LIBCFUN(memcpy)
+  .size memcpy, . - memcpy
 
 #endif
