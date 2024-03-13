@@ -22,15 +22,7 @@
 
 ifeq ($(CONFIG_RPTUN),y)
 
-CSRCS += rptun.c rptun_dump.c
-
-ifeq ($(CONFIG_RPTUN_SECURE),y)
-CSRCS += rptun_secure.c
-endif
-
-ifeq ($(CONFIG_RPTUN_IVSHMEM),y)
-CSRCS += rptun_ivshmem.c
-endif
+CSRCS += rptun.c
 
 DEPPATH += --dep-path rptun
 VPATH += :rptun
