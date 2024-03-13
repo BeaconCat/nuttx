@@ -219,8 +219,6 @@ int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
     }
 
   syslog(LOG_INFO, "ping times: %d\n", ping->times);
-  syslog(LOG_INFO, "buffer_len: %" PRIu32 ", send_len: %d\n",
-                    buf_len, send_len);
 
   rpmsg_ping_logout("avg", total / ping->times);
   rpmsg_ping_logout("min", min);
