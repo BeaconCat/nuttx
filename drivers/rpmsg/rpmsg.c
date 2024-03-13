@@ -29,8 +29,6 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
-#include "rpmsg_ping.h"
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -93,38 +91,14 @@ rpmsg_get_by_rdev(FAR struct rpmsg_device *rdev)
   return metal_container_of(rdev, struct rpmsg_s, rdev);
 }
 
-static int rpmsg_dev_ioctl_(FAR struct rpmsg_s *rpmsg, int cmd,
-                            unsigned long arg)
-{
-  int ret = OK;
-
-  switch (cmd)
-    {
-      case RPMSGIOC_PANIC:
-        rpmsg->ops->panic(rpmsg);
-        break;
-      case RPMSGIOC_DUMP:
-        rpmsg->ops->dump(rpmsg);
-        break;
-#ifdef CONFIG_RPMSG_PING
-      case RPMSGIOC_PING:
-        ret = rpmsg_ping(&rpmsg->ping, (FAR const struct rpmsg_ping_s *)arg);
-        break;
-#endif
-      default:
-        ret = rpmsg->ops->ioctl(rpmsg, cmd, arg);
-        break;
-    }
-
-  return ret;
-}
-
 static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg)
 {
-  FAR struct rpmsg_s *rpmsg = filep->f_inode->i_private;
+  FAR struct rpmsg_s *rpmsg;
 
-  return rpmsg_dev_ioctl_(rpmsg, cmd, arg);
+  rpmsg = (FAR struct rpmsg_s *)filep->f_inode->i_private;
+
+  return rpmsg->ops->ioctl(rpmsg, cmd, arg);
 }
 
 /****************************************************************************
@@ -407,10 +381,6 @@ void rpmsg_device_created(FAR struct rpmsg_s *rpmsg)
     }
 
   nxrmutex_unlock(&g_rpmsg_lock);
-
-#ifdef CONFIG_RPMSG_PING
-  rpmsg_ping_init(rpmsg->rdev, &rpmsg->ping);
-#endif
 }
 
 void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
@@ -418,10 +388,6 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
   FAR struct rpmsg_cb_s *cb;
   FAR struct metal_list *node;
   FAR struct metal_list *tmp;
-
-#ifdef CONFIG_RPMSG_PING
-  rpmsg_ping_deinit(&rpmsg->ping);
-#endif
 
   nxrmutex_lock(&rpmsg->lock);
 
@@ -502,7 +468,7 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 
       if (!cpuname || !strcmp(rpmsg_get_cpuname(rpmsg->rdev), cpuname))
         {
-          ret = rpmsg_dev_ioctl_(rpmsg, cmd, arg);
+          ret = rpmsg->ops->ioctl(rpmsg, cmd, arg);
           if (ret < 0)
             {
               break;
@@ -512,14 +478,4 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 
   nxrmutex_unlock(&g_rpmsg_lock);
   return ret;
-}
-
-int rpmsg_panic(FAR const char *cpuname)
-{
-  return rpmsg_ioctl(cpuname, RPMSGIOC_PANIC, 0);
-}
-
-void rpmsg_dump_all(void)
-{
-  rpmsg_ioctl(NULL, RPMSGIOC_DUMP, 0);
 }

@@ -1,5 +1,3 @@
-.. _platforms:
-
 ===================
 Supported Platforms
 ===================
