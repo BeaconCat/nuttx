@@ -273,7 +273,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -357,10 +357,9 @@ noinstrument_function static inline irqstate_t up_irq_save(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
-#else
       "\tcpsid  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
+      "\tcpsid  f\n"
 #endif
       : "=r" (cpsr)
       :
@@ -379,29 +378,10 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+      "\tcpsie  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
       "\tcpsie  f\n"
-#else
-      "\tcpsie  if\n"
 #endif
-      : "=r" (cpsr)
-      :
-      : "memory"
-    );
-
-  return cpsr;
-}
-
-/* Disable IRQs and return the previous IRQ state */
-
-static inline irqstate_t up_irq_disable(void)
-{
-  unsigned int cpsr;
-
-  __asm__ __volatile__
-    (
-      "\tmrs    %0, cpsr\n"
-      "\tcpsid  i\n"
       : "=r" (cpsr)
       :
       : "memory"
