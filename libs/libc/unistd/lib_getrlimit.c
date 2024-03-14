@@ -28,7 +28,6 @@
 #include <errno.h>
 
 #include <sys/resource.h>
-#include <pthread.h>
 
 /****************************************************************************
  * Public Functions
@@ -65,12 +64,7 @@ int getrlimit(int resource, FAR struct rlimit *rlp)
           rlp->rlim_max = OPEN_MAX;
         }
         break;
-      case RLIMIT_STACK:
-        {
-          rlp->rlim_cur = PTHREAD_STACK_DEFAULT;
-          rlp->rlim_max = RLIM_INFINITY;
-        }
-        break;
+
       default:
         break;
     }
