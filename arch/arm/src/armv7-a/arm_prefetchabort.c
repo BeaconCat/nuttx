@@ -29,7 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -50,18 +50,18 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
 {
   uint32_t *savestate;
 
-  /* Save the saved processor context in CURRENT_REGS where it can be
+  /* Save the saved processor context in current_regs where it can be
    * accessed for register dumps and possibly context switching.
    */
 
-  savestate    = (uint32_t *)CURRENT_REGS;
-  CURRENT_REGS = regs;
+  savestate = get_current_regs();
+  set_current_regs(regs);
 
   /* Get the (virtual) address of instruction that caused the prefetch
    * abort. When the exception occurred, this address was provided in the
@@ -83,7 +83,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
        * paging logic for both prefetch and data aborts.
        */
 
-      struct tcb_s *tcb = this_task();
+      struct tcb_s *tcb = this_task_irq();
       tcb->xcp.far  = regs[REG_R15];
 
       /* Call pg_miss() to schedule the page fill.  A consequences of this
@@ -98,14 +98,14 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
        *     execute immediately when we return from this exception.
        */
 
-      pg_miss();
+      pg_miss(tcb);
 
-      /* Restore the previous value of CURRENT_REGS.
+      /* Restore the previous value of current_regs.
        * NULL would indicate thatwe are no longer in an interrupt handler.
        *  It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      CURRENT_REGS = savestate;
+      set_current_regs(savestate);
     }
   else
     {
@@ -117,15 +117,15 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   return regs;
 }
 
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
 {
-  /* Save the saved processor context in CURRENT_REGS where it can be
+  /* Save the saved processor context in current_regs where it can be
    * accessed for register dumps and possibly context switching.
    */
 
-  CURRENT_REGS = regs;
+  set_current_regs(regs);
 
   /* Crash -- possibly showing diagnostic debug information. */
 
@@ -135,4 +135,4 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   return regs; /* To keep the compiler happy */
 }
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
