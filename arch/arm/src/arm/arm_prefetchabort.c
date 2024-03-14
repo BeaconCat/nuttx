@@ -30,7 +30,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -65,18 +65,18 @@
 
 void arm_prefetchabort(uint32_t *regs)
 {
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   uint32_t *savestate;
 
-  /* Save the saved processor context in CURRENT_REGS where it can be
+  /* Save the saved processor context in current_regs where it can be
    * accessed for register dumps and possibly context switching.
    */
 
-  savestate    = (uint32_t *)CURRENT_REGS;
+  savestate = get_current_regs();
 #endif
-  CURRENT_REGS = regs;
+  set_current_regs(regs);
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   /* Get the (virtual) address of instruction that caused the prefetch
    * abort.  When the exception occurred, this address was provided in the
    * lr register and this value was saved in the context save area as the PC
@@ -97,7 +97,7 @@ void arm_prefetchabort(uint32_t *regs)
        * paging logic for both prefetch and data aborts.
        */
 
-      struct tcb_s *tcb = this_task();
+      struct tcb_s *tcb = this_task_inirq();
       tcb->xcp.far  = regs[REG_R15];
 
       /* Call pg_miss() to schedule the page fill.  A consequences of this
@@ -112,14 +112,14 @@ void arm_prefetchabort(uint32_t *regs)
        *     execute immediately when we return from this exception.
        */
 
-      pg_miss();
+      pg_miss(tcb);
 
-      /* Restore the previous value of CURRENT_REGS.  NULL would indicate
+      /* Restore the previous value of current_regs.  NULL would indicate
        * that we are no longer in an interrupt handler.  It will be non-NULL
        * if we are returning from a nested interrupt.
        */
 
-      CURRENT_REGS = savestate;
+      set_current_regs(savestate);
     }
   else
 #endif
