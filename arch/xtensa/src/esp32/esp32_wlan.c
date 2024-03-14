@@ -31,7 +31,6 @@
 #include <debug.h>
 #include <arpa/inet.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/crc64.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
@@ -1514,7 +1513,7 @@ static int wlan_ioctl(struct net_driver_s *dev,
 
   return ret;
 }
-#endif /* CONFIG_NETDEV_IOCTL */
+#endif  /* CONFIG_NETDEV_IOCTL */
 
 /****************************************************************************
  * Name: esp32_net_initialize
@@ -1842,4 +1841,4 @@ int esp32_wlan_softap_initialize(void)
 }
 #endif /* ESP32_WLAN_HAS_SOFTAP */
 
-#endif /* CONFIG_ESP32_WIFI */
+#endif  /* CONFIG_ESP32_WIFI */
