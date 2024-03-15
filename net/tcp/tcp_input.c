@@ -254,11 +254,9 @@ static bool tcp_snd_wnd_update(FAR struct tcp_conn_s *conn,
 
       conn->snd_wl1 = seq;
       conn->snd_wl2 = ackseq;
-      if (conn->snd_wnd != wnd)
-        {
-          conn->snd_wnd = wnd;
-          return true;
-        }
+      conn->snd_wnd = wnd;
+
+      return true;
     }
 
   return false;
@@ -1028,6 +1026,7 @@ found:
     {
       uint32_t unackseq;
       uint32_t ackseq;
+      int timeout = 0;
 
       /* The next sequence number is equal to the current sequence
        * number (sndseq) plus the size of the outstanding, unacknowledged
@@ -1137,9 +1136,16 @@ found:
 
       flags |= TCP_ACKDATA;
 
+      /* Check if no packet need to retransmission, clear timer. */
+
+      if (conn->tx_unacked != 0)
+        {
+          timeout = conn->rto;
+        }
+
       /* Reset the retransmission timer. */
 
-      tcp_update_retrantimer(conn, conn->rto);
+      tcp_update_retrantimer(conn, timeout);
     }
 
   /* Check if the sequence number of the incoming packet is what we are
@@ -1208,10 +1214,6 @@ found:
           /* Window updated, set the acknowledged flag. */
 
           flags |= TCP_ACKDATA;
-
-          /* Reset the retransmission timer. */
-
-          tcp_update_retrantimer(conn, conn->rto);
         }
     }
 
