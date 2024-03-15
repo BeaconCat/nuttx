@@ -55,7 +55,7 @@
 void riscv_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
-  uintptr_t *regs = rtcb->xcp.saved_regs;
+  uintreg_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal
@@ -161,6 +161,10 @@ retry:
   leave_critical_section(regs[REG_INT_CTX]);
   rtcb->irqcount--;
 #endif
+
+  /* g_running_tasks is not valid now */
+
+  g_running_tasks[this_cpu()] = NULL;
 
   rtcb->xcp.regs = regs;
   riscv_fullcontextrestore(rtcb);
