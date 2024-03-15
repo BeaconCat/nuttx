@@ -45,7 +45,7 @@ SECTIONS
   .init_section : {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array .ctors))
+        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
         _einit = ABSOLUTE(.);
   }
 
@@ -81,6 +81,11 @@ SECTIONS
        *(.data.page_aligned)
        *(.data)
        . = ALIGN(8);
+        __start_impls = .;
+        *(.impls)
+        KEEP(*(.impls))
+        . = ALIGN(4);
+        __stop_impls = .;
        *(.data.rel)
        *(.data.rel.*)
        CONSTRUCTORS
