@@ -33,7 +33,7 @@
 #include <nuttx/page.h>
 #include <nuttx/signal.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -106,8 +106,9 @@
  *
  ****************************************************************************/
 
-void pg_miss(FAR struct tcb_s *ftcb)
+void pg_miss(void)
 {
+  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
   bool switch_needed;
 
@@ -148,7 +149,7 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   if (switch_needed)
     {
-      up_switch_context(this_task_inirq(), ftcb);
+      up_switch_context(this_task(), ftcb);
     }
 
   /* Boost the page fill worker thread priority.
@@ -182,4 +183,4 @@ void pg_miss(FAR struct tcb_s *ftcb)
     }
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
