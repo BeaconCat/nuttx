@@ -89,8 +89,6 @@ label:  .asciz msg;                             \
      * This must be the very first address in the loaded image.
      * It should be loaded at any 4K-aligned address.
      */
-
-    .section .start, "ax"
     .globl __start;
 __start:
 
@@ -173,6 +171,9 @@ real_start:
     bne    .loop
 #  endif
 
+    /* Initialize percpu reg tpidr_el1 */
+
+    msr    tpidr_el1, xzr
     ldr    x25, =arm64_boot_secondary_c_routine
     bl     __reset_prep_c
 
@@ -201,6 +202,9 @@ primary_core:
     ldr    x24, =(g_idle_stack + CONFIG_IDLETHREAD_STACKSIZE)
 #endif /* CONFIG_SMP */
 
+    /* Initialize percpu reg tpidr_el1 */
+
+    msr    tpidr_el1, xzr
     ldr    x25, =arm64_boot_primary_c_routine
 
     /* Prepare for calling C code */
