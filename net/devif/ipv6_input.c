@@ -47,7 +47,6 @@
 #include "pkt/pkt.h"
 #include "icmpv6/icmpv6.h"
 
-#include "nat/nat.h"
 #include "netdev/netdev.h"
 #include "ipforward/ipforward.h"
 #include "inet/inet.h"
@@ -296,12 +295,6 @@ static int ipv6_in(FAR struct net_driver_s *dev)
       iphdrlen += extlen;
       nxthdr    = exthdr->nxthdr;
     }
-
-#ifdef CONFIG_NET_NAT66
-  /* Try NAT inbound, rule matching will be performed in NAT module. */
-
-  ipv6_nat_inbound(dev, ipv6);
-#endif
 
 #ifdef CONFIG_NET_BROADCAST
   /* Check for a multicast packet, which may be destined to us (even if
@@ -615,12 +608,6 @@ int ipv6_input(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
-
-  /* Store reception timestamp if enabled and not provided by hardware. */
-
-#if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
-  clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
-#endif
 
   if (dev->d_iob != NULL)
     {

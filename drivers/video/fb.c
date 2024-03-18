@@ -41,7 +41,7 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/clock.h>
 #include <nuttx/wdog.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -200,7 +200,10 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
   /* Write planeinfo information to the queue. */
 
   ret = circbuf_write(panbuf, info, sizeof(union fb_paninfo_u));
-  DEBUGASSERT(ret == sizeof(union fb_paninfo_u));
+  if (ret != sizeof(union fb_paninfo_u))
+    {
+      gwarn("WARNING: circbuf_write(panbuf) failed\n");
+    }
 
   /* Re-enable interrupts */
 
@@ -544,7 +547,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode *inode;
   FAR struct fb_chardev_s *fb;
-  int ret;
+  int ret = OK;
 
   ginfo("cmd: %d arg: %ld\n", cmd, arg);
 
@@ -661,8 +664,12 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           DEBUGASSERT(priv != NULL && fb->vtable != NULL &&
                       fb->vtable->getoverlayinfo != NULL);
-          memset(&oinfo, 0, sizeof(oinfo));
-          ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
+          if (arg != FB_NO_OVERLAY)
+            {
+              memset(&oinfo, 0, sizeof(oinfo));
+              ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
+            }
+
           if (ret >= 0)
             {
               priv->overlay = arg;
@@ -808,7 +815,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(power != NULL && fb->vtable != NULL &&
                       fb->vtable->getpower != NULL);
           *(power) = fb->vtable->getpower(fb->vtable);
-          ret = OK;
         }
         break;
 
@@ -819,7 +825,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(rate != NULL && fb->vtable != NULL &&
                       fb->vtable->getframerate != NULL);
           *(rate) = fb->vtable->getframerate(fb->vtable);
-          ret = OK;
         }
         break;
 
@@ -853,7 +858,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case FBIOSET_VSYNCOFFSET:
         {
           fb->vsyncoffset = USEC2TICK(arg);
-          ret = OK;
         }
         break;
 
@@ -1326,6 +1330,37 @@ static void fb_pollnotify(FAR struct fb_chardev_s *fb, int overlay)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: fb_notify_vsync
+ * Description:
+ *   notify that the vsync comes.
+ *
+ * Input Parameters:
+ *   vtable  - Pointer to framebuffer's virtual table.
+ *
+ ****************************************************************************/
+
+void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
+{
+  FAR struct fb_chardev_s *fb;
+  FAR struct fb_priv_s * priv;
+  irqstate_t flags;
+
+  fb = vtable->priv;
+  if (fb != NULL)
+    {
+      flags = enter_critical_section();
+      for (priv = fb->head; priv; priv = priv->flink)
+        {
+          /* Notify that the vsync comes. */
+
+          poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLPRI);
+        }
+
+      leave_critical_section(flags);
+    }
+}
+
+/****************************************************************************
  * Name: fb_peek_paninfo
  * Description:
  *   Peek a frame from pan info queue of the specified overlay.
@@ -1589,7 +1624,6 @@ int fb_register_device(int display, int plane,
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
-
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);

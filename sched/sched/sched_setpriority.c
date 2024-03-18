@@ -68,11 +68,11 @@ static FAR struct tcb_s *nxsched_nexttcb(FAR struct tcb_s *tcb)
    * then use the 'nxttcb' which will probably be the IDLE thread.
    */
 
-  if (!nxsched_islocked_global() && !irq_cpu_locked(this_cpu()))
+  if (!nxsched_islocked_global())
     {
       /* Search for the highest priority task that can run on tcb->cpu. */
 
-      for (rtrtcb = (FAR struct tcb_s *)list_readytorun()->head;
+      for (rtrtcb = (FAR struct tcb_s *)g_readytorun.head;
            rtrtcb != NULL && !CPU_ISSET(tcb->cpu, &rtrtcb->affinity);
            rtrtcb = rtrtcb->flink);
 
@@ -140,7 +140,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
   if (sched_priority <= nxttcb->sched_priority)
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_irq();
 
       if (rtcb->lockcount > 0)
         {
@@ -150,11 +150,9 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           do
             {
-              bool check = nxsched_remove_readytorun(nxttcb, false);
-              DEBUGASSERT(check == false);
-              UNUSED(check);
+              nxsched_remove_not_running(nxttcb);
 
-              nxsched_add_prioritized(nxttcb, list_pendingtasks());
+              nxsched_add_prioritized(nxttcb, &g_pendingtasks);
               nxttcb->task_state = TSTATE_TASK_PENDING;
 
 #ifdef CONFIG_SMP
@@ -175,7 +173,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           if (nxsched_reprioritize_rtr(tcb, sched_priority))
             {
-              up_switch_context(this_task(), rtcb);
+              up_switch_context(this_task_irq(), rtcb);
             }
         }
     }
@@ -211,7 +209,6 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
                                            int sched_priority)
 {
   FAR struct tcb_s *rtcb;
-
 #ifdef CONFIG_SMP
   int cpu;
 
@@ -247,7 +244,7 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
    * may be caused by the re-prioritization.
    */
 
-  rtcb = this_task();
+  rtcb = this_task_irq();
 #endif
 
   /* A context switch will occur if the new priority of the ready-to-run
@@ -260,7 +257,7 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
       if (nxsched_reprioritize_rtr(tcb, sched_priority))
         {
-          up_switch_context(this_task(), rtcb);
+          up_switch_context(this_task_irq(), rtcb);
         }
     }
 
@@ -270,13 +267,13 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
   else
     {
+      bool check;
+
       /* Remove the TCB from the ready-to-run task list that it resides in.
        * It should not be at the head of the list.
        */
 
-      bool check = nxsched_remove_readytorun(tcb, false);
-      DEBUGASSERT(check == false);
-      UNUSED(check);
+      nxsched_remove_not_running(tcb);
 
       /* Change the task priority */
 

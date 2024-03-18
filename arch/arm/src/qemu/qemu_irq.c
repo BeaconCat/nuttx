@@ -127,7 +127,23 @@ void up_irqinitialize(void)
 }
 
 /****************************************************************************
- * Name: up_get_intstackbase
+ * Name: arm_intstack_top
+ *
+ * Description:
+ *   Return a pointer to the top the correct interrupt stack allocation
+ *   for the current CPU.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+uintptr_t arm_intstack_top(int cpu)
+{
+  return g_irqstack_top[cpu];
+}
+#endif
+
+/****************************************************************************
+ * Name: arm_intstack_alloc
  *
  * Description:
  *   Return a pointer to the "alloc" the correct interrupt stack allocation
@@ -136,7 +152,7 @@ void up_irqinitialize(void)
  ****************************************************************************/
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
+uintptr_t arm_intstack_alloc(int cpu)
 {
   return g_irqstack_top[cpu] - INTSTACK_SIZE;
 }

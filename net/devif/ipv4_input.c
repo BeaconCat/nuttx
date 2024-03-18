@@ -235,10 +235,14 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       goto drop;
     }
 
-#ifdef CONFIG_NET_NAT44
+#ifdef CONFIG_NET_NAT
   /* Try NAT inbound, rule matching will be performed in NAT module. */
 
-  ipv4_nat_inbound(dev, ipv4);
+  if (ipv4_nat_inbound(dev, ipv4) < 0)
+    {
+      nwarn("WARNING: Performing NAT inbound failed!\n");
+      goto drop;
+    }
 #endif
 
   /* Get the destination IP address in a friendlier form */
@@ -486,12 +490,6 @@ int ipv4_input(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
-
-  /* Store reception timestamp if enabled and not provided by hardware. */
-
-#if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
-  clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
-#endif
 
   if (dev->d_iob != NULL)
     {
