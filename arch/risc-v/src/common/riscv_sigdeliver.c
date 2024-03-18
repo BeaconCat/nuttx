@@ -54,7 +54,7 @@
 
 void riscv_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s *rtcb = this_task();
   uintptr_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP
@@ -64,6 +64,8 @@ void riscv_sigdeliver(void)
    */
 
   int16_t saved_irqcount;
+
+  enter_critical_section();
 #endif
 
   board_autoled_on(LED_SIGNAL);
@@ -80,16 +82,17 @@ retry:
    */
 
   saved_irqcount = rtcb->irqcount;
-  DEBUGASSERT(saved_irqcount >= 0);
+  DEBUGASSERT(saved_irqcount >= 1);
 
   /* Now we need call leave_critical_section() repeatedly to get the irqcount
    * to zero, freeing all global spinlocks that enforce the critical section.
    */
 
-  while (rtcb->irqcount > 0)
+  do
     {
       leave_critical_section(regs[REG_INT_CTX]);
     }
+  while (rtcb->irqcount > 0);
 #endif /* CONFIG_SMP */
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
@@ -118,7 +121,7 @@ retry:
    */
 
   DEBUGASSERT(rtcb->irqcount == 0);
-  while (rtcb->irqcount < saved_irqcount + 1)
+  while (rtcb->irqcount < saved_irqcount)
     {
       enter_critical_section();
     }
@@ -131,9 +134,6 @@ retry:
   if (!sq_empty(&rtcb->sigpendactionq) &&
       (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
     {
-#ifdef CONFIG_SMP
-      leave_critical_section(regs[REG_INT_CTX]);
-#endif
       goto retry;
     }
 
