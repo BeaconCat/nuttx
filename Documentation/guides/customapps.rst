@@ -18,9 +18,8 @@ the directory ``CustomApps`` as an example.
   need to run ``make clean`` and possibly even ``make distclean`` before rebuilding to
   ensure it works correctly.
 
------------------------------------------
 1. Replace The Apps/ Directory Completely
------------------------------------------
+=========================================
 
 The CustomApps directory need only to contain the minimum three files:
 
@@ -161,7 +160,7 @@ In order to build with the new custom configuration, you will need the following
 
 :menuselection:`CONFIG_APPS_DIR="../CustomApps"`
 
-:menuselection:`CONFIG_USER_ENTRYPOINT="custom_hello"`
+:menuselection:`CONFIG_INIT_ENTRYPOINT="custom_hello"`
 
 Note that you can only access the ``../CustomApps/Kconfig`` configuration file if ``CONFIG_APPS_DIR`` is set
 to ``../CustomApps`` BEFORE ``make menuconfig`` is executed
@@ -188,9 +187,8 @@ Then build as you normally would. When you execute the custom_hello app you shou
 
     Hello, Custom World!!
 
----------------------------------------------------------------
 2. Extend the apps/ directory to include a new custom directory
----------------------------------------------------------------
+===============================================================
 
 The collection of apps provided in nuttx-apps can be useful, and this method simply
 extends the directory structure to include your own directory structure.
@@ -234,7 +232,19 @@ Create a sub-directory under the ``CustomApps`` directory called ``CustomHello``
 
 The same ``CustomHello.c`` file as described above should be created here.
 
-2.5 CustomHello Makefile
+2.5 CustomHello Make.defs
+-------------------------
+
+Create a Make.defs in the ``CustomApps/CustomHello`` directory with the following lines:
+
+  .. code-block:: console
+
+    ifneq ($(CONFIG_CUSTOM_APPS_CUSTOM_HELLO),)
+    CONFIGURED_APPS += $(APPDIR)/CustomApps/CustomHello
+    endif
+
+
+2.6 CustomHello Makefile
 ------------------------
 
 Create a Makefile in the ``CustomApps/CustomHello`` directory with the following lines:
@@ -257,7 +267,7 @@ Create a Makefile in the ``CustomApps/CustomHello`` directory with the following
     include $(APPDIR)/Application.mk
 
 
-2.6 CustomHello Kconfig
+2.7 CustomHello Kconfig
 -----------------------
 
 Create a Kconfig file in the ``CustomApps/CustomHello`` directory, with the following lines. For
@@ -295,7 +305,7 @@ the purposes of this example, the Kconfig will only cover our single application
 
     endif
 
-2.7 Build and Run
+2.8 Build and Run
 -----------------
 
 Once these files have been created, run a ``make clean`` (you may need to run ``make distclean``
@@ -306,9 +316,8 @@ followed by ``make menuconfig``. If successful there will be new Kconfig entries
 Select the ``Custom Hello App`` and run the usual build process. If successful
 you can run the newly included ``custom_hello`` app.
 
---------------------------------------------------------------------------
 3. Include an Additional Custom directory Outside of the Main Source Trees
---------------------------------------------------------------------------
+==========================================================================
 
 Thia is similar to the previous approach, but places the ``CustomApps`` directory
 outside of the default trees.
