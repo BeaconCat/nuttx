@@ -744,7 +744,14 @@ void ipv4_nat_inbound(FAR struct net_driver_s *dev,
   if (IFF_IS_NAT(dev->d_flags) &&
       net_ipv4addr_hdrcmp(ipv4->destipaddr, &dev->d_ipaddr))
     {
-      ipv4_nat_inbound_internal(ipv4, NAT_MANIP_DST);
+      FAR ipv4_nat_entry_t *entry =
+          ipv4_nat_inbound_internal(ipv4, NAT_MANIP_DST);
+      if (!entry)
+        {
+          /* Inbound without entry is OK (e.g. towards NuttX itself), skip. */
+
+          return;
+        }
     }
 }
 
