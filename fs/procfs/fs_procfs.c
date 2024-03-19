@@ -66,8 +66,10 @@ extern const struct procfs_operations g_module_operations;
 extern const struct procfs_operations g_pm_operations;
 extern const struct procfs_operations g_proc_operations;
 extern const struct procfs_operations g_tcbinfo_operations;
+extern const struct procfs_operations g_thermal_operations;
 extern const struct procfs_operations g_uptime_operations;
 extern const struct procfs_operations g_version_operations;
+extern const struct procfs_operations g_pressure_operations;
 
 /* This is not good.  These are implemented in other sub-systems.  Having to
  * deal with them here is not a good coupling. What is really needed is a
@@ -176,6 +178,11 @@ static const struct procfs_entry_s g_procfs_entries[] =
   { "pm/**",        &g_pm_operations,       PROCFS_UNKOWN_TYPE },
 #endif
 
+#ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
+  { "pressure",     &g_pressure_operations, PROCFS_DIR_TYPE    },
+  { "pressure/**",  &g_pressure_operations, PROCFS_FILE_TYPE   },
+#endif
+
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
   { "self",         &g_proc_operations,     PROCFS_DIR_TYPE    },
   { "self/**",      &g_proc_operations,     PROCFS_UNKOWN_TYPE },
@@ -183,6 +190,11 @@ static const struct procfs_entry_s g_procfs_entries[] =
 
 #if defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
   { "tcbinfo",      &g_tcbinfo_operations,  PROCFS_FILE_TYPE   },
+#endif
+
+#ifdef CONFIG_THERMAL_PROCFS
+  { "thermal",      &g_thermal_operations,  PROCFS_DIR_TYPE    },
+  { "thermal/**",   &g_thermal_operations,  PROCFS_UNKOWN_TYPE },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_UPTIME
@@ -309,8 +321,8 @@ struct procfs_level0_s
   /* Our private data */
 
   uint8_t lastlen;                       /* length of last reported static dir */
-  pid_t pid[CONFIG_FS_PROCFS_MAX_TASKS]; /* Snapshot of all active task IDs */
   FAR const char *lastread;              /* Pointer to last static dir read */
+  pid_t pid[0];                          /* Snapshot of all active task IDs */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -350,13 +362,17 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   /* Add the PID to the list */
 
   index = dir->base.nentries;
-  if (index >= CONFIG_FS_PROCFS_MAX_TASKS)
-    {
-      return;
-    }
-
   dir->pid[index] = tcb->pid;
   dir->base.nentries = index + 1;
+}
+
+/****************************************************************************
+ * Name: procfs_thread_number
+ ****************************************************************************/
+
+static void procfs_thread_number(FAR struct tcb_s *tcb, FAR void *arg)
+{
+  (*(FAR size_t *)arg)++;
 }
 
 /****************************************************************************
@@ -408,6 +424,11 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 
       if (fnmatch(g_procfs_entries[x].pathpattern, relpath, 0) == 0)
         {
+          if (g_procfs_entries[x].type == PROCFS_DIR_TYPE)
+            {
+              return -EISDIR;
+            }
+
           /* Match found!  Stat using this procfs entry */
 
           DEBUGASSERT(g_procfs_entries[x].ops &&
@@ -627,12 +648,18 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   if (!relpath || relpath[0] == '\0')
     {
+      size_t num = 0;
+
       /* The path refers to the top level directory.  Allocate the level0
        * dirent structure.
        */
 
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
+      nxsched_foreach(procfs_thread_number, &num);
+#endif
+
       level0 = (FAR struct procfs_level0_s *)
-         kmm_zalloc(sizeof(struct procfs_level0_s));
+         kmm_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
       if (!level0)
         {
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
