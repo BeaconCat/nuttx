@@ -24,12 +24,18 @@ ifeq ($(CONFIG_OPENAMP_CACHE),y)
   CFLAGS += -DVIRTIO_CACHED_BUFFERS -DVIRTIO_CACHED_VRINGS
 endif
 
-ifeq ($(CONFIG_OPENAMP_RPMSG_DEBUG),y)
-  CFLAGS += -DRPMSG_DEBUG
+ifeq ($(CONFIG_OPENAMP_DEBUG),y)
+  CFLAGS += -DRPMSG_DEBUG -DVQUEUE_DEBUG
 endif
 
-ifeq ($(CONFIG_OPENAMP_VQUEUE_DEBUG),y)
-  CFLAGS += -DVQUEUE_DEBUG
+CFLAGS += -Delf_loader=remoteproc_elf_loader
+
+ifeq ($(CONFIG_OPENAMP_VIRTIO_DEVICE_ONLY),y)
+  CFLAGS += -DVIRTIO_DEVICE_ONLY
+endif
+
+ifeq ($(CONFIG_OPENAMP_VIRTIO_DRIVER_ONLY),y)
+  CFLAGS += -DVIRTIO_DRIVER_ONLY
 endif
 
 CSRCS += open-amp/lib/remoteproc/elf_loader.c
@@ -66,7 +72,6 @@ open-amp.zip:
 	$(Q) patch -p0 < 0017-virtio-follow-virtio-1.2-spec-add-more-virtio-status.patch
 	$(Q) patch -p0 < 0018-virtio-decoupling-the-transport-layer-and-virtio-dev.patch
 	$(Q) patch -p0 < 0019-virtio.h-add-version-in-device-id-table.patch
-	$(Q) patch -p0 < 0020-virtio-Add-the-virtio_negotiate_features-interface.patch
 
 
 
