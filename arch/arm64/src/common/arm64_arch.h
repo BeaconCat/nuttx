@@ -95,6 +95,17 @@
 #define SCTLR_SA_BIT        BIT(3)
 #define SCTLR_I_BIT         BIT(12)
 
+#define ACTLR_AUX_BIT        BIT(9)
+#define ACTLR_CLPORTS_BIT    BIT(8)
+#define ACTLR_CLPMU_BIT      BIT(7)
+#define ACTLR_TESTR1_BIT     BIT(6)
+#define ACTLR_CDBG_BIT       BIT(5)
+#define ACTLR_PATCH_BIT      BIT(4)
+#define ACTLR_BPRED_BIT      BIT(3)
+#define ACTLR_POWER_BIT      BIT(2)
+#define ACTLR_DIAGNOSTIC_BIT BIT(1)
+#define ACTLR_REGIONS_BIT    BIT(0)
+
 /* SPSR M[3:0] define
  *
  * Arm® Architecture Registers Armv8, for Armv8-A architecture profile
@@ -146,38 +157,10 @@
 
 #define GET_EL(mode)  (((mode) >> MODE_EL_SHIFT) & MODE_EL_MASK)
 
-/* MPIDR_EL1, Multiprocessor Affinity Register */
-
-#define MPIDR_AFFLVL_MASK   (0xff)
-#define MPIDR_ID_MASK       (0xff00ffffff)
-
-#define MPIDR_AFF0_SHIFT    (0)
-#define MPIDR_AFF1_SHIFT    (8)
-#define MPIDR_AFF2_SHIFT    (16)
-#define MPIDR_AFF3_SHIFT    (32)
-
-/* mpidr_el1 register, the register is define:
- *   - bit 0~7:   Aff0
- *   - bit 8~15:  Aff1
- *   - bit 16~23: Aff2
- *   - bit 24:    MT, multithreading
- *   - bit 25~29: RES0
- *   - bit 30:    U, multiprocessor/Uniprocessor
- *   - bit 31:    RES1
- *   - bit 32~39: Aff3
- *   - bit 40~63: RES0
- *   Different ARM64 Core will use different Affn define, the mpidr_el1
- *  value is not CPU number, So we need to change CPU number to mpid
- *  and vice versa
- */
-
-#define GET_MPIDR()             read_sysreg(mpidr_el1)
+#define MPIDR_ID_MASK (0xff00ffffff)
 
 #define MPIDR_AFFLVL(mpidr, aff_level) \
   (((mpidr) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
-
-#define MPID_TO_CORE(mpid, aff_level) \
-  (((mpid) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
 
 #define CORE_TO_MPID(core, aff_level) \
   ({ \
@@ -289,7 +272,7 @@
  *  to these memory regions.
  */
 
-#define CONFIG_MAX_XLAT_TABLES      7
+#define CONFIG_MAX_XLAT_TABLES      10
 
 /* Virtual address space size
  * Allows choosing one of multiple possible virtual address
@@ -299,15 +282,14 @@
  * The choice could be: 32, 36, 42, 48
  */
 
-#define CONFIG_ARM64_VA_BITS        36
-
+#define CONFIG_ARM64_VA_BITS        48
 /* Physical address space size
  * Choose the maximum physical address range that the kernel will support.
  *
  * The choice could be: 32, 36, 42, 48
  */
 
-#define CONFIG_ARM64_PA_BITS        36
+#define CONFIG_ARM64_PA_BITS        48
 
 #define L1_CACHE_SHIFT              (6)
 #define L1_CACHE_BYTES              BIT(L1_CACHE_SHIFT)
@@ -345,6 +327,9 @@ struct regs_context
   uint64_t  exe_depth;
   uint64_t  tpidr_el0;
   uint64_t  tpidr_el1;
+#ifdef CONFIG_ARCH_FPU
+  struct fpu_reg fpu_regs;
+#endif
 };
 
 /****************************************************************************
@@ -436,6 +421,26 @@ static inline void arch_nop(void)
 {
   __asm__ volatile ("nop");
 }
+
+/****************************************************************************
+ * Name:
+ *   arm64_current_el()
+ *
+ * Description:
+ *
+ *   Get current execute level
+ *
+ ****************************************************************************/
+
+#define arm64_current_el()                \
+  ({                                      \
+    uint64_t __el;                        \
+    int      __ret;                       \
+    __asm__ volatile ("mrs %0, CurrentEL" \
+                      : "=r" (__el));     \
+    __ret = GET_EL(__el);                 \
+    __ret;                                \
+  })
 
 /****************************************************************************
  * Name:
