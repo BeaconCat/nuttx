@@ -62,8 +62,8 @@ ifneq ($(CONFIG_STACK_USAGE_WARNING),0)
   ARCHOPTIMIZATION += -Wstack-usage=$(CONFIG_STACK_USAGE_WARNING)
 endif
 
-ifeq ($(CONFIG_SCHED_GPROF_ALL),y)
-  ARCHOPTIMIZATION += -pg
+ifeq ($(CONFIG_ARCH_COVERAGE_ALL),y)
+  ARCHOPTIMIZATION += -fprofile-generate -ftest-coverage
 endif
 
 ifeq ($(CONFIG_MM_UBSAN_ALL),y)
@@ -104,26 +104,16 @@ endif
 
 ifeq ($(CONFIG_LTO_THIN),y)
   ARCHOPTIMIZATION += -flto=thin
-else ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
-else ifeq ($(CONFIG_LTO_FAT), y)
-  ARCHOPTIMIZATION += -flto -ffat-lto-objects
-endif
-
-# The arm clang toolchain requires to pass the linker option will
-# gcc tool chain can automatically perform lto at linking time if it
-# found any object files are compiled with flto
-
-ifneq ($(CONFIG_LTO_NONE),y)
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --lto
   endif
-
-  # For gcc, use the linker plugin to extract objects with GIMPLE
-  # info from the lib archive
-
+else ifeq ($(CONFIG_LTO_FULL),y)
+  ARCHOPTIMIZATION += -flto
   ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
     ARCHOPTIMIZATION += -fuse-linker-plugin
+  endif
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
+    LDFLAGS += --lto
   endif
 endif
 
@@ -270,13 +260,8 @@ else
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
 
-  # For dealing with object files with GIMPLE bytecode
-  # special wrappers prefixed with "gcc-" reuired
-  # such as creating static libraries.
-  # https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
-
-  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
-    ifneq ($(CONFIG_LTO_NONE),y)
+  ifeq ($(CONFIG_LTO_FULL),y)
+    ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
       LD := $(CROSSDEV)gcc
       AR := $(CROSSDEV)gcc-ar rcs
       NM := $(CROSSDEV)gcc-nm
@@ -308,11 +293,17 @@ endif
 # Architecture flags
 
 ARCHCFLAGS += -Wstrict-prototypes -Wno-attributes -Wno-unknown-pragmas
-ARCHCXXFLAGS += -nostdinc++ -Wno-attributes -Wno-unknown-pragmas
+ARCHCXXFLAGS += -Wno-attributes -Wno-unknown-pragmas
 
 # When all C++ code is built using GCC 7.1 or a higher version,
 # we can safely disregard warnings of the type "parameter passing for X changed in GCC 7.1."
 # Refer to : https://stackoverflow.com/questions/48149323/what-does-the-gcc-warning-project-parameter-passing-for-x-changed-in-gcc-7-1-m
+
+ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
+  ARCHCXXFLAGS += -nostdinc++
+else
+  ARCHCXXFLAGS += -D_STDLIB_H_
+endif
 
 ifneq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   ARCHCFLAGS += -Wno-psabi
@@ -353,16 +344,12 @@ endif
 
 ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI) $(ZARCHCPUFLAGS)
 
+# Optimization of unused sections
+
 ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
-  # Optimization of unused sections
   ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
     LDFLAGS          += --gc-sections
     ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
-  endif
-
-  # Debug --whole-archive
-  ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
-    LDFLAGS += --whole-archive
   endif
 endif
 
@@ -378,7 +365,7 @@ ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION += -g3
+  ARCHOPTIMIZATION += -g
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --debug
   endif
@@ -405,8 +392,12 @@ ifeq ($(CONFIG_LIBSUPCXX),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a))
 endif
 
-ifeq ($(CONFIG_SCHED_GCOV),y)
+ifeq ($(CONFIG_ARCH_COVERAGE),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcov.a))
+endif
+
+ifeq ($(CONFIG_LIBCXXTOOLCHAIN),y)
+  EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libstdc++.a))
 endif
 
 # Zig toolchain
