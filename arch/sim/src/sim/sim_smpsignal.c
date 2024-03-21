@@ -99,6 +99,14 @@ static int sim_cpupause_handler(int irq, void *context, void *arg)
 
       leave_critical_section(flags);
     }
+  else
+    {
+      struct tcb_s *tcb = current_task(cpu);
+      sim_savestate(tcb->xcp.regs);
+      nxsched_process_delivered(cpu);
+      tcb = current_task(cpu);
+      sim_restorestate(tcb->xcp.regs);
+    }
 
   return OK;
 }
@@ -148,7 +156,7 @@ bool up_cpu_pausereq(int cpu)
 
 int up_cpu_paused_save(void)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_irq();
 
   /* Update scheduler parameters */
 
@@ -160,7 +168,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at CURRENT_REGS into the TCB at the head
+  /* Save the current context at current_regs into the TCB at the head
    * of the assigned task list for this CPU.
    */
 
@@ -232,7 +240,7 @@ int up_cpu_paused(int cpu)
 
 int up_cpu_paused_restore(void)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_irq();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that we have resumed */
@@ -246,7 +254,7 @@ int up_cpu_paused_restore(void)
 
   /* Restore the cpu lock */
 
-  restore_critical_section();
+  restore_critical_section(tcb, cpu);
 
   /* Then switch contexts.  Any necessary address environment changes
    * will be made when the interrupt returns.
@@ -314,7 +322,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task(), cpu);
+  sched_note_cpu_start(this_task_irq(), cpu);
 #endif
 
   return host_cpu_start(cpu, tcb->stack_base_ptr, tcb->adj_stack_size);
@@ -337,6 +345,34 @@ int sim_init_ipi(int irq)
 {
   up_enable_irq(irq);
   return irq_attach(irq, sim_cpupause_handler, NULL);
+}
+
+/****************************************************************************
+ * Name: up_cpu_async_pause
+ *
+ * Description:
+ *   pause task execution on the CPU
+ *   check whether there are tasks delivered to specified cpu
+ *   and try to run them.
+ *
+ * Input Parameters:
+ *   cpu - The index of the CPU to be paused.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ * Assumptions:
+ *   Called from within a critical section;
+ *
+ ****************************************************************************/
+
+inline_function int up_cpu_async_pause(int cpu)
+{
+  /* Generate IRQ for CPU(cpu) */
+
+  host_send_ipi(cpu);
+
+  return OK;
 }
 
 /****************************************************************************
@@ -366,7 +402,7 @@ int up_cpu_pause(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the pause event */
 
-  sched_note_cpu_pause(this_task(), cpu);
+  sched_note_cpu_pause(this_task_irq(), cpu);
 #endif
 
   /* Take the both spinlocks.  The g_cpu_wait spinlock will prevent the
@@ -381,9 +417,7 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  /* Generate IRQ for CPU(cpu) */
-
-  host_send_ipi(cpu);
+  up_cpu_async_pause(cpu);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
@@ -426,7 +460,7 @@ int up_cpu_resume(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the resume event */
 
-  sched_note_cpu_resume(this_task(), cpu);
+  sched_note_cpu_resume(this_task_irq(), cpu);
 #endif
 
   /* Release the spinlock.  Releasing the spinlock will cause the SGI2

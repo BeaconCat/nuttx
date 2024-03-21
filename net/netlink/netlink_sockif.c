@@ -129,11 +129,6 @@ static int netlink_setup(FAR struct socket *psock)
         break;
 #endif
 
-#ifdef CONFIG_NETLINK_NETFILTER
-      case NETLINK_NETFILTER:
-        break;
-#endif
-
       default:
         return -EPROTONOSUPPORT;
     }
@@ -626,15 +621,6 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
         break;
 #endif
 
-#ifdef CONFIG_NETLINK_NETFILTER
-      case NETLINK_NETFILTER:
-        ret = netlink_netfilter_sendto(conn, nlmsg,
-                                       msg->msg_iov->iov_len, flags,
-                                       (FAR const struct sockaddr_nl *)to,
-                                       tolen);
-        break;
-#endif
-
       default:
        ret = -EOPNOTSUPP;
        break;
@@ -672,6 +658,7 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
   FAR socklen_t *fromlen = &msg->msg_namelen;
   FAR struct netlink_response_s *entry;
   FAR struct socket_conn_s *conn;
+  int ret = OK;
 
   DEBUGASSERT(from == NULL ||
               (fromlen != NULL && *fromlen >= sizeof(struct sockaddr_nl)));
@@ -692,13 +679,15 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
           return -EAGAIN;
         }
 
-      /* Wait for the response.  This should always succeed. */
+      /* Wait for the response. */
 
-      entry = netlink_get_response(psock->s_conn);
-      DEBUGASSERT(entry != NULL);
+      ret = netlink_get_response(psock->s_conn, &entry);
+
+      /* If interrupted by signals, return errno */
+
       if (entry == NULL)
         {
-          return -EPIPE;
+          return ret;
         }
     }
 
