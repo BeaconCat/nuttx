@@ -33,7 +33,7 @@
 #include <nuttx/page.h>
 #include <nuttx/signal.h>
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -106,9 +106,8 @@
  *
  ****************************************************************************/
 
-void pg_miss(void)
+void pg_miss(FAR struct tcb_s *ftcb)
 {
-  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
   bool switch_needed;
 
@@ -143,13 +142,13 @@ void pg_miss(void)
   /* Add the task to the specified blocked task list */
 
   ftcb->task_state = TSTATE_WAIT_PAGEFILL;
-  nxsched_add_prioritized(ftcb, list_waitingforfill());
+  nxsched_add_prioritized(ftcb, &g_waitingforfill);
 
   /* Now, perform the context switch if one is needed */
 
   if (switch_needed)
     {
-      up_switch_context(this_task(), ftcb);
+      up_switch_context(this_task_inirq(), ftcb);
     }
 
   /* Boost the page fill worker thread priority.
@@ -183,4 +182,4 @@ void pg_miss(void)
     }
 }
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
