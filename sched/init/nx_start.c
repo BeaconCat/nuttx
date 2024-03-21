@@ -46,7 +46,6 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
 
-#include "task/task.h"
 #include "sched/sched.h"
 #include "signal/signal.h"
 #include "semaphore/semaphore.h"
@@ -143,7 +142,7 @@ dq_queue_t g_pendingtasks;
 
 dq_queue_t g_waitingforsignal;
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
 dq_queue_t g_waitingforfill;
@@ -240,7 +239,7 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
     TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
   }
 #endif
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   ,
   {                                              /* TSTATE_WAIT_PAGEFILL */
     &g_waitingforfill,
@@ -322,7 +321,7 @@ void nx_start(void)
 
   /* Boot up is complete */
 
-  nxsched_initstate() = OSINIT_BOOT;
+  g_nx_initstate = OSINIT_BOOT;
 
   /* Initialize RTOS Data ***************************************************/
 
@@ -427,7 +426,7 @@ void nx_start(void)
 
   /* Task lists are initialized */
 
-  nxsched_initstate() = OSINIT_TASKLISTS;
+  g_nx_initstate = OSINIT_TASKLISTS;
 
   /* Initialize RTOS facilities *********************************************/
 
@@ -493,17 +492,20 @@ void nx_start(void)
   iob_initialize();
 #endif
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_init();
+#endif
+
   /* Initialize the logic that determine unique process IDs. */
 
-  nxsched_npidhash() = 4;
-  while (nxsched_npidhash() <= CONFIG_SMP_NCPUS)
+  g_npidhash = 4;
+  while (g_npidhash <= CONFIG_SMP_NCPUS)
     {
-      nxsched_npidhash() <<= 1;
+      g_npidhash <<= 1;
     }
 
-  nxsched_pidhash() =
-    kmm_zalloc(sizeof(*nxsched_pidhash()) * nxsched_npidhash());
-  DEBUGASSERT(nxsched_pidhash());
+  g_pidhash = kmm_zalloc(sizeof(*g_pidhash) * g_npidhash);
+  DEBUGASSERT(g_pidhash);
 
   /* IDLE Group Initialization **********************************************/
 
@@ -514,16 +516,12 @@ void nx_start(void)
       /* Assign the process ID(s) of ZERO to the idle task(s) */
 
       hashndx            = PIDHASH(i);
-      nxsched_pidhash()[hashndx] = &g_idletcb[i].cmn;
+      g_pidhash[hashndx] = &g_idletcb[i].cmn;
 
       /* Allocate the IDLE group */
 
-      DEBUGVERIFY(group_initialize(&g_idletcb[i], g_idletcb[i].cmn.flags));
+      DEBUGVERIFY(group_allocate(&g_idletcb[i], g_idletcb[i].cmn.flags));
       g_idletcb[i].cmn.group->tg_info->ta_argv = &g_idleargv[i][0];
-
-      /* Initialize the task join */
-
-      nxtask_joininit(&g_idletcb[i].cmn);
 
 #ifdef CONFIG_SMP
       /* Create a stack for all CPU IDLE threads (except CPU0 which already
@@ -549,16 +547,16 @@ void nx_start(void)
        * of child status in the IDLE group.
        */
 
-      group_postinitialize(&g_idletcb[i]);
+      group_initialize(&g_idletcb[i]);
       g_idletcb[i].cmn.group->tg_flags = GROUP_FLAG_NOCLDWAIT |
                                          GROUP_FLAG_PRIVILEGED;
     }
 
-  nxsched_lastpid() = CONFIG_SMP_NCPUS - 1;
+  g_lastpid = CONFIG_SMP_NCPUS - 1;
 
   /* The memory manager is available */
 
-  nxsched_initstate() = OSINIT_MEMORY;
+  g_nx_initstate = OSINIT_MEMORY;
 
   /* Initialize tasking data structures */
 
@@ -644,7 +642,7 @@ void nx_start(void)
 
   /* Hardware resources are now available */
 
-  nxsched_initstate() = OSINIT_HARDWARE;
+  g_nx_initstate = OSINIT_HARDWARE;
 
   /* Setup for Multi-Tasking ************************************************/
 
@@ -690,7 +688,7 @@ void nx_start(void)
 
   /* The OS is fully initialized and we are beginning multi-tasking */
 
-  nxsched_initstate() = OSINIT_OSREADY;
+  g_nx_initstate = OSINIT_OSREADY;
 
   /* Create initial tasks and bring-up the system */
 
@@ -698,7 +696,7 @@ void nx_start(void)
 
   /* Enter to idleloop */
 
-  nxsched_initstate() = OSINIT_IDLELOOP;
+  g_nx_initstate = OSINIT_IDLELOOP;
 
   /* Let other threads have access to the memory manager */
 
