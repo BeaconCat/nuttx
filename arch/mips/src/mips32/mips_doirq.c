@@ -68,8 +68,8 @@ uint32_t *mips_doirq(int irq, uint32_t *regs)
    * Nested interrupts are not supported
    */
 
-  DEBUGASSERT(get_current_regs() == NULL);
-  set_current_regs(regs);
+  DEBUGASSERT(CURRENT_REGS == NULL);
+  CURRENT_REGS = regs;
 
   /* Disable further occurrences of this interrupt (until the interrupt
    * source have been cleared by the driver).
@@ -88,12 +88,12 @@ uint32_t *mips_doirq(int irq, uint32_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != get_current_regs())
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      up_restorefpu(get_current_regs());
+      up_restorefpu((uint32_t *)CURRENT_REGS);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -111,7 +111,7 @@ uint32_t *mips_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_inirq();
+      g_running_tasks[this_cpu()] = this_task();
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -120,13 +120,13 @@ uint32_t *mips_doirq(int irq, uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = get_current_regs();
+  regs = (uint32_t *)CURRENT_REGS;
 
   /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 
   /* Unmask the last interrupt (global interrupts are still disabled) */
 
