@@ -63,8 +63,6 @@
 
 #include <arch/board/board.h>
 
-#include <nuttx/arch.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -799,18 +797,18 @@ void arm_lowputc(char ch)
        * atomic.
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
       if ((getreg32(CONSOLE_BASE + LPC54_USART_FIFOSTAT_OFFSET) &
           USART_FIFOSTAT_TXNOTFULL) != 0)
         {
           /* Send the character */
 
           putreg32((uint32_t)ch, CONSOLE_BASE + LPC54_USART_FIFOWR_OFFSET);
-          spin_unlock_irqrestore(NULL, flags);
+          leave_critical_section(flags);
           return;
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
     }
 #endif
 }

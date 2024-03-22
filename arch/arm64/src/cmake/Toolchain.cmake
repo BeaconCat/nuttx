@@ -123,8 +123,14 @@ set(ARCHCFLAGS
     "-Wstrict-prototypes -fno-common -Wall -Wshadow -Werror -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 set(ARCHCXXFLAGS
-    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
-)
+    "-fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas")
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
+else()
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
+endif()
+
 if(NOT ${CONFIG_ARCH_TOOLCHAIN_CLANG})
   string(APPEND ARCHCFLAGS " -Wno-psabi")
   string(APPEND ARCHCXXFLAGS " -Wno-psabi")
@@ -154,7 +160,7 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 if(CONFIG_ARCH_TOOLCHAIN_GNU)
