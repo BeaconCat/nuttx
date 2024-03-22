@@ -98,7 +98,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (arm_from_thread(regs[REG_EXC_RETURN]))
     {
-      set_current_regs(regs);
+      CURRENT_REGS = regs;
     }
 
   /* Acknowledge the interrupt */
@@ -110,7 +110,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   irq_dispatch(irq, regs);
 
   /* If a context switch occurred while processing the interrupt then
-   * current_regs may have change value.  If we return any value different
+   * CURRENT_REGS may have change value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
@@ -119,20 +119,22 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
     {
       /* Restore the cpu lock */
 
-      if (regs != get_current_regs())
+      if (regs != CURRENT_REGS)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task_inirq();
-          regs = get_current_regs();
+          g_running_tasks[this_cpu()] = this_task();
+
+          restore_critical_section();
+          regs = (uint32_t *)CURRENT_REGS;
         }
 
-      /* Update the current_regs to NULL. */
+      /* Update the CURRENT_REGS to NULL. */
 
-      set_current_regs(NULL);
+      CURRENT_REGS = NULL;
     }
 #endif
 

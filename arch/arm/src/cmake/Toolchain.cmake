@@ -29,6 +29,8 @@ if(CONFIG_ARCH_ARMV7A) # ARMv7-A
   set(ARCH_SUBDIR armv7-a)
 elseif(CONFIG_ARCH_ARMV7R) # ARMv7-R
   set(ARCH_SUBDIR armv7-r)
+elseif(CONFIG_ARCH_ARMV8R) # ARMv8-R
+  set(ARCH_SUBDIR armv8-r)
 elseif(CONFIG_ARCH_ARMV7M) # ARMv7-M
   set(ARCH_SUBDIR armv7-m)
 elseif(CONFIG_ARCH_ARMV8M) # ARMv8-M
@@ -148,21 +150,11 @@ if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
-if(CONFIG_SCHED_GPROF_ALL)
-  add_compile_options(-pg)
-endif()
-
 # Optimization of unused sections
 
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_link_options(-Wl,--gc-sections)
   add_compile_options(-ffunction-sections -fdata-sections)
-endif()
-
-# Debug --whole-archive
-
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
 endif()
 
 if(CONFIG_ENDIAN_BIG)
@@ -188,11 +180,16 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 set(ARCHCFLAGS "-Wstrict-prototypes")
-set(ARCHCXXFLAGS "-nostdinc++")
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
+else()
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
+endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")

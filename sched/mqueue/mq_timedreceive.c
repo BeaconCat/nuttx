@@ -138,7 +138,7 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
                              size_t msglen, FAR unsigned int *prio,
                              FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
   irqstate_t flags;
@@ -167,8 +167,7 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
    * because messages can be sent from interrupt level.
    */
 
-  flags = enter_critical_section_nonirq();
-  rtcb = this_task_inirq();
+  flags = enter_critical_section();
 
   /* Check if the message queue is empty.  If it is NOT empty, then we
    * will not need to start timer.
@@ -234,7 +233,7 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
   /* We can now restore interrupts */
 
 errout_in_critical_section:
-  leave_critical_section_nonirq(flags);
+  leave_critical_section(flags);
 
   return ret;
 }
