@@ -91,7 +91,7 @@ static int elf_emit(FAR struct elf_dumpinfo_s *cinfo,
 {
   FAR const uint8_t *ptr = buf;
   size_t total = len;
-  int ret;
+  int ret = 0;
 
   while (total > 0)
     {
@@ -122,7 +122,7 @@ static int elf_emit_align(FAR struct elf_dumpinfo_s *cinfo)
                         ELF_PAGESIZE) - cinfo->stream->nput;
   unsigned char null[256];
   off_t total = align;
-  off_t ret;
+  off_t ret = 0;
 
   memset(null, 0, sizeof(null));
 
@@ -187,9 +187,9 @@ static int elf_get_ntcb(void)
   int count = 0;
   int i;
 
-  for (i = 0; i < g_npidhash; i++)
+  for (i = 0; i < nxsched_npidhash(); i++)
     {
-      if (g_pidhash[i] != NULL)
+      if (nxsched_pidhash()[i] != NULL)
         {
           count++;
         }
@@ -267,7 +267,7 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
     {
       if (up_interrupt_context())
         {
-          regs = (FAR uintptr_t *)up_current_regs();
+          regs = (FAR uintptr_t *)CURRENT_REGS;
         }
       else
         {
@@ -277,7 +277,7 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
     }
   else
     {
-      regs = (FAR uintptr_t *)tcb->xcp.regs;
+      regs = (uintptr_t *)tcb->xcp.regs;
     }
 
   if (regs != NULL)
@@ -313,11 +313,11 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
 
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
-      for (i = 0; i < g_npidhash; i++)
+      for (i = 0; i < nxsched_npidhash(); i++)
         {
-          if (g_pidhash[i] != NULL)
+          if (nxsched_pidhash()[i] != NULL)
             {
-              elf_emit_tcb_note(cinfo, g_pidhash[i]);
+              elf_emit_tcb_note(cinfo, nxsched_pidhash()[i]);
             }
         }
     }
@@ -395,11 +395,11 @@ static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
 
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
-      for (i = 0; i < g_npidhash; i++)
+      for (i = 0; i < nxsched_npidhash(); i++)
         {
-          if (g_pidhash[i] != NULL)
+          if (nxsched_pidhash()[i] != NULL)
             {
-              elf_emit_tcb_stack(cinfo, g_pidhash[i]);
+              elf_emit_tcb_stack(cinfo, nxsched_pidhash()[i]);
             }
         }
     }
@@ -423,34 +423,9 @@ static void elf_emit_memory(FAR struct elf_dumpinfo_s *cinfo, int memsegs)
 
   for (i = 0; i < memsegs; i++)
     {
-      if (cinfo->regions[i].flags & PF_REGISTER)
-        {
-          FAR uintptr_t *start = (FAR uintptr_t *)cinfo->regions[i].start;
-          FAR uintptr_t *end = (FAR uintptr_t *)cinfo->regions[i].end;
-          uintptr_t buf[64];
-          size_t offset = 0;
-
-          while (start < end)
-            {
-              buf[offset++] = *start++;
-
-              if (offset % (sizeof(buf) / sizeof(uintptr_t)) == 0)
-                {
-                  elf_emit(cinfo, buf, sizeof(buf));
-                  offset = 0;
-                }
-            }
-
-          if (offset != 0)
-            {
-              elf_emit(cinfo, buf, offset * sizeof(uintptr_t));
-            }
-        }
-      else
-        {
-          elf_emit(cinfo, (FAR void *)cinfo->regions[i].start,
-                   cinfo->regions[i].end - cinfo->regions[i].start);
-        }
+      elf_emit(cinfo, (FAR void *)cinfo->regions[i].start,
+               cinfo->regions[i].end -
+               cinfo->regions[i].start);
 
       /* Align to page */
 
@@ -545,11 +520,11 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
 
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
-      for (i = 0; i < g_npidhash; i++)
+      for (i = 0; i < nxsched_npidhash(); i++)
         {
-          if (g_pidhash[i] != NULL)
+          if (nxsched_pidhash()[i] != NULL)
             {
-              elf_emit_tcb_phdr(cinfo, g_pidhash[i], &phdr, &offset);
+              elf_emit_tcb_phdr(cinfo, nxsched_pidhash()[i], &phdr, &offset);
             }
         }
     }

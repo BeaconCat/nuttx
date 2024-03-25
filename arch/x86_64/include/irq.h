@@ -46,32 +46,30 @@
 #endif
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
-/* CPU private data */
-
-struct intel64_cpu_s
-{
-  int     id;
-  uint8_t loapic_id;
-  bool    ready;
-
-/* current_regs holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to current_regs must be through
- * up_current_regs() and up_set_current_regs() functions
+/* This holds a references to the current interrupt level register storage
+ * structure.  It is non-NULL only during interrupt processing.
  */
 
-  uint64_t *current_regs;
-};
+extern volatile uint64_t *g_current_regs;
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -96,42 +94,11 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
-static inline_function int up_cpu_index(void)
-{
-  unsigned long cpu;
-
-  asm volatile(
-    "\tmovq %%gs:(%c1), %0\n"
-    : "=rm" (cpu)
-    : "i" (offsetof(struct intel64_cpu_s, id))
-    :);
-
-  return cpu;
-}
-#else
-#  define up_cpu_index() (0)
-#endif
+#define up_cpu_index() (0)
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
-
-static inline_function uint64_t *up_current_regs(void)
-{
-  uint64_t *regs;
-  asm volatile("movq %%gs:(%c1), %0"
-               : "=rm" (regs)
-               : "i" (offsetof(struct intel64_cpu_s, current_regs)));
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint64_t *regs)
-{
-  asm volatile("movq %0, %%gs:(%c1)"
-               :: "r" (regs), "i" (offsetof(struct intel64_cpu_s,
-                                            current_regs)));
-}
 
 /****************************************************************************
  * Name: up_interrupt_context
@@ -142,30 +109,7 @@ static inline_function void up_set_current_regs(uint64_t *regs)
  *
  ****************************************************************************/
 
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return up_current_regs() != NULL;
-}
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint64_t *)((regs) ? (regs) : up_current_regs()))[REG_RIP])
-
-/****************************************************************************
- * Name: up_alloc_irq_msi
- * Name: up_release_irq_msi
- *
- * Description:
- *   Reserve/release vector for MSI
- *
- ****************************************************************************/
-
-int up_alloc_irq_msi(int *num);
-void up_release_irq_msi(int *irq, int num);
+#define up_interrupt_context() (g_current_regs != NULL)
 
 #undef EXTERN
 #ifdef __cplusplus
