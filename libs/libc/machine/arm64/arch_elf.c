@@ -30,6 +30,7 @@
 #include <debug.h>
 #include <endian.h>
 
+#include <nuttx/compiler.h>
 #include <nuttx/bits.h>
 #include <nuttx/elf.h>
 
@@ -121,8 +122,8 @@ aarch64_insn_encode_immediate(enum insn_imm_type_e type,
           imm >>= ADR_IMM_HILOSPLIT;
           immhi = (imm & ADR_IMM_HIMASK) << ADR_IMM_HISHIFT;
           imm = immlo | immhi;
-          mask = ((ADR_IMM_LOMASK << ADR_IMM_LOSHIFT) |
-                  (ADR_IMM_HIMASK << ADR_IMM_HISHIFT));
+          mask = (ADR_IMM_LOMASK << ADR_IMM_LOSHIFT) |
+                 (ADR_IMM_HIMASK << ADR_IMM_HISHIFT);
         }
         break;
 
@@ -539,6 +540,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
           overflow_check = false;
         }
 
+        /* fallthrough */
+
       case R_AARCH64_MOVW_UABS_G0:
         {
           ret = reloc_insn_movw(RELOC_OP_ABS, addr, val, 0,
@@ -551,6 +554,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
           overflow_check = false;
         }
 
+        /* fallthrough */
+
       case R_AARCH64_MOVW_UABS_G1:
         {
           ret = reloc_insn_movw(RELOC_OP_ABS, addr, val, 16,
@@ -562,6 +567,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
         {
           overflow_check = false;
         }
+
+        /* fallthrough */
 
       case R_AARCH64_MOVW_UABS_G2:
         {
@@ -677,6 +684,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
           overflow_check = false;
         }
 
+        /* fallthrough */
+
       case R_AARCH64_ADR_PREL_PG_HI21:
         {
           if (((uint64_t)addr & 0xfff) < 0xff8)
@@ -771,8 +780,8 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
         break;
 
       default:
-        berr("ERROR: Unsupported relocation: %d\n",
-             (int)ELF64_R_TYPE(rel->r_info));
+        berr("ERROR: Unsupported relocation: %"PRIu64"\n",
+             ELF64_R_TYPE(rel->r_info));
         return -EINVAL;
     }
 
