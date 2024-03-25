@@ -50,7 +50,6 @@
 void nxsched_suspend(FAR struct tcb_s *tcb)
 {
   irqstate_t flags;
-  bool switch_needed;
 
   DEBUGASSERT(tcb != NULL);
 
@@ -75,11 +74,11 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
       /* Move the TCB to the g_stoppedtasks list. */
 
       tcb->task_state = TSTATE_TASK_STOPPED;
-      dq_addlast((FAR dq_entry_t *)tcb, list_stoppedtasks());
+      dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
     }
   else
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
 
       /* The task was running or runnable before being stopped.  Simply
        * block it in the stopped state.  If tcb refers to this task, then
@@ -90,21 +89,18 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
       DEBUGASSERT(!is_idle_task(tcb));
 
-      /* Remove the tcb task from the ready-to-run list. */
+      /* Remove the tcb task from the running list. */
 
-      switch_needed = nxsched_remove_readytorun(tcb, true);
+      nxsched_remove_running(tcb);
 
       /* Add the task to the specified blocked task list */
 
       tcb->task_state = TSTATE_TASK_STOPPED;
-      dq_addlast((FAR dq_entry_t *)tcb, list_stoppedtasks());
+      dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
 
-      /* Now, perform the context switch if one is needed */
+      /* Now, perform the context switch */
 
-      if (switch_needed)
-        {
-          up_switch_context(this_task(), rtcb);
-        }
+      up_switch_context(this_task_inirq(), rtcb);
     }
 
   leave_critical_section(flags);

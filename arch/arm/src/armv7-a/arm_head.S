@@ -41,7 +41,7 @@
 
 #define IDLE_STACK_TOP  (IDLE_STACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef CONFIG_LEGACY_PAGING
+#ifndef CONFIG_PAGING
 
 	.file	"arm_head.S"
 
@@ -183,7 +183,17 @@ __start:
 	and		r0, r0, #0x3
 	cmp		r0, #0
 	beq		__cpu0_start
+
+#ifdef CONFIG_ARMV7A_SMP_BUSY_WAIT
+	ldr		r2, =CONFIG_ARMV7A_SMP_BUSY_WAIT_FLAG_ADDR
+1:
+	ldr		r1, [r2, #0]
+	cmp		r1, #0
+	beq		1b
+#else
 	wfe
+#endif
+
 	cmp		r0, #1
 	beq		__cpu1_start
 #  if CONFIG_SMP_NCPUS > 2
@@ -668,11 +678,29 @@ __cpu0_start:
 	bl		arm_data_initialize
 #endif
 
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+	/* Perform init the secure monitor runtime. As the following arm_boot may
+	 * using smc to perform psci related func, so the secure monitor init
+	 * procedure should be placed before arm_boot
+	 */
+
+	bl		arm_sm_init
+#endif
+
 	/* Perform early C-level, platform-specific initialization.  Logic
 	 * within arm_boot() must configure SDRAM and call arm_data_initialize().
 	 */
 
 	bl		arm_boot
+
+	/* finish busy wait */
+
+#ifdef CONFIG_ARMV7A_SMP_BUSY_WAIT
+	ldr		r0, =CONFIG_ARMV7A_SMP_BUSY_WAIT_FLAG_ADDR
+	mov		r1, #1
+	str		r1, [r0]
+	dsb		sy
+#endif
 
 	/* Finally branch to the OS entry point */
 
