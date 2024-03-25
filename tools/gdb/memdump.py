@@ -18,10 +18,9 @@
 #
 ############################################################################
 
-import argparse
-
 import gdb
 import utils
+import argparse
 from lists import list_for_each_entry, sq_for_every, sq_queue
 
 mempool_backtrace = utils.CachedType("struct mempool_backtrace_s")
@@ -118,15 +117,11 @@ class Nxmemdump(gdb.Command):
                                     )
                                 )
 
-                        if address and (
-                            address < int(charnode)
-                            and address >= (int)(charnode - pool["blocksize"])
-                        ):
-                            gdb.write(
-                                "\nThe address 0x%x found belongs to"
-                                "the mempool node with base address 0x%x\n"
-                                % (address, charnode)
-                            )
+                        if address \
+                           and (address < int(charnode)
+                                and address >= (int)(charnode - pool["blocksize"])):
+                            gdb.write("\nThe address 0x%x found belongs to"
+                                      "the mempool node with base address 0x%x\n" % (address, charnode))
                             return True
 
                         gdb.write("\n")
@@ -184,18 +179,10 @@ class Nxmemdump(gdb.Command):
 
                     gdb.write("\n")
 
-                    if address and (
-                        address < int(charnode + node["size"])
-                        and address
-                        >= (int)(
-                            charnode + gdb.lookup_type("struct mm_allocnode_s").sizeof
-                        )
-                    ):
-                        gdb.write(
-                            "\nThe address 0x%x found belongs to"
-                            "the memory node with base address 0x%x\n"
-                            % (address, charnode)
-                        )
+                    if address and (address < int(charnode + node["size"])
+                                    and address >= (int)(charnode + gdb.lookup_type("struct mm_allocnode_s").sizeof)):
+                        gdb.write("\nThe address 0x%x found belongs to"
+                                  "the memory node with base address 0x%x\n" % (address, charnode))
                         return
 
                     self.aordblks += 1
@@ -224,22 +211,20 @@ class Nxmemdump(gdb.Command):
         return gdb.COMPLETE_SYMBOL
 
     def parse_arguments(self, argv):
-        parser = argparse.ArgumentParser(description="memdump command")
-        parser.add_argument("-p", "--pid", type=str, help="Thread PID")
-        parser.add_argument("-a", "--addr", type=str, help="Query memory address")
-        parser.add_argument("-i", "--min", type=str, help="Minimum value")
-        parser.add_argument("-x", "--max", type=str, help="Maximum value")
-        parser.add_argument("--used", action="store_true", help="Used flag")
-        parser.add_argument("--free", action="store_true", help="Free flag")
+        parser = argparse.ArgumentParser(description='memdump command')
+        parser.add_argument('-p', "--pid", type=str, help='Thread PID')
+        parser.add_argument('-a', "--addr", type=str, help='Query memory address')
+        parser.add_argument('-i', "--min", type=str, help='Minimum value')
+        parser.add_argument('-x', "--max", type=str, help='Maximum value')
+        parser.add_argument('--used', action='store_true', help='Used flag')
+        parser.add_argument('--free', action='store_true', help='Free flag')
         args = parser.parse_args(args=(None if len(argv) == 1 else argv))
-        return {
-            "pid": int(args.pid, 0) if args.pid else None,
-            "seqmin": int(args.min, 0) if args.min else 0,
-            "seqmax": int(args.max, 0) if args.max else 0xFFFFFFFF,
-            "used": args.used,
-            "free": args.free,
-            "addr": int(args.addr, 0) if args.addr else None,
-        }
+        return {'pid': int(args.pid, 0) if args.pid else None,
+                'seqmin': int(args.min, 0) if args.min else 0,
+                'seqmax': int(args.max, 0) if args.max else 0xFFFFFFFF,
+                'used': args.used,
+                'free': args.free,
+                'addr': int(args.addr, 0) if args.addr else None}
 
     def invoke(self, args, from_tty):
         if gdb.lookup_type("size_t").sizeof == 4:
@@ -250,16 +235,16 @@ class Nxmemdump(gdb.Command):
         arg = self.parse_arguments(args.split(" "))
 
         pid = PID_MM_ALLOC
-        if arg["used"]:
+        if arg['used']:
             pid = PID_MM_ALLOC
-        elif arg["free"]:
+        elif arg['free']:
             pid = PID_MM_LEAK
-        elif arg["pid"]:
-            pid = arg["pid"]
+        elif arg['pid']:
+            pid = arg['pid']
 
         self.aordblks = 0
         self.uordblks = 0
-        self.memdump(pid, arg["seqmin"], arg["seqmax"], arg["addr"])
+        self.memdump(pid, arg['seqmin'], arg['seqmax'], arg['addr'])
 
 
 Nxmemdump()
