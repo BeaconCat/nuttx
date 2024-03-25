@@ -63,11 +63,11 @@ extern "C"
  * Input Parameters:
  *   val - this val carrying pid, tag and original fd information
  *
- * Returned Value: The original fd is returned.
+ * Returned Value: none
  *
  ****************************************************************************/
 
-int fdcheck_restore(int val);
+int fdcheck_restore(int fd);
 
 /****************************************************************************
  * Name: fdcheck_protect
