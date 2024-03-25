@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/Make.defs
+include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
 include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_FAMILY_LX6),y)
@@ -129,6 +129,7 @@ endif
 
 VPATH += chip
 VPATH += common
+VPATH += common/espressif
 VPATH += $(ARCH_SUBDIR)
 VPATH += $(CHIP_DIR)
 
@@ -201,12 +202,15 @@ export_startup: $(STARTUP_OBJS)
 
 # Dependencies
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_CSRC:.c=.ddc) $(HEAD_ASRC:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile chip/Make.defs $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MKDEP) --dep-path chip --dep-path common --dep-path $(ARCH_SUBDIR) \
-	 "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile DEPPATH="$(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))"
 	$(Q) touch $@
 
 depend: .depend

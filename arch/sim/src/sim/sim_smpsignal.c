@@ -74,7 +74,6 @@ static volatile spinlock_t g_cpu_resumed[CONFIG_SMP_NCPUS];
 
 static int sim_cpupause_handler(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   /* Check for false alarms.  Such false could occur as a consequence of
@@ -100,12 +99,6 @@ static int sim_cpupause_handler(int irq, void *context, void *arg)
 
       leave_critical_section(flags);
     }
-
-  tcb = current_task(cpu);
-  sim_savestate(tcb->xcp.regs);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  sim_restorestate(tcb->xcp.regs);
 
   return OK;
 }
@@ -251,6 +244,10 @@ int up_cpu_paused_restore(void)
 
   nxsched_resume_scheduler(tcb);
 
+  /* Restore the cpu lock */
+
+  restore_critical_section(tcb, this_cpu());
+
   /* Then switch contexts.  Any necessary address environment changes
    * will be made when the interrupt returns.
    */
@@ -270,7 +267,7 @@ int up_cpu_paused_restore(void)
 
 void host_cpu_started(void)
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+#ifdef CONFIG_SCHED_INSTRUMENTATION
   struct tcb_s *tcb = this_task();
 
   /* Notify that this CPU has started */
@@ -343,34 +340,6 @@ int sim_init_ipi(int irq)
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
- *
- * Description:
- *   pause task execution on the CPU
- *   check whether there are tasks delivered to specified cpu
- *   and try to run them.
- *
- * Input Parameters:
- *   cpu - The index of the CPU to be paused.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section;
- *
- ****************************************************************************/
-
-inline_function int up_cpu_pause_async(int cpu)
-{
-  /* Generate IRQ for CPU(cpu) */
-
-  host_send_ipi(cpu);
-
-  return OK;
-}
-
-/****************************************************************************
  * Name: up_cpu_pause
  *
  * Description:
@@ -412,7 +381,9 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  up_cpu_pause_async(cpu);
+  /* Generate IRQ for CPU(cpu) */
+
+  host_send_ipi(cpu);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
@@ -517,4 +488,3 @@ void up_send_smp_call(cpu_set_t cpuset)
     }
 }
 #endif
-
