@@ -163,7 +163,6 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
 
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-  struct boardioc_spinlock_s spinlock;
   pthread_t me = pthread_self();
   int ret;
 
@@ -177,10 +176,22 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
       return EDEADLOCK;
     }
 
-  spinlock.action = BOARDIOC_SPINLOCK_LOCK;
-  spinlock.lock = &lock->sp_lock;
-  spinlock.flags = NULL;
-  ret = boardctl(BOARDIOC_SPINLOCK, (uintptr_t)&spinlock);
+  /* Loop until we successfully take the spinlock (i.e., until the previous
+   * state of the spinlock was SP_UNLOCKED).
+   * NOTE that the test/set operation is performed via boardctl() to avoid a
+   * variety of issues.  An option might be to move the implementation of
+   * up_testset() to libs/libc/machine.
+   */
+
+  do
+    {
+#ifdef CONFIG_BUILD_FLAT
+      ret = up_testset(&lock->sp_lock) == SP_LOCKED ? 1 : 0;
+#else
+      ret = boardctl(BOARDIOC_TESTSET, (uintptr_t)&lock->sp_lock);
+#endif
+    }
+  while (ret == 1);
 
   /* Check for success (previous state was SP_UNLOCKED) */
 
@@ -222,7 +233,6 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
 
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  struct boardioc_spinlock_s spinlock;
   pthread_t me = pthread_self();
   int ret;
 
@@ -239,18 +249,21 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
     {
       /* Perform the test/set operation via boardctl() */
 
-      spinlock.action = BOARDIOC_SPINLOCK_TRYLOCK;
-      spinlock.lock = &lock->sp_lock;
-      spinlock.flags = NULL;
-      ret = boardctl(BOARDIOC_SPINLOCK, (uintptr_t)&spinlock);
-      if (ret == 0) /* Previously unlocked.  We hold the spinlock */
+      ret = boardctl(BOARDIOC_TESTSET, (uintptr_t)&lock->sp_lock);
+      switch (ret)
         {
-          lock->sp_holder = me;
-        }
-      else /* Previously locked.  We did not get the spinlock  */
-        {
-          DEBUGASSERT(ret < 0);
-          ret = -ret;
+          case 0:  /* Previously unlocked.  We hold the spinlock */
+            lock->sp_holder = me;
+            break;
+
+          case 1:  /* Previously locked.  We did not get the spinlock  */
+            ret = EBUSY;
+            break;
+
+          default:
+            DEBUGASSERT(ret < 0);
+            ret = -ret;
+            break;
         }
     }
 
@@ -288,7 +301,6 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
 
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  struct boardioc_spinlock_s spinlock;
   pthread_t me = pthread_self();
 
   DEBUGASSERT(lock != NULL &&
@@ -307,11 +319,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
   /* Release the lock */
 
   lock->sp_holder = IMPOSSIBLE_THREAD;
-  spinlock.action = BOARDIOC_SPINLOCK_UNLOCK;
-  spinlock.lock = &lock->sp_lock;
-  spinlock.flags = NULL;
-  boardctl(BOARDIOC_SPINLOCK, (uintptr_t)&spinlock);
-
+  spin_initialize(&lock->sp_lock, SP_UNLOCKED);
   return OK;
 }
 
