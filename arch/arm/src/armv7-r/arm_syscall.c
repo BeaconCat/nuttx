@@ -156,8 +156,7 @@ static void dispatch_syscall(void)
 
 uint32_t *arm_syscall(uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
+  struct tcb_s *tcb;
   uint32_t cmd;
   int cpu;
 #ifdef CONFIG_BUILD_PROTECTED
@@ -167,8 +166,6 @@ uint32_t *arm_syscall(uint32_t *regs)
   /* Nested interrupts are not supported */
 
   DEBUGASSERT(up_current_regs() == NULL);
-
-  tcb->xcp.regs = regs;
 
   /* Current regs non-zero indicates that we are processing an interrupt;
    * current_regs is also used to manage interrupt level context switches.
@@ -271,7 +268,7 @@ uint32_t *arm_syscall(uint32_t *regs)
            * set will determine the restored context.
            */
 
-          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
+          up_set_current_regs((uint32_t *)regs[REG_R1]);
           DEBUGASSERT(up_current_regs());
         }
         break;
@@ -297,7 +294,7 @@ uint32_t *arm_syscall(uint32_t *regs)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          tcb->xcp.regs = (uint32_t *)regs[REG_R2];
+          up_set_current_regs((uint32_t *)regs[REG_R2]);
         }
         break;
 
@@ -427,7 +424,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
               /* Copy "info" into user stack */
 
-              if (rtcb->sigdeliver)
+              if (rtcb->xcp.sigdeliver)
                 {
                   usp = rtcb->xcp.saved_regs[REG_SP];
                 }
@@ -564,25 +561,22 @@ uint32_t *arm_syscall(uint32_t *regs)
         break;
     }
 
-  if (regs != tcb->xcp.regs)
+  /* Restore the cpu lock */
+
+  if (regs != up_current_regs())
     {
-      cpu = this_cpu();
-
-      /* Update scheduler parameters */
-
-      nxsched_suspend_scheduler(g_running_tasks[cpu]);
-      nxsched_resume_scheduler(tcb);
-
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.
        */
 
+      cpu = this_cpu();
+      tcb = current_task(cpu);
       g_running_tasks[cpu] = tcb;
 
       /* Restore the cpu lock */
 
       restore_critical_section(tcb, cpu);
-      regs = tcb->xcp.regs;
+      regs = up_current_regs();
     }
 
   /* Report what happened */
