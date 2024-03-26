@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
 #  include <stdbool.h>
-#  include <arch/syscall.h>
 #endif
 
 /****************************************************************************
@@ -77,17 +76,6 @@
 
 #ifndef __ASSEMBLY__
 
-#ifndef up_switch_context
-#define up_switch_context(tcb, rtcb)                              \
-  do {                                                            \
-    if (!up_interrupt_context())                                  \
-      {                                                           \
-        sys_call2(SYS_switch_context, (uintptr_t)&rtcb->xcp.regs, \
-                  (uintptr_t)tcb->xcp.regs);                      \
-      }                                                           \
-  } while (0)
-#endif
-
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -97,12 +85,33 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: up_getusrpc
+ * Inline functions
  ****************************************************************************/
 
-#define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
+/****************************************************************************
+ * Name: up_interrupt_context
+ *
+ * Description:
+ *   Return true is we are currently executing in the interrupt
+ *   handler context.
+ *
+ ****************************************************************************/
 
+noinstrument_function
+static inline bool up_interrupt_context(void)
+{
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
+#endif
+
+  bool ret = up_current_regs() != NULL;
+
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+
+  return ret;
+}
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN
