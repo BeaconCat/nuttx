@@ -44,15 +44,43 @@
 
 #include <arch/chip/irq.h>
 
-#ifndef __ASSEMBLY__
-#  include <stdint.h>
-#endif
-
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
 
-#define up_getsp()              (uintptr_t)__builtin_frame_address(0)
+#define up_getsp()          (uintptr_t)__builtin_frame_address(0)
+
+/* MPIDR_EL1, Multiprocessor Affinity Register */
+
+#define MPIDR_AFFLVL_MASK   (CONFIG_SMP_NCPUS - 1)
+
+#define MPIDR_AFF0_SHIFT    (0)
+#define MPIDR_AFF1_SHIFT    (8)
+#define MPIDR_AFF2_SHIFT    (16)
+#define MPIDR_AFF3_SHIFT    (32)
+
+/* mpidr_el1 register, the register is define:
+ *   - bit 0~7:   Aff0
+ *   - bit 8~15:  Aff1
+ *   - bit 16~23: Aff2
+ *   - bit 24:    MT, multithreading
+ *   - bit 25~29: RES0
+ *   - bit 30:    U, multiprocessor/Uniprocessor
+ *   - bit 31:    RES1
+ *   - bit 32~39: Aff3
+ *   - bit 40~63: RES0
+ *   Different ARM64 Core will use different Affn define, the mpidr_el1
+ *  value is not CPU number, So we need to change CPU number to mpid
+ *  and vice versa
+ */
+
+#define GET_MPIDR()                              \
+  ({                                             \
+    uint64_t __val;                              \
+    __asm__ volatile ("mrs %0, mpidr_el1"        \
+                    : "=r" (__val) :: "memory"); \
+    __val;                                       \
+  })
 
 /****************************************************************************
  * Exception stack frame format:
@@ -207,9 +235,9 @@ extern "C"
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
+ * register storage structure.  If is non-NULL only during interrupt
  * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -217,7 +245,6 @@ extern "C"
  */
 
 EXTERN volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 struct xcptcontext
 {
@@ -254,7 +281,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   uintptr_t far;
 #endif
 
@@ -376,10 +403,20 @@ static inline void up_irq_restore(irqstate_t flags)
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int up_cpu_index(void);
+#  define up_cpu_index() ((int)MPID_TO_CORE(GET_MPIDR()))
 #else
 #  define up_cpu_index() (0)
 #endif
+
+static inline_function uint64_t *get_current_regs(void)
+{
+  return (uint64_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void set_current_regs(uint64_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
 
 /****************************************************************************
  * Name: up_interrupt_context
@@ -389,13 +426,13 @@ int up_cpu_index(void);
  *
  ****************************************************************************/
 
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = (CURRENT_REGS != NULL);
+  bool ret = (get_current_regs() != NULL);
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -403,6 +440,13 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uintptr_t *)((regs) ? (regs) : get_current_regs()))[REG_ELR])
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -83,9 +83,9 @@ extern "C"
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -93,7 +93,6 @@ extern "C"
  */
 
 EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 /****************************************************************************
  * Public Function Prototypes
@@ -125,6 +124,16 @@ int up_cpu_index(void) noinstrument_function;
  * Inline functions
  ****************************************************************************/
 
+static inline_function uint32_t *get_current_regs(void)
+{
+  return (uint32_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void set_current_regs(uint32_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
+
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -135,13 +144,13 @@ int up_cpu_index(void) noinstrument_function;
  ****************************************************************************/
 
 noinstrument_function
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = CURRENT_REGS != NULL;
+  bool ret = get_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -149,6 +158,14 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_PC])
+
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN
