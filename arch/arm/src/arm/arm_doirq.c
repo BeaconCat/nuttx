@@ -64,13 +64,13 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 #else
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(CURRENT_REGS == NULL);
+  DEBUGASSERT(get_current_regs() == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * CURRENT_REGS is also used to manage interrupt level context switches.
+   * current_regs is also used to manage interrupt level context switches.
    */
 
-  CURRENT_REGS = regs;
+  set_current_regs(regs);
 
   /* Acknowledge the interrupt */
 
@@ -81,13 +81,13 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   irq_dispatch(irq, regs);
 
   /* Check for a context switch.  If a context switch occurred, then
-   * CURRENT_REGS will have a different value than it did on entry.  If an
+   * current_regs will have a different value than it did on entry.  If an
    * interrupt level context switch has occurred, then restore the floating
    * point state and the establish the correct address environment before
    * returning from the interrupt.
    */
 
-  if (regs != CURRENT_REGS)
+  if (regs != get_current_regs())
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -104,16 +104,16 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_inirq();
 
-      regs = (uint32_t *)CURRENT_REGS;
+      regs = get_current_regs();
     }
 
-  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
+  /* Set current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  CURRENT_REGS = NULL;
+  set_current_regs(NULL);
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;
