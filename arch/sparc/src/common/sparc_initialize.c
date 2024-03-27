@@ -103,11 +103,14 @@ volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 7
 static inline void up_color_intstack(void)
 {
-  int cpu;
+  uint32_t *ptr = (uint32_t *)sparc_intstack_alloc();
+  ssize_t size;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (size = ((CONFIG_ARCH_INTERRUPTSTACK & ~7) * CONFIG_SMP_NCPUS);
+       size > 0;
+       size -= sizeof(uint32_t))
     {
-      sparc_stack_color((void *)sparc_intstack_alloc(cpu), INTSTACK_SIZE);
+      *ptr++ = INTSTACK_COLOR;
     }
 }
 #else

@@ -58,9 +58,6 @@
 
 uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
 {
-  int cpu = up_cpu_index();
-  uintptr_t **current_regs = (uintptr_t **)&g_current_regs[cpu];
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -79,8 +76,8 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
    * Nested interrupts are not supported
    */
 
-  DEBUGASSERT(*current_regs == NULL);
-  *current_regs = regs;
+  DEBUGASSERT(CURRENT_REGS == NULL);
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
@@ -93,7 +90,7 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != *current_regs)
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -110,7 +107,11 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * crashes.
        */
 
-      g_running_tasks[cpu] = current_task(cpu);
+      g_running_tasks[this_cpu()] = this_task();
+
+      /* Restore the cpu lock */
+
+      restore_critical_section();
 
       /* If a context switch occurred while processing the interrupt then
        * CURRENT_REGS may have change value.  If we return any value
@@ -118,14 +119,14 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * that a context switch occurred during interrupt processing.
        */
 
-      regs = *current_regs;
+      regs = (uintptr_t *)CURRENT_REGS;
     }
 
   /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  *current_regs = NULL;
+  CURRENT_REGS = NULL;
 
 #endif
   board_autoled_off(LED_INIRQ);

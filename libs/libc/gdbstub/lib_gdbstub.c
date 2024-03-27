@@ -782,39 +782,6 @@ static int gdb_send_ok_packet(FAR struct gdb_state_s *state)
 }
 
 /****************************************************************************
- * Name: gdb_send_signal_packet
- *
- * Description:
- *   Send a signal packet (S AA).
- *
- * Input Parameters:
- *   state   - The pointer to the GDB state structure.
- *   signal  - The signal to send.
- *
- * Returned Value:
- *   Zero on success.
- *   Negative value on error.
- *
- ****************************************************************************/
-
-static int gdb_send_signal_packet(FAR struct gdb_state_s *state,
-                                  unsigned char signal)
-{
-  int ret;
-
-  state->pkt_buf[0] = 'S';
-  ret = gdb_bin2hex(&state->pkt_buf[1], sizeof(state->pkt_buf) - 1,
-                    &signal, 1);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  state->pkt_len = 1 + ret;
-  return gdb_send_packet(state);
-}
-
-/****************************************************************************
  * Name: gdb_send_error_packet
  *
  * Description:
@@ -1349,7 +1316,6 @@ static int gdb_is_thread_active(FAR struct gdb_state_s *state)
  *   Negative value on error.
  *
  * Note : Comand Format: Hg<id>
- *                       Hc-<id>
  *        Rsponse Format: OK
  ****************************************************************************/
 
@@ -1359,19 +1325,12 @@ static int gdb_thread_context(FAR struct gdb_state_s *state)
   uintptr_t pid;
   int ret;
 
-  if (state->pkt_buf[1] == 'g')
-    {
-      state->pkt_next += 2;
-    }
-  else if  (state->pkt_buf[1] == 'c')
-    {
-      state->pkt_next += 3;
-    }
-  else
+  if (state->pkt_buf[1] != 'g')
     {
       return -EINVAL;
     }
 
+  state->pkt_next += 2;
   ret = gdb_expect_integer(state, &pid);
   if (ret < 0)
     {
@@ -1574,13 +1533,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-          type = DEBUGPOINT_WATCHPOINT_WO;
+        type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-          type = DEBUGPOINT_WATCHPOINT_RO;
+        type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-          type = DEBUGPOINT_WATCHPOINT_RW;
+        type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1797,7 +1756,7 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
       switch (state->pkt_buf[0])
         {
           case '?': /* gdbserial status */
-            ret = gdb_send_signal_packet(state, 0x00);
+            ret = gdb_send_stop(state, stopreason, stopaddr);
             break;
           case 'g': /* Read registers */
             ret = gdb_read_registers(state);
@@ -1875,7 +1834,9 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
+#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;
