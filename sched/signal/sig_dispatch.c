@@ -66,7 +66,6 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
   irqstate_t     flags;
   int            ret = OK;
 
-  sched_lock();
   DEBUGASSERT(stcb != NULL && stcb->group != NULL);
 
   /* Find the group sigaction associated with this signal */
@@ -118,7 +117,6 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
         }
     }
 
-  sched_unlock();
   return ret;
 }
 
@@ -324,7 +322,7 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 
 int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int masked;
   int ret = OK;
@@ -394,15 +392,12 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
        */
 
       flags = enter_critical_section();
+      rtcb = this_task_inirq();
       if (stcb->task_state == TSTATE_WAIT_SIG &&
           (masked == 0 ||
            nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
         {
-          if (stcb->sigunbinfo != NULL)
-            {
-              memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-            }
-
+          memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
           sigemptyset(&stcb->sigwaitmask);
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
@@ -412,7 +407,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           /* Remove the task from waitting list */
 
-          dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
+          dq_rem((FAR dq_entry_t *)stcb, &g_waitingforsignal);
 
           /* Add the task to ready-to-run task list and
            * perform the context switch if one is needed
@@ -457,6 +452,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       /* Deliver of the signal must be performed in a critical section */
 
       flags = enter_critical_section();
+      rtcb = this_task_inirq();
 
       /* Check if the task is waiting for an unmasked signal. If so, then
        * unblock it. This must be performed in a critical section because
@@ -465,11 +461,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       if (stcb->task_state == TSTATE_WAIT_SIG)
         {
-          if (stcb->sigunbinfo != NULL)
-            {
-              memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-            }
-
+          memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
           sigemptyset(&stcb->sigwaitmask);
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
@@ -479,7 +471,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           /* Remove the task from waitting list */
 
-          dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
+          dq_rem((FAR dq_entry_t *)stcb, &g_waitingforsignal);
 
           /* Add the task to ready-to-run task list and
            * perform the context switch if one is needed
@@ -508,6 +500,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
   if (masked == 0)
     {
       flags = enter_critical_section();
+      rtcb = this_task_inirq();
 
       /* If the task is blocked waiting for a semaphore, then that task must
        * be unblocked when a signal is received.
@@ -543,7 +536,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 #else
           /* Remove the task from waitting list */
 
-          dq_rem((FAR dq_entry_t *)stcb, list_stoppedtasks());
+          dq_rem((FAR dq_entry_t *)stcb, &g_stoppedtasks);
 
           /* Add the task to ready-to-run task list and
            * perform the context switch if one is needed

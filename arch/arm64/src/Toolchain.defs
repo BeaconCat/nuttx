@@ -81,7 +81,23 @@ ifeq ($(CONFIG_MM_UBSAN_TRAP_ON_ERROR),y)
 endif
 
 ifeq ($(CONFIG_MM_KASAN_ALL),y)
-  ARCHOPTIMIZATION += -fsanitize=kernel-address
+  ifeq ($(CONFIG_MM_KASAN_GENERIC),y)
+    ARCHOPTIMIZATION += -fsanitize=kernel-address
+  else ifeq ($(CONFIG_MM_KASAN_SW_TAGS),y)
+    ARCHOPTIMIZATION += -fsanitize=kernel-hwaddress
+  endif
+endif
+
+ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
+  ARCHOPTIMIZATION += --param asan-globals=1
+endif
+
+ifeq ($(CONFIG_MM_KASAN_DISABLE_READS_CHECK),y)
+  ARCHOPTIMIZATION += --param asan-instrument-reads=0
+endif
+
+ifeq ($(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK),y)
+  ARCHOPTIMIZATION += --param asan-instrument-writes=0
 endif
 
 # Instrumentation options
@@ -96,7 +112,7 @@ ifeq ($(CONFIG_ARCH_FPU),y)
 endif
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common
+ARCHCXXFLAGS += -fno-common -nostdinc++
 
 ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Werror -Wno-attributes -Wno-unknown-pragmas
 ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
@@ -104,12 +120,6 @@ ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 # When all C++ code is built using GCC 7.1 or a higher version,
 # we can safely disregard warnings of the type "parameter passing for X changed in GCC 7.1."
 # Refer to : https://stackoverflow.com/questions/48149323/what-does-the-gcc-warning-project-parameter-passing-for-x-changed-in-gcc-7-1-m
-
-ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
-  ARCHCXXFLAGS += -nostdinc++
-else
-  ARCHCXXFLAGS += -D_STDLIB_H_
-endif
 
 ifneq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   ARCHCFLAGS += -Wno-psabi
@@ -137,6 +147,12 @@ ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
   ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
 endif
 
+# Debug --whole-archive
+
+ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
+  LDFLAGS += --whole-archive
+endif
+
 # Debug link map
 
 ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
@@ -144,7 +160,7 @@ ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION += -g
+  ARCHOPTIMIZATION += -g3
 endif
 
 CROSSDEV ?= aarch64-none-elf-
