@@ -626,7 +626,7 @@ static int cdcacm_requeue_rdrequest(FAR struct cdcacm_dev_s *priv,
   /* Requeue the read request */
 
   ep       = priv->epbulkout;
-  req->len = MAX(CONFIG_CDCACM_BULKOUT_REQLEN, ep->maxpacket);
+  req->len = ep->maxpacket;
   ret      = EP_SUBMIT(ep, req);
   if (ret != OK)
     {
@@ -1042,6 +1042,8 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
 
   priv->epbulkout->priv = priv;
 
+  /* Queue read requests in the bulk OUT endpoint */
+
   DEBUGASSERT(priv->nrdq == 0);
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
     {
@@ -1340,11 +1342,6 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
 #else
   reqlen = CONFIG_CDCACM_EPBULKOUT_FSSIZE;
 #endif
-
-  if (CONFIG_CDCACM_BULKOUT_REQLEN > reqlen)
-    {
-      reqlen = CONFIG_CDCACM_BULKOUT_REQLEN;
-    }
 
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
     {
