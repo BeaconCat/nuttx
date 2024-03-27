@@ -214,18 +214,6 @@ pid_t up_fork(void);
 void up_initialize(void);
 
 /****************************************************************************
- * Name: up_systempoweroff
- *
- * Description:
- *   The function up_systempoweroff() will power down the MCU.  Optional!
- *   Availability of this function is dependent upon the architecture
- *   support.
- *
- ****************************************************************************/
-
-void up_systempoweroff(void) noreturn_function;
-
-/****************************************************************************
  * Name: up_systemreset
  *
  * Description:
@@ -761,17 +749,12 @@ void up_extraheaps_init(void);
  * Name: up_textheap_memalign
  *
  * Description:
- *   Allocate memory for text with the specified alignment and sectname.
+ *   Allocate memory for text sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_textheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_textheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -802,17 +785,12 @@ bool up_textheap_heapmember(FAR void *p);
  * Name: up_dataheap_memalign
  *
  * Description:
- *   Allocate memory for data with the specified alignment and sectname.
+ *   Allocate memory for data sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_dataheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_dataheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -1400,12 +1378,31 @@ uintptr_t up_addrenv_page_vaddr(uintptr_t page);
  *   vaddr - The virtual address.
  *
  * Returned Value:
- *   True if it is; false if it's not
+ *   True if it is; false if it's not.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
 bool up_addrenv_user_vaddr(uintptr_t vaddr);
+#endif
+
+/****************************************************************************
+ * Name: up_addrenv_page_wipe
+ *
+ * Description:
+ *   Wipe a page of physical memory, first mapping it into kernel virtual
+ *   memory.
+ *
+ * Input Parameters:
+ *   page - The page physical address.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+void up_addrenv_page_wipe(uintptr_t page);
 #endif
 
 /****************************************************************************
@@ -2503,7 +2500,7 @@ void nxsched_alarm_tick_expiration(clock_t ticks);
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_CPULOAD_EXTCLK
-void nxsched_process_cpuload_ticks(clock_t ticks);
+void nxsched_process_cpuload_ticks(uint32_t ticks);
 #  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
 #endif
 
@@ -2539,12 +2536,12 @@ void irq_dispatch(int irq, FAR void *context);
 struct tcb_s;
 size_t up_check_tcbstack(FAR struct tcb_s *tcb);
 #if defined(CONFIG_ARCH_INTERRUPTSTACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
-size_t up_check_intstack(int cpu);
+size_t up_check_intstack(void);
 #endif
 #endif
 
 #if defined(CONFIG_ARCH_INTERRUPTSTACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
-uintptr_t up_get_intstackbase(int cpu);
+uintptr_t up_get_intstackbase(void);
 #endif
 
 /****************************************************************************
@@ -2849,9 +2846,9 @@ void arch_sporadic_resume(FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 void up_perf_init(FAR void *arg);
-clock_t up_perf_gettime(void);
+unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
-void up_perf_convert(clock_t elapsed, FAR struct timespec *ts);
+void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
