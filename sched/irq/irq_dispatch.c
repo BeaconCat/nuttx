@@ -49,6 +49,10 @@
  * interrupt request
  */
 
+#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ
+#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ 0
+#endif
+
 #ifdef CONFIG_SCHED_IRQMONITOR
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
@@ -96,7 +100,7 @@
 void irq_dispatch(int irq, FAR void *context)
 {
 #ifdef CONFIG_DEBUG_MM
-  struct tcb_s *rtcb = this_task_inirq();
+  struct tcb_s *rtcb = this_task();
 #endif
   xcpt_t vector = irq_unexpected_isr;
   FAR void *arg = NULL;
@@ -150,7 +154,7 @@ void irq_dispatch(int irq, FAR void *context)
 
 #ifdef CONFIG_DEBUG_MM
   if ((rtcb->flags & TCB_FLAG_HEAP_CHECK) ||
-      (this_task_inirq()->flags & TCB_FLAG_HEAP_CHECK))
+      (this_task()->flags & TCB_FLAG_HEAP_CHECK))
     {
       kmm_checkcorruption();
     }

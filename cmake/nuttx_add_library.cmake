@@ -194,8 +194,10 @@ endfunction()
 #
 # Add extra library to extra attribute
 #
-function(nuttx_add_extra_library target)
-  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
+function(nuttx_add_extra_library)
+  foreach(target ${ARGN})
+    set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
+  endforeach()
 endfunction()
 
 # Import static library
@@ -204,4 +206,23 @@ function(nuttx_library_import library_name library_path)
   add_library(${library_name} STATIC IMPORTED GLOBAL)
   set_target_properties(${library_name} PROPERTIES IMPORTED_LOCATION
                                                    ${library_path})
+endfunction()
+
+# nuttx_add_external_library
+#
+# the target library of add_library has been called in external CMakeLists.txt
+# so that they can be added to the final link
+#
+# Usually used with Nuttx to include an external system that already supports
+# CMake compilation
+function(nuttx_add_external_library target)
+  cmake_parse_arguments(ARGS "" MODE "" ${ARGN})
+  if(NOT ARGS_MODE)
+    set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+  elseif("${ARGS_MODE}" STREQUAL "APPS")
+    set_property(GLOBAL APPEND PROPERTY NUTTX_APPS_LIBRARIES ${target})
+  elseif("${ARGS_MODE}" STREQUAL "KERNEL")
+    set_property(GLOBAL APPEND PROPERTY NUTTX_KERNEL_LIBRARIES ${target})
+  endif()
+  nuttx_add_library_internal(${target})
 endfunction()
