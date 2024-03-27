@@ -113,8 +113,13 @@ set(ARCHCFLAGS
     "-Wstrict-prototypes -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 set(ARCHCXXFLAGS
-    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
-)
+    "-fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas")
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
+else()
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
+endif()
 
 if(NOT ${CONFIG_ARCH_TOOLCHAIN_CLANG})
   string(APPEND ARCHCFLAGS " -Wno-psabi")
@@ -145,12 +150,7 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
-# Debug --whole-archive
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
-endif()
-
-add_link_options(-Wl,-nostdlib)
+add_link_options(-nostdlib)
 add_link_options(-Wl,--entry=__start)
 
 if(CONFIG_DEBUG_LINK_MAP)
@@ -158,7 +158,7 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 if(NOT "${CMAKE_C_FLAGS}" STREQUAL "")
@@ -189,24 +189,52 @@ if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL GNU_RVG)
     set(ARCHRVISAZ "_zicsr_zifencei")
   endif()
 
+  set(ARCHCPUEXTFLAGS i)
+
   if(CONFIG_ARCH_RV_ISA_M)
-    set(ARCHRVISAM m)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}m)
   endif()
 
   if(CONFIG_ARCH_RV_ISA_A)
-    set(ARCHRVISAA a)
-  endif()
-
-  if(CONFIG_ARCH_RV_ISA_C)
-    set(ARCHRVISAC c)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}a)
   endif()
 
   if(CONFIG_ARCH_FPU)
-    set(ARCHRVISAF f)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}f)
   endif()
 
   if(CONFIG_ARCH_DPFPU)
-    set(ARCHRVISAD d)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}d)
+  endif()
+
+  if(CONFIG_ARCH_QPFPU)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}q)
+  endif()
+
+  if(CONFIG_ARCH_RV_ISA_C)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}c)
+  endif()
+
+  if(CONFIG_ARCH_RV_ISA_V)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}v)
+  endif()
+
+  if(CONFIG_ARCH_RV_ISA_ZICSR_ZIFENCEI)
+    if(NOT DEFINED GCCVER)
+      execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
+                      OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
+      string(REGEX MATCH "\\+\\+.* ([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
+                   "${GCC_VERSION_OUTPUT}")
+      set(GCCVER ${CMAKE_MATCH_1})
+    endif()
+    if(GCCVER GREATER_EQUAL 12)
+      set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicsr_zifencei)
+    endif()
+  endif()
+
+  if(CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS)
+    set(ARCHCPUEXTFLAGS
+        ${ARCHCPUEXTFLAGS}_${CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS})
   endif()
 
   # Detect abi type
@@ -223,9 +251,6 @@ if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL GNU_RVG)
 
   # Construct arch flags
 
-  set(ARCHCPUEXTFLAGS
-      i${ARCHRVISAM}${ARCHRVISAA}${ARCHRVISAF}${ARCHRVISAD}${ARCHRVISAC}${ARCHRVISAZ}
-  )
   set(ARCHCPUFLAGS -march=${ARCHTYPE}${ARCHCPUEXTFLAGS})
 
   # Construct arch abi flags
@@ -251,21 +276,21 @@ if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL GNU_RVG)
   # These models can't cover all implementation of RISCV, but it's enough for
   # most cases.
 
-  set(PLATFORM_FLAGS)
+  set(LLVM_CPUFLAGS)
 
   if(CONFIG_ARCH_RV32)
     if(${ARCHCPUEXTFLAGS} STREQUAL imc)
-      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e20)
+      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e20)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imac)
-      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e31)
+      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e31)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imafc)
-      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e76)
+      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e76)
     endif()
   else()
     if(${ARCHCPUEXTFLAGS} STREQUAL imac)
-      list(APPEND PLATFORM_FLAGS -mcpu=sifive-s51)
+      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-s51)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imafdc)
-      list(APPEND PLATFORM_FLAGS -mcpu=sifive-u54)
+      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-u54)
     endif()
   endif()
 
@@ -277,10 +302,6 @@ endif()
 
 if(CONFIG_MM_KASAN_ALL)
   add_compile_options(-fsanitize=kernel-address)
-endif()
-
-if(CONFIG_MM_KASAN_GLOBAL)
-  add_compile_options(--param asan-globals=1)
 endif()
 
 if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
@@ -297,10 +318,4 @@ endif()
 
 if(CONFIG_MM_UBSAN_TRAP_ON_ERROR)
   add_compile_options(-fsanitize-undefined-trap-on-error)
-endif()
-
-# Instrumentation options
-
-if(CONFIG_ARCH_INSTRUMENT_ALL)
-  add_compile_options(-finstrument-functions)
 endif()
