@@ -74,7 +74,8 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
 
   /* Trim inqueue entries if needed */
 
-  nrequire = (pktlen + offset + IOB_BUFSIZE(iob) - 1) / IOB_BUFSIZE(iob);
+  nrequire = (pktlen + offset + CONFIG_IOB_BUFSIZE - 1) /
+             CONFIG_IOB_BUFSIZE;
   if (nrequire == 0)
     {
       nrequire = 1;
@@ -129,9 +130,9 @@ int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
   next = iob;
   while (next != NULL && pktlen > 0)
     {
-      if (pktlen + next->io_offset > IOB_BUFSIZE(next))
+      if (pktlen + next->io_offset > CONFIG_IOB_BUFSIZE)
         {
-          len = IOB_BUFSIZE(next) - next->io_offset;
+          len = CONFIG_IOB_BUFSIZE - next->io_offset;
         }
       else
         {
