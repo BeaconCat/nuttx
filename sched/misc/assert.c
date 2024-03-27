@@ -26,7 +26,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
-#include <nuttx/coredump.h>
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
@@ -47,6 +46,7 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
+#include "misc/coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -89,8 +89,6 @@ static FAR const char * const g_ttypenames[4] =
   "Kthread",
   "Invalid"
 };
-
-static bool g_fatal_assert = false;
 
 /****************************************************************************
  * Private Functions
@@ -196,7 +194,7 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
 static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 {
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  uintptr_t intstack_base = up_get_intstackbase(up_cpu_index());
+  uintptr_t intstack_base = up_get_intstackbase();
   size_t intstack_size = CONFIG_ARCH_INTERRUPTSTACK;
   uintptr_t intstack_top = intstack_base + intstack_size;
   uintptr_t intstack_sp = 0;
@@ -245,13 +243,13 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
                  intstack_base,
                  intstack_size,
 #ifdef CONFIG_STACK_COLORATION
-                 up_check_intstack(up_cpu_index())
+                 up_check_intstack()
 #else
                  0
 #endif
                  );
 
-      tcbstack_sp = CURRENT_REGS ? up_getusrsp((FAR void *)CURRENT_REGS) : 0;
+      tcbstack_sp = up_getusrsp((FAR void *)CURRENT_REGS);
       if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
         {
           tcbstack_sp = 0;
@@ -407,8 +405,17 @@ static void dump_backtrace(FAR struct tcb_s *tcb, FAR void *arg)
 
 static void dump_tasks(void)
 {
-#if CONFIG_ARCH_INTERRUPTSTACK > 0
-  int cpu;
+#if CONFIG_ARCH_INTERRUPTSTACK > 0 && defined(CONFIG_STACK_COLORATION)
+  size_t stack_used = up_check_intstack();
+  size_t stack_filled = 0;
+
+  if (stack_used > 0)
+    {
+      /* Use fixed-point math with one decimal place */
+
+      stack_filled = 10 * 100 *
+                     stack_used / CONFIG_ARCH_INTERRUPTSTACK;
+    }
 #endif
 
   /* Dump interesting properties of each task in the crash environment */
@@ -431,50 +438,31 @@ static void dump_tasks(void)
          "   COMMAND\n");
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
-    {
-#  ifdef CONFIG_STACK_COLORATION
-      size_t stack_used = up_check_intstack(cpu);
-      size_t stack_filled = 0;
-
-      if (stack_used > 0)
-        {
-          /* Use fixed-point math with one decimal place */
-
-          stack_filled = 10 * 100 *
-                         stack_used / CONFIG_ARCH_INTERRUPTSTACK;
-        }
-#  endif
-
-      _alert("  ----   ---"
+  _alert("  ----   ---"
 #  ifdef CONFIG_SMP
-             "  %4d"
+         "  ----"
 #  endif
-             " --- --------"
-             " ------- ---"
-             " ------- ----------"
-             " ----------------"
-             " %p"
-             "   %7u"
+         " --- --------"
+         " ------- ---"
+         " ------- ----------"
+         " ----------------"
+         " %p"
+         "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
-             "   %7zu   %3zu.%1zu%%%c"
+         "   %7zu   %3zu.%1zu%%%c"
 #  endif
 #  ifndef CONFIG_SCHED_CPULOAD_NONE
-             "     ----"
+         "     ----"
 #  endif
-             "   irq\n"
-#ifdef CONFIG_SMP
-             , cpu
-#endif
-             , (FAR void *)up_get_intstackbase(cpu)
-             , CONFIG_ARCH_INTERRUPTSTACK
+         "   irq\n"
+         , (FAR void *)up_get_intstackbase()
+         , CONFIG_ARCH_INTERRUPTSTACK
 #  ifdef CONFIG_STACK_COLORATION
-             , stack_used
-             , stack_filled / 10, stack_filled % 10,
-             (stack_filled >= 10 * 80 ? '!' : ' ')
+         , stack_used
+         , stack_filled / 10, stack_filled % 10,
+         (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif
-            );
-    }
+        );
 #endif
 
   nxsched_foreach(dump_task, NULL);
@@ -510,25 +498,6 @@ static void dump_deadlock(void)
 #endif
 
 /****************************************************************************
- * Name: pause_all_cpu
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-static void pause_all_cpu(void)
-{
-  int cpu;
-
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
-    {
-      if (cpu != this_cpu())
-        {
-          up_cpu_pause(cpu);
-        }
-    }
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -557,17 +526,7 @@ void _assert(FAR const char *filename, int linenum,
 
   flags = enter_critical_section();
 
-  if (g_fatal_assert)
-    {
-      goto reset;
-    }
-
-  if (fatal)
-    {
-#ifdef CONFIG_SMP
-      pause_all_cpu();
-#endif
-    }
+  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -587,11 +546,7 @@ void _assert(FAR const char *filename, int linenum,
     {
       fatal = false;
     }
-  else
 #endif
-    {
-      g_fatal_assert = true;
-    }
 
   notifier_data.rtcb = rtcb;
   notifier_data.regs = regs;
@@ -626,7 +581,7 @@ void _assert(FAR const char *filename, int linenum,
          msg ? msg : "",
          filename ? filename : "", linenum,
 #ifdef CONFIG_SMP
-         up_cpu_index(),
+         this_cpu(),
 #endif
 #if CONFIG_TASK_NAME_SIZE > 0
          rtcb->name,
@@ -690,7 +645,6 @@ void _assert(FAR const char *filename, int linenum,
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
-reset:
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
@@ -707,6 +661,8 @@ reset:
         }
 #endif
     }
+
+  sched_unlock();
 
   leave_critical_section(flags);
 }

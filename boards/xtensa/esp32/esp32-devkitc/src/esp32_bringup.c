@@ -100,6 +100,10 @@
 #  include "esp32_tca9548a.h"
 #endif
 
+#ifdef CONFIG_SENSORS_APDS9960
+#include "esp32_board_apds9960.h"
+#endif
+
 #ifdef CONFIG_SENSORS_BMP180
 #  include "esp32_bmp180.h"
 #endif
@@ -112,7 +116,7 @@
 #  include "esp32_sht3x.h"
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
 #  include "esp32_ms5611.h"
 #endif
 
@@ -137,6 +141,10 @@
 #  include <nuttx/lcd/lcd_dev.h>
 #endif
 
+#ifdef CONFIG_VIDEO_FB
+#  include <nuttx/video/fb.h>
+#endif
+
 #ifdef CONFIG_RTC_DRIVER
 #  include "esp32_rtc_lowerhalf.h"
 #endif
@@ -153,8 +161,8 @@
 #  include "esp32_max6675.h"
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-#  include "esp32_rmt.h"
+#ifdef CONFIG_DAC
+#  include "esp32_board_dac.h"
 #endif
 
 #include "esp32-devkitc.h"
@@ -247,7 +255,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32_SPIFLASH
-  ret = esp32_spiflash_init();
+  ret = board_spiflash_init();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
@@ -321,6 +329,14 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
              ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32_OPENETH
+  ret = esp32_openeth_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize Open ETH ethernet.\n");
     }
 #endif
 
@@ -542,7 +558,7 @@ int esp32_bringup(void)
 
 #endif /* CONFIG_AUDIO_CS4344 */
 
-#endif  /* CONFIG_ESP32_I2S0 */
+#endif /* CONFIG_ESP32_I2S0 */
 
 #ifdef CONFIG_ESP32_I2S1
 
@@ -567,7 +583,7 @@ int esp32_bringup(void)
              CONFIG_ESP32_I2S1, ret);
     }
 
-#endif  /* CONFIG_ESP32_I2S1 */
+#endif /* CONFIG_ESP32_I2S1 */
 
 #endif /* CONFIG_ESP32_I2S */
 
@@ -582,7 +598,7 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
   /* Try to register MS5611 device in I2C0 as device 0: I2C addr 0x77 */
 
   ret = board_ms5611_initialize(0, 0);
@@ -629,11 +645,11 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-  ret = board_rmt_initialize(RMT_CHANNEL, RMT_OUTPUT_PIN);
+#ifdef CONFIG_DAC
+  ret = board_dac_initialize(CONFIG_ESP32_DAC_DEVPATH);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: board_rmt_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: board_dac_initialize(0) failed: %d\n", ret);
     }
 #endif
 
@@ -667,6 +683,27 @@ int esp32_bringup(void)
       syslog(LOG_ERR, "Failed to initialize ws2812 driver\n");
     }
 #  endif
+#endif
+
+#ifdef CONFIG_VIDEO_FB
+  /* Initialize and register the framebuffer driver */
+
+  ret = fb_register(0, 0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_SENSORS_APDS9960
+  /* Register the APDS-9960 gesture sensor */
+
+  ret = board_apds9960_initialize(0, 0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_apds9960_initialize() failed: %d\n",
+             ret);
+    }
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but
