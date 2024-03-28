@@ -37,8 +37,8 @@
  ****************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-uintptr_t up_get_intstackbase(int cpu)
+uintptr_t up_get_intstackbase(void)
 {
-  return (uintptr_t)sparc_intstack_alloc(cpu);
+  return (uintptr_t)sparc_intstack_alloc();
 }
 #endif

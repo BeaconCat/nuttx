@@ -204,9 +204,9 @@ size_t up_check_tcbstack(struct tcb_s *tcb)
 }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-size_t up_check_intstack(int cpu)
+size_t up_check_intstack(void)
 {
-  return sparc_stack_check((void *)sparc_intstack_alloc(cpu),
+  return sparc_stack_check((void *)sparc_intstack_alloc(),
                            STACK_ALIGN_DOWN(CONFIG_ARCH_INTERRUPTSTACK));
 }
 #endif

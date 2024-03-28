@@ -37,10 +37,10 @@
  ****************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_get_intstackbase(int cpu)
+uintptr_t up_get_intstackbase(void)
 {
 #ifdef CONFIG_SMP
-  return arm64_intstack_alloc(cpu);
+  return arm64_intstack_alloc();
 #else
   return (uintptr_t)g_interrupt_stack;
 #endif
