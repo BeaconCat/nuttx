@@ -58,7 +58,7 @@ static void x86_64_mb2_config(void)
 {
   struct multiboot_tag *tag;
 
-  /* Check that we were actually booted by a mulitboot2 bootloader */
+  /* Check that we were actually booted by a multiboot2 bootloader */
 
   if (g_mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC)
     {
