@@ -90,7 +90,7 @@ The following list indicates the state of peripherals' support in NuttX:
 Peripheral Support NOTES
 ========== ======= =====
 ADC          No
-AES          YES
+AES          No
 Bluetooth    No
 CAMERA       No
 CAN/TWAI     Yes
@@ -106,7 +106,7 @@ Pulse_CNT    No
 RMT          No
 RNG          No
 RSA          No
-RTC          Yes
+RTC          No
 SD/MMC       No
 SDIO         No
 SHA          No
