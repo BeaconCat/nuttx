@@ -46,7 +46,6 @@ SECTIONS
 
     .loader.rodata : {
         *(.loader.rodata)
-        *(.note.nuttx)
     }
 
     .loader.tdata_tbss : {
