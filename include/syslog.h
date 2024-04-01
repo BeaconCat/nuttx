@@ -29,7 +29,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
-
 #ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
 #include <nuttx/sched_note.h>
 #endif
