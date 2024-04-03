@@ -28,6 +28,7 @@ FROM builder-base AS nuttx-tools
 
 RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
   bison \
+  clang \
   cmake \
   flex \
   g++ \
@@ -35,7 +36,11 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   git \
   gperf \
   libncurses5-dev \
-  make
+  make \
+  ninja-build \
+  nodejs \
+  npm \
+  unzip
 
 RUN mkdir /tools
 WORKDIR /tools
@@ -61,7 +66,53 @@ ENV RUSTUP_HOME=$RUST_HOME/rustup
 RUN mkdir -p $CARGO_HOME \
   && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
   && $CARGO_HOME/bin/rustup target add thumbv6m-none-eabi \
-  && $CARGO_HOME/bin/rustup target add thumbv7m-none-eabi
+  && $CARGO_HOME/bin/rustup target add thumbv7m-none-eabi \
+  && $CARGO_HOME/bin/rustup target add riscv64gc-unknown-none-elf
+
+# Install Swift
+ENV SWIFT_VERSION=6.0-DEVELOPMENT-SNAPSHOT-2024-08-22-a
+ENV SWIFT_HOME=/tools/swift
+RUN mkdir -p ${SWIFT_HOME} \
+    && curl -s -O -L https://download.swift.org/swift-6.0-branch/ubuntu2204/swift-${SWIFT_VERSION}/swift-${SWIFT_VERSION}-ubuntu22.04.tar.gz \
+    && tar xzf swift-${SWIFT_VERSION}-ubuntu22.04.tar.gz -C ${SWIFT_HOME} \
+    && rm swift-${SWIFT_VERSION}-ubuntu22.04.tar.gz
+
+# Install Zig latest release
+ENV ZIG_VERSION=0.13.0
+ENV ZIG_HOME=/tools/zig
+RUN mkdir -p ${ZIG_HOME} \
+    && curl -s -O -L https://github.com/marler8997/zigup/releases/download/v2024_05_05/zigup-x86_64-linux.tar.gz \
+    && tar xzf zigup-x86_64-linux.tar.gz -C ${ZIG_HOME} \
+    && rm zigup-x86_64-linux.tar.gz \
+    && chmod +x ${ZIG_HOME}/zigup \
+    && ${ZIG_HOME}/zigup fetch --install-dir ${ZIG_HOME} ${ZIG_VERSION} \
+    && chmod +x ${ZIG_HOME}/${ZIG_VERSION}/files/zig
+
+
+# Install LDC2 latest release
+ENV LDC_VERSION=1.39.0
+ENV D_HOME=/tools/ldc2
+RUN mkdir -p ${D_HOME} \
+    && curl -s -O -L https://github.com/ldc-developers/ldc/releases/download/v${LDC_VERSION}/ldc2-${LDC_VERSION}-linux-x86_64.tar.xz \
+    && tar xf ldc2-${LDC_VERSION}-linux-x86_64.tar.xz -C ${D_HOME} \
+    && rm ldc2-${LDC_VERSION}-linux-x86_64.tar.xz
+
+RUN mkdir /tools/gn -p \
+  && cd /tools/gn \
+  && git clone https://gn.googlesource.com/gn gn \
+  && cd gn && ./build/gen.py && cd out && ninja
+
+ENV ZAP_INSTALL_PATH=/tools/zap_release
+RUN mkdir $ZAP_INSTALL_PATH -p \
+  && cd $ZAP_INSTALL_PATH \
+  && curl -s -O -L https://github.com/project-chip/zap/releases/download/v2023.10.09-nightly/zap-linux-x64.zip \
+  && unzip zap-linux-x64.zip
+
+ENV ZAP_DEVELOPMENT_PATH=/tools/zap
+RUN cd /tools \
+  && curl -s -O -L https://github.com/project-chip/zap/archive/refs/tags/v2023.10.09-nightly.zip \
+  && unzip v2023.10.09-nightly.zip && mv zap-2023.10.09-nightly zap \
+  && cd zap && npm install cross-spawn folder-hash
 
 CMD [ "/bin/bash" ]
 
@@ -95,6 +146,17 @@ FROM nuttx-toolchain-base AS nuttx-toolchain-arm64
 RUN mkdir gcc-aarch64-none-elf && \
   curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/13.2.Rel1/binrel/arm-gnu-toolchain-13.2.Rel1-x86_64-aarch64-none-elf.tar.xz" \
   | tar -C gcc-aarch64-none-elf --strip-components 1 -xJ
+
+###############################################################################
+# Build image for tool required by AVR32 builds
+###############################################################################
+FROM nuttx-toolchain-base AS nuttx-toolchain-avr32
+# Download the prebuilt AVR32 GCC toolchain
+RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
+  git
+# Clone Main Repository
+RUN mkdir -p gcc-avr32-gnu && \
+  git clone --depth 1 https://github.com/ramangopalan/avr32-gnu-toolchain-linux_x86 gcc-avr32-gnu
 
 ###############################################################################
 # Build image for tool required by Pinguino builds
@@ -238,21 +300,22 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   libssl-dev
 
 RUN mkdir -p cmake && \
-    curl -s -L wget https://cmake.org/files/v3.26/cmake-3.26.0.tar.gz \
-    | tar -C cmake --strip-components=1 -xz && \
-    cd cmake && ./bootstrap && make && make install && rm -rf cmake
+  curl -s -L wget https://cmake.org/files/v3.26/cmake-3.26.0.tar.gz \
+  | tar -C cmake --strip-components=1 -xz && \
+  cd cmake && ./bootstrap && make && make install && rm -rf cmake
 
 RUN dpkg --add-architecture i386
 # This is used for the final images so make sure to not store apt cache
 # Note: xtensa-esp32-elf-gdb is linked to libpython2.7
-RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq --no-install-recommends \
+RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" TZ=Etc/UTC apt-get install -y -qq --no-install-recommends \
   -o APT::Immediate-Configure=0 \
   avr-libc \
   ccache \
   clang \
   clang-tidy \
+  g++-12-multilib \
   gcc-avr \
-  gcc-multilib \
+  gcc-12-multilib \
   genromfs \
   gettext \
   git \
@@ -273,6 +336,7 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   linux-headers-generic \
   linux-libc-dev:i386 \
   ninja-build \
+  npm \
   qemu-system-arm \
   qemu-system-misc \
   python3 \
@@ -282,7 +346,17 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   unzip \
   wget \
   xxd \
+  file \
+  tclsh \
   && rm -rf /var/lib/apt/lists/*
+
+# Set GCC-12 as Default compiler
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 20 && \
+  update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 30 && \
+  update-alternatives --set cc /usr/bin/gcc && \
+  update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 30 && \
+  update-alternatives --set c++ /usr/bin/g++
 
 # Configure out base setup for adding python packages
 ENV PIP_DISABLE_PIP_VERSION_CHECK=true
@@ -301,7 +375,7 @@ RUN pip3 install cmake-format
 RUN pip3 install cvt2utf
 # Install pytest
 RUN pip3 install cxxfilt
-RUN pip3 install esptool
+RUN pip3 install esptool==4.8.dev4
 RUN pip3 install imgtool
 RUN pip3 install kconfiglib
 RUN pip3 install pexpect==4.8.0
@@ -311,6 +385,14 @@ RUN pip3 install pytest==6.2.5
 RUN pip3 install pytest-json==0.4.0
 RUN pip3 install pytest-ordering==0.6
 RUN pip3 install pytest-repeat==0.9.1
+# Install lark stringcase jinja2 and coloredlogs for matter build
+RUN pip3 install lark
+RUN pip3 install stringcase
+RUN pip3 install jinja2
+RUN pip3 install coloredlogs
+
+# Upgrade nodejs to the latest version
+RUN npm install -g n && n stable && hash -r
 
 # Used to generate symbol table files
 
@@ -329,6 +411,18 @@ ENV CARGO_HOME=/tools/rust/cargo
 ENV RUSTUP_HOME=/tools/rust/rustup
 ENV PATH="/tools/rust/cargo/bin:$PATH"
 
+# Pull in the Zig v0.13.0 toolchain
+COPY --from=nuttx-tools /tools/zig/ /tools/zig/
+ENV PATH="/tools/zig/0.13.0/files:$PATH"
+
+# Pull in the ldc2 1.39.0 toolchain
+COPY --from=nuttx-tools /tools/ldc2/ /tools/ldc2/
+ENV PATH="/tools/ldc2/ldc2-1.39.0-linux-x86_64/bin:$PATH"
+
+# Pull in the swift 6.0 toolchain
+COPY --from=nuttx-tools /tools/swift/ /tools/swift/
+ENV PATH="/tools/swift/swift-6.0-DEVELOPMENT-SNAPSHOT-2024-08-22-a/bin:$PATH"
+
 # ARM toolchain
 COPY --from=nuttx-toolchain-arm /tools/clang-arm-none-eabi/ clang-arm-none-eabi/
 # RUN cp /usr/bin/clang-extdef-mapping-10 clang-arm-none-eabi/bin/clang-extdef-mapping
@@ -340,6 +434,10 @@ ENV PATH="/tools/gcc-arm-none-eabi/bin:$PATH"
 # ARM64 toolchain
 COPY --from=nuttx-toolchain-arm64 /tools/gcc-aarch64-none-elf/ gcc-aarch64-none-elf/
 ENV PATH="/tools/gcc-aarch64-none-elf/bin:$PATH"
+
+# AVR32 toolchain
+COPY --from=nuttx-toolchain-avr32 /tools/gcc-avr32-gnu/ gcc-avr32-gnu/
+ENV PATH="/tools/gcc-avr32-gnu/bin:$PATH"
 
 # MIPS toolchain
 COPY --from=nuttx-toolchain-pinguino /tools/pinguino-compilers/p32/ pinguino-compilers/p32/
@@ -377,6 +475,17 @@ COPY --from=nuttx-toolchain-wasm /tools/wasi-sdk/ wasi-sdk/
 ENV WASI_SDK_PATH="/tools/wasi-sdk"
 ENV PATH="/tools/wamr:$PATH"
 
+# gn tool
+RUN mkdir -p /tools/gn
+COPY --from=nuttx-tools /tools/gn/gn/out/gn /tools/gn
+ENV PATH="/tools/gn:$PATH"
+
+# ZAP tool and nodejs packet
+COPY --from=nuttx-tools /tools/zap/ /tools/zap/
+COPY --from=nuttx-tools /tools/zap_release/ /tools/zap_release/
+ENV ZAP_INSTALL_PATH=/tools/zap_release
+ENV ZAP_DEVELOPMENT_PATH=/tools/zap
+
 # Configure ccache
 RUN mkdir -p /tools/ccache/bin && \
   ln -sf `which ccache` /tools/ccache/bin/aarch64-none-elf-gcc && \
@@ -385,6 +494,8 @@ RUN mkdir -p /tools/ccache/bin && \
   ln -sf `which ccache` /tools/ccache/bin/arm-none-eabi-g++ && \
   ln -sf `which ccache` /tools/ccache/bin/avr-gcc && \
   ln -sf `which ccache` /tools/ccache/bin/avr-g++ && \
+  ln -sf `which ccache` /tools/ccache/bin/avr32-gcc && \
+  ln -sf `which ccache` /tools/ccache/bin/avr32-g++ && \
   ln -sf `which ccache` /tools/ccache/bin/cc && \
   ln -sf `which ccache` /tools/ccache/bin/c++ && \
   ln -sf `which ccache` /tools/ccache/bin/clang && \
