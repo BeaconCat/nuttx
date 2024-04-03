@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86_64/include/irq.h
+ * arch/x86_64/src/intel64/intel64_cpu.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,69 +18,28 @@
  *
  ****************************************************************************/
 
-/* This file should never be included directly but, rather, only indirectly
- * through nuttx/irq.h
- */
-
-#ifndef __ARCH_X86_64_INCLUDE_IRQ_H
-#define __ARCH_X86_64_INCLUDE_IRQ_H
+#ifndef __ARCH_X86_64_SRC_INTEL64_INTEL64_CPU_H
+#define __ARCH_X86_64_SRC_INTEL64_INTEL64_CPU_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-/* Include NuttX-specific IRQ definitions */
+#include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
-#include <nuttx/irq.h>
+#include <stdbool.h>
 
-/* Include chip-specific IRQ definitions (including IRQ numbers) */
-
-#include <arch/chip/irq.h>
-
-/* Include architecture-specific IRQ definitions (including register save
- * structure and up_irq_save()/up_irq_restore() macros).
- */
-
-#ifdef CONFIG_ARCH_INTEL64
-#  include <arch/intel64/irq.h>
-#endif
+#include <arch/arch.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/****************************************************************************
- * Public Data
+ * Inline Functions
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
-/* CPU private data */
-
-struct intel64_cpu_s
-{
-  int     id;
-  uint8_t loapic_id;
-  bool    ready;
-
-/* current_regs holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to current_regs must be through
- * up_current_regs() and up_set_current_regs() functions
- */
-
-  uint64_t *current_regs;
-};
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef __cplusplus
+#undef EXTERN
+#if defined(__cplusplus)
 #define EXTERN extern "C"
 extern "C"
 {
@@ -89,82 +48,107 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: up_cpu_index
+ * Public Types
+ ****************************************************************************/
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: x86_64_cpu_tss_init
  *
  * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
+ *  Initialize the TSS
  *
  ****************************************************************************/
 
-#define up_cpu_index() (0)
+void x86_64_cpu_tss_init(int cpu);
 
 /****************************************************************************
- * Inline functions
- ****************************************************************************/
-
-static inline_function uint64_t *up_current_regs(void)
-{
-  uint64_t *regs;
-  asm volatile("movq %%gs:(%c1), %0"
-               : "=rm" (regs)
-               : "i" (offsetof(struct intel64_cpu_s, current_regs)));
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint64_t *regs)
-{
-  asm volatile("movq %0, %%gs:(%c1)"
-               :: "r" (regs), "i" (offsetof(struct intel64_cpu_s,
-                                            current_regs)));
-}
-
-/****************************************************************************
- * Name: up_interrupt_context
+ * Name: x86_64_cpu_tss_now_get
  *
  * Description:
- *   Return true is we are currently executing in the interrupt handler
- *   context.
+ *   Get CPU TSS data associated with the current CPU
  *
  ****************************************************************************/
 
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return up_current_regs() != NULL;
-}
+struct tss_s *x86_64_cpu_tss_now_get(void);
 
 /****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint64_t *)((regs) ? (regs) : up_current_regs()))[REG_RIP])
-
-/****************************************************************************
- * Name: up_alloc_irq_msi
- * Name: up_release_irq_msi
+ * Name: x86_64_cpu_init
  *
  * Description:
- *   Reserve/release vector for MSI
+ *   Initialize CPU data.
  *
  ****************************************************************************/
 
-int up_alloc_irq_msi(int *num);
-void up_release_irq_msi(int *irq, int num);
+void x86_64_cpu_init(void);
+
+/****************************************************************************
+ * Name: x86_64_lopaic_to_cpu
+ *
+ * Description:
+ *   Get CPU index for a given Local APIC ID
+ *
+ ****************************************************************************/
+
+uint8_t x86_64_loapic_to_cpu(uint8_t loapic);
+
+/****************************************************************************
+ * Name: x86_64_cpu_to_loapic
+ *
+ * Description:
+ *   Get Local APIC ID for a given CPU index
+ *
+ ****************************************************************************/
+
+uint8_t x86_64_cpu_to_loapic(uint8_t cpu);
+
+/****************************************************************************
+ * Name: x86_64_cpu_ready_set
+ *
+ * Description:
+ *   Set CPU ready flag
+ *
+ ****************************************************************************/
+
+void x86_64_cpu_ready_set(uint8_t cpu);
+
+/****************************************************************************
+ * Name: x86_64_cpu_ready_get
+ *
+ * Description:
+ *   Get CPU ready flag
+ *
+ ****************************************************************************/
+
+bool x86_64_cpu_ready_get(uint8_t cpu);
+
+/****************************************************************************
+ * Name: x86_64_cpu_count_get
+ *
+ * Description:
+ *   Get CPU counter
+ *
+ ****************************************************************************/
+
+uint8_t x86_64_cpu_count_get(void);
+
+/****************************************************************************
+ * Name: x86_64_cpu_priv_set
+ *
+ * Description:
+ *   Save CPU private data
+ *
+ ****************************************************************************/
+
+void x86_64_cpu_priv_set(uint8_t cpu);
 
 #undef EXTERN
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif
-#endif
 
-#endif /* __ARCH_X86_64_INCLUDE_IRQ_H */
-
+#endif /* __ASSEMBLY__ */
+#endif /* __ARCH_X86_64_SRC_INTEL64_INTEL64_CPU_H */
