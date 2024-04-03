@@ -30,11 +30,10 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
 #include <nuttx/sched.h>
-#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Private Functions
@@ -65,21 +64,21 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   flags = up_irq_save();
 
-  tmp = heap->mm_delaylist[up_cpu_index()];
+  tmp = heap->mm_delaylist[this_cpu()];
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   if (tmp == NULL ||
       (!force &&
-        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+        heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       up_irq_restore(flags);
       return false;
     }
 
-  heap->mm_delaycount[up_cpu_index()] = 0;
+  heap->mm_delaycount[this_cpu()] = 0;
 #endif
 
-  heap->mm_delaylist[up_cpu_index()] = NULL;
+  heap->mm_delaylist[this_cpu()] = NULL;
 
   up_irq_restore(flags);
 
@@ -286,8 +285,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
       /* Update heap statistics */
 
-      nodesize = MM_SIZEOF_NODE(node);
-      heap->mm_curused += nodesize;
+      heap->mm_curused += MM_SIZEOF_NODE(node);
       if (heap->mm_curused > heap->mm_maxused)
         {
           heap->mm_maxused = heap->mm_curused;
@@ -305,8 +303,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
       MM_ADD_BACKTRACE(heap, node);
-      ret = kasan_unpoison(ret, nodesize - MM_ALLOCNODE_OVERHEAD);
-      sched_note_heap(true, heap, ret, nodesize);
+      kasan_unpoison(ret, mm_malloc_size(heap, ret));
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, alignsize - MM_ALLOCNODE_OVERHEAD);
 #endif
@@ -332,11 +329,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-#if CONFIG_MM_BACKTRACE >= 0
         PID_MM_ALLOC, 0, ULONG_MAX
-#else
-        PID_MM_ALLOC
-#endif
       };
 #  endif
 #endif
@@ -359,9 +352,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
                                mm_mempool_dump_handle, NULL);
 #  endif
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
-      mm_memdump(heap, &dump);
-      mwarn("Dump leak memory(thread exit, but memory not free):\n");
-      dump.pid = PID_MM_LEAK;
       mm_memdump(heap, &dump);
 #  endif
 #endif

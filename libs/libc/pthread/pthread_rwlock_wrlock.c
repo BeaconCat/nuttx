@@ -33,6 +33,7 @@
  * Private Functions
  ****************************************************************************/
 
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
 static void wrlock_cleanup(FAR void *arg)
 {
   FAR pthread_rwlock_t *rw_lock = (FAR pthread_rwlock_t *)arg;
@@ -40,6 +41,7 @@ static void wrlock_cleanup(FAR void *arg)
   rw_lock->num_writers--;
   pthread_mutex_unlock(&rw_lock->lock);
 }
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -102,7 +104,9 @@ int pthread_rwlock_clockwrlock(FAR pthread_rwlock_t *rw_lock,
 
   rw_lock->num_writers++;
 
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
   pthread_cleanup_push(&wrlock_cleanup, rw_lock);
+#endif
   while (rw_lock->write_in_progress || rw_lock->num_readers > 0)
     {
       if (ts != NULL)
@@ -121,7 +125,9 @@ int pthread_rwlock_clockwrlock(FAR pthread_rwlock_t *rw_lock,
         }
     }
 
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
   pthread_cleanup_pop(0);
+#endif
 
   if (err == 0)
     {
