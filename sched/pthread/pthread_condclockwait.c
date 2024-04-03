@@ -74,6 +74,7 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
                            FAR const struct timespec *abstime)
 {
   irqstate_t flags;
+  int mypid = nxsched_gettid();
   int ret = OK;
   int status;
 
@@ -92,7 +93,7 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
   /* Make sure that the caller holds the mutex */
 
-  else if (!mutex_is_hold(&mutex->mutex))
+  else if (mutex->pid != mypid)
     {
       ret = EPERM;
     }
@@ -108,7 +109,13 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
   else
     {
-      unsigned int nlocks;
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+      uint8_t mflags;
+#endif
+#ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      uint8_t type;
+      int16_t nlocks;
+#endif
 
       sinfo("Give up mutex...\n");
 
@@ -123,7 +130,15 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
       /* Give up the mutex */
 
-      ret = pthread_mutex_breaklock(mutex, &nlocks);
+      mutex->pid = INVALID_PROCESS_ID;
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+      mflags     = mutex->flags;
+#endif
+#ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      type       = mutex->type;
+      nlocks     = mutex->nlocks;
+#endif
+      ret        = pthread_mutex_give(mutex);
       if (ret == 0)
         {
           status = nxsem_clockwait_uninterruptible(&cond->sem,
@@ -144,10 +159,21 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
       sinfo("Re-locking...\n");
 
-      status = pthread_mutex_restorelock(mutex, nlocks);
-      if (ret == 0)
+      status = pthread_mutex_take(mutex, NULL);
+      if (status == OK)
         {
-          ret = status;
+          mutex->pid    = mypid;
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+          mutex->flags  = mflags;
+#endif
+#ifdef CONFIG_PTHREAD_MUTEX_TYPES
+          mutex->type   = type;
+          mutex->nlocks = nlocks;
+#endif
+        }
+      else if (ret == 0)
+        {
+          ret           = status;
         }
 
       /* Re-enable pre-emption (It is expected that interrupts
