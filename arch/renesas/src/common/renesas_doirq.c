@@ -71,8 +71,8 @@ uint32_t *renesas_doirq(int irq, uint32_t * regs)
        * Nested interrupts are not supported.
        */
 
-      DEBUGASSERT(g_current_regs == NULL);
-      g_current_regs = regs;
+      DEBUGASSERT(get_current_regs() == NULL);
+      set_current_regs(regs);
 
       /* Deliver the IRQ */
 
@@ -85,12 +85,12 @@ uint32_t *renesas_doirq(int irq, uint32_t * regs)
        * environment before returning from the interrupt.
        */
 
-      if (regs != g_current_regs)
+      if (regs != get_current_regs())
         {
 #ifdef CONFIG_ARCH_FPU
           /* Restore floating point registers */
 
-          up_restorefpu((uint32_t *)g_current_regs);
+          up_restorefpu(get_current_regs());
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -108,20 +108,20 @@ uint32_t *renesas_doirq(int irq, uint32_t * regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          g_running_tasks[this_cpu()] = this_task_irq();
         }
 
       /* Get the current value of regs... it may have changed because
        * of a context switch performed during interrupt processing.
        */
 
-      regs = (uint32_t *)g_current_regs;
+      regs = get_current_regs();
 
       /* Set g_current_regs to NULL to indicate that we are no longer in an
        * interrupt handler.
        */
 
-      g_current_regs = NULL;
+      set_current_regs(NULL);
     }
 
   board_autoled_off(LED_INIRQ);
