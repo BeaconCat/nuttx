@@ -59,13 +59,13 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 #else
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(CURRENT_REGS == NULL);
+  DEBUGASSERT(get_current_regs() == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * CURRENT_REGS is also used to manage interrupt level context switches.
+   * current_regs is also used to manage interrupt level context switches.
    */
 
-  CURRENT_REGS = regs;
+  set_current_regs(regs);
 
   /* Deliver the IRQ */
 
@@ -73,7 +73,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Restore the cpu lock */
 
-  if (regs != CURRENT_REGS)
+  if (regs != get_current_regs())
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -90,17 +90,15 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
-
-      restore_critical_section();
-      regs = (uint32_t *)CURRENT_REGS;
+      g_running_tasks[this_cpu()] = this_task_irq();
+      regs = get_current_regs();
     }
 
-  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
+  /* Set current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  CURRENT_REGS = NULL;
+  set_current_regs(NULL);
 #endif
 
   board_autoled_off(LED_INIRQ);
