@@ -107,8 +107,8 @@
  * only a reference stored in TCB.
  */
 
-#define xtensa_savestate(regs)    ((regs) = (uint32_t *)CURRENT_REGS)
-#define xtensa_restorestate(regs) (CURRENT_REGS = (regs))
+#define xtensa_savestate(regs)    ((regs) = get_current_regs())
+#define xtensa_restorestate(regs) set_current_regs(regs)
 
 /* Context switching via system calls ***************************************/
 
@@ -230,8 +230,8 @@ void xtensa_window_spill(void);
 /* IRQs */
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
-uintptr_t xtensa_intstack_alloc(void);
-uintptr_t xtensa_intstack_top(void);
+uintptr_t xtensa_intstack_alloc(int cpu);
+uintptr_t xtensa_intstack_top(int cpu);
 #endif
 
 uint32_t *xtensa_int_decode(uint32_t cpuints, uint32_t *regs);
