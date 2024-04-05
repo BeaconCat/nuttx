@@ -43,24 +43,17 @@
 #ifdef CONFIG_ARCH_FPU
 #include "arm64_fpu.h"
 #endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+#include "arm64_hwdebug.h"
+#endif
+
 #include "arm64_internal.h"
 #include "chip.h"
 
 /****************************************************************************
  * Public data
  ****************************************************************************/
-
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
- */
-
-/* For the case of configurations with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
 
 #ifdef CONFIG_ARCH_FPU
 static struct notifier_block g_fpu_panic_block;
@@ -223,5 +216,9 @@ void up_initialize(void)
   arm64_fpu_procfs_register();
 #endif
 
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+  arm64_hwdebug_init();
 #endif
 }

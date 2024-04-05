@@ -111,7 +111,7 @@ enum net_lltype_e
   NET_LL_IEEE802154,   /* IEEE 802.15.4 MAC */
   NET_LL_PKTRADIO,     /* Non-standard packet radio */
   NET_LL_MBIM,         /* CDC-MBIM USB host driver */
-  NET_LL_CAN,          /* CAN bus */
+  NET_LL_CAN,          /* CAN/LIN bus */
   NET_LL_CELL          /* Cellular Virtual Network Device */
 };
 
@@ -229,7 +229,7 @@ struct socket_conn_s
   uint8_t       s_tos;       /* IPv4 Type of Service */
 #define s_tclass s_tos       /* IPv6 traffic class defination */
 #if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
-  uint8_t       s_ttl;       /* Default time-to-live */
+  uint8_t       ttl;         /* Default time-to-live */
 #endif
 
   /* Connection-specific content may follow */
