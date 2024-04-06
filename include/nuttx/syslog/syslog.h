@@ -226,7 +226,7 @@ int syslog_channel_remove(FAR struct syslog_channel_s *channel);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
+#ifndef CONFIG_ARCH_SYSLOG
 int syslog_initialize(void);
 #else
 #  define syslog_initialize()
@@ -358,11 +358,7 @@ ssize_t syslog_write(FAR const char *buffer, size_t buflen);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
 int syslog_flush(void);
-#else
-#  define syslog_flush()
-#endif
 
 /****************************************************************************
  * Name: nx_vsyslog
@@ -377,9 +373,7 @@ int syslog_flush(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
 int nx_vsyslog(int priority, FAR const IPTR char *src, FAR va_list *ap);
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus

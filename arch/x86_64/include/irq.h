@@ -59,7 +59,7 @@
 
 #ifndef __ASSEMBLY__
 /* This holds a references to the current interrupt level register storage
- * structure.  If is non-NULL only during interrupt processing.
+ * structure.  It is non-NULL only during interrupt processing.
  */
 
 extern volatile uint64_t *g_current_regs;
@@ -100,16 +100,6 @@ extern "C"
  * Inline functions
  ****************************************************************************/
 
-static inline_function uint64_t *get_current_regs(void)
-{
-  return (uint64_t *)g_current_regs;
-}
-
-static inline_function void set_current_regs(uint64_t *regs)
-{
-  g_current_regs = regs;
-}
-
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -119,26 +109,7 @@ static inline_function void set_current_regs(uint64_t *regs)
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (get_current_regs() != NULL)
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint64_t *)((regs) ? (regs) : get_current_regs()))[REG_RIP])
-
-/****************************************************************************
- * Name: up_alloc_irq_msi
- * Name: up_release_irq_msi
- *
- * Description:
- *   Reserve/release vector for MSI
- *
- ****************************************************************************/
-
-int up_alloc_irq_msi(int *num);
-void up_release_irq_msi(int *irq, int num);
+#define up_interrupt_context() (g_current_regs != NULL)
 
 #undef EXTERN
 #ifdef __cplusplus

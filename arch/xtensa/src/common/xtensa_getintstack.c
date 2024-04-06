@@ -37,10 +37,10 @@
  ****************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-uintptr_t up_get_intstackbase(int cpu)
+uintptr_t up_get_intstackbase(void)
 {
 #ifdef CONFIG_SMP
-  return (uintptr_t)xtensa_intstack_alloc(cpu);
+  return (uintptr_t)xtensa_intstack_alloc();
 #else
   return (uintptr_t)g_intstackalloc;
 #endif
