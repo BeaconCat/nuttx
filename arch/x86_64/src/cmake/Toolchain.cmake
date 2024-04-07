@@ -97,12 +97,27 @@ else()
   set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
 endif()
 
+if(CONFIG_CXX_STANDARD)
+  string(APPEND ARCHCXXFLAGS " -std=${CONFIG_CXX_STANDARD}")
+endif()
+
+if(CONFIG_STACK_CANARIES)
+  add_compile_options(-fstack-protector-all)
+else()
+  add_compile_options(-fno-stack-protector)
+endif()
+
 if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
 endif()
 
 if(NOT CONFIG_CXX_RTTI)
   string(APPEND ARCHCXXFLAGS " -fno-rtti")
+endif()
+
+if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
+  add_link_options(-Wl,--gc-sections)
+  add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
 if(NOT "${CMAKE_C_FLAGS}" STREQUAL "")
