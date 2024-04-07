@@ -30,7 +30,7 @@ endif()
 add_compile_options(-fno-common)
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g)
+  add_compile_options(-g3)
 endif()
 
 if(CONFIG_SIM_M32)
@@ -99,12 +99,7 @@ if(CONFIG_CXX_STANDARD)
 endif()
 
 set(ARCHCFLAGS "-Wstrict-prototypes")
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
-else()
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
-endif()
+set(ARCHCXXFLAGS "-nostdinc++")
 
 if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
