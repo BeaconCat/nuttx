@@ -260,7 +260,7 @@ int up_backtrace(struct tcb_s *tcb,
           unsigned long top;
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 #  ifdef CONFIG_SMP
-          top = arm_intstack_top(up_cpu_index());
+          top = arm_intstack_top();
 #  else
           top = (unsigned long)g_intstacktop;
 #  endif /* CONFIG_SMP */
@@ -274,7 +274,7 @@ int up_backtrace(struct tcb_s *tcb,
               ret += backtrace_branch((unsigned long)
                                       rtcb->stack_base_ptr +
                                       rtcb->adj_stack_size,
-                                      get_current_regs()[REG_SP],
+                                      CURRENT_REGS[REG_SP],
                                       &buffer[ret],
                                       size - ret, &skip);
             }

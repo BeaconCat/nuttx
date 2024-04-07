@@ -90,16 +90,15 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n",
-            this_task_irq(), get_current_regs());
+      sinfo("rtcb=%p g_current_regs=%p\n", this_task(), g_current_regs);
 
-      if (tcb == this_task_irq())
+      if (tcb == this_task())
         {
           /* CASE 1: We are not in an interrupt handler and a task is
            * signalling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!g_current_regs)
             {
               /* In this case just deliver the signal now. */
 
@@ -126,15 +125,14 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * been delivered.
                */
 
-              tcb->xcp.saved_epc = get_current_regs()[REG_CSR_MEPC];
+              tcb->xcp.saved_epc = g_current_regs[REG_CSR_MEPC];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              get_current_regs()[REG_CSR_MEPC] =
-                (uint32_t)minerva_sigdeliver;
-              get_current_regs()[REG_CSR_MSTATUS] &= ~CSR_MSTATUS_MIE;
+              g_current_regs[REG_CSR_MEPC] = (uint32_t) minerva_sigdeliver;
+              g_current_regs[REG_CSR_MSTATUS] &= ~CSR_MSTATUS_MIE;
 
               /* And make sure that the saved context in the TCB is the same
                * as the interrupt return context.
@@ -144,8 +142,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               sinfo("PC/STATUS Saved: %08x/%08x New: %08x/%08x\n",
                     tcb->xcp.saved_epc, tcb->xcp.saved_status,
-                    get_current_regs()[REG_CSR_MEPC],
-                    get_current_regs()[REG_CSR_MSTATUS]);
+                    g_current_regs[REG_CSR_MEPC],
+                    g_current_regs[REG_CSR_MSTATUS]);
             }
         }
 
@@ -169,7 +167,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.regs[REG_CSR_MEPC] = (uint32_t) minerva_sigdeliver;
-          get_current_regs()[REG_CSR_MSTATUS] &= ~CSR_MSTATUS_MIE;
+          g_current_regs[REG_CSR_MSTATUS] &= ~CSR_MSTATUS_MIE;
 
           sinfo("PC/STATUS Saved: %08x/%08x New: %08x/%08x\n",
                 tcb->xcp.saved_epc, tcb->xcp.saved_status,
