@@ -50,11 +50,11 @@ uint32_t *or1k_doirq(int irq, uint32_t *regs)
   regs = NULL;
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  savestate = get_current_regs();
-  set_current_regs(regs);
+  savestate    = (uint32_t *)CURRENT_REGS;
+  CURRENT_REGS = regs;
 
   /* Acknowledge the interrupt */
 
@@ -65,29 +65,29 @@ uint32_t *or1k_doirq(int irq, uint32_t *regs)
   irq_dispatch(irq, regs);
 
   /* If a context switch occurred while processing the interrupt then
-   * current_regs may have changed value.  If we return any value different
+   * CURRENT_REGS may have changed value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
 
-  if (regs != get_current_regs())
+  if (regs != (uint32_t *)CURRENT_REGS)
     {
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
+      g_running_tasks[this_cpu()] = this_task();
     }
 
-  regs = get_current_regs();
+  regs = (uint32_t *)CURRENT_REGS;
 
-  /* Restore the previous value of current_regs.  NULL would indicate that
+  /* Restore the previous value of CURRENT_REGS.  NULL would indicate that
    * we are no longer in an interrupt handler.  It will be non-NULL if we
    * are returning from a nested interrupt.
    */
 
-  set_current_regs(savestate);
+  CURRENT_REGS = savestate;
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;
