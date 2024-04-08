@@ -90,7 +90,7 @@ void backtrace(uint64_t rbp)
 
   for (i = 0; i < 16; i++)
     {
-      if ((rbp < 0x200000) || (rbp > 0xfffffffff))
+      if ((rbp < 0x200000) || (rbp > 0xffffffff))
         {
           break;
         }
@@ -111,7 +111,7 @@ void backtrace(uint64_t rbp)
 
 void up_dump_register(void *dumpregs)
 {
-  volatile uint64_t *regs = dumpregs ? dumpregs : get_current_regs();
+  volatile uint64_t *regs = dumpregs ? dumpregs : g_current_regs;
   uint64_t mxcsr;
   uint64_t cr2;
 
