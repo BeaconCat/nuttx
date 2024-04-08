@@ -198,6 +198,20 @@
 
 #define REG_PIC             REG_R10
 
+/* Multiprocessor Affinity Register (MPIDR): CRn=c0, opc1=0, CRm=c0, opc2=5 */
+
+#define MPIDR_CPUID_SHIFT   (0)       /* Bits 0-1: CPU ID */
+#define MPIDR_CPUID_MASK    (3 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU0  (0 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU1  (1 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU2  (2 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU3  (3 << MPIDR_CPUID_SHIFT)
+                                      /* Bits 2-7: Reserved */
+#define MPIDR_CLUSTID_SHIFT (8)       /* Bits 8-11: Cluster ID value */
+#define MPIDR_CLUSTID_MASK  (15 << MPIDR_CLUSTID_SHIFT)
+                                      /* Bits 12-29: Reserved */
+#define MPIDR_U             (1 << 30) /* Bit 30: Multiprocessing Extensions. */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -235,7 +249,6 @@ struct xcpt_syscall_s
  * For a total of 17 (XCPTCONTEXT_REGS)
  */
 
-#ifndef __ASSEMBLY__
 struct xcptcontext
 {
   /* The following function pointer is non-zero if there are pending signals
@@ -273,7 +286,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   uintptr_t far;
 #endif
 
@@ -312,15 +325,10 @@ struct xcptcontext
 #endif
 #endif
 };
-#endif
-
-#endif /* __ASSEMBLY__ */
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
-
-#ifndef __ASSEMBLY__
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -358,7 +366,7 @@ noinstrument_function static inline irqstate_t up_irq_save(void)
     (
       "\tmrs    %0, cpsr\n"
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
+      "\tcpsid  if\n"
 #else
       "\tcpsid  i\n"
 #endif
@@ -380,11 +388,28 @@ static inline irqstate_t up_irq_enable(void)
     (
       "\tmrs    %0, cpsr\n"
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-      "\tcpsie  f\n"
-#endif
-#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
+      "\tcpsie  if\n"
+#else
       "\tcpsie  i\n"
 #endif
+      : "=r" (cpsr)
+      :
+      : "memory"
+    );
+
+  return cpsr;
+}
+
+/* Disable IRQs and return the previous IRQ state */
+
+static inline irqstate_t up_irq_disable(void)
+{
+  unsigned int cpsr;
+
+  __asm__ __volatile__
+    (
+      "\tmrs    %0, cpsr\n"
+      "\tcpsid  i\n"
       : "=r" (cpsr)
       :
       : "memory"
@@ -406,13 +431,74 @@ noinstrument_function static inline void up_irq_restore(irqstate_t flags)
     );
 }
 
-#endif /* __ASSEMBLY__ */
+/****************************************************************************
+ * Name: up_cpu_index
+ *
+ * Description:
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+noinstrument_function
+static inline_function int up_cpu_index(void)
+{
+  unsigned int mpidr;
+
+  /* Read the Multiprocessor Affinity Register (MPIDR) */
+
+  __asm__ __volatile__
+  (
+    "mrc " "p15, " "0" ", %0, " "c0" ", " "c0" ", " "5" "\n"
+    : "=r"(mpidr)
+  );
+
+  /* And return the CPU ID field */
+
+  return (mpidr & MPIDR_CPUID_MASK) >> MPIDR_CPUID_SHIFT;
+}
+#else
+#  define up_cpu_index() 0
+#endif /* CONFIG_SMP */
+
+static inline_function uint32_t *get_current_regs(void)
+{
+  uint32_t *regs;
+  __asm__ __volatile__
+  (
+    "mrc " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
+    : "=r"(regs)
+  );
+  return regs;
+}
+
+static inline_function void set_current_regs(uint32_t *regs)
+{
+  __asm__ __volatile__
+  (
+    "mcr " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
+    :: "r"(regs)
+  );
+}
+
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return get_current_regs() != NULL;
+}
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -429,6 +515,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* __ASSEMBLY__ */
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV7_A_IRQ_H */
