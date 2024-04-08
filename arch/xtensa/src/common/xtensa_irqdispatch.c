@@ -54,23 +54,23 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(get_current_regs() == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  set_current_regs(regs);
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
 
   /* Check for a context switch.  If a context switch occurred, then
-   * current_regs will have a different value than it did on entry.
+   * CURRENT_REGS will have a different value than it did on entry.
    */
 
-  if (regs != get_current_regs())
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -87,21 +87,22 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
+      g_running_tasks[this_cpu()] = this_task();
     }
 
   /* Restore the cpu lock */
 
-  if (regs != get_current_regs())
+  if (regs != CURRENT_REGS)
     {
-      regs = get_current_regs();
+      restore_critical_section();
+      regs = (uint32_t *)CURRENT_REGS;
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 #endif
 
   board_autoled_off(LED_INIRQ);
