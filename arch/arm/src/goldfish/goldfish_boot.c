@@ -41,16 +41,6 @@
 #  include <nuttx/sched_note.h>
 #endif
 
-#include <nuttx/syslog/syslog_rpmsg.h>
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#ifdef CONFIG_SYSLOG_RPMSG
-static char g_syslog_rpmsg_buf[4096];
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -92,10 +82,6 @@ void arm_boot(void)
 
   arm_earlyserialinit();
 #endif
-
-#ifdef CONFIG_SYSLOG_RPMSG
-  syslog_rpmsg_init_early(g_syslog_rpmsg_buf, sizeof(g_syslog_rpmsg_buf));
-#endif
 }
 
 #if defined(CONFIG_ARM_PSCI) && defined(CONFIG_SMP)
@@ -104,7 +90,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task(), cpu);
+  sched_note_cpu_start(this_task_inirq(), cpu);
 #endif
 
   return psci_cpu_on(cpu, (uintptr_t)__start);

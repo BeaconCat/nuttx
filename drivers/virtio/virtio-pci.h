@@ -29,7 +29,6 @@
 
 #ifdef CONFIG_DRIVERS_VIRTIO_PCI
 
-#include <nuttx/arch.h>
 #include <nuttx/pci/pci.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/wdog.h>
@@ -101,7 +100,7 @@ struct virtio_pci_device_s
 
   /* for legacy */
 
-  void                              *ioaddr;
+  FAR void                          *ioaddr;
 };
 
 /****************************************************************************
@@ -109,15 +108,14 @@ struct virtio_pci_device_s
  ****************************************************************************/
 
 void virtio_pci_reset_device(FAR struct virtio_device *vdev);
-uint64_t
+uint32_t
 virtio_pci_negotiate_features(FAR struct virtio_device *vdev,
-                              uint64_t features);
+                              uint32_t features);
 int virtio_pci_create_virtqueues(FAR struct virtio_device *vdev,
                                  unsigned int flags,
                                  unsigned int nvqs,
                                  FAR const char *names[],
-                                 vq_callback callbacks[],
-                                 FAR void *callback_args[]);
+                                 vq_callback callbacks[]);
 void virtio_pci_delete_virtqueues(FAR struct virtio_device *vdev);
 
 int virtio_pci_modern_probe(FAR struct pci_device_s *dev);

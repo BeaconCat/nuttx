@@ -23,7 +23,8 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include "cp15.h"
+
+#include <arch/irq.h>
 
 #ifdef CONFIG_ARCH_FPU
 
@@ -74,13 +75,6 @@ arm_fpuconfig:
 	mcr		CP15_CPACR(r0)
 
 	/* Enable access to CP10 and CP11 in CP15.NSACR */
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-	mrc		CP15_NSACR(r0)
-	orr		r0, r0, #0xc00
-	mcr		CP15_NSACR(r0)
-#endif
-
 	/* REVISIT: Do we need to do this? */
 
 	/* Set FPEXC.EN (B30) */
