@@ -514,8 +514,8 @@ static FAR struct tcp_conn_s *tcp_alloc_conn(void)
   if (dq_peek(&g_free_tcp_connections) == NULL)
     {
 #if CONFIG_NET_TCP_MAX_CONNS > 0
-      if (dq_count(&g_active_tcp_connections) +
-          CONFIG_NET_TCP_ALLOC_CONNS > CONFIG_NET_TCP_MAX_CONNS)
+      if (dq_count(&g_active_tcp_connections) + CONFIG_NET_TCP_ALLOC_CONNS
+          >= CONFIG_NET_TCP_MAX_CONNS)
         {
           return NULL;
         }
@@ -585,12 +585,10 @@ int tcp_selectport(uint8_t domain,
     {
       net_getrandom(&g_last_tcp_port, sizeof(uint16_t));
 
-      g_last_tcp_port = g_last_tcp_port % 32000;
-
-      if (g_last_tcp_port < 4096)
-        {
-          g_last_tcp_port += 4096;
-        }
+      g_last_tcp_port = g_last_tcp_port %
+                        (CONFIG_NET_DEFAULT_MAX_PORT -
+                         CONFIG_NET_DEFAULT_MIN_PORT + 1);
+      g_last_tcp_port += CONFIG_NET_DEFAULT_MIN_PORT;
     }
 
   if (portno == 0)
@@ -608,9 +606,12 @@ int tcp_selectport(uint8_t domain,
            * is within range.
            */
 
-          if (++g_last_tcp_port >= 32000)
+          ++g_last_tcp_port;
+
+          if (g_last_tcp_port > CONFIG_NET_DEFAULT_MAX_PORT ||
+              g_last_tcp_port < CONFIG_NET_DEFAULT_MIN_PORT)
             {
-              g_last_tcp_port = 4096;
+              g_last_tcp_port = CONFIG_NET_DEFAULT_MIN_PORT;
             }
 
           portno = HTONS(g_last_tcp_port);

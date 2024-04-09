@@ -476,8 +476,8 @@ static FAR struct udp_conn_s *udp_alloc_conn(void)
   if (dq_peek(&g_free_udp_connections) == NULL)
     {
 #if CONFIG_NET_UDP_MAX_CONNS > 0
-      if (dq_count(&g_active_udp_connections) +
-          CONFIG_NET_UDP_ALLOC_CONNS > CONFIG_NET_UDP_MAX_CONNS)
+      if (dq_count(&g_active_udp_connections) + CONFIG_NET_UDP_ALLOC_CONNS
+          >= CONFIG_NET_UDP_MAX_CONNS)
         {
           return NULL;
         }
@@ -540,12 +540,10 @@ uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
 
   if (g_last_udp_port == 0)
     {
-      g_last_udp_port = clock_systime_ticks() % 32000;
-
-      if (g_last_udp_port < 4096)
-        {
-          g_last_udp_port += 4096;
-        }
+      g_last_udp_port = clock_systime_ticks() %
+                        (CONFIG_NET_DEFAULT_MAX_PORT -
+                         CONFIG_NET_DEFAULT_MIN_PORT + 1);
+      g_last_udp_port += CONFIG_NET_DEFAULT_MIN_PORT;
     }
 
   /* Find an unused local port number.  Loop until we find a valid
@@ -562,9 +560,10 @@ uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
 
       /* Make sure that the port number is within range */
 
-      if (g_last_udp_port >= 32000)
+      if (g_last_udp_port > CONFIG_NET_DEFAULT_MAX_PORT ||
+          g_last_udp_port < CONFIG_NET_DEFAULT_MIN_PORT)
         {
-          g_last_udp_port = 4096;
+          g_last_udp_port = CONFIG_NET_DEFAULT_MIN_PORT;
         }
     }
   while (udp_find_conn(domain, u, HTONS(g_last_udp_port), 0) != NULL
