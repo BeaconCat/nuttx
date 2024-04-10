@@ -37,17 +37,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define FD_SHIFT  0
-#define FD_BITS   LOG2_CEIL(OPEN_MAX)
-#define FD_MASK   ((1 << FD_BITS) - 1)
-
-#define TAG_SHIFT (FD_BITS + FD_SHIFT)
+#define TAG_SHIFT 0
 #define TAG_BITS  8
 #define TAG_MASK  ((1 << TAG_BITS) - 1)
 
-#define PID_SHIFT (TAG_BITS + TAG_SHIFT)
-#define PID_BITS  (8 * sizeof(int) - 1 - PID_SHIFT)
-#define PID_MASK  ((1 << PID_BITS) - 1)
+#define FD_SHIFT  (TAG_SHIFT + TAG_BITS)
+#define FD_BITS   LOG2_CEIL(OPEN_MAX)
+#define FD_MASK   ((1 << FD_BITS) - 1)
+
+static_assert(FD_BITS <= TAG_BITS, "FD_BITS is too long");
 
 /****************************************************************************
  * Private Data
@@ -82,48 +80,36 @@ static uint8_t    g_fdcheck_tag = 0;
  * Input Parameters:
  *   val - this val carrying pid, tag and original fd information
  *
- * Returned Value: none
+ * Returned Value: The original fd is returned.
  *
  ****************************************************************************/
 
 int fdcheck_restore(int val)
 {
-  int pid_expect;
-  int ppid_now;
-  int pid_now;
+  uint8_t tag_store;
+  int fd;
 
-  if (val <= 2)
+  /* If val is a bare fd（0~255）, we should return it directly  */
+
+  fd = (val >> FD_SHIFT) & FD_MASK;
+  if (fd == 0 || val < 0)
     {
       return val;
     }
 
-  pid_expect = (val >> PID_SHIFT) & PID_MASK;
-  pid_now = _SCHED_GETPID() & PID_MASK;
-  ppid_now = _SCHED_GETPPID() & PID_MASK;
-  if (pid_expect != pid_now && pid_expect != ppid_now && pid_expect != 0)
+  int ret = ioctl(fd, FIOC_GETTAG_FDCHECK, &tag_store);
+  if (ret >= 0)
     {
-      ferr("pid_expect %d pid_now %d ppid_now %d\n",
-           pid_expect, pid_now, ppid_now);
-      PANIC();
-    }
-
-  if (pid_expect != 0)
-    {
-      uint8_t tag_store;
-      int ret = ioctl(val & FD_MASK, FIOC_GETTAG_FDCHECK, &tag_store);
-      if (ret >= 0)
+      uint8_t tag_expect = (val >> TAG_SHIFT) & TAG_MASK;
+      if (tag_expect != tag_store)
         {
-          uint8_t tag_expect = (val >> TAG_SHIFT) & TAG_MASK;
-          if (tag_expect != tag_store)
-            {
-              ferr("tag_expect 0x%x tag_store 0x%x\n",
-                   tag_expect, tag_store);
-              PANIC();
-            }
+          ferr("tag_expect 0x%x tag_store 0x%x\n",
+                tag_expect, tag_store);
+          PANIC();
         }
     }
 
-  return val & FD_MASK;
+  return fd;
 }
 
 /****************************************************************************
@@ -160,9 +146,7 @@ int fdcheck_protect(int fd)
       return fd;
     }
 
-  protect_fd = fd & FD_MASK;
-  protect_fd |= (_SCHED_GETPID() & PID_MASK) << PID_SHIFT;
-
+  protect_fd = (fd & FD_MASK) << FD_SHIFT;
   ret = ioctl(fd, FIOC_GETTAG_FDCHECK, &tag);
   DEBUGASSERT(ret >= 0);
   if (tag == 0)

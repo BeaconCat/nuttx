@@ -456,7 +456,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
   struct tcb_s *rtcb = running_task();
   irqstate_t flags;
   void *sp;
-  int ret = 0;
+  int ret;
 
   if (size <= 0 || !buffer)
     {
@@ -475,8 +475,12 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-          ret = backtrace_push((void *)(INTSTACK_SIZE +
-                               up_get_intstackbase(up_cpu_index())),
+          ret = backtrace_push(
+#  ifdef CONFIG_SMP
+                               arm_intstack_top(up_cpu_index()),
+#  else
+                               g_intstacktop,
+#  endif /* CONFIG_SMP */
                                &sp, (void *)up_backtrace + 16,
                                buffer, size, &skip);
 #else
@@ -487,10 +491,10 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #endif
           if (ret < size)
             {
-              sp = (void *)CURRENT_REGS[REG_SP];
+              sp = up_current_regs()[REG_SP];
               ret += backtrace_push(rtcb->stack_base_ptr +
                                     rtcb->adj_stack_size, &sp,
-                                    (void *)CURRENT_REGS[REG_PC],
+                                    (void *)up_current_regs()[REG_PC],
                                     &buffer[ret], size - ret, &skip);
             }
         }
@@ -511,6 +515,8 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     }
   else
     {
+      ret = 0;
+
       flags = enter_critical_section();
 
       if (skip-- <= 0)
