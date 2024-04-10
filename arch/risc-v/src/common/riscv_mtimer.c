@@ -83,14 +83,14 @@ static const struct oneshot_operations_s g_riscv_mtimer_ops =
 #ifndef CONFIG_ARCH_USE_S_MODE
 static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 {
-#ifdef CONFIG_ARCH_RV64
+#if CONFIG_ARCH_RV_MMIO_BITS == 64
   /* priv->mtime is -1, means this SoC:
    * 1. does NOT support 64bit/DWORD write for the mtimer compare value regs,
    * 2. has NO memory mapped regs which hold the value of mtimer counter,
    *    it could be read from the CSR "time".
    */
 
-  return -1 == priv->mtime ? READ_CSR(time) : getreg64(priv->mtime);
+  return -1 == priv->mtime ? READ_CSR(CSR_TIME) : getreg64(priv->mtime);
 #else
   uint32_t hi;
   uint32_t lo;
@@ -109,7 +109,7 @@ static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 static void riscv_mtimer_set_mtimecmp(struct riscv_mtimer_lowerhalf_s *priv,
                                       uint64_t value)
 {
-#ifdef CONFIG_ARCH_RV64
+#if CONFIG_ARCH_RV_MMIO_BITS == 64
   if (-1 != priv->mtime)
     {
       putreg64(value, priv->mtimecmp);
@@ -290,11 +290,10 @@ static int riscv_mtimer_current(struct oneshot_lowerhalf_s *lower,
   struct riscv_mtimer_lowerhalf_s *priv =
     (struct riscv_mtimer_lowerhalf_s *)lower;
   uint64_t mtime = riscv_mtimer_get_mtime(priv);
-  uint64_t left;
+  uint64_t nsec = mtime / (priv->freq / USEC_PER_SEC) * NSEC_PER_USEC;
 
-  ts->tv_sec  = mtime / priv->freq;
-  left        = mtime - ts->tv_sec * priv->freq;
-  ts->tv_nsec = NSEC_PER_SEC * left / priv->freq;
+  ts->tv_sec  = nsec / NSEC_PER_SEC;
+  ts->tv_nsec = nsec % NSEC_PER_SEC;
 
   return 0;
 }
