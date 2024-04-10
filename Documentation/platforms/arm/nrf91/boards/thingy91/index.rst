@@ -42,4 +42,4 @@ TODO
 Flash & Debug
 =============
 
-Both flashing and debuing is possible only with an external debug probe.
+Both flashing and debuing is possible only with an external debug proble.
