@@ -41,7 +41,7 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/clock.h>
 #include <nuttx/wdog.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -135,6 +135,12 @@ static int     fb_sem_wait(FAR struct fb_chardev_s *fb,
 static void    fb_sem_post(FAR struct fb_chardev_s *fb, int overlay);
 #endif
 
+#ifdef CONFIG_BUILD_KERNEL
+static int     fb_munmap(FAR struct task_group_s *group,
+                         FAR struct mm_map_entry_s *entry,
+                         FAR void *start, size_t length);
+#endif
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -200,10 +206,7 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
   /* Write planeinfo information to the queue. */
 
   ret = circbuf_write(panbuf, info, sizeof(union fb_paninfo_u));
-  if (ret != sizeof(union fb_paninfo_u))
-    {
-      gwarn("WARNING: circbuf_write(panbuf) failed\n");
-    }
+  DEBUGASSERT(ret == sizeof(union fb_paninfo_u));
 
   /* Re-enable interrupts */
 
@@ -547,7 +550,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode *inode;
   FAR struct fb_chardev_s *fb;
-  int ret = OK;
+  int ret;
 
   ginfo("cmd: %d arg: %ld\n", cmd, arg);
 
@@ -664,12 +667,8 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           DEBUGASSERT(priv != NULL && fb->vtable != NULL &&
                       fb->vtable->getoverlayinfo != NULL);
-          if (arg != FB_NO_OVERLAY)
-            {
-              memset(&oinfo, 0, sizeof(oinfo));
-              ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
-            }
-
+          memset(&oinfo, 0, sizeof(oinfo));
+          ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
           if (ret >= 0)
             {
               priv->overlay = arg;
@@ -815,6 +814,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(power != NULL && fb->vtable != NULL &&
                       fb->vtable->getpower != NULL);
           *(power) = fb->vtable->getpower(fb->vtable);
+          ret = OK;
         }
         break;
 
@@ -825,6 +825,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(rate != NULL && fb->vtable != NULL &&
                       fb->vtable->getframerate != NULL);
           *(rate) = fb->vtable->getframerate(fb->vtable);
+          ret = OK;
         }
         break;
 
@@ -858,6 +859,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case FBIOSET_VSYNCOFFSET:
         {
           fb->vsyncoffset = USEC2TICK(arg);
+          ret = OK;
         }
         break;
 
@@ -1006,6 +1008,22 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return ret;
 }
 
+#ifdef CONFIG_BUILD_KERNEL
+static int fb_munmap(FAR struct task_group_s *group,
+                     FAR struct mm_map_entry_s *entry,
+                     FAR void *start, size_t length)
+{
+  if (group && entry)
+    {
+      ginfo("%p, len=%zu\n", entry->vaddr, entry->length);
+      vm_unmap_region(entry->vaddr, entry->length);
+      mm_map_remove(get_current_mm(), entry);
+    }
+
+  return OK;
+}
+#endif
+
 static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct inode *inode;
@@ -1036,7 +1054,15 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   if (map->offset >= 0 && map->offset < panelinfo.fblen &&
       map->length && map->offset + map->length <= panelinfo.fblen)
     {
+#ifdef CONFIG_BUILD_KERNEL
+      map->vaddr = vm_map_region((uintptr_t)panelinfo.fbmem + map->offset,
+                                 panelinfo.fblen);
+      map->length = panelinfo.fblen;
+      map->munmap = fb_munmap;
+      mm_map_add(get_current_mm(), map);
+#else
       map->vaddr = (FAR char *)panelinfo.fbmem + map->offset;
+#endif
       return OK;
     }
 
@@ -1330,37 +1356,6 @@ static void fb_pollnotify(FAR struct fb_chardev_s *fb, int overlay)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: fb_notify_vsync
- * Description:
- *   notify that the vsync comes.
- *
- * Input Parameters:
- *   vtable  - Pointer to framebuffer's virtual table.
- *
- ****************************************************************************/
-
-void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
-{
-  FAR struct fb_chardev_s *fb;
-  FAR struct fb_priv_s * priv;
-  irqstate_t flags;
-
-  fb = vtable->priv;
-  if (fb != NULL)
-    {
-      flags = enter_critical_section();
-      for (priv = fb->head; priv; priv = priv->flink)
-        {
-          /* Notify that the vsync comes. */
-
-          poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLPRI);
-        }
-
-      leave_critical_section(flags);
-    }
-}
-
-/****************************************************************************
  * Name: fb_peek_paninfo
  * Description:
  *   Peek a frame from pan info queue of the specified overlay.
@@ -1624,6 +1619,7 @@ int fb_register_device(int display, int plane,
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
+
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);
@@ -1643,52 +1639,4 @@ errout_with_paninfo:
 errout_with_fb:
   kmm_free(fb);
   return ret;
-}
-
-/****************************************************************************
- * Name: fb_register
- *
- * Description:
- *   Register the framebuffer character device at /dev/fbN where N is the
- *   display number if the devices supports only a single plane.  If the
- *   hardware supports multiple color planes, then the device will be
- *   registered at /dev/fbN.M where N is the again display number but M
- *   is the display plane.
- *
- * Input Parameters:
- *   display - The display number for the case of boards supporting multiple
- *             displays or for hardware that supports multiple
- *             layers (each layer is consider a display).  Typically zero.
- *   plane   - Identifies the color plane on hardware that supports separate
- *             framebuffer "planes" for each color component.
- *
- * Returned Value:
- *   Zero (OK) is returned success; a negated errno value is returned on any
- *   failure.
- *
- ****************************************************************************/
-
-int fb_register(int display, int plane)
-{
-  FAR struct fb_vtable_s *vtable;
-  int ret;
-
-  /* Initialize the frame buffer device. */
-
-  ret = up_fbinitialize(display);
-  if (ret < 0)
-    {
-      gerr("ERROR: up_fbinitialize() failed for display %d: %d\n",
-           display, ret);
-      return ret;
-    }
-
-  vtable = up_fbgetvplane(display, plane);
-  if (vtable == NULL)
-    {
-      gerr("ERROR: up_fbgetvplane() failed, vplane=%d\n", plane);
-      return -EINVAL;
-    }
-
-  return fb_register_device(display, plane, vtable);
 }
