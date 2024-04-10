@@ -26,7 +26,6 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/input/buttons.h>
 #include <nuttx/input/keyboard.h>
 #include <nuttx/input/touchscreen.h>
@@ -35,7 +34,7 @@
 #include <nuttx/list.h>
 
 #ifdef CONFIG_UINPUT_RPMSG
-#  include <nuttx/rptun/openamp.h>
+#  include <nuttx/rpmsg/rpmsg.h>
 #endif
 
 /****************************************************************************
