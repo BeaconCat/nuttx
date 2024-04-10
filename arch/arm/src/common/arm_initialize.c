@@ -33,15 +33,12 @@
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
+ * register storage structure.  It is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
  */
 
-#if defined(CONFIG_ARCH_ARMV7M) || defined(CONFIG_ARCH_ARMV8M) || \
-      defined(CONFIG_ARCH_ARMV6M) || defined(CONFIG_ARCH_ARM)
 volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -64,7 +61,7 @@ static inline void arm_color_intstack(void)
 
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      arm_stack_color((void *)arm_intstack_alloc(cpu), INTSTACK_SIZE);
+      arm_stack_color((void *)up_get_intstackbase(cpu), INTSTACK_SIZE);
     }
 #else
   arm_stack_color((void *)g_intstackalloc, INTSTACK_SIZE);
