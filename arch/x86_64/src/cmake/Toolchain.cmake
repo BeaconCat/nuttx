@@ -64,12 +64,12 @@ if(${CONFIG_STACK_USAGE_WARNING})
   endif()
 endif()
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_SCHED_GCOV)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g)
+  add_compile_options(-g3)
 endif()
 
 # Architecture flags
@@ -102,13 +102,8 @@ set(ARCHCFLAGS
     "-Wstrict-prototypes -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 set(ARCHCXXFLAGS
-    "-fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas")
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
-else()
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
-endif()
+    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
+)
 
 if(CONFIG_CXX_STANDARD)
   string(APPEND ARCHCXXFLAGS " -std=${CONFIG_CXX_STANDARD}")
