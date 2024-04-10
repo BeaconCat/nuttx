@@ -43,17 +43,24 @@
 #ifdef CONFIG_ARCH_FPU
 #include "arm64_fpu.h"
 #endif
-
-#ifdef CONFIG_ARCH_HAVE_DEBUG
-#include "arm64_hwdebug.h"
-#endif
-
 #include "arm64_internal.h"
 #include "chip.h"
 
 /****************************************************************************
  * Public data
  ****************************************************************************/
+
+/* g_current_regs[] holds a references to the current interrupt level
+ * register storage structure.  It is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
+ */
+
+/* For the case of configurations with multiple CPUs, then there must be one
+ * such value for each processor that can receive an interrupt.
+ */
+
+volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
 
 #ifdef CONFIG_ARCH_FPU
 static struct notifier_block g_fpu_panic_block;
@@ -87,7 +94,7 @@ INIT_STACK_DEFINE(g_interrupt_fiq_stack, INTSTACK_SIZE);
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm64_intstack_alloc
+ * Name: up_get_intstackbase
  *
  * Description:
  *   Return a pointer to the "alloc" the correct interrupt stack allocation
@@ -96,25 +103,10 @@ INIT_STACK_DEFINE(g_interrupt_fiq_stack, INTSTACK_SIZE);
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-uintptr_t arm64_intstack_alloc(int cpu)
+uintptr_t up_get_intstackbase(int cpu)
 {
   return (uintptr_t)(g_interrupt_stacks[cpu]);
 }
-
-/****************************************************************************
- * Name: arm64_intstack_top
- *
- * Description:
- *   Return a pointer to the top the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-uintptr_t arm64_intstack_top(int cpu)
-{
-  return (uintptr_t)(g_interrupt_stacks[cpu] + INTSTACK_SIZE);
-}
-
 #endif
 
 /****************************************************************************
@@ -134,7 +126,7 @@ static void up_color_intstack(void)
 
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      arm64_stack_color((void *)arm64_intstack_alloc(cpu), INTSTACK_SIZE);
+      arm64_stack_color((void *)up_get_intstackbase(cpu), INTSTACK_SIZE);
     }
 #else
   arm64_stack_color((void *)g_interrupt_stack, INTSTACK_SIZE);
@@ -231,9 +223,5 @@ void up_initialize(void)
   arm64_fpu_procfs_register();
 #endif
 
-#endif
-
-#ifdef CONFIG_ARCH_HAVE_DEBUG
-  arm64_hwdebug_init();
 #endif
 }
