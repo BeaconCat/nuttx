@@ -22,14 +22,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* SBI Extension IDs */
-
-#define SBI_EXT_TIME            0x54494D45
-
-/* SBI function IDs for TIME extension */
-
-#define SBI_EXT_TIME_SET_TIMER  0x0
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -124,10 +116,10 @@ uint64_t riscv_sbi_get_time(void)
 
   do
     {
-      hi = READ_CSR(timeh);
-      lo = READ_CSR(time);
+      hi = READ_CSR(CSR_TIMEH);
+      lo = READ_CSR(CSR_TIME);
     }
-  while (hi != READ_CSR(timeh));
+  while (hi != READ_CSR(CSR_TIMEH));
 
   return (((uint64_t) hi) << 32) | lo;
 #endif
