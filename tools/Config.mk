@@ -570,17 +570,12 @@ endef
 
 # CLEAN - Default clean target
 
-ifeq ($(CONFIG_ARCH_COVERAGE),y)
+ifeq ($(CONFIG_SCHED_GCOV),y)
 	EXTRA = *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_STACK_USAGE),y)
 	EXTRA += *.su
-endif
-
-ifeq ($(CONFIG_ARCH_TOOLCHAIN_TASKING),y)
-	EXTRA += *.d
-	EXTRA += *.src
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
