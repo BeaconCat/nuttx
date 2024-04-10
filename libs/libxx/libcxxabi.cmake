@@ -20,7 +20,7 @@
 
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
 
-  set(LIBCXXABI_VERSION CONFIG_LIBCXXABI_VERSION)
+  set(LIBCXXABI_VERSION ${CONFIG_LIBCXXABI_VERSION})
 
   FetchContent_Declare(
     libcxxabi
@@ -39,6 +39,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
         ""
         TEST_COMMAND
         ""
+    PATCH_COMMAND ""
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -48,12 +49,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
     FetchContent_Populate(libcxxabi)
   endif()
 endif()
-
-set_property(
-  TARGET nuttx
-  APPEND
-  PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES
-           ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
 
 nuttx_add_system_library(libcxxabi)
 
@@ -98,7 +93,11 @@ foreach(src ${SRCS})
   list(APPEND TARGET_SRCS ${src})
 endforeach()
 
+# RTTI is required for building the libcxxabi library
+target_compile_options(libcxxabi PRIVATE -frtti)
+
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
 target_compile_options(libcxxabi PRIVATE -frtti)
-target_include_directories(libcxxabi BEFORE
-                           PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
+target_include_directories(
+  libcxxabi BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include
+                           ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
