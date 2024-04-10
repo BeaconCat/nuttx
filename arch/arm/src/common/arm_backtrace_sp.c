@@ -257,12 +257,16 @@ int up_backtrace(struct tcb_s *tcb,
 
       if (up_interrupt_context())
         {
-          unsigned long top =
+          unsigned long top;
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-            up_get_intstackbase(up_cpu_index()) + INTSTACK_SIZE;
+#  ifdef CONFIG_SMP
+          top = arm_intstack_top(up_cpu_index());
+#  else
+          top = (unsigned long)g_intstacktop;
+#  endif /* CONFIG_SMP */
 #else
-            (unsigned long)rtcb->stack_base_ptr +
-                           rtcb->adj_stack_size;
+          top = (unsigned long)rtcb->stack_base_ptr +
+                               rtcb->adj_stack_size;
 #endif
           ret = backtrace_branch(top, sp, buffer, size, &skip);
           if (ret < size)
@@ -270,7 +274,7 @@ int up_backtrace(struct tcb_s *tcb,
               ret += backtrace_branch((unsigned long)
                                       rtcb->stack_base_ptr +
                                       rtcb->adj_stack_size,
-                                      CURRENT_REGS[REG_SP],
+                                      up_current_regs()[REG_SP],
                                       &buffer[ret],
                                       size - ret, &skip);
             }
