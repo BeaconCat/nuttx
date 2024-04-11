@@ -44,7 +44,7 @@ struct task_group_s;
 
 struct mm_map_entry_s
 {
-  FAR struct mm_map_entry_s *flink;  /* this is used as sq_entry_t */
+  FAR struct mm_map_entry *flink;  /* this is used as sq_entry_t */
   FAR void *vaddr;
   size_t length;
   off_t offset;
@@ -56,11 +56,11 @@ struct mm_map_entry_s
     int i;
   } priv;
 
-  /* Drivers which register mappings may also implement the unmap function
-   * to undo anything done in mmap.
-   * Nb. Implementation must NOT use "this_task()->group" since it is not
-   * valid during process exit. The argument "group" will be NULL in this
-   * case.
+  /* Drivers which register mappings may also
+   * implement the unmap function to undo anything done in mmap.
+   * Nb. Implementation must NOT use "this_task()->group" since
+   * this is not valid during process exit. The argument "group" will be
+   * NULL in this case.
    */
 
   int (*munmap)(FAR struct task_group_s *group,
@@ -69,15 +69,16 @@ struct mm_map_entry_s
                 size_t length);
 };
 
-/* memory mapping structure for the task group */
+/* A structure for the task group */
 
 struct mm_map_s
 {
-  sq_queue_t mm_map_sq;         /* mappings list */
-  size_t map_count;             /* mappings list length */
+  sq_queue_t mm_map_sq;
+
+  size_t map_count;
 
 #ifdef CONFIG_ARCH_VMA_MAPPING
-  GRAN_HANDLE mm_map_vpages;    /* SHM virtual zone allocator */
+  GRAN_HANDLE mm_map_vpages;
 #endif
 
   rmutex_t mm_map_mutex;
@@ -124,7 +125,7 @@ void mm_map_unlock(void);
  * Name: mm_map_initialize
  *
  * Description:
- *   Initialization function, called only by group_postinitialize
+ *   Initialization function, called only by group_initialize
  *
  * Input Parameters:
  *   mm     - Pointer to the mm_map structure to be initialized
