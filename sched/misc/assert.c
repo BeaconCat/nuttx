@@ -26,6 +26,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/coredump.h>
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
@@ -46,7 +47,6 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
-#include "misc/coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -89,6 +89,8 @@ static FAR const char * const g_ttypenames[4] =
   "Kthread",
   "Invalid"
 };
+
+static bool g_fatal_assert = false;
 
 /****************************************************************************
  * Private Functions
@@ -249,7 +251,8 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 #endif
                  );
 
-      tcbstack_sp = up_getusrsp((FAR void *)CURRENT_REGS);
+      tcbstack_sp = up_current_regs() ?
+                    up_getusrsp((FAR void *)up_current_regs()) : 0;
       if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
         {
           tcbstack_sp = 0;
@@ -508,6 +511,25 @@ static void dump_deadlock(void)
 #endif
 
 /****************************************************************************
+ * Name: pause_all_cpu
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void pause_all_cpu(void)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      if (cpu != this_cpu())
+        {
+          up_cpu_pause(cpu);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -536,7 +558,17 @@ void _assert(FAR const char *filename, int linenum,
 
   flags = enter_critical_section();
 
-  sched_lock();
+  if (g_fatal_assert)
+    {
+      goto reset;
+    }
+
+  if (fatal)
+    {
+#ifdef CONFIG_SMP
+      pause_all_cpu();
+#endif
+    }
 
   /* try to save current context if regs is null */
 
@@ -556,7 +588,11 @@ void _assert(FAR const char *filename, int linenum,
     {
       fatal = false;
     }
+  else
 #endif
+    {
+      g_fatal_assert = true;
+    }
 
   notifier_data.rtcb = rtcb;
   notifier_data.regs = regs;
@@ -591,7 +627,7 @@ void _assert(FAR const char *filename, int linenum,
          msg ? msg : "",
          filename ? filename : "", linenum,
 #ifdef CONFIG_SMP
-         this_cpu(),
+         up_cpu_index(),
 #endif
 #if CONFIG_TASK_NAME_SIZE > 0
          rtcb->name,
@@ -655,6 +691,7 @@ void _assert(FAR const char *filename, int linenum,
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
+reset:
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
@@ -671,8 +708,6 @@ void _assert(FAR const char *filename, int linenum,
         }
 #endif
     }
-
-  sched_unlock();
 
   leave_critical_section(flags);
 }

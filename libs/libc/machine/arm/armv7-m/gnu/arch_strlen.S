@@ -70,7 +70,6 @@
 
 	.macro def_fn f p2align=0
 	.text
-	.section .text.strlen
 	.p2align \p2align
 	.global \f
 	.type \f, %function
@@ -108,7 +107,7 @@
 #define tmp1		r4		/* Overlaps const_0  */
 #define tmp2		r5
 
-def_fn	strlen p2align=6
+def_fn	ARCH_LIBCFUN(strlen) p2align=6
 	pld	[srcin, #0]
 	strd	r4, r5, [sp, #-8]!
 	bic	src, srcin, #7
@@ -186,6 +185,6 @@ def_fn	strlen p2align=6
 	movne	data1a, const_m1
 	mov	const_0, #0
 	b	.Lstart_realigned
-	.size	strlen, . - strlen
+	.size	ARCH_LIBCFUN(strlen), . - ARCH_LIBCFUN(strlen)
 
 #endif
