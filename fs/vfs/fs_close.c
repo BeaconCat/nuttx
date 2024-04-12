@@ -69,10 +69,6 @@ int file_close_without_clear(FAR struct file *filep)
 
   if (inode)
     {
-#ifdef CONFIG_FS_NOTIFY
-      notify_close(filep);
-#endif
-
       file_closelk(filep);
 
       /* Close the file, driver, or mountpoint. */
