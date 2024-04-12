@@ -145,7 +145,7 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
    * fault.
    */
 
-  pdump->info.current_regs = (uintptr_t)CURRENT_REGS;
+  pdump->info.current_regs = (uintptr_t)up_current_regs();
 
   /* Save Context */
 
@@ -160,14 +160,14 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
    * the users context
    */
 
-  if (CURRENT_REGS)
+  if (up_current_regs())
     {
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
       pdump->info.stacks.interrupt.sp = sp;
 #endif
-      pdump->info.flags |= (REGS_PRESENT | USERSTACK_PRESENT | \
+      pdump->info.flags |= (REGS_PRESENT | USERSTACK_PRESENT |
                             INTSTACK_PRESENT);
-      memcpy(pdump->info.regs, (void *)CURRENT_REGS,
+      memcpy(pdump->info.regs, up_current_regs(),
              sizeof(pdump->info.regs));
       pdump->info.stacks.user.sp = pdump->info.regs[REG_R13];
     }
@@ -186,9 +186,13 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   /* Get the limits on the interrupt stack memory */
 
+#ifdef CONFIG_SMP
   pdump->info.stacks.interrupt.top =
-    up_get_intstackbase(up_cpu_index()) + INTSTACK_SIZE;
-  pdump->info.stacks.interrupt.size = INTSTACK_SIZE;
+      (uint32_t)arm_intstack_top(up_cpu_index());
+#else
+  pdump->info.stacks.interrupt.top = (uint32_t)g_intstacktop;
+#endif
+  pdump->info.stacks.interrupt.size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
 
   /* If In interrupt Context save the interrupt stack data centered
    * about the interrupt stack pointer

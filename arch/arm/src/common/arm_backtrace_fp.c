@@ -105,6 +105,9 @@ int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
+  void *istacklimit;
+#endif
   irqstate_t flags;
   int ret;
 
@@ -118,10 +121,13 @@ int up_backtrace(struct tcb_s *tcb,
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-          void *istackbase = (void *)up_get_intstackbase(up_cpu_index());
-
-          ret = backtrace(istackbase,
-                          istackbase + INTSTACK_SIZE,
+#  ifdef CONFIG_SMP
+          istacklimit = (void *)arm_intstack_top(up_cpu_index());
+#  else
+          istacklimit = g_intstacktop;
+#  endif /* CONFIG_SMP */
+          ret = backtrace(istacklimit - (CONFIG_ARCH_INTERRUPTSTACK & ~7),
+                          istacklimit,
                           (void *)__builtin_frame_address(0),
                           NULL, buffer, size, &skip);
 #else
@@ -134,8 +140,8 @@ int up_backtrace(struct tcb_s *tcb,
             {
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                               (void *)CURRENT_REGS[REG_FP],
-                               (void *)CURRENT_REGS[REG_PC],
+                               (void *)up_current_regs()[REG_FP],
+                               (void *)up_current_regs()[REG_PC],
                                &buffer[ret], size - ret, &skip);
             }
         }

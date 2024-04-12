@@ -107,15 +107,14 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
-  struct tcb_s *rtcb = (struct tcb_s *)arch_get_current_tcb();
+  struct tcb_s *rtcb = running_task();
   struct regs_context * p_regs;
+
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
+  void *istacklimit;
+#endif
   irqstate_t flags;
   int ret;
-
-  if (rtcb == NULL)
-    {
-      rtcb = running_task();
-    }
 
   if (size <= 0 || !buffer)
     {
@@ -127,9 +126,13 @@ int up_backtrace(struct tcb_s *tcb,
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-          void *istackbase = (void *)up_get_intstackbase(up_cpu_index());
-          ret = backtrace(istackbase,
-                          istackbase + INTSTACK_SIZE,
+#  ifdef CONFIG_SMP
+          istacklimit = (void *)arm64_intstack_top(up_cpu_index());
+#  else
+          istacklimit = g_interrupt_stack + INTSTACK_SIZE;
+#  endif /* CONFIG_SMP */
+          ret = backtrace(istacklimit - (CONFIG_ARCH_INTERRUPTSTACK & ~15),
+                          istacklimit,
                           (void *)__builtin_frame_address(0),
                           NULL, buffer, size, &skip);
 #else
@@ -140,7 +143,7 @@ int up_backtrace(struct tcb_s *tcb,
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
           if (ret < size)
             {
-              p_regs = (struct regs_context *)CURRENT_REGS;
+              p_regs = (struct regs_context *)up_current_regs();
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
                                (void *)p_regs->regs[REG_X29],
