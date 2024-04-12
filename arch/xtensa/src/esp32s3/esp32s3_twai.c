@@ -44,11 +44,9 @@
 #include "esp32s3_twai.h"
 #include "esp32s3_irq.h"
 #include "esp32s3_clockconfig.h"
-
-#include "periph_ctrl.h"
+#include "esp32s3_periph.h"
 
 #include "hardware/esp32s3_system.h"
-#include "hardware/esp32s3_twai.h"
 #include "hardware/esp32s3_gpio_sigmap.h"
 
 #if defined(CONFIG_ESP32S3_TWAI)
@@ -1243,7 +1241,7 @@ struct can_dev_s *esp32s3_twaiinitialize(void)
    * Enable clocking to the TWAI module
    */
 
-  periph_module_enable(PERIPH_TWAI_MODULE);
+  esp32s3_periph_module_enable(PERIPH_TWAI_MODULE);
 
   /* Configure CAN GPIO pins */
 
