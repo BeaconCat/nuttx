@@ -95,6 +95,7 @@ AES          Yes
 Bluetooth    Yes
 CAN/TWAI     Yes
 DMA          Yes
+DAC          Yes    One-shot
 eFuse        Yes
 Ethernet     Yes
 GPIO         Yes
@@ -240,7 +241,7 @@ Linker Segments
 ESP32 has 4 generic timers of 64 bits (2 from Group 0 and 2 from Group 1). They're
 accessible as character drivers, the configuration along with a guidance on how
 to run the example and the description of the application level interface
-can be found :doc:`here </components/drivers/character/timer>`.
+can be found :doc:`here </components/drivers/character/timers/timer>`.
 
 Watchdog Timers
 ===============
@@ -249,7 +250,7 @@ ESP32 has 3 WDTs. 2 MWDTS from the Timers Module and 1 RWDT from the RTC Module
 (Currently not supported yet). They're accessible as character drivers,
 The configuration along with a guidance on how to run the example and the description
 of the application level interface can be found
-:doc:`here </components/drivers/character/watchdog>`.
+:doc:`here </components/drivers/character/timers/watchdog>`.
 
 SMP
 ===
@@ -290,7 +291,7 @@ the result by running ``ifconfig`` afterwards.
 
 .. tip:: Boards usually expose a ``wifi`` defconfig which enables Wi-Fi
 
-.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
+.. tip:: Please check :doc:`wapi </applications/wireless/wapi/index>` documentation for more
    information about its commands and arguments.
 
 .. note:: The ``wapi psk`` command on Station mode sets a security threshold. That
@@ -319,7 +320,7 @@ In this case, you are creating the access point ``nuttxapp`` in your board and t
 connect to it on your smartphone you will be required to type the password ``mypasswd``
 using WPA2.
 
-.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
+.. tip:: Please check :doc:`wapi </applications/wireless/wapi/index>` documentation for more
    information about its commands and arguments.
 
 The ``dhcpd_start`` is necessary to let your board to associate an IP to your smartphone.
@@ -403,6 +404,13 @@ Build and generate the QEMU image::
 A QEMU-compatible ``nuttx.merged.bin`` binary image will be created. It can be run as::
 
  $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw
+
+QEMU Networking
+---------------
+
+Networking is possible using the openeth MAC driver. Enable ``ESP32_OPENETH`` option and set the nic in QEMU:
+
+ $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw -nic user,model=open_eth
 
 Secure Boot and Flash Encryption
 ================================
