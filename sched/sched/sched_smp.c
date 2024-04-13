@@ -133,14 +133,6 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
 
       ret = call_data->func(call_data->arg);
 
-      if (spin_is_locked(&call_data->lock))
-        {
-          if (--call_data->refcount == 0)
-            {
-              spin_unlock(&call_data->lock);
-            }
-        }
-
       if (call_data->cookie != NULL)
         {
           if (ret < 0)
@@ -149,6 +141,14 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
             }
 
           nxsem_post(&call_data->cookie->sem);
+        }
+
+      if (spin_is_locked(&call_data->lock))
+        {
+          if (--call_data->refcount == 0)
+            {
+              spin_unlock(&call_data->lock);
+            }
         }
 
       flags = enter_critical_section();
@@ -235,8 +235,7 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
       CPU_CLR(this_cpu(), &cpuset);
     }
 
-  remote_cpus = CPU_COUNT(&cpuset);
-  if (remote_cpus == 0)
+  if (CPU_COUNT(&cpuset) == 0)
     {
       goto out;
     }
@@ -258,17 +257,22 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
 
   call_data->func = func;
   call_data->arg  = arg;
-  call_data->refcount = remote_cpus;
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       if (CPU_ISSET(i, &cpuset))
         {
           nxsched_smp_call_add(i, call_data);
+          remote_cpus++;
         }
     }
 
-  up_send_smp_call(cpuset);
+  call_data->refcount = remote_cpus;
+
+  if (remote_cpus > 0)
+    {
+      up_send_smp_call(cpuset);
+    }
 
   if (wait)
     {
