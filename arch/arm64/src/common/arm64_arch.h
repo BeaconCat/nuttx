@@ -52,6 +52,23 @@
 #define BIT_MASK(n)     (BIT(n) - 1)
 #define BIT64_MASK(n)   (BIT64(n) - 1ULL)
 
+#define DAIFSET_FIQ_BIT     BIT(0)
+#define DAIFSET_IRQ_BIT     BIT(1)
+#define DAIFSET_ABT_BIT     BIT(2)
+#define DAIFSET_DBG_BIT     BIT(3)
+
+#define DAIFCLR_FIQ_BIT     BIT(0)
+#define DAIFCLR_IRQ_BIT     BIT(1)
+#define DAIFCLR_ABT_BIT     BIT(2)
+#define DAIFCLR_DBG_BIT     BIT(3)
+
+#define DAIF_FIQ_BIT        BIT(6)
+#define DAIF_IRQ_BIT        BIT(7)
+#define DAIF_ABT_BIT        BIT(8)
+#define DAIF_DBG_BIT        BIT(9)
+
+#define DAIF_MASK           (0xf << 6)
+
 /* Arm® Architecture Registers Armv8, for Armv8-A architecture profile
  * ( DDI 0595, ID121321 ), defined:
  *
@@ -77,17 +94,6 @@
 #define SCTLR_C_BIT         BIT(2)
 #define SCTLR_SA_BIT        BIT(3)
 #define SCTLR_I_BIT         BIT(12)
-
-#define ACTLR_AUX_BIT        BIT(9)
-#define ACTLR_CLPORTS_BIT    BIT(8)
-#define ACTLR_CLPMU_BIT      BIT(7)
-#define ACTLR_TESTR1_BIT     BIT(6)
-#define ACTLR_CDBG_BIT       BIT(5)
-#define ACTLR_PATCH_BIT      BIT(4)
-#define ACTLR_BPRED_BIT      BIT(3)
-#define ACTLR_POWER_BIT      BIT(2)
-#define ACTLR_DIAGNOSTIC_BIT BIT(1)
-#define ACTLR_REGIONS_BIT    BIT(0)
 
 /* SPSR M[3:0] define
  *
@@ -140,10 +146,38 @@
 
 #define GET_EL(mode)  (((mode) >> MODE_EL_SHIFT) & MODE_EL_MASK)
 
-#define MPIDR_ID_MASK (0xff00ffffff)
+/* MPIDR_EL1, Multiprocessor Affinity Register */
+
+#define MPIDR_AFFLVL_MASK   (0xff)
+#define MPIDR_ID_MASK       (0xff00ffffff)
+
+#define MPIDR_AFF0_SHIFT    (0)
+#define MPIDR_AFF1_SHIFT    (8)
+#define MPIDR_AFF2_SHIFT    (16)
+#define MPIDR_AFF3_SHIFT    (32)
+
+/* mpidr_el1 register, the register is define:
+ *   - bit 0~7:   Aff0
+ *   - bit 8~15:  Aff1
+ *   - bit 16~23: Aff2
+ *   - bit 24:    MT, multithreading
+ *   - bit 25~29: RES0
+ *   - bit 30:    U, multiprocessor/Uniprocessor
+ *   - bit 31:    RES1
+ *   - bit 32~39: Aff3
+ *   - bit 40~63: RES0
+ *   Different ARM64 Core will use different Affn define, the mpidr_el1
+ *  value is not CPU number, So we need to change CPU number to mpid
+ *  and vice versa
+ */
+
+#define GET_MPIDR()             read_sysreg(mpidr_el1)
 
 #define MPIDR_AFFLVL(mpidr, aff_level) \
   (((mpidr) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
+
+#define MPID_TO_CORE(mpid, aff_level) \
+  (((mpid) >> MPIDR_AFF ## aff_level ## _SHIFT) & MPIDR_AFFLVL_MASK)
 
 #define CORE_TO_MPID(core, aff_level) \
   ({ \
@@ -255,7 +289,7 @@
  *  to these memory regions.
  */
 
-#define CONFIG_MAX_XLAT_TABLES      10
+#define CONFIG_MAX_XLAT_TABLES      7
 
 /* Virtual address space size
  * Allows choosing one of multiple possible virtual address
@@ -265,14 +299,15 @@
  * The choice could be: 32, 36, 42, 48
  */
 
-#define CONFIG_ARM64_VA_BITS        48
+#define CONFIG_ARM64_VA_BITS        36
+
 /* Physical address space size
  * Choose the maximum physical address range that the kernel will support.
  *
  * The choice could be: 32, 36, 42, 48
  */
 
-#define CONFIG_ARM64_PA_BITS        48
+#define CONFIG_ARM64_PA_BITS        36
 
 #define L1_CACHE_SHIFT              (6)
 #define L1_CACHE_BYTES              BIT(L1_CACHE_SHIFT)
@@ -309,9 +344,7 @@ struct regs_context
   uint64_t  sp_el0;
   uint64_t  exe_depth;
   uint64_t  tpidr_el0;
-#ifdef CONFIG_ARCH_FPU
-  struct fpu_reg fpu_regs;
-#endif
+  uint64_t  tpidr_el1;
 };
 
 /****************************************************************************
@@ -406,26 +439,6 @@ static inline void arch_nop(void)
 
 /****************************************************************************
  * Name:
- *   arm64_current_el()
- *
- * Description:
- *
- *   Get current execute level
- *
- ****************************************************************************/
-
-#define arm64_current_el()                \
-  ({                                      \
-    uint64_t __el;                        \
-    int      __ret;                       \
-    __asm__ volatile ("mrs %0, CurrentEL" \
-                      : "=r" (__el));     \
-    __ret = GET_EL(__el);                 \
-    __ret;                                \
-  })
-
-/****************************************************************************
- * Name:
  *   read_/write_/zero_ sysreg
  *
  * Description:
@@ -485,7 +498,7 @@ void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
  * Description:
  *   tpidrro_el0 is used to record exception depth, it's used for fpu trap
  * happened at exception context (like IRQ).
- *   tpidr_el0 is used to record TCB at present, it's used for fpu and task
+ *   tpidr_el1 is used to record TCB at present, it's used for fpu and task
  * switch propose
  *
  ****************************************************************************/
@@ -497,7 +510,7 @@ static inline int arch_get_exception_depth(void)
 
 static inline uint64_t arch_get_current_tcb(void)
 {
-  return read_sysreg(tpidr_el0);
+  return read_sysreg(tpidr_el1);
 }
 
 void arch_cpu_idle(void);

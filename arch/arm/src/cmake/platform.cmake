@@ -50,6 +50,8 @@ elseif(CONFIG_ARCH_CORTEXR5)
   set(CMAKE_SYSTEM_PROCESSOR cortex-r5)
 elseif(CONFIG_ARCH_CORTEXR7)
   set(CMAKE_SYSTEM_PROCESSOR cortex-r7)
+elseif(CONFIG_ARCH_CORTEXR52)
+  set(CMAKE_SYSTEM_PROCESSOR cortex-r8)
 else()
   message(FATAL_ERROR "CMAKE_SYSTEM_PROCESSOR not set")
 endif()
@@ -93,7 +95,7 @@ if(CONFIG_LIBSUPCXX)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a
