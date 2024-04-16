@@ -31,7 +31,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/serial/uart_rpmsg.h>
 
@@ -344,6 +344,9 @@ static void uart_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
     {
       rpmsg_destroy_ept(&priv->ept);
     }
+
+  dev->dmatx.nbytes = dev->dmatx.length + dev->dmatx.nlength;
+  uart_xmitchars_done(dev);
 }
 
 static int uart_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
