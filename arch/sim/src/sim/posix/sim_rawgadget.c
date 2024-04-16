@@ -81,7 +81,7 @@
 #define USB_RAW_EP0_MAX_LEN         256
 #define USB_RAW_EP_MAX_LEN          1024
 
-#define USB_RAW_RX_BUF_NUM          256
+#define USB_RAW_RX_BUF_NUM          8
 
 #define USB_RAW_DEVICE              "dummy_udc.0"
 #define USB_RAW_DRIVER              "dummy_udc"
@@ -577,7 +577,7 @@ static void *host_raw_ep0handle(void *arg)
   struct usb_raw_control_event_s event;
   struct sigaction action;
 
-  memset(&action, 0, sizeof(struct sigaction));
+  memset(&action, 0, sizeof(action));
   action.sa_handler = host_raw_handle_signal;
   sigaction(SIGUSR2, &action, NULL);
 
@@ -617,7 +617,7 @@ static void *host_raw_ephandle(void *arg)
   struct usb_raw_data_io_s *io;
   struct sigaction action;
 
-  memset(&action, 0, sizeof(struct sigaction));
+  memset(&action, 0, sizeof(action));
   action.sa_handler = host_raw_handle_signal;
   sigaction(SIGUSR2, &action, NULL);
 
