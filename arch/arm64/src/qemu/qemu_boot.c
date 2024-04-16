@@ -29,7 +29,8 @@
 #include <debug.h>
 
 #include <nuttx/cache.h>
-#ifdef CONFIG_LEGACY_PAGING
+#include <nuttx/syslog/syslog_rpmsg.h>
+#ifdef CONFIG_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -62,6 +63,18 @@ static const struct arm_mmu_region g_mmu_regions[] =
   MMU_REGION_FLAT_ENTRY("DRAM0_S0",
                         CONFIG_RAMBANK1_ADDR, CONFIG_RAMBANK1_SIZE,
                         MT_NORMAL | MT_RW | MT_SECURE),
+
+  MMU_REGION_FLAT_ENTRY("PCI_CFG",
+                        CONFIG_PCI_CFG_BASEADDR, CONFIG_PCI_CFG_SIZE,
+                        MT_NORMAL | MT_RW | MT_SECURE),
+
+  MMU_REGION_FLAT_ENTRY("PCI_MEM",
+                        CONFIG_PCI_MEM_BASEADDR, CONFIG_PCI_MEM_SIZE,
+                        MT_NORMAL | MT_RW | MT_SECURE),
+
+  MMU_REGION_FLAT_ENTRY("PCI_IO",
+                        CONFIG_PCI_IO_BASEADDR, CONFIG_PCI_IO_SIZE,
+                        MT_NORMAL | MT_RW | MT_SECURE),
 };
 
 const struct arm_mmu_config g_mmu_config =
@@ -69,6 +82,10 @@ const struct arm_mmu_config g_mmu_config =
   .num_regions = nitems(g_mmu_regions),
   .mmu_regions = g_mmu_regions,
 };
+
+#ifdef CONFIG_SYSLOG_RPMSG
+static char g_syslog_rpmsg_buf[4096];
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -79,35 +96,6 @@ const struct arm_mmu_config g_mmu_config =
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- *   If TLS is enabled, then the RTOS can get this information from the TLS
- *   info structure.  Otherwise, the MCU-specific logic must provide some
- *   mechanism to provide the CPU index.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- ****************************************************************************/
-
-int up_cpu_index(void)
-{
-  /* Read the Multiprocessor Affinity Register (MPIDR)
-   * And return the CPU ID field
-   */
-
-  return MPID_TO_CORE(GET_MPIDR(), 0);
-}
 
 /****************************************************************************
  * Name: arm64_get_mpid
@@ -135,7 +123,7 @@ uint64_t arm64_get_mpid(int cpu)
 
 int arm64_get_cpuid(uint64_t mpid)
 {
-  return MPID_TO_CORE(mpid, 0);
+  return MPID_TO_CORE(mpid);
 }
 
 #endif /* CONFIG_SMP */
@@ -193,5 +181,13 @@ void arm64_chip_boot(void)
    */
 
   arm64_earlyserialinit();
+#endif
+
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  up_perf_init((void *)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
+#endif
+
+#ifdef CONFIG_SYSLOG_RPMSG
+  syslog_rpmsg_init_early(g_syslog_rpmsg_buf, sizeof(g_syslog_rpmsg_buf));
 #endif
 }
