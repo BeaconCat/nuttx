@@ -29,6 +29,9 @@
 
 #include <stdint.h>
 
+#include "chip.h"
+#include "hardware/esp32s3_otg.h"
+
 #if defined(CONFIG_ESP32S3_OTG)
 
 /****************************************************************************
