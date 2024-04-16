@@ -73,8 +73,12 @@ ifneq ($(CONFIG_STACK_USAGE_WARNING),0)
   ARCHOPTIMIZATION += -Wstack-usage=$(CONFIG_STACK_USAGE_WARNING)
 endif
 
+ifeq ($(CONFIG_ARCH_COVERAGE_ALL),y)
+  ARCHOPTIMIZATION += -fprofile-generate -ftest-coverage
+endif
+
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCXXFLAGS += -fno-common
 
 ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
@@ -82,6 +86,12 @@ ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 # When all C++ code is built using GCC 7.1 or a higher version,
 # we can safely disregard warnings of the type "parameter passing for X changed in GCC 7.1."
 # Refer to : https://stackoverflow.com/questions/48149323/what-does-the-gcc-warning-project-parameter-passing-for-x-changed-in-gcc-7-1-m
+
+ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
+  ARCHCXXFLAGS += -nostdinc++
+else
+  ARCHCXXFLAGS += -D_STDLIB_H_
+endif
 
 ifneq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   ARCHCFLAGS += -Wno-psabi
@@ -113,12 +123,6 @@ ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
   ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
 endif
 
-# Debug --whole-archive
-
-ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
-  LDFLAGS += --whole-archive
-endif
-
 LDFLAGS += -nostdlib
 
 # Debug link map
@@ -128,7 +132,7 @@ ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION += -g3
+  ARCHOPTIMIZATION += -g
 endif
 
 # Generic GNU RVG toolchain
@@ -148,7 +152,14 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     endif
   endif
 
-  # Detect cpu ISA support flags
+  # Detect cpu ISA support flags:
+  #
+  # Naming Convention
+  # RISC-V defines an exact order that must be used to define the RISC-V ISA subset:
+  #
+  # RV [32, 64, 128] I, M, A, F, D, G, Q, L, C, B, J, T, P, V, N
+  #
+  # For example, RV32IMAFDQC is legal, whereas RV32IMAFDCQ is not.
 
   ARCHCPUEXTFLAGS = i
 
@@ -176,9 +187,22 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)c
   endif
 
-  GCC_VERSION = ${shell $(CROSSDEV)gcc --version | grep gcc | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1 | cut -d"." -f1 }
-  ifeq ($(shell expr $(GCC_VERSION) \>= 12), 1)
-    ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_zicsr_zifencei
+  ifeq ($(CONFIG_ARCH_RV_ISA_V),y)
+    ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)v
+  endif
+
+  ifeq ($(CONFIG_ARCH_RV_ISA_ZICSR_ZIFENCEI),y)
+    ifeq ($(GCCVER),)
+      export GCCVER = ${shell $(CROSSDEV)gcc --version | grep gcc | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1 | cut -d"." -f1 }
+    endif
+    ifeq ($(shell expr $(GCCVER) \>= 12), 1)
+      ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_zicsr_zifencei
+    endif
+  endif
+
+  ARCH_RV_ISA_VENDOR_EXTENSIONS = $(strip $(subst ",,$(CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS)))
+  ifneq ($(ARCH_RV_ISA_VENDOR_EXTENSIONS),)
+      ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_$(ARCH_RV_ISA_VENDOR_EXTENSIONS)
   endif
 
   # Detect abi type
@@ -305,7 +329,7 @@ ifeq ($(CONFIG_LIBSUPCXX),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a))
 endif
 
-ifeq ($(CONFIG_SCHED_GCOV),y)
+ifeq ($(CONFIG_ARCH_COVERAGE),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcov.a))
 endif
 
