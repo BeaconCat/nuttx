@@ -93,8 +93,8 @@
  * only a reference stored in TCB.
  */
 
-#define riscv_savestate(regs) (regs = up_current_regs())
-#define riscv_restorestate(regs) up_set_current_regs(regs)
+#define riscv_savestate(regs) (regs = (uintptr_t *)CURRENT_REGS)
+#define riscv_restorestate(regs) (CURRENT_REGS = regs)
 
 /* Determine which (if any) console driver to use.  If a console is enabled
  * and no other console device is specified, then a serial console is
@@ -133,16 +133,16 @@
 
 #define READ_CSR(reg) \
   ({ \
-     uintptr_t reg##_val; \
-     __asm__ __volatile__("csrr %0, " __STR(reg) : "=r"(reg##_val)); \
-     reg##_val; \
+     uintptr_t regval; \
+     __asm__ __volatile__("csrr %0, " __STR(reg) : "=r"(regval)); \
+     regval; \
   })
 
 #define READ_AND_SET_CSR(reg, bits) \
   ({ \
-     uintptr_t reg##_val; \
-     __asm__ __volatile__("csrrs %0, " __STR(reg) ", %1": "=r"(reg##_val) : "rK"(bits)); \
-     reg##_val; \
+     uintptr_t regval; \
+     __asm__ __volatile__("csrrs %0, " __STR(reg) ", %1": "=r"(regval) : "rK"(bits)); \
+     regval; \
   })
 
 #define WRITE_CSR(reg, val) \
@@ -159,6 +159,9 @@
   ({ \
      __asm__ __volatile__("csrc " __STR(reg) ", %0" :: "rK"(bits)); \
   })
+
+#define riscv_append_pmp_region(a, b, s) \
+  riscv_config_pmp_region(riscv_next_free_pmp_region(), a, b, s)
 
 #endif
 
@@ -232,7 +235,7 @@ static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
 
 static inline void riscv_savecontext(struct tcb_s *tcb)
 {
-  tcb->xcp.regs = up_current_regs();
+  tcb->xcp.regs = (uintptr_t *)CURRENT_REGS;
 
 #ifdef CONFIG_ARCH_FPU
   /* Save current process FPU state to TCB */
@@ -243,7 +246,7 @@ static inline void riscv_savecontext(struct tcb_s *tcb)
 
 static inline void riscv_restorecontext(struct tcb_s *tcb)
 {
-  up_set_current_regs((uintptr_t *)tcb->xcp.regs);
+  CURRENT_REGS = (uintptr_t *)tcb->xcp.regs;
 
 #ifdef CONFIG_ARCH_FPU
   /* Restore FPU state for next process */
@@ -312,6 +315,7 @@ void riscv_netinitialize(void);
 
 uintptr_t *riscv_doirq(int irq, uintptr_t *regs);
 int riscv_exception(int mcause, void *regs, void *args);
+int riscv_fillpage(int mcause, void *regs, void *args);
 int riscv_misaligned(int irq, void *context, void *arg);
 
 /* Debug ********************************************************************/

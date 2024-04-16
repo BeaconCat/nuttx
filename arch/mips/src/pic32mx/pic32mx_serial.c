@@ -305,10 +305,10 @@ static void up_restoreuartint(struct uart_dev_s *dev, uint8_t im)
    * of bits in im.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   up_rxint(dev, RX_ENABLED(im));
   up_txint(dev, TX_ENABLED(im));
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -320,14 +320,14 @@ static void up_disableuartint(struct uart_dev_s *dev, uint8_t *im)
   struct up_dev_s *priv = (struct up_dev_s *)dev->priv;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   if (im)
     {
       *im = priv->im;
     }
 
   up_restoreuartint(dev, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
