@@ -64,14 +64,9 @@
 #    undef  USE_SERIALDRIVER
 #    undef  USE_EARLYSERIALINIT
 #    undef  CONFIG_DEV_LOWCONSOLE
-#  elif defined(CONFIG_16550_UART) && \
-        !defined(CONFIG_16550_NO_SERIAL_CONSOLE)
+#  elif defined(CONFIG_16550_UART)
 #    define USE_SERIALDRIVER 1
 #    define USE_EARLYSERIALINIT 1
-#  elif defined(CONFIG_16550_PCI_UART) && \
-        !defined(CONFIG_16550_PCI_NO_SERIAL_CONSOLE)
-#    define USE_SERIALDRIVER 1
-#    undef  USE_EARLYSERIALINIT
 #  endif
 #endif
 
@@ -116,7 +111,7 @@
  * referenced is passed to get the state from the TCB.
  */
 
-#define x86_64_restorestate(regs) (up_set_current_regs(regs))
+#define x86_64_restorestate(regs) (g_current_regs = regs)
 
 /****************************************************************************
  * Public Types
