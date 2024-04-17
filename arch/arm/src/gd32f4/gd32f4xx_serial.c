@@ -118,7 +118,7 @@ struct up_dev_s
   bool            oflow;         /* output flow control (CTS) enabled */
 #  endif
 
-  uint16_t        oversamp;      /* USART oversample mode */
+  uint16_t        oversamp       /* USART oversample mode */
   uintptr_t       usartbase;     /* Base address of UART registers */
   uint32_t        baud;          /* Configured baud */
   uint32_t        clock;         /* Frequency of the UART */
@@ -1124,7 +1124,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   irqstate_t flags;
   uint32_t ctl_ie;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(NULL);
 
   if (ie)
     {
@@ -1158,7 +1158,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   ctl_ie = (USART_CFG_CTL_MASK << USART_CFG_SHIFT);
   up_setusartint(priv, ctl_ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 /****************************************************************************
@@ -1169,11 +1169,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint32_t ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(NULL);
 
   up_setusartint(priv, ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 /****************************************************************************
@@ -1213,6 +1213,14 @@ static void gd32_usart_configure(struct uart_dev_s *dev)
   uint32_t intdiv;
   uint32_t fradiv;
   uint32_t regval;
+
+  /* Reset USART */
+
+  gd32_usart_reset(priv->usartbase);
+
+  /* Enable USART clock */
+
+  gd32_usart_clock_enable(priv->usartbase);
 
   /* Configure the USART oversample mode. */
 
@@ -1326,10 +1334,6 @@ static int up_setup(struct uart_dev_s *dev)
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
   uint32_t regval;
-
-  /* Enable USART clock */
-
-  gd32_usart_clock_enable(priv->usartbase);
 
   /* Configure pins for USART use */
 
@@ -2101,8 +2105,6 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
     {
       ie &= ~(USART_CFG_CTL0_INT_RBNEIE | USART_CFG_CTL0_INT_PERRIE |
               USART_CFG_CTL2_INT_ERRIE);
-      ie |= ((USART_CFG_CTL0_INT << USART_CFG_SHIFT) |
-             (USART_CFG_CTL2_INT << USART_CFG_SHIFT));
     }
 
   /* Then set the new interrupt state */
