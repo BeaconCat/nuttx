@@ -90,7 +90,7 @@ bool up_cpu_pausereq(int cpu)
 
 int up_cpu_paused_save(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   /* Update scheduler parameters */
 
@@ -102,7 +102,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at current_regs into the TCB at the head
+  /* Save the current context at CURRENT_REGS into the TCB at the head
    * of the assigned task list for this CPU.
    */
 
@@ -174,7 +174,7 @@ int up_cpu_paused(int cpu)
 
 int up_cpu_paused_restore(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that we have resumed */
@@ -242,42 +242,6 @@ void xtensa_pause_handler(void)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      xtensa_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      xtensa_restorestate(tcb->xcp.regs);
-    }
-}
-
-/****************************************************************************
- * Name: up_cpu_async_pause
- *
- * Description:
- *   pause task execution on the CPU
- *   check whether there are tasks delivered to specified cpu
- *   and try to run them.
- *
- * Input Parameters:
- *   cpu - The index of the CPU to be paused.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section;
- *
- ****************************************************************************/
-
-inline_function int up_cpu_async_pause(int cpu)
-{
-  /* Execute the intercpu interrupt */
-
-  xtensa_intercpu_interrupt(cpu, CPU_INTCODE_PAUSE);
-
-  return OK;
 }
 
 /****************************************************************************
@@ -302,10 +266,12 @@ inline_function int up_cpu_async_pause(int cpu)
 
 int up_cpu_pause(int cpu)
 {
+  int ret;
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the pause event */
 
-  sched_note_cpu_pause(this_task_irq(), cpu);
+  sched_note_cpu_pause(this_task(), cpu);
 #endif
 
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
@@ -324,13 +290,23 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  up_cpu_async_pause(cpu);
+  /* Execute the intercpu interrupt */
 
-  /* Wait for the other CPU to unlock g_cpu_paused meaning that
-   * it is fully paused and ready for up_cpu_resume();
-   */
+  ret = xtensa_intercpu_interrupt(cpu, CPU_INTCODE_PAUSE);
+  if (ret < 0)
+    {
+      /* What happened?  Unlock the g_cpu_wait spinlock */
 
-  spin_lock(&g_cpu_paused[cpu]);
+      spin_unlock(&g_cpu_wait[cpu]);
+    }
+  else
+    {
+      /* Wait for the other CPU to unlock g_cpu_paused meaning that
+       * it is fully paused and ready for up_cpu_resume();
+       */
+
+      spin_lock(&g_cpu_paused[cpu]);
+    }
 
   spin_unlock(&g_cpu_paused[cpu]);
 
@@ -339,7 +315,7 @@ int up_cpu_pause(int cpu)
    * called.  g_cpu_paused will be unlocked in any case.
    */
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -350,8 +326,8 @@ int up_cpu_pause(int cpu)
  *   state of the task at the head of the g_assignedtasks[cpu] list, and
  *   resume normal tasking.
  *
- *   This function is called after up_cpu_pause in order resume operation of
- *   the CPU after modifying its g_assignedtasks[cpu] list.
+ *   This function is called after up_cpu_pause in order to resume operation
+ *   of the CPU after modifying its g_assignedtasks[cpu] list.
  *
  * Input Parameters:
  *   cpu - The index of the CPU being re-started.
@@ -366,7 +342,7 @@ int up_cpu_resume(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the resume event */
 
-  sched_note_cpu_resume(this_task_irq(), cpu);
+  sched_note_cpu_resume(this_task(), cpu);
 #endif
 
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
