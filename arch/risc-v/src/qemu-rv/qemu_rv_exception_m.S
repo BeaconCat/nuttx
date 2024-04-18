@@ -81,7 +81,7 @@ exception_m:
   /* Swap mscratch with sp */
   /* NOTE: mscratch has been set in up_mtimer_initialize() */
 
-  csrrw     sp, CSR_MSCRATCH, sp
+  csrrw     sp, mscratch, sp
 
   /* Save the context */
 
@@ -98,7 +98,7 @@ exception_m:
 
   /* Swap mscratch with sp */
 
-  csrrw     sp, CSR_MSCRATCH, sp
+  csrrw     sp, mscratch, sp
 
   /* Return from exception */
 

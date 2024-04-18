@@ -79,6 +79,8 @@
 #define X86_GDT_DATA_SEL_NUM    2
 #  define X86_GDT_DATA_SEL      (X86_GDT_DATA_SEL_NUM * X86_GDT_ENTRY_SIZE)
 
+/* The first TSS entry */
+
 #define X86_GDT_ISTL_SEL_NUM    6
 #define X86_GDT_ISTH_SEL_NUM    (X86_GDT_ISTL_SEL_NUM + 1)
 
@@ -135,14 +137,33 @@
 
 /* CPUID Leaf Definitions */
 
-#define X86_64_CPUID_CAP         0x01
-#  define X86_64_CPUID_01_SSE3   (1 << 0)
-#  define X86_64_CPUID_01_PCID   (1 << 17)
-#  define X86_64_CPUID_01_X2APIC (1 << 21)
-#  define X86_64_CPUID_01_TSCDEA (1 << 24)
-#  define X86_64_CPUID_01_XSAVE  (1 << 26)
-#  define X86_64_CPUID_01_RDRAND (1 << 30)
-#define X86_64_CPUID_TSC         0x15
+#define X86_64_CPUID_VENDOR           0x00
+#define X86_64_CPUID_CAP              0x01
+#  define X86_64_CPUID_01_SSE3        (1 << 0)
+#  define X86_64_CPUID_01_SSSE3       (1 << 9)
+#  define X86_64_CPUID_01_PCID        (1 << 17)
+#  define X86_64_CPUID_01_SSE41       (1 << 19)
+#  define X86_64_CPUID_01_SSE42       (1 << 20)
+#  define X86_64_CPUID_01_X2APIC      (1 << 21)
+#  define X86_64_CPUID_01_TSCDEA      (1 << 24)
+#  define X86_64_CPUID_01_XSAVE       (1 << 26)
+#  define X86_64_CPUID_01_RDRAND      (1 << 30)
+#  define X86_64_CPUID_01_APICID(ebx) ((ebx) >> 24)
+#define X86_64_CPUID_EXTCAP           0x07
+#  define X86_64_CPUID_07_AVX2        (1 << 5)
+#  define X86_64_CPUID_07_AVX512F     (1 << 16)
+#  define X86_64_CPUID_07_AVX512DQ    (1 << 17)
+#  define X86_64_CPUID_07_SMAP        (1 << 20)
+#  define X86_64_CPUID_07_AVX512IFMA  (1 << 21)
+#  define X86_64_CPUID_07_CLWB        (1 << 24)
+#  define X86_64_CPUID_07_AVX512PF    (1 << 26)
+#  define X86_64_CPUID_07_AVX512ER    (1 << 27)
+#  define X86_64_CPUID_07_AVX512CD    (1 << 28)
+#  define X86_64_CPUID_07_AVX512BW    (1 << 30)
+#  define X86_64_CPUID_07_AVX512VL    (1 << 31)
+#define X86_64_CPUID_TSC              0x15
+#define X86_64_CPUID_EXTINFO          0x80000001
+#  define X86_64_CPUID_EXTINFO_RDTSCP (1 << 27)
 
 /* MSR Definitions */
 
@@ -207,8 +228,10 @@
 #  define MSR_X2APIC_ICR_DEASSERT      0x00000000
 #  define MSR_X2APIC_ICR_LEVEL         0x00008000  /* Level triggered */
 #  define MSR_X2APIC_ICR_BCAST         0x00080000  /* Send to all APICs, including self. */
+#  define MSR_X2APIC_ICR_OTHERS        0x000c0000  /* Send to all APICs, excluding self. */
 #  define MSR_X2APIC_ICR_BUSY          0x00001000
 #  define MSR_X2APIC_ICR_FIXED         0x00000000
+#  define MSR_X2APIC_DESTINATION(d)    ((d) << 32ul)
 #define MSR_X2APIC_LVTT         0x832
 #  define MSR_X2APIC_LVTT_X1           0x0000000B  /* divide counts by 1 */
 #  define MSR_X2APIC_LVTT_PERIODIC     0x00020000  /* Periodic */
@@ -246,7 +269,12 @@
 #define X86_PIC_8086           1
 #define X86_PIC_EOI            0x20
 
-#define BITS_PER_LONG    64
+#define BITS_PER_LONG          64
+
+/* Interrupt Stack Table size */
+
+#define X86_IST_SIZE           104
+#define X86_TSS_SIZE           (104 + 8)
 
 /* Reset Control Register (RST_CNT) */
 
@@ -349,14 +377,17 @@ begin_packed_struct struct ist_s
   uint64_t IST6;                 /* Interrupt Stack 6 */
   uint64_t IST7;                 /* Interrupt Stack 7 */
   uint64_t reserved3;            /* reserved */
-  uint64_t reserved4;            /* reserved */
-  uint16_t reserved5;            /* reserved */
+  uint16_t reserved4;            /* reserved */
   uint16_t IOPB_OFFSET;          /* IOPB_offset */
 } end_packed_struct;
 
-/****************************************************************************
- * Public Types
- ****************************************************************************/
+/* TSS */
+
+begin_packed_struct struct tss_s
+{
+  struct ist_s ist;     /* IST  */
+  void         *cpu;    /* CPU private data */
+} end_packed_struct;
 
 /****************************************************************************
  * Public Data
