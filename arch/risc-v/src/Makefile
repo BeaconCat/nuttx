@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/Make.defs
+include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
 include chip/Make.defs
 ifeq ($(CONFIG_OPENSBI),y)
 include opensbi/Make.defs
@@ -107,11 +107,13 @@ ifeq ($(LD),$(CC))
     #  -fstack-protector-explicit
     STRIPCFLAGS = $(filter -fstack-protector%,$(CFLAGS))
   endif
+  LDENTRY      ?= -Wl,--entry=__start
   LDSTARTGROUP ?= -Wl,--start-group
   LDENDGROUP   ?= -Wl,--end-group
   LDFLAGS      := $(addprefix -Xlinker ,$(LDFLAGS))
   LDFLAGS      += $(filter-out $(STRIPCFLAGS),$(CFLAGS))
 else
+  LDENTRY      ?= --entry=__start
   LDSTARTGROUP ?= --start-group
   LDENDGROUP   ?= --end-group
 endif
@@ -130,6 +132,7 @@ endif
 
 VPATH += chip
 VPATH += common
+VPATH += common/espressif
 VPATH += $(SBI_DIR)
 VPATH += $(ARCH_SUBDIR)
 VPATH += $(CHIP_DIR)
@@ -179,7 +182,7 @@ define LINK_ALLSYMS_KASAN
 	$(Q) $(TOPDIR)/tools/kasan_global.py -e $(NUTTX) -o kasan_globals.tmp
 	$(Q) $(call COMPILE, kasan_globals.tmp, kasan_globals$(OBJEXT) -fno-sanitize=kernel-address, -x c)
 	$(Q) $(call DELFILE, kasan_globals.tmp))
-	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
+	$(Q) $(LD) $(LDENTRY) $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
 		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 endef
@@ -190,7 +193,7 @@ $(addsuffix .tmp,$(ARCHSCRIPT)): $(ARCHSCRIPT)
 nuttx$(EXEEXT): $(HEAD_OBJ) board/libboard$(LIBEXT) $(addsuffix .tmp,$(ARCHSCRIPT))
 	$(Q) echo "LD: nuttx"
 ifeq ($(CONFIG_ALLSYMS)$(CONFIG_MM_KASAN_GLOBAL),)
-	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
+	$(Q) $(LD) $(LDENTRY) $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
 		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
