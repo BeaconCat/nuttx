@@ -66,7 +66,7 @@
 
 int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret;
 
@@ -80,8 +80,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
    * enabled while we are blocked waiting for the semaphore.
    */
 
-  flags = enter_critical_section_nonirq();
-  rtcb = this_task_irq();
+  flags = enter_critical_section();
 
   /* Try to take the semaphore without waiting. */
 
@@ -119,7 +118,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
   /* We can now restore interrupts */
 
 out:
-  leave_critical_section_nonirq(flags);
+  leave_critical_section(flags);
   return ret;
 }
 
