@@ -493,13 +493,8 @@ int modlib_insertsymtab(FAR struct module_s *modp,
   nsym = shdr->sh_size / sizeof(Elf_Sym);
   for (i = 0, symcount = 0; i < nsym; i++)
     {
-      if (sym[i].st_name != 0 &&
-          ELF_ST_BIND(sym[i].st_info) == STB_GLOBAL &&
-          ELF_ST_TYPE(sym[i].st_info) != STT_NOTYPE &&
-          ELF_ST_VISIBILITY(sym[i].st_other) == STV_DEFAULT)
-        {
+      if (sym[i].st_name != 0)
           symcount++;
-        }
     }
 
   if (symcount > 0)
@@ -514,10 +509,7 @@ int modlib_insertsymtab(FAR struct module_s *modp,
           modp->modinfo.nexports = symcount;
           for (i = 0, j = 0; i < nsym; i++)
             {
-              if (sym[i].st_name != 0 &&
-                  ELF_ST_BIND(sym[i].st_info) == STB_GLOBAL &&
-                  ELF_ST_TYPE(sym[i].st_info) != STT_NOTYPE &&
-                  ELF_ST_VISIBILITY(sym[i].st_other) == STV_DEFAULT)
+              if (sym[i].st_name != 0)
                 {
                   ret = modlib_symname(loadinfo, &sym[i], strtab->sh_offset);
                   if (ret < 0)
@@ -534,10 +526,6 @@ int modlib_insertsymtab(FAR struct module_s *modp,
                   j++;
                 }
             }
-
-#ifdef CONFIG_SYMTAB_ORDEREDBYNAME
-          symtab_sortbyname(symbol, symcount);
-#endif
         }
       else
         {
