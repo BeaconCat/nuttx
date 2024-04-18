@@ -69,6 +69,11 @@
 #  define IGROUPR_SGI_VAL 0xFFFFFFFFU
 #endif
 
+#define SMP_FUNC_CALL_IPI GIC_IRQ_SGI3
+
+#define PENDING_GRP1NS_INTID 1021
+#define SPURIOUS_INT         1023
+
 /***************************************************************************
  * Private Data
  ***************************************************************************/
@@ -290,13 +295,6 @@ unsigned int arm64_gic_get_active_irq(void)
 
   intid = read_sysreg(ICC_IAR1_EL1);
 
-  /* The ARM GICv3 specification states in 4.1.1 Physical CPU Interface:
-   * The effects of reading ICC_IAR0_EL1 and ICC_IAR1_EL1
-   * on the state of a returned INTID are not guaranteed
-   * to be visible until after the execution of a DSB.
-   */
-
-  ARM64_DSB();
   return intid;
 }
 
@@ -309,13 +307,6 @@ unsigned int arm64_gic_get_active_fiq(void)
 
   intid = read_sysreg(ICC_IAR0_EL1);
 
-  /* The ARM GICv3 specification states in 4.1.1 Physical CPU Interface:
-   * The effects of reading ICC_IAR0_EL1 and ICC_IAR1_EL1
-   * on the state of a returned INTID are not guaranteed
-   * to be visible until after the execution of a DSB.
-   */
-
-  ARM64_DSB();
   return intid;
 }
 #endif
@@ -338,8 +329,6 @@ void aarm64_gic_eoi_irq(unsigned int intid)
   /* (AP -> Pending) Or (Active -> Inactive) or (AP to AP) nested case */
 
   write_sysreg(intid, ICC_EOIR1_EL1);
-
-  ARM64_ISB();
 }
 
 #ifdef CONFIG_ARM64_DECODEFIQ
@@ -361,7 +350,6 @@ void arm64_gic_eoi_fiq(unsigned int intid)
   /* (AP -> Pending) Or (Active -> Inactive) or (AP to AP) nested case */
 
   write_sysreg(intid, ICC_EOIR0_EL1);
-  ARM64_ISB();
 }
 #endif
 
@@ -405,7 +393,7 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   return 0;
 }
 
-void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
+int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 {
   uint64_t pre_cluster_id = UINT64_MAX;
   uint64_t curr_cluster_id;
@@ -434,6 +422,8 @@ void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
     }
 
   arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
+
+  return 0;
 }
 
 /* Wake up GIC redistributor.
@@ -516,9 +506,6 @@ static void gicv3_cpuif_init(void)
         (icc_sre | ICC_SRE_ELX_SRE_BIT | ICC_SRE_ELX_DIB_BIT |
          ICC_SRE_ELX_DFB_BIT);
       write_sysreg(icc_sre, ICC_SRE_EL1);
-
-      ARM64_ISB();
-
       icc_sre = read_sysreg(ICC_SRE_EL1);
 
       ASSERT(icc_sre & ICC_SRE_ELX_SRE_BIT);
@@ -533,8 +520,6 @@ static void gicv3_cpuif_init(void)
 #ifdef CONFIG_ARM64_DECODEFIQ
   write_sysreg(1, ICC_IGRPEN0_EL1);
 #endif
-
-  ARM64_ISB();
 }
 
 static void gicv3_dist_init(void)
@@ -650,12 +635,9 @@ static void gicv3_dist_init(void)
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm64_pause_async_handler, NULL));
-
+  DEBUGVERIFY(irq_attach(GIC_IRQ_SGI2, arm64_pause_handler, NULL));
 #  ifdef CONFIG_SMP_CALL
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
+  DEBUGVERIFY(irq_attach(SMP_FUNC_CALL_IPI,
                          nxsched_smp_call_handler, NULL));
 #  endif
 #endif
@@ -786,7 +768,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -810,11 +792,33 @@ uint64_t * arm64_decodefiq(uint64_t * regs)
 
   irq = arm64_gic_get_active_fiq();
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  /* FIQ is group0 interrupt */
+
+  if (irq == PENDING_GRP1NS_INTID)
+    {
+      /* irq 1021 indicates that the irq being acked is expected at EL1/EL2.
+       * However, EL3 has no interrupts, only FIQs, see:
+       * 'Arm® Generic Interrupt Controller, Architecture Specification GIC
+       *  architecture version 3 and version 4' Arm IHI 0069G (ID011821)
+       * 'Table 4-3 Interrupt signals for two Security states when EL3 is
+       *  using AArch64 state'
+       *
+       * Thus we know there's an interrupt so let's handle it from group1.
+       */
+
+      regs = arm64_decodeirq(regs);
+      arm64_gic_eoi_fiq(irq);
+
+      return regs;
+    }
+#endif
+
   /* Ignore spurions IRQs.  ICCIAR will report 1023 if there is no pending
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -848,7 +852,7 @@ static int gic_validate_dist_version(void)
     }
   else
     {
-      serr("No GIC version detect\n");
+      sinfo("No GIC version detect\n");
       return -ENODEV;
     }
 
@@ -867,7 +871,7 @@ static int gic_validate_dist_version(void)
 
   if (typer & GICD_TYPER_MBIS)
     {
-      swarn("MBIs is present, But No support\n");
+      sinfo("MBIs is present, But No support\n");
     }
 
   return 0;
@@ -888,7 +892,7 @@ static int gic_validate_redist_version(void)
   if (reg != GICR_PIDR2_ARCH_GICV3 &&
              reg != GICR_PIDR2_ARCH_GICV4)
     {
-      serr("No redistributor present 0x%lx\n", redist_base);
+      sinfo("No redistributor present 0x%lx\n", redist_base);
       return -ENODEV;
     }
 
@@ -922,7 +926,7 @@ static void arm64_gic_init(void)
   err = gic_validate_redist_version();
   if (err)
     {
-      swarn("no redistributor detected, giving up ret=%d\n", err);
+      sinfo("no redistributor detected, giving up ret=%d\n", err);
       return;
     }
 
@@ -931,10 +935,9 @@ static void arm64_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_SMP
-  up_enable_irq(GIC_SMP_CPUPAUSE);
-  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
+  up_enable_irq(GIC_IRQ_SGI2);
 #  ifdef CONFIG_SMP_CALL
-  up_enable_irq(GIC_SMP_CPUCALL);
+  up_enable_irq(SMP_FUNC_CALL_IPI);
 #  endif
 #endif
 }
@@ -946,7 +949,7 @@ int arm64_gic_initialize(void)
   err = gic_validate_dist_version();
   if (err)
     {
-      swarn("no distributor detected, giving up ret=%d\n", err);
+      sinfo("no distributor detected, giving up ret=%d\n", err);
       return err;
     }
 
@@ -962,11 +965,11 @@ void arm64_gic_secondary_init(void)
 {
   arm64_gic_init();
 }
+#endif
 
-#  ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP_CALL
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
+  up_trigger_irq(SMP_FUNC_CALL_IPI, cpuset);
 }
-#  endif
 #endif
