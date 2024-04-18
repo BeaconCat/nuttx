@@ -27,12 +27,11 @@
 #include <fcntl.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/sensors/sensor.h>
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -215,6 +214,9 @@ static int sensor_rpmsg_set_calibvalue(FAR struct sensor_lowerhalf_s *lower,
 static int sensor_rpmsg_calibrate(FAR struct sensor_lowerhalf_s *lower,
                                   FAR struct file *filep,
                                   unsigned long arg);
+static int sensor_rpmsg_get_info(FAR struct sensor_lowerhalf_s *lower,
+                                 FAR struct file *filep,
+                                 FAR struct sensor_device_info_s *info);
 static int sensor_rpmsg_control(FAR struct sensor_lowerhalf_s *lower,
                                 FAR struct file *filep,
                                 int cmd, unsigned long arg);
@@ -262,6 +264,7 @@ static const struct sensor_ops_s g_sensor_rpmsg_ops =
   .selftest       = sensor_rpmsg_selftest,
   .set_calibvalue = sensor_rpmsg_set_calibvalue,
   .calibrate      = sensor_rpmsg_calibrate,
+  .get_info       = sensor_rpmsg_get_info,
   .control        = sensor_rpmsg_control
 };
 
@@ -692,6 +695,28 @@ SENSOR_RPMSG_FUNCTION(set_calibvalue, SNIOC_SET_CALIBVALUE,
                       arg, arg, 256, true)
 SENSOR_RPMSG_FUNCTION(calibrate, SNIOC_CALIBRATE, arg, arg, 256, true)
 
+static int sensor_rpmsg_get_info(FAR struct sensor_lowerhalf_s *lower,
+                                 FAR struct file *filep,
+                                 FAR struct sensor_device_info_s *info)
+{
+  FAR struct sensor_rpmsg_dev_s *dev = lower->priv;
+  FAR struct sensor_lowerhalf_s *drv = dev->drv;
+  int ret = -ENOTTY;
+
+  if (drv->ops->get_info)
+    {
+      ret = drv->ops->get_info(drv, filep, info);
+    }
+  else if (!(filep->f_oflags & SENSOR_REMOTE))
+    {
+      ret = sensor_rpmsg_ioctl(dev, SNIOC_GET_INFO,
+                               (unsigned long)(uintptr_t)info,
+                               sizeof(struct sensor_device_info_s), true);
+    }
+
+  return ret;
+}
+
 static int sensor_rpmsg_control(FAR struct sensor_lowerhalf_s *lower,
                                 FAR struct file *filep,
                                 int cmd, unsigned long arg)
@@ -986,7 +1011,7 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
   int ret;
 
   dev = sensor_rpmsg_find_dev(msg->path);
-  if (!dev)
+  if (!dev || (dev->nadvertisers == 0 && !dev->lower.persist))
     {
       return 0;
     }
@@ -1069,6 +1094,8 @@ static int sensor_rpmsg_publish_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct sensor_rpmsg_data_s *msg = data;
   FAR struct sensor_rpmsg_cell_s *cell;
+  FAR struct sensor_rpmsg_stub_s *stub;
+  FAR struct sensor_rpmsg_stub_s *stmp;
   FAR struct sensor_rpmsg_dev_s *dev;
   size_t written = sizeof(*msg);
 
@@ -1091,6 +1118,22 @@ static int sensor_rpmsg_publish_handler(FAR struct rpmsg_endpoint *ept,
         }
 
       dev->push_event(dev->upper, cell->data, cell->len);
+
+      /* When the remote core publishes a message, the subscribed cores will
+       * receive the message. When the subscribed core publishes a new
+       * message, it will take away the message published by the remote core,
+       * so all stublist information needs to be updated.
+       */
+
+      sensor_rpmsg_lock(dev);
+      list_for_every_entry_safe(&dev->stublist, stub, stmp,
+                                struct sensor_rpmsg_stub_s, node)
+        {
+          file_read(&stub->file, NULL, cell->len);
+        }
+
+      sensor_rpmsg_unlock(dev);
+
       written += sizeof(*cell) + cell->len + 0x7;
       written &= ~0x7;
     }
@@ -1216,7 +1259,11 @@ static void sensor_rpmsg_ns_unbind_cb(FAR struct rpmsg_endpoint *ept)
   nxrmutex_unlock(&g_dev_lock);
 
   nxrmutex_lock(&g_ept_lock);
-  list_delete(&sre->node);
+  if (list_in_list(&sre->node))
+    {
+      list_delete(&sre->node);
+    }
+
   nxrmutex_unlock(&g_ept_lock);
 
   nxrmutex_destroy(&sre->lock);
