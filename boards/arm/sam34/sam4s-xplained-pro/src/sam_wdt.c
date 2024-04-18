@@ -183,6 +183,8 @@ int sam_watchdog_initialize(void)
   /* Start Kicker task */
 
 #if defined(CONFIG_WDT_THREAD)
+  sched_lock();
+
   int taskid = kthread_create(CONFIG_WDT_THREAD_NAME,
                               CONFIG_WDT_THREAD_PRIORITY,
                               CONFIG_WDT_THREAD_STACKSIZE,
@@ -191,6 +193,7 @@ int sam_watchdog_initialize(void)
   DEBUGASSERT(taskid > 0);
   UNUSED(taskid);
 
+  sched_unlock();
 #endif
   return OK;
 errout_with_dev:
