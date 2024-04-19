@@ -37,12 +37,11 @@
 #include <nuttx/fs/procfs.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
-#include <nuttx/mm/mempool.h>
 #include <nuttx/sched.h>
-#include <nuttx/sched_note.h>
+#include <nuttx/mm/mempool.h>
 
 #include "tlsf/tlsf.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -190,11 +189,11 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
   flags = up_irq_save();
 
-  tmp->flink = heap->mm_delaylist[up_cpu_index()];
-  heap->mm_delaylist[up_cpu_index()] = tmp;
+  tmp->flink = heap->mm_delaylist[this_cpu()];
+  heap->mm_delaylist[this_cpu()] = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  heap->mm_delaycount[up_cpu_index()]++;
+  heap->mm_delaycount[this_cpu()]++;
 #endif
 
   up_irq_restore(flags);
@@ -207,30 +206,30 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
 static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 {
+  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
   flags = up_irq_save();
 
-  tmp = heap->mm_delaylist[up_cpu_index()];
+  tmp = heap->mm_delaylist[this_cpu()];
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   if (tmp == NULL ||
       (!force &&
-        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+        heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       up_irq_restore(flags);
       return false;
     }
 
-  heap->mm_delaycount[up_cpu_index()] = 0;
+  heap->mm_delaycount[this_cpu()] = 0;
 #endif
 
-  heap->mm_delaylist[up_cpu_index()] = NULL;
+  heap->mm_delaylist[this_cpu()] = NULL;
 
   up_irq_restore(flags);
 
@@ -254,8 +253,8 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-  return ret;
 #endif
+  return ret;
 }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0 && CONFIG_MM_BACKTRACE >= 0
@@ -503,23 +502,15 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
 {
   if (mm_lock(heap) == 0)
     {
-      size_t size = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* If delay free is enabled, a memory node will be freed twice.
-   * The first time is to add the node to the delay list, and the second
-   * time is to actually free the node. Therefore, we only colorize the
-   * memory node the first time, when `delay` is set to true.
-   */
-
-  if (delay)
-#endif
-    {
-      memset(mem, MM_FREE_MAGIC, nodesize);
-    }
+      memset(mem, MM_FREE_MAGIC, mm_malloc_size(heap, mem));
 #endif
 
-      kasan_poison(mem, size);
+      kasan_poison(mem, mm_malloc_size(heap, mem));
+
+      /* Update heap statistics */
+
+      heap->mm_curused -= mm_malloc_size(heap, mem);
 
       /* Pass, return to the tlsf pool */
 
@@ -529,10 +520,6 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
         }
       else
         {
-          /* Update heap statistics */
-
-          heap->mm_curused -= mm_malloc_size(heap, mem);
-          sched_note_heap(false, heap, mem, size);
           tlsf_free(heap->mm_tlsf, mem);
         }
 
@@ -591,7 +578,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   /* Use the fill value to mark uninitialized user memory */
 
-  memset(heapstart, MM_INIT_MAGIC, heapsize);
+  memset(heapstart, 0xcc, heapsize);
 #endif
 
   /* Register to KASan for access check */
@@ -1114,7 +1101,6 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 
 FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
-  size_t nodesize;
   FAR void *ret;
 
   /* In case of zero-length allocations allocate the minimum size object */
@@ -1146,8 +1132,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   ret = tlsf_malloc(heap->mm_tlsf, size);
 #endif
 
-  nodesize = mm_malloc_size(heap, ret);
-  heap->mm_curused += nodesize;
+  heap->mm_curused += mm_malloc_size(heap, ret);
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1158,16 +1143,14 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
 #if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + nodesize;
+      FAR struct memdump_backtrace_s *buf = ret + mm_malloc_size(heap, ret);
 
       memdump_backtrace(heap, buf);
 #endif
-
-      ret = kasan_unpoison(ret, nodesize);
-      sched_note_heap(true, heap, ret, nodesize);
+      kasan_unpoison(ret, mm_malloc_size(heap, ret));
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(ret, MM_ALLOC_MAGIC, nodesize);
+      memset(ret, 0xaa, nodesize);
 #endif
     }
 
@@ -1199,7 +1182,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
                       size_t size)
 {
-  size_t nodesize;
   FAR void *ret;
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
@@ -1224,8 +1206,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   ret = tlsf_memalign(heap->mm_tlsf, alignment, size);
 #endif
 
-  nodesize = mm_malloc_size(heap, ret);
-  heap->mm_curused += nodesize;
+  heap->mm_curused += mm_malloc_size(heap, ret);
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1236,12 +1217,11 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   if (ret)
     {
 #if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + nodesize;
+      FAR struct memdump_backtrace_s *buf = ret + mm_malloc_size(heap, ret);
 
       memdump_backtrace(heap, buf);
 #endif
-      ret = kasan_unpoison(ret, nodesize);
-      sched_note_heap(true, heap, ret, nodesize);
+      kasan_unpoison(ret, mm_malloc_size(heap, ret));
     }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -1283,8 +1263,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                      size_t size)
 {
   FAR void *newmem;
-  size_t oldsize;
-  size_t newsize;
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
@@ -1341,8 +1319,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   /* Allocate from the tlsf pool */
 
   DEBUGVERIFY(mm_lock(heap));
-  oldsize = mm_malloc_size(heap, oldmem);
-  heap->mm_curused -= oldsize;
+  heap->mm_curused -= mm_malloc_size(heap, oldmem);
 #if CONFIG_MM_BACKTRACE >= 0
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size +
                         sizeof(struct memdump_backtrace_s));
@@ -1350,8 +1327,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size);
 #endif
 
-  newsize = mm_malloc_size(heap, newmem);
-  heap->mm_curused += newmem ? newsize : oldsize;
+  heap->mm_curused += mm_malloc_size(heap, newmem ? newmem : oldmem);
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1359,21 +1335,20 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   mm_unlock(heap);
 
+#if CONFIG_MM_BACKTRACE >= 0
   if (newmem)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = newmem + newsize;
-      memdump_backtrace(heap, buf);
-#endif
+      FAR struct memdump_backtrace_s *buf =
+        newmem + mm_malloc_size(heap, newmem);
 
-      sched_note_heap(false, heap, oldmem, oldsize);
-      sched_note_heap(true, heap, newmem, newsize);
+      memdump_backtrace(heap, buf);
     }
+#endif
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   /* Try again after free delay list */
 
-  else if (free_delaylist(heap, true))
+  if (newmem == NULL && free_delaylist(heap, true))
     {
       return mm_realloc(heap, oldmem, size);
     }
@@ -1430,17 +1405,4 @@ FAR void *mm_zalloc(FAR struct mm_heap_s *heap, size_t size)
     }
 
   return alloc;
-}
-
-/****************************************************************************
- * Name: mm_heapfree
- *
- * Description:
- *   Return the total free size (in bytes) in the heap
- *
- ****************************************************************************/
-
-size_t mm_heapfree(FAR struct mm_heap_s *heap)
-{
-  return heap->mm_heapsize - heap->mm_curused;
 }

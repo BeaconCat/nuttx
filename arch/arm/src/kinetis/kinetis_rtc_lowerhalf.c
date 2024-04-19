@@ -363,7 +363,6 @@ kinetis_setrelative(struct rtc_lowerhalf_s *lower,
   time_t seconds;
   struct timespec ts;
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL);
   DEBUGASSERT(alarminfo->id == RTC_ALARMA);
@@ -375,7 +374,7 @@ kinetis_setrelative(struct rtc_lowerhalf_s *lower,
        * about being suspended and working on an old time.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
 
 #if defined(CONFIG_RTC_DATETIME)
       /* Get the broken out time and convert to seconds */
@@ -383,7 +382,7 @@ kinetis_setrelative(struct rtc_lowerhalf_s *lower,
       ret = up_rtc_getdatetime(&time);
       if (ret < 0)
         {
-          leave_critical_section(flags);
+          sched_unlock();
           return ret;
         }
 
@@ -395,7 +394,7 @@ kinetis_setrelative(struct rtc_lowerhalf_s *lower,
       ret = up_rtc_gettime(&ts);
       if (ret < 0)
         {
-          leave_critical_section(flags);
+          sched_unlock();
           return ret;
         }
 #endif
@@ -422,7 +421,7 @@ kinetis_setrelative(struct rtc_lowerhalf_s *lower,
 
       ret = kinetis_setalarm(lower, &setalarm);
 
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   return ret;
@@ -499,7 +498,6 @@ static int kinetis_rdalarm(struct rtc_lowerhalf_s *lower,
 {
   struct timespec ts;
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->time != NULL);
   DEBUGASSERT(alarminfo->id == RTC_ALARMA);
@@ -510,12 +508,12 @@ static int kinetis_rdalarm(struct rtc_lowerhalf_s *lower,
        * about being suspended and working on an old time.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
       ret = kinetis_rtc_rdalarm(&ts);
 
       localtime_r((const time_t *)&ts.tv_sec,
                   (struct tm *)alarminfo->time);
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   return ret;

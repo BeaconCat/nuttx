@@ -43,12 +43,6 @@ if(CONFIG_PM)
 
   # Governor implementations
 
-  if(CONFIG_PM_GOVERNOR_STABILITY)
-
-    list(APPEND SRCS stability_governor.c)
-
-  endif()
-
   if(CONFIG_PM_GOVERNOR_ACTIVITY)
 
     list(APPEND SRCS activity_governor.c)
@@ -58,12 +52,6 @@ if(CONFIG_PM)
   if(CONFIG_PM_GOVERNOR_GREEDY)
 
     list(APPEND SRCS greedy_governor.c)
-
-  endif()
-
-  if(CONFIG_PM_RUNTIME)
-
-    list(APPEND SRCS pm_runtime.c)
 
   endif()
 
