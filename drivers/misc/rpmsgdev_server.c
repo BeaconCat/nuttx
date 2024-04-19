@@ -28,13 +28,14 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/drivers/rpmsgdev.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 #include "rpmsgdev.h"
 
@@ -333,10 +334,6 @@ static void rpmsgdev_poll_worker(FAR void *arg)
       fds->revents = 0;
 
       rpmsg_send(&server->ept, &msg, sizeof(msg));
-    }
-  else
-    {
-      ferr("ERROR: rpmsgdev_poll_cb() dev->cfd=0\n");
     }
 }
 
