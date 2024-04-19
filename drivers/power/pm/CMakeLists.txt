@@ -35,7 +35,8 @@ if(CONFIG_PM)
     pm_unregister.c
     pm_autoupdate.c
     pm_governor.c
-    pm_lock.c)
+    pm_lock.c
+    pm_idle.c)
 
   if(CONFIG_PM_PROCFS)
     list(APPEND SRCS pm_procfs.c)
@@ -58,6 +59,12 @@ if(CONFIG_PM)
   if(CONFIG_PM_GOVERNOR_GREEDY)
 
     list(APPEND SRCS greedy_governor.c)
+
+  endif()
+
+  if(CONFIG_PM_RUNTIME)
+
+    list(APPEND SRCS pm_runtime.c)
 
   endif()
 

@@ -1,5 +1,5 @@
 # ##############################################################################
-# sched/misc/CMakeLists.txt
+# sched/sched/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -24,7 +24,7 @@ if(CONFIG_ARCH_DEADLOCKDUMP)
   list(APPEND SRCS deadlock.c)
 endif()
 
-if(CONFIG_BOARD_COREDUMP_SYSLOG OR CONFIG_BOARD_COREDUMP_BLKDEV)
+if(CONFIG_COREDUMP)
   list(APPEND SRCS coredump.c)
 endif()
 
