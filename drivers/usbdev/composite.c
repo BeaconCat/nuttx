@@ -38,7 +38,7 @@
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
 
-#if defined(CONFIG_BOARD_USBDEV_SERIALSTR) || defined(CONFIG_BOARD_USBDEV_PIDVID)
+#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
 #  include <nuttx/board.h>
 #endif
 
@@ -161,8 +161,8 @@ static int composite_classsetup(FAR struct composite_dev_s *priv,
           interface < (priv->device[i].compdesc.devinfo.ifnobase +
                        priv->device[i].compdesc.devinfo.ninterfaces))
         {
-          return CLASS_SETUP(priv->device[i].dev, dev, ctrl,
-                             dataout, outlen);
+          ret = CLASS_SETUP(priv->device[i].dev, dev, ctrl, dataout, outlen);
+          break;
         }
     }
 
