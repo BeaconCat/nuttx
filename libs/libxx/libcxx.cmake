@@ -43,7 +43,9 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxx)
       patch -p1 -d ${CMAKE_CURRENT_LIST_DIR}/libcxx <
       ${CMAKE_CURRENT_LIST_DIR}/0001_fix_stdatomic_h_miss_typedef.patch && patch
       -p3 -d ${CMAKE_CURRENT_LIST_DIR}/libcxx <
-      ${CMAKE_CURRENT_LIST_DIR}/mbstate_t.patch
+      ${CMAKE_CURRENT_LIST_DIR}/mbstate_t.patch && patch -p1 -d
+      ${CMAKE_CURRENT_LIST_DIR}/libcxx <
+      ${CMAKE_CURRENT_LIST_DIR}/0001-libcxx-remove-mach-time-h.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -95,43 +97,47 @@ if(NOT DEFINED GCCVER)
 endif()
 
 if(GCCVER EQUAL 12)
-  set_source_files_properties(libcxx/src/filesystem/operations.cpp
-                              PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
-  set_source_files_properties(libcxx/src/locale.cpp
-                              PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
-  set_source_files_properties(
-    libcxx/src/string.cpp PROPERTIES COMPILE_FLAGS -Wno-alloc-size-larger-than)
-  set_source_files_properties(libcxx/src/charconv.cpp
-                              PROPERTIES COMPILE_FLAGS -Wno-attributes)
-  set_source_files_properties(libcxx/src/locale.cpp PROPERTIES COMPILE_FLAGS
-                                                               -Wno-attributes)
+  nuttx_append_source_file_properties(libcxx/src/filesystem/operations.cpp
+                                      COMPILE_FLAGS -Wno-maybe-uninitialized)
+  nuttx_append_source_file_properties(libcxx/src/locale.cpp COMPILE_FLAGS
+                                      -Wno-maybe-uninitialized)
+  nuttx_append_source_file_properties(libcxx/src/string.cpp COMPILE_FLAGS
+                                      -Wno-alloc-size-larger-than)
+  nuttx_append_source_file_properties(libcxx/src/charconv.cpp COMPILE_FLAGS
+                                      -Wno-attributes)
+  nuttx_append_source_file_properties(libcxx/src/locale.cpp COMPILE_FLAGS
+                                      -Wno-attributes)
 endif()
 
 if(GCCVER GREATER_EQUAL 12)
-  set_source_files_properties(
-    libcxx/src/string.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
-  set_source_files_properties(libcxx/src/filesystem/path.cpp
-                              PROPERTIES COMPILE_FLAGS -Wno-shadow)
-  set_source_files_properties(libcxx/src/ryu/d2s.cpp
-                              PROPERTIES COMPILE_FLAGS -Wno-maybe-uninitialized)
+  nuttx_append_source_file_properties(libcxx/src/string.cpp COMPILE_FLAGS
+                                      -Wno-deprecated-declarations)
+  nuttx_append_source_file_properties(libcxx/src/filesystem/path.cpp
+                                      COMPILE_FLAGS -Wno-shadow)
+  nuttx_append_source_file_properties(libcxx/src/ryu/d2s.cpp COMPILE_FLAGS
+                                      -Wno-maybe-uninitialized)
 endif()
 
 if(GCCVER GREATER_EQUAL 13)
-  set_source_files_properties(
-    libcxx/src/string.cpp PROPERTIES COMPILE_FLAGS -Wno-alloc-size-larger-than)
+  nuttx_append_source_file_properties(libcxx/src/string.cpp COMPILE_FLAGS
+                                      -Wno-alloc-size-larger-than)
 endif()
 
-set_source_files_properties(libcxx/src/barrier.cpp PROPERTIES COMPILE_FLAGS
-                                                              -Wno-shadow)
-set_source_files_properties(libcxx/src/locale.cpp PROPERTIES COMPILE_FLAGS
-                                                             -Wno-shadow)
-set_source_files_properties(libcxx/src/filesystem/operations.cpp
-                            PROPERTIES COMPILE_FLAGS -Wno-shadow)
-set_source_files_properties(libcxx/src/condition_variable.cpp
-                            PROPERTIES COMPILE_FLAGS -Wno-sign-compare)
+nuttx_append_source_file_properties(libcxx/src/barrier.cpp COMPILE_FLAGS
+                                    -Wno-shadow)
+nuttx_append_source_file_properties(libcxx/src/locale.cpp COMPILE_FLAGS
+                                    -Wno-shadow)
+nuttx_append_source_file_properties(libcxx/src/filesystem/operations.cpp
+                                    COMPILE_FLAGS -Wno-shadow)
+nuttx_append_source_file_properties(libcxx/src/condition_variable.cpp
+                                    COMPILE_FLAGS -Wno-sign-compare)
 
 nuttx_add_system_library(libcxx)
 target_sources(libcxx PRIVATE ${SRCS})
+if(CONFIG_LIBCXXABI)
+  target_include_directories(
+    libcxx BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
+endif()
 
 target_include_directories(libcxx BEFORE
                            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
