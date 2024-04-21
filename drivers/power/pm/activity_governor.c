@@ -141,7 +141,7 @@ static void governor_initialize(void);
 static void governor_statechanged(int domain, enum pm_state_e newstate);
 static enum pm_state_e governor_checkstate(int domain);
 static void governor_activity(int domain, int count);
-static void governor_timer(int domain, enum pm_state_e newstate);
+static void governor_timer(int domain);
 static void governor_update(int domain, int16_t accum);
 
 /****************************************************************************
@@ -526,7 +526,7 @@ static void governor_statechanged(int domain, enum pm_state_e newstate)
     {
       /* Start PM timer to decrease PM state */
 
-      governor_timer(domain, newstate);
+      governor_timer(domain);
     }
 }
 
@@ -543,18 +543,18 @@ static void governor_timer_cb(wdparm_t arg)
  *   state level.
  *
  * Input Parameters:
- *   domain   - The PM domain associated with the accumulator
- *   newstate - The PM domain newstate
+ *   domain - The PM domain associated with the accumulator
  *
  * Returned Value:
  *   None.
  *
  ****************************************************************************/
 
-static void governor_timer(int domain, enum pm_state_e newstate)
+static void governor_timer(int domain)
 {
   FAR struct pm_domain_state_s *pdomstate;
   FAR struct pm_domain_s *pdom;
+  uint8_t state;
 
   static const int pmtick[3] =
   {
@@ -565,10 +565,11 @@ static void governor_timer(int domain, enum pm_state_e newstate)
 
   pdom      = &g_pmglobals.domain[domain];
   pdomstate = &g_pm_activity_governor.domain_states[domain];
+  state     = pdom->state;
 
-  if (newstate < PM_SLEEP && dq_empty(&pdom->wakelock[newstate]))
+  if (state < PM_SLEEP && dq_empty(&pdom->wakelock[state]))
     {
-      sclock_t delay = pmtick[newstate] +
+      sclock_t delay = pmtick[state] +
                        pdomstate->btime -
                        clock_systime_ticks();
       sclock_t left  = wd_gettime(&pdomstate->wdog);
