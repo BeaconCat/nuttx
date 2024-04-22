@@ -27,7 +27,7 @@ ifeq ($(CONFIG_VIDEO_FB),y)
 endif
 
 ifeq ($(CONFIG_VIDEO_STREAM),y)
-  CSRCS += v4l2_core.c video_framebuff.c v4l2_cap.c v4l2_m2m.c
+  CSRCS += v4l2_core.c video_framebuff.c v4l2_cap.c
 endif
 
 # These video drivers depend on I2C support
@@ -50,10 +50,6 @@ endif
 
 ifeq ($(CONFIG_GOLDFISH_FB),y)
   CSRCS += goldfish_fb.c
-endif
-
-ifeq ($(CONFIG_GOLDFISH_GPU_FB),y)
-  CSRCS += goldfish_gpu_fb.c
 endif
 
 # These video drivers depend on SPI support
