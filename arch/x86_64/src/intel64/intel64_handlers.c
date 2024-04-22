@@ -62,14 +62,16 @@
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
 static uint64_t *common_handler(int irq, uint64_t *regs)
 {
+  board_autoled_on(LED_INIRQ);
+
   /* Current regs non-zero indicates that we are processing an interrupt;
    * g_current_regs is also used to manage interrupt level context switches.
    *
    * Nested interrupts are not supported.
    */
 
-  DEBUGASSERT(up_current_regs() == NULL);
-  up_set_current_regs(regs);
+  DEBUGASSERT(g_current_regs == NULL);
+  g_current_regs = regs;
 
   /* Deliver the IRQ */
 
@@ -82,7 +84,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != up_current_regs())
+  if (regs != g_current_regs)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -99,11 +101,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
-
-      /* Restore the cpu lock */
-
-      restore_critical_section(this_task_irq(), this_cpu());
+      g_running_tasks[this_cpu()] = this_task();
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -112,13 +110,13 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = up_current_regs();
+  regs = (uint64_t *)g_current_regs;
 
   /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  g_current_regs = NULL;
   return regs;
 }
 #endif
@@ -137,9 +135,9 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
 
 uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
 {
+#ifdef CONFIG_SUPPRESS_INTERRUPTS
   board_autoled_on(LED_INIRQ);
 
-#ifdef CONFIG_SUPPRESS_INTERRUPTS
   /* Doesn't return */
 
   PANIC();
@@ -149,15 +147,15 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
   return regs;
 #else
 
-  DEBUGASSERT(up_current_regs() == NULL);
-  up_set_current_regs(regs);
+  DEBUGASSERT(g_current_regs == NULL);
+  g_current_regs = regs;
 
   switch (irq)
     {
       case 0:
       case 16:
         asm volatile("fnclex":::"memory");
-        nxsig_kill(this_task_irq()->pid, SIGFPE);
+        nxsig_kill(this_task()->pid, SIGFPE);
         break;
 
       default:
@@ -178,19 +176,19 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
 
   /* Maybe we need a context switch */
 
-  regs = up_current_regs();
+  regs = (uint64_t *)g_current_regs;
 
   /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  g_current_regs = NULL;
   return regs;
 #endif
 }
 
 /****************************************************************************
- * Name: irq_handler
+ * Name: isr_handler
  *
  * Description:
  *   This gets called from IRQ vector handling logic in intel64_vectors.S
@@ -199,9 +197,9 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
 
 uint64_t *irq_handler(uint64_t *regs, uint64_t irq_no)
 {
+#ifdef CONFIG_SUPPRESS_INTERRUPTS
   board_autoled_on(LED_INIRQ);
 
-#ifdef CONFIG_SUPPRESS_INTERRUPTS
   /* Doesn't return */
 
   PANIC();
@@ -212,6 +210,8 @@ uint64_t *irq_handler(uint64_t *regs, uint64_t irq_no)
 #else
   uint64_t *ret;
   int irq;
+
+  board_autoled_on(LED_INIRQ);
 
   /* Get the IRQ number */
 

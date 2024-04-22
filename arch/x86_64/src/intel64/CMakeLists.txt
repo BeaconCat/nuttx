@@ -38,22 +38,16 @@ set(SRCS
     intel64_usestack.c
     intel64_systemreset.c
     intel64_freq.c
-    intel64_cache.c
     intel64_start.c
     intel64_handlers.c
     intel64_idle.c
     intel64_lowsetup.c
     intel64_serial.c
     intel64_rng.c
-    intel64_check_capability.c
-    intel64_cpu.c)
+    intel64_check_capability.c)
 
 if(CONFIG_ARCH_HAVE_TESTSET)
   list(APPEND SRCS intel64_testset.S)
-endif()
-
-if(CONFIG_SMP)
-  list(APPEND SRCS intel64_cpuidlestack.c intel64_cpupause.c intel64_cpustart.c)
 endif()
 
 if(CONFIG_MULTBOOT2_FB_TERM)
