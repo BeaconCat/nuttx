@@ -1405,11 +1405,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint16_t ie)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   up_setusartint(priv, ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1420,7 +1420,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   if (ie)
     {
@@ -1464,7 +1464,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 
   up_setusartint(priv, 0);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************

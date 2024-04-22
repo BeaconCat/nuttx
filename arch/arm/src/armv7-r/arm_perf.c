@@ -82,14 +82,14 @@ unsigned long up_perf_getfreq(void)
   return g_cpu_freq;
 }
 
-clock_t up_perf_gettime(void)
+unsigned long up_perf_gettime(void)
 {
   return cp15_pmu_rdccr();
 }
 
-void up_perf_convert(clock_t elapsed, struct timespec *ts)
+void up_perf_convert(unsigned long elapsed, struct timespec *ts)
 {
-  clock_t left;
+  unsigned long left;
 
   ts->tv_sec  = elapsed / g_cpu_freq;
   left        = elapsed - ts->tv_sec * g_cpu_freq;
