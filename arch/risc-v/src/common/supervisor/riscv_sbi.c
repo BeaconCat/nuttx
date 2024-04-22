@@ -24,11 +24,16 @@
 
 /* SBI Extension IDs */
 
+#define SBI_EXT_HSM             0x48534D
 #define SBI_EXT_TIME            0x54494D45
 
 /* SBI function IDs for TIME extension */
 
 #define SBI_EXT_TIME_SET_TIMER  0x0
+
+/* SBI function IDs for HSM extension */
+
+#define SBI_EXT_HSM_HART_START  0x0
 
 /****************************************************************************
  * Included Files
@@ -123,19 +128,28 @@ uint64_t riscv_sbi_get_time(void)
   return sbi_mcall_get_time();
 #else
 #ifdef CONFIG_ARCH_RV64
-  return READ_CSR(time);
+  return READ_CSR(CSR_TIME);
 #else
   uint32_t hi;
   uint32_t lo;
 
   do
     {
-      hi = READ_CSR(timeh);
-      lo = READ_CSR(time);
+      hi = READ_CSR(CSR_TIMEH);
+      lo = READ_CSR(CSR_TIME);
     }
-  while (hi != READ_CSR(timeh));
+  while (hi != READ_CSR(CSR_TIMEH));
 
   return (((uint64_t) hi) << 32) | lo;
 #endif
 #endif
 }
+
+#ifndef CONFIG_NUTTSBI
+uintptr_t riscv_sbi_boot_secondary(uint32_t hartid, uintptr_t addr,
+                                   uintptr_t a1)
+{
+  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_START,
+      hartid, addr, a1, 0, 0, 0);
+}
+#endif /* CONFIG_NUTTSBI */

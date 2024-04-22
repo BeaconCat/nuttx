@@ -75,6 +75,7 @@ int nxsched_get_affinity(pid_t pid, size_t cpusetsize, FAR cpu_set_t *mask)
 
   /* Verify that the PID corresponds to a real task */
 
+  sched_lock();
   if (pid == 0)
     {
       tcb = this_task();
@@ -96,6 +97,7 @@ int nxsched_get_affinity(pid_t pid, size_t cpusetsize, FAR cpu_set_t *mask)
       ret = OK;
     }
 
+  sched_unlock();
   return ret;
 }
 
