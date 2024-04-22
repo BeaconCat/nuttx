@@ -123,17 +123,17 @@ uint64_t riscv_sbi_get_time(void)
   return sbi_mcall_get_time();
 #else
 #ifdef CONFIG_ARCH_RV64
-  return READ_CSR(CSR_TIME);
+  return READ_CSR(time);
 #else
   uint32_t hi;
   uint32_t lo;
 
   do
     {
-      hi = READ_CSR(CSR_TIMEH);
-      lo = READ_CSR(CSR_TIME);
+      hi = READ_CSR(timeh);
+      lo = READ_CSR(time);
     }
-  while (hi != READ_CSR(CSR_TIMEH));
+  while (hi != READ_CSR(timeh));
 
   return (((uint64_t) hi) << 32) | lo;
 #endif
