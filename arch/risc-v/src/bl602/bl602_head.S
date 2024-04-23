@@ -40,7 +40,7 @@ bl602_start:
   /*disable IRQ*/
 
     li t0, MSTATUS_MIE
-    csrc CSR_MSTATUS, t0
+    csrc mstatus, t0
 
     la gp, __global_pointer$
 .option pop
