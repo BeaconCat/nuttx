@@ -36,6 +36,8 @@
 #include "pca9540bdp.h"
 #include <nuttx/i2c/pca9540bdp.h>
 
+#ifdef CONFIG_I2CMULTIPLEXER_PCA9540BDP
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -297,3 +299,4 @@ FAR struct pca9540bdp_dev_s *
   return priv;
 }
 
+#endif /* CONFIG_I2CMULTIPLEXER_PCA9540BDP */

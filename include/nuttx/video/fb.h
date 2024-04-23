@@ -29,7 +29,10 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <errno.h>
+#include <debug.h>
 
+#include <nuttx/compiler.h>
 #include <nuttx/fs/ioctl.h>
 
 /****************************************************************************
@@ -1006,18 +1009,6 @@ FAR struct fb_vtable_s *up_fbgetvplane(int display, int vplane);
 void up_fbuninitialize(int display);
 
 /****************************************************************************
- * Name: fb_notify_vsync
- * Description:
- *   notify that the vsync comes.
- *
- * Input Parameters:
- *   vtable  - Pointer to framebuffer's virtual table.
- *
- ****************************************************************************/
-
-void fb_notify_vsync(FAR struct fb_vtable_s *vtable);
-
-/****************************************************************************
  * Name: fb_peek_paninfo
  * Description:
  *   Peek a frame from pan info queue of the specified overlay.
@@ -1118,7 +1109,30 @@ int fb_register_device(int display, int plane,
  *
  ****************************************************************************/
 
-int fb_register(int display, int plane);
+static inline_function unused_code int fb_register(int display, int plane)
+{
+  FAR struct fb_vtable_s *vtable;
+  int ret;
+
+  /* Initialize the frame buffer device. */
+
+  ret = up_fbinitialize(display);
+  if (ret < 0)
+    {
+      gerr("ERROR: up_fbinitialize() failed for display %d: %d\n",
+           display, ret);
+      return ret;
+    }
+
+  vtable = up_fbgetvplane(display, plane);
+  if (vtable == NULL)
+    {
+      gerr("ERROR: up_fbgetvplane() failed, vplane=%d\n", plane);
+      return -EINVAL;
+    }
+
+  return fb_register_device(display, plane, vtable);
+}
 
 #undef EXTERN
 #ifdef __cplusplus
