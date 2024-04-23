@@ -64,12 +64,12 @@ if(${CONFIG_STACK_USAGE_WARNING})
   endif()
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 # Architecture flags
@@ -81,19 +81,6 @@ add_link_options(-Wl,--no-relax)
 add_compile_options(-fPIC)
 add_compile_options(-mno-red-zone)
 
-# Libcxx flags
-
-add_compile_options(
-  -U_AIX
-  -U_WIN32
-  -U__APPLE__
-  -U__FreeBSD__
-  -U__NetBSD__
-  -U__linux__
-  -U__sun__
-  -U__unix__
-  -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-
 if(CONFIG_DEBUG_LINK_MAP)
   add_link_options(-Wl,--cref -Wl,-Map=nuttx.map)
 endif()
@@ -102,22 +89,12 @@ set(ARCHCFLAGS
     "-Wstrict-prototypes -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 set(ARCHCXXFLAGS
-    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
-)
+    "-fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas")
 
-if(CONFIG_CXX_STANDARD)
-  string(APPEND ARCHCXXFLAGS " -std=${CONFIG_CXX_STANDARD}")
-endif()
-
-if(CONFIG_LIBCXX)
-  add_compile_options(-D__GLIBCXX__)
-  add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
-endif()
-
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
 else()
-  add_compile_options(-fno-stack-protector)
+  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
@@ -126,11 +103,6 @@ endif()
 
 if(NOT CONFIG_CXX_RTTI)
   string(APPEND ARCHCXXFLAGS " -fno-rtti")
-endif()
-
-if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
-  add_link_options(-Wl,--gc-sections)
-  add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
 if(NOT "${CMAKE_C_FLAGS}" STREQUAL "")
