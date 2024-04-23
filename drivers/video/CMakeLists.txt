@@ -29,7 +29,7 @@ if(CONFIG_DRIVERS_VIDEO)
   endif()
 
   if(CONFIG_VIDEO_STREAM)
-    list(APPEND SRCS v4l2_core.c video_framebuff.c v4l2_cap.c)
+    list(APPEND SRCS v4l2_core.c video_framebuff.c v4l2_cap.c v4l2_m2m.c)
   endif()
 
   # These video drivers depend on I2C support
@@ -52,6 +52,10 @@ if(CONFIG_DRIVERS_VIDEO)
 
   if(CONFIG_GOLDFISH_FB)
     list(APPEND SRCS goldfish_fb.c)
+  endif()
+
+  if(CONFIG_GOLDFISH_GPU_FB)
+    list(APPEND SRCS goldfish_gpu_fb.c)
   endif()
 
   if(CONFIG_GOLDFISH_CAMERA)
