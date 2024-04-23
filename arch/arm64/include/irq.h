@@ -39,49 +39,20 @@
 /* Include NuttX-specific IRQ definitions */
 
 #include <nuttx/irq.h>
-#include <nuttx/bits.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
 #include <arch/chip/irq.h>
 
+#ifndef __ASSEMBLY__
+#  include <stdint.h>
+#endif
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
 
-#define up_getsp()          (uintptr_t)__builtin_frame_address(0)
-
-/* MPIDR_EL1, Multiprocessor Affinity Register */
-
-#define MPIDR_AFFLVL_MASK   (CONFIG_SMP_NCPUS - 1)
-
-#define MPIDR_AFF0_SHIFT    (0)
-#define MPIDR_AFF1_SHIFT    (8)
-#define MPIDR_AFF2_SHIFT    (16)
-#define MPIDR_AFF3_SHIFT    (32)
-
-/* mpidr_el1 register, the register is define:
- *   - bit 0~7:   Aff0
- *   - bit 8~15:  Aff1
- *   - bit 16~23: Aff2
- *   - bit 24:    MT, multithreading
- *   - bit 25~29: RES0
- *   - bit 30:    U, multiprocessor/Uniprocessor
- *   - bit 31:    RES1
- *   - bit 32~39: Aff3
- *   - bit 40~63: RES0
- *   Different ARM64 Core will use different Affn define, the mpidr_el1
- *  value is not CPU number, So we need to change CPU number to mpid
- *  and vice versa
- */
-
-#define GET_MPIDR()                              \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, mpidr_el1"        \
-                    : "=r" (__val) :: "memory"); \
-    __val;                                       \
-  })
+#define up_getsp()              (uintptr_t)__builtin_frame_address(0)
 
 /****************************************************************************
  * Exception stack frame format:
@@ -221,29 +192,6 @@
 #define XCPTCONTEXT_REGS    (XCPTCONTEXT_GP_REGS + XCPTCONTEXT_FPU_REGS)
 #define XCPTCONTEXT_SIZE    (8 * XCPTCONTEXT_REGS)
 
-#define DAIFSET_FIQ_BIT     BIT(0)
-#define DAIFSET_IRQ_BIT     BIT(1)
-#define DAIFSET_ABT_BIT     BIT(2)
-#define DAIFSET_DBG_BIT     BIT(3)
-
-#define DAIFCLR_FIQ_BIT     BIT(0)
-#define DAIFCLR_IRQ_BIT     BIT(1)
-#define DAIFCLR_ABT_BIT     BIT(2)
-#define DAIFCLR_DBG_BIT     BIT(3)
-
-#define DAIF_FIQ_BIT        BIT(6)
-#define DAIF_IRQ_BIT        BIT(7)
-#define DAIF_ABT_BIT        BIT(8)
-#define DAIF_DBG_BIT        BIT(9)
-
-#define DAIF_MASK           (0xf << 6)
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define up_irq_is_disabled(flags) (((flags) & DAIF_FIQ_BIT) != 0)
-#else
-#  define up_irq_is_disabled(flags) (((flags) & DAIF_IRQ_BIT) != 0)
-#endif
-
 #ifndef __ASSEMBLY__
 
 #ifdef __cplusplus
@@ -257,6 +205,19 @@ extern "C"
 /****************************************************************************
  * Public Data
  ****************************************************************************/
+
+/* g_current_regs[] holds a references to the current interrupt level
+ * register storage structure.  It is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
+ */
+
+/* For the case of architectures with multiple CPUs, then there must be one
+ * such value for each processor that can receive an interrupt.
+ */
+
+EXTERN volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
+#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 struct xcptcontext
 {
@@ -293,7 +254,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -415,22 +376,10 @@ static inline void up_irq_restore(irqstate_t flags)
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-#  define up_cpu_index() ((int)MPID_TO_CORE(GET_MPIDR()))
+int up_cpu_index(void);
 #else
 #  define up_cpu_index() (0)
 #endif
-
-static inline_function uint64_t *up_current_regs(void)
-{
-  uint64_t *regs;
-  __asm__ volatile ("mrs %0, " "tpidr_el1" : "=r" (regs));
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint64_t *regs)
-{
-  __asm__ volatile ("msr " "tpidr_el1" ", %0" : : "r" (regs));
-}
 
 /****************************************************************************
  * Name: up_interrupt_context
@@ -440,17 +389,20 @@ static inline_function void up_set_current_regs(uint64_t *regs)
  *
  ****************************************************************************/
 
-static inline_function bool up_interrupt_context(void)
+static inline bool up_interrupt_context(void)
 {
-  return up_current_regs() != NULL;
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
+#endif
+
+  bool ret = (CURRENT_REGS != NULL);
+
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+
+  return ret;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_ELR])
 
 #undef EXTERN
 #ifdef __cplusplus
