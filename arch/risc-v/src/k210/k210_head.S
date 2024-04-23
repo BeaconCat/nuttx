@@ -44,7 +44,7 @@ __start:
 
   /* Load mhartid (cpuid) */
 
-  csrr a0, mhartid
+  csrr a0, CSR_MHARTID
 
   /* Set stack pointer to the idle thread stack */
 
@@ -56,43 +56,43 @@ __start:
   /* In case of single CPU config, stop here */
 
 #if !defined(CONFIG_SMP) || (CONFIG_SMP_NCPUS == 1)
-  csrw mie, zero
+  csrw CSR_MIE, zero
   wfi
 #endif
 
-  /* To get g_cpu_basestack[mhartid], must get g_cpu_basestack first */
+  /* Get start address of idle stack array */
 
-  la   t0, g_cpu_basestack
+  la   t0, g_cpux_idlestack
 
-  /* Offset = pointer width * hart id */
+  /* Get idle stack offset */
 
-  slli t1, a0, 3
-  add  t0, t0, t1
+  li   t1, SMP_STACK_SIZE
+  mul  t1, t1, a0
 
-  /* Load idle stack base to sp */
+  /* Load idle stack top to sp */
 
-  ld   sp, 0(t0)
+  add  sp, t0, t1
 
   /*
-   * sp (stack top) = sp + idle stack size - XCPTCONTEXT_SIZE
+   * sp (stack top) = sp (stack top) - XCPTCONTEXT_SIZE
    *
    * Note: Reserve some space used by up_initial_state since we are already
    * running and using the per CPU idle stack.
    */
 
-  li   t0, STACK_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE - XCPTCONTEXT_SIZE)
+  li   t0, -STACK_ALIGN_UP(XCPTCONTEXT_SIZE)
   add  sp, sp, t0
 
 2:
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
-  csrw mie, zero
+  csrw CSR_MIE, zero
 
   /* Initialize the Machine Trap Vector */
 
   la   t0, __trap_vec
-  csrw mtvec, t0
+  csrw CSR_MTVEC, t0
 
   /* Jump to __k210_start with mhartid */
 

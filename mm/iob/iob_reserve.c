@@ -49,9 +49,9 @@ void iob_reserve(FAR struct iob_s *iob, unsigned int reserved)
 
   while (iob != NULL && reserved > 0)
     {
-      if (reserved > IOB_BUFSIZE(iob))
+      if (reserved > CONFIG_IOB_BUFSIZE)
         {
-          offset = IOB_BUFSIZE(iob);
+          offset = CONFIG_IOB_BUFSIZE;
         }
       else
         {

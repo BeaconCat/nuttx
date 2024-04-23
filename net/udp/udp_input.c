@@ -80,7 +80,7 @@
 #if defined(CONFIG_NET_SOCKOPTS) && defined(CONFIG_NET_BROADCAST)
 static bool udp_is_broadcast(FAR struct net_driver_s *dev)
 {
-  /* Check if the destination address is a broadcast address */
+  /* Check if the destination address is a broadcast/multicast address */
 
 #ifdef CONFIG_NET_IPv4
 #  ifdef CONFIG_NET_IPv6
@@ -291,42 +291,40 @@ static int udp_input(FAR struct net_driver_s *dev, unsigned int iplen)
           /* We'll only get multiple conn when we support SO_REUSEADDR */
 
 #if defined(CONFIG_NET_SOCKOPTS) && defined(CONFIG_NET_BROADCAST)
-          /* Check if the destination address is a broad/multicast address */
+          /* Check if the destination is a broadcast/multicast address */
 
-          if (!udp_is_broadcast(dev))
+          if (udp_is_broadcast(dev))
             {
-              goto unicast;
-            }
+              /* Do we have second connection that can hold this packet? */
 
-          /* Do we have second connection that can hold this packet? */
-
-          while ((nextconn = udp_active(dev, conn, udp)) != NULL)
-            {
-              /* Yes... There are multiple listeners on the same port.
-               * We need to clone the packet and deliver it to each listener.
-               */
-
-              iob = netdev_iob_clone(dev, true);
-              if (iob == NULL)
+              while ((nextconn = udp_active(dev, conn, udp)) != NULL)
                 {
-                  nerr("ERROR: IOB clone failed.\n");
-                  break; /* We can still process one time without clone. */
-                }
+                  /* Yes... There are multiple listeners on the same port.
+                   * We need to clone the packet and deliver it to each
+                   * listener.
+                   */
 
-              ret = udp_input_conn(dev, conn, udpiplen);
-              if (ret < 0)
-                {
-                  nwarn("WARNING: A conn failed to process the packet %d\n",
-                        ret); /* We can still continue for next conn. */
-                }
+                  iob = netdev_iob_clone(dev, true);
+                  if (iob == NULL)
+                    {
+                      nerr("ERROR: IOB clone failed.\n");
+                      break; /* We can still process once without clone. */
+                    }
 
-              netdev_iob_replace(dev, iob);
-              udp  = IPBUF(iplen);
-              conn = nextconn;
+                  ret = udp_input_conn(dev, conn, udpiplen);
+                  if (ret < 0)
+                    {
+                      nwarn("WARNING: A conn failed to process the pkt %d\n",
+                            ret); /* We can still continue for next conn. */
+                    }
+
+                  netdev_iob_replace(dev, iob);
+                  udp  = IPBUF(iplen);
+                  conn = nextconn;
+                }
             }
-
-unicast:
 #endif
+
           /* We can deliver the packet directly to the last listener. */
 
           ret = udp_input_conn(dev, conn, udpiplen);
