@@ -69,6 +69,11 @@
 #  define IGROUPR_SGI_VAL 0xFFFFFFFFU
 #endif
 
+#define SMP_FUNC_CALL_IPI GIC_IRQ_SGI3
+
+#define PENDING_GRP1NS_INTID 1021
+#define SPURIOUS_INT         1023
+
 /***************************************************************************
  * Private Data
  ***************************************************************************/
@@ -405,7 +410,7 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   return 0;
 }
 
-void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
+int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 {
   uint64_t pre_cluster_id = UINT64_MAX;
   uint64_t curr_cluster_id;
@@ -434,6 +439,8 @@ void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
     }
 
   arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
+
+  return 0;
 }
 
 /* Wake up GIC redistributor.
@@ -650,12 +657,9 @@ static void gicv3_dist_init(void)
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm64_pause_async_handler, NULL));
-
+  DEBUGVERIFY(irq_attach(GIC_IRQ_SGI2, arm64_pause_handler, NULL));
 #  ifdef CONFIG_SMP_CALL
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
+  DEBUGVERIFY(irq_attach(SMP_FUNC_CALL_IPI,
                          nxsched_smp_call_handler, NULL));
 #  endif
 #endif
@@ -786,7 +790,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -810,11 +814,33 @@ uint64_t * arm64_decodefiq(uint64_t * regs)
 
   irq = arm64_gic_get_active_fiq();
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  /* FIQ is group0 interrupt */
+
+  if (irq == PENDING_GRP1NS_INTID)
+    {
+      /* irq 1021 indicates that the irq being acked is expected at EL1/EL2.
+       * However, EL3 has no interrupts, only FIQs, see:
+       * 'Arm® Generic Interrupt Controller, Architecture Specification GIC
+       *  architecture version 3 and version 4' Arm IHI 0069G (ID011821)
+       * 'Table 4-3 Interrupt signals for two Security states when EL3 is
+       *  using AArch64 state'
+       *
+       * Thus we know there's an interrupt so let's handle it from group1.
+       */
+
+      regs = arm64_decodeirq(regs);
+      arm64_gic_eoi_fiq(irq);
+
+      return regs;
+    }
+#endif
+
   /* Ignore spurions IRQs.  ICCIAR will report 1023 if there is no pending
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -917,7 +943,7 @@ static void arm64_gic_init(void)
 
   cpu             = this_cpu();
   gic_rdists[cpu] = CONFIG_GICR_BASE +
-                    this_cpu() * CONFIG_GICR_OFFSET;
+                    up_cpu_index() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
@@ -931,10 +957,9 @@ static void arm64_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_SMP
-  up_enable_irq(GIC_SMP_CPUPAUSE);
-  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
+  up_enable_irq(GIC_IRQ_SGI2);
 #  ifdef CONFIG_SMP_CALL
-  up_enable_irq(GIC_SMP_CPUCALL);
+  up_enable_irq(SMP_FUNC_CALL_IPI);
 #  endif
 #endif
 }
@@ -962,11 +987,11 @@ void arm64_gic_secondary_init(void)
 {
   arm64_gic_init();
 }
+#endif
 
-#  ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP_CALL
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
+  up_trigger_irq(SMP_FUNC_CALL_IPI, cpuset);
 }
-#  endif
 #endif
