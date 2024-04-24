@@ -63,13 +63,13 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   /* Are we in an interrupt handler? */
 
-  if (up_current_regs())
+  if (CURRENT_REGS)
     {
       /* Yes, then we have to do things differently.
-       * Just copy the g_current_regs into the OLD rtcb.
+       * Just copy the CURRENT_REGS into the OLD rtcb.
        */
 
-      tricore_savestate(rtcb->xcp.regs);
+      tricore_savecontext(rtcb->xcp.regs);
 
       /* Update scheduler parameters */
 
@@ -79,7 +79,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
        * changes will be made when the interrupt returns.
        */
 
-      tricore_restorestate(tcb->xcp.regs);
+      tricore_restorecontext(tcb->xcp.regs);
     }
 
   /* No, then we will need to perform the user context switch */
