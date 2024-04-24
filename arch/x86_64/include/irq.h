@@ -46,11 +46,18 @@
 #endif
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
 /* CPU private data */
 
 struct intel64_cpu_s
@@ -96,24 +103,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
-static inline_function int up_cpu_index(void)
-{
-  unsigned long cpu;
-
-  asm volatile(
-    "\tmovq %%gs:(%c1), %0\n"
-    : "=rm" (cpu)
-    : "i" (offsetof(struct intel64_cpu_s, id))
-    :);
-
-  return cpu;
-}
-#else
-#  define up_cpu_index() (0)
-#endif
-
-#define this_cpu() up_cpu_index()
+#define up_cpu_index() (0)
 
 /****************************************************************************
  * Inline functions
@@ -149,25 +139,6 @@ static inline_function bool up_interrupt_context(void)
 {
   return up_current_regs() != NULL;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint64_t *)((regs) ? (regs) : up_current_regs()))[REG_RIP])
-
-/****************************************************************************
- * Name: up_alloc_irq_msi
- * Name: up_release_irq_msi
- *
- * Description:
- *   Reserve/release vector for MSI
- *
- ****************************************************************************/
-
-int up_alloc_irq_msi(int *num);
-void up_release_irq_msi(int *irq, int num);
 
 #undef EXTERN
 #ifdef __cplusplus
