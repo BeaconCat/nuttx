@@ -150,7 +150,7 @@ struct wlan_priv_s
 
 /* Reference count of register Wi-Fi handler */
 
-static uint8_t g_callback_register_ref;
+static uint8_t g_callback_register_ref = 0;
 
 static struct wlan_priv_s g_wlan_priv[ESP32S3_WLAN_DEVS];
 
@@ -292,8 +292,13 @@ static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 static struct iob_s *wlan_recvframe(struct wlan_priv_s *priv)
 {
   struct iob_s *iob;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   iob = iob_remove_queue(&priv->rxb);
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return iob;
 }
@@ -1177,7 +1182,7 @@ static int wlan_ioctl(struct net_driver_s *dev,
 
   return ret;
 }
-#endif /* CONFIG_NETDEV_IOCTL */
+#endif  /* CONFIG_NETDEV_IOCTL */
 
 /****************************************************************************
  * Name: esp32s3_net_initialize
@@ -1373,7 +1378,7 @@ int esp32s3_wlan_sta_set_linkstatus(bool linkstatus)
 {
   struct wlan_priv_s *priv = &g_wlan_priv[ESP32S3_WLAN_STA_DEVNO];
 
-  if (linkstatus)
+  if (linkstatus == true)
     {
       netdev_carrier_on(&priv->dev);
     }
@@ -1505,4 +1510,4 @@ int esp32s3_wlan_softap_initialize(void)
 }
 #endif /* ESP32S3_WLAN_HAS_SOFTAP */
 
-#endif /* CONFIG_ESP32S3_WIFI */
+#endif  /* CONFIG_ESP32S3_WIFI */

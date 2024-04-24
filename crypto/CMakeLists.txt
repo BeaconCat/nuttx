@@ -39,6 +39,7 @@ if(CONFIG_CRYPTO)
   endif()
   list(APPEND SRCS blake2s.c)
   list(APPEND SRCS blf.c)
+  list(APPEND SRCS bn.c)
   list(APPEND SRCS cast.c)
   list(APPEND SRCS chachapoly.c)
   list(APPEND SRCS ecb_enc.c)
@@ -60,7 +61,6 @@ if(CONFIG_CRYPTO)
   list(APPEND SRCS siphash.c)
   list(APPEND SRCS hmac_buff.c)
   list(APPEND SRCS curve25519.c)
-  list(APPEND SRCS bn.c)
 
   # Entropy pool random number generator
 
