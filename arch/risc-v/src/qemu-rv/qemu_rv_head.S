@@ -44,7 +44,7 @@ __start:
   /* Preserve a1 as it contains the pointer to DTB */
   /* Load mhartid (cpuid) */
 
-  csrr a0, CSR_MHARTID
+  csrr a0, mhartid
 
   /* Set stack pointer to the idle thread stack */
 
@@ -64,41 +64,45 @@ __start:
   /* If a0 (mhartid) >= t1 (the number of CPUs), stop here */
 
   blt  a0, t1, 3f
-  csrw CSR_MIE, zero
+  csrw mie, zero
   wfi
 
 3:
-  /* Get start address of idle stack array */
+  /* To get g_cpu_basestack[mhartid], must get g_cpu_basestack first */
 
-  la   t0, g_cpux_idlestack
+  la   t0, g_cpu_basestack
 
-  /* Get idle stack offset */
+  /* Offset = pointer width * hart id */
 
-  li   t1, SMP_STACK_SIZE
-  mul  t1, t1, a0
+#ifdef CONFIG_ARCH_RV32
+  slli t1, a0, 2
+#else
+  slli t1, a0, 3
+#endif
+  add  t0, t0, t1
 
-  /* Load idle stack top to sp */
+  /* Load idle stack base to sp */
 
-  add  sp, t0, t1
+  REGLOAD sp, 0(t0)
 
   /*
-   * sp (stack top) = sp (stack top) - XCPTCONTEXT_SIZE
+   * sp (stack top) = sp + idle stack size - XCPTCONTEXT_SIZE
    *
    * Note: Reserve some space used by up_initial_state since we are already
    * running and using the per CPU idle stack.
    */
 
-  li   t0, -STACK_ALIGN_UP(XCPTCONTEXT_SIZE)
+  li   t0, STACK_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE - XCPTCONTEXT_SIZE)
   add  sp, sp, t0
 
 2:
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
-	csrw CSR_MIE, zero
+	csrw	mie, zero
 
   la   t0, __trap_vec
-  csrw CSR_MTVEC, t0
+  csrw mtvec, t0
 
   /* Jump to qemu_rv_start */
 
