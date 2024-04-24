@@ -97,8 +97,7 @@ struct mbstate_s
   int __fill[6];
 };
 
-typedef struct mbstate_s mbstate_s;
-#define mbstate_t mbstate_s
+typedef struct mbstate_s mbstate_t;
 
 /* FILE
  *   As described in <stdio.h>.
@@ -203,9 +202,7 @@ FAR wchar_t      *wcsstr(FAR const wchar_t *, FAR const wchar_t *);
 #ifdef CONFIG_HAVE_DOUBLE
 double            wcstod(FAR const wchar_t *, FAR wchar_t **);
 #endif
-#ifdef CONFIG_HAVE_FLOAT
 float             wcstof(FAR const wchar_t *, FAR wchar_t **);
-#endif
 FAR wchar_t      *wcstok(FAR wchar_t *, FAR const wchar_t *, FAR wchar_t **);
 long int          wcstol(FAR const wchar_t *, FAR wchar_t **, int);
 #ifdef CONFIG_HAVE_LONG_DOUBLE
