@@ -40,7 +40,7 @@ FAR char *strdup(FAR const char *s)
 
   if (news)
     {
-      memcpy(news, s, size);
+      strlcpy(news, s, size);
     }
 
   return news;
