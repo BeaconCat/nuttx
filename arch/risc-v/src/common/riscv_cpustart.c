@@ -77,11 +77,13 @@ void riscv_cpu_boot(int cpu)
 
   asm("WFI");
 
-#ifdef CONFIG_BUILD_KERNEL
+#ifdef CONFIG_RISCV_PERCPU_SCRATCH
   /* Initialize the per CPU areas */
 
   riscv_percpu_add_hart((uintptr_t)cpu);
+#endif
 
+#ifdef CONFIG_BUILD_KERNEL
   /* Enable MMU */
 
   binfo("mmu_enable: satp=%lx\n", g_kernel_pgt_pbase);
@@ -91,7 +93,7 @@ void riscv_cpu_boot(int cpu)
   _info("CPU%d Started\n", this_cpu());
 
 #ifdef CONFIG_STACK_COLORATION
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   /* If stack debug is enabled, then fill the stack with a
    * recognizable value that we can use later to test for high
@@ -110,7 +112,7 @@ void riscv_cpu_boot(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
 
-  sched_note_cpu_started(this_task_irq());
+  sched_note_cpu_started(this_task());
 #endif
 
   up_irq_enable();
@@ -154,7 +156,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_irq(), cpu);
+  sched_note_cpu_start(this_task(), cpu);
 #endif
 
   /* Send IPI to CPU(cpu) */
