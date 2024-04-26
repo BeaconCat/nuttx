@@ -285,7 +285,6 @@ config ARCH_CHIP_NRF52
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_HAVE_SERIAL_TERMIOS
-	select ARCH_DMA_NO_FLASH_TRANSFER
 	---help---
 		Nordic nRF52 architectures (ARM Cortex-M4).
 
@@ -293,7 +292,6 @@ config ARCH_CHIP_NRF53
 	bool "Nordic nRF53"
 	select ARCH_CORTEXM33
 	select ARCH_HAVE_PWM_MULTICHAN
-	select ARCH_DMA_NO_FLASH_TRANSFER
 	depends on EXPERIMENTAL
 	---help---
 		Nordic nRF53 architectures (ARM dual Cortex-M33).
@@ -304,7 +302,6 @@ config ARCH_CHIP_NRF91
 	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_HAVE_TRUSTZONE
 	select ARCH_HAVE_TICKLESS
-	select ARCH_DMA_NO_FLASH_TRANSFER
 	depends on EXPERIMENTAL
 	---help---
 		Nordic nRF91 architectures (ARM Cortex-M33 with integrated
@@ -600,7 +597,6 @@ config ARCH_CHIP_XMC4
 	select ARCH_HAVE_I2CRESET
 	select ARM_HAVE_MPU_UNIFIED
 	select ARMV7M_HAVE_STACKCHECK
-	select ARCH_HAVE_TICKLESS
 	---help---
 		Infineon XMC4xxx(ARM Cortex-M4) architectures
 
@@ -656,17 +652,19 @@ config ARCH_CHIP_MPS
 
 config ARCH_CHIP_QEMU_ARM
 	bool "QEMU virt platform (ARMv7a)"
-	select ARCH_HAVE_PSCI
 	select ARCH_HAVE_POWEROFF
 	select ARCH_HAVE_RESET
+	select ARM_HAVE_PSCI
+	select ARM_HAVE_NEON
 	---help---
 		QEMU virt platform (ARMv7a)
 
 config ARCH_CHIP_GOLDFISH_ARM
 	bool "GOLDFISH virt platform (ARMv7a)"
-	select ARCH_HAVE_PSCI
 	select ARCH_HAVE_POWEROFF
 	select ARCH_HAVE_RESET
+	select ARM_HAVE_PSCI
+	select ARM_HAVE_NEON
 	---help---
 		GOLDFISH virt platform (ARMv7a)
 
@@ -789,6 +787,7 @@ config ARCH_CORTEXM0
 	select ARM_THUMB
 	select ARCH_ARMV6M
 	select ARCH_HAVE_IRQPRIO
+	select ARCH_HAVE_RAMVECTORS
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_HARDFAULT_DEBUG
 
@@ -1108,8 +1107,8 @@ config ARM_THUMB
 	bool "Thumb Mode"
 	default n
 
-config ARCH_HAVE_PSCI
-	bool "ARM PCSI (Power State Coordination Interface) Support"
+config ARM_HAVE_PSCI
+	bool "ARM PSCI (Power State Coordination Interface) Support"
 	default n
 	---help---
 		This Power State Coordination Interface (PSCI) defines
@@ -1156,6 +1155,13 @@ config ARM_HAVE_PACBTI
 	default n
 	---help---
 		Decide whether support PACBTI(Pointer Authentication and Branch Target Identification) Extension
+
+config ARM_PSCI
+	bool "Enabled PSCI"
+	depends on ARM_HAVE_PSCI
+	default n
+	---help---
+		See ARM_HAVE_PSCI for details
 
 config ARM_FPU_ABI_SOFT
 	bool "Soft Float ABI"
@@ -1342,7 +1348,6 @@ config DEBUG_SECUREFAULT
 
 config ARM_SEMIHOSTING_SYSLOG
 	bool "Semihosting SYSLOG support"
-	select ARCH_SYSLOG
 	---help---
 		Enable hooks to support semihosting syslog output.
 
@@ -1363,7 +1368,7 @@ config ARM_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 	---help---
 		Flush & Invalidte cache before & after bkpt instruction.
 
-endif # ARM_SEMIHOSTING_HOSTFS
+endif
 
 if SCHED_BACKTRACE
 
