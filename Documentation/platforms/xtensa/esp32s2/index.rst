@@ -9,61 +9,16 @@ All embedded memory, external memory and peripherals are located on the
 data bus and/or the instruction bus of the CPU. Multiple peripherals in
 the system can access embedded memory via DMA.
 
-ESP32-S2 Toolchain
-==================
+Toolchain
+=========
 
-The toolchain used to build ESP32-S2 firmware can be either downloaded or built from the sources.
-It is **highly** recommended to use (download or build) the same toolchain version that is being
-used by the NuttX CI.
+You can use the prebuilt `toolchain <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-guides/tools/idf-tools.html#xtensa-esp32-elf>`__
+for Xtensa architecture and `OpenOCD <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-guides/tools/idf-tools.html#openocd-esp32>`__
+for ESP32-S2 by Espressif.
 
-Please refer to the Docker
-`container <https://github.com/apache/nuttx/tree/master/tools/ci/docker/linux/Dockerfile>`_ and
-check for the current compiler version being used. For instance:
+For flashing firmware, you will need to install ``esptool.py`` by running::
 
-.. code-block::
-
-  ###############################################################################
-  # Build image for tool required by ESP32 builds
-  ###############################################################################
-  FROM nuttx-toolchain-base AS nuttx-toolchain-esp32
-  # Download the latest ESP32 GCC toolchain prebuilt by Espressif
-  RUN mkdir -p xtensa-esp32-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
-
-  RUN mkdir -p xtensa-esp32s2-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
-
-  RUN mkdir -p xtensa-esp32s3-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s3-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xJ
-
-For ESP32-S2, the toolchain version is based on GGC 12.2.0 (``xtensa-esp32s2-elf-12.2.0_20230208``)
-
-The prebuilt Toolchain (Recommended)
-------------------------------------
-
-First, create a directory to hold the toolchain:
-
-.. code-block:: console
-
-  $ mkdir -p /path/to/your/toolchain/xtensa-esp32s2-elf-gcc
-
-Download and extract toolchain:
-
-.. code-block:: console
-
-  $ curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
-
-Add the toolchain to your `PATH`:
-
-.. code-block:: console
-
-  $ echo "export PATH=/path/to/your/toolchain/xtensa-esp32s2-elf-gcc/bin:$PATH" >> ~/.bashrc
-
-You can edit your shell's rc files if you don't use bash.
+    $ pip install esptool
 
 Building from source
 --------------------
@@ -75,19 +30,20 @@ build the toolchain with crosstool-NG on Linux are as follows
 
   $ git clone https://github.com/espressif/crosstool-NG.git
   $ cd crosstool-NG
+  $ git checkout esp-2021r1
   $ git submodule update --init
 
   $ ./bootstrap && ./configure --enable-local && make
 
-  $ ./ct-ng xtensa-esp32s2-elf
+  $ ./ct-ng xtensa-esp32-elf
   $ ./ct-ng build
 
-  $ chmod -R u+w builds/xtensa-esp32s2-elf
+  $ chmod -R u+w builds/xtensa-esp32-elf
 
   $ export PATH="crosstool-NG/builds/xtensa-esp32-elf/bin:$PATH"
 
-These steps are given in the setup guide in
-`ESP-IDF documentation <https://docs.espressif.com/projects/esp-idf/en/latest/get-started/linux-setup-scratch.html>`_.
+Alternatively, you may follow the steps in
+`ESP-IDF documentation <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/linux-macos-setup.html>`_.
 
 Flashing
 ========
@@ -142,7 +98,7 @@ Peripheral Support NOTES
 ========== ======= =====
 ADC          No
 AES          No
-CAN/TWAI     Yes
+CAN/TWAI     No
 DMA          Yes
 eFuse        No
 Ethernet     No
@@ -286,7 +242,7 @@ Linker Segments
 ESP32-S2 has 4 generic timers of 64 bits (2 from Group 0 and 2 from Group 1).
 They're accessible as character drivers, the configuration along with a
 guidance on how to run the example and the description of the application level
-interface can be found in the :doc:`timer documentation </components/drivers/character/timers/timer>`.
+interface can be found in the :doc:`timer documentation </components/drivers/character/timer>`.
 
 Watchdog Timers
 ===============
@@ -295,7 +251,7 @@ ESP32-S2 has 3 WDTs. 2 MWDTs from the Timers Module and 1 RWDT from the RTC Modu
 (Currently not supported yet). They're accessible as character drivers,
 The configuration along with a guidance on how to run the example and the description
 of the application level interface can be found in the
-:doc:`watchdog documentation </components/drivers/character/timers/watchdog>`.
+:doc:`watchdog documentation </components/drivers/character/watchdog>`.
 
 I2S
 ===
