@@ -1,5 +1,5 @@
 ############################################################################
-# drivers/rptun/Make.defs
+# drivers/rpmsg/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -26,15 +26,6 @@ CSRCS += rpmsg.c
 
 ifeq ($(CONFIG_RPMSG_PING),y)
 CSRCS += rpmsg_ping.c
-endif
-
-ifeq ($(CONFIG_RPMSG_VIRTIO),y)
-CSRCS += rpmsg_virtio.c
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)openamp$(DELIM)open-amp$(DELIM)lib
-endif
-
-ifeq ($(CONFIG_RPMSG_VIRTIO_IVSHMEM),y)
-CSRCS += rpmsg_virtio_ivshmem.c
 endif
 
 DEPPATH += --dep-path rpmsg

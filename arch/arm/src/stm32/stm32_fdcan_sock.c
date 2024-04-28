@@ -1751,7 +1751,7 @@ static int fdcan_send(struct stm32_fdcan_s *priv)
 
       /* Set DLC */
 
-      txbuffer[1] |= BUFFER_R1_DLC(g_len_to_can_dlc[frame->len]);
+      txbuffer[1] |= BUFFER_R1_DLC(len_to_can_dlc[frame->len]);
 
       /* Set flags */
 
@@ -2469,8 +2469,8 @@ static void fdcan_receive(struct stm32_fdcan_s *priv,
 
       /* Word R1 contains the DLC and timestamp */
 
-      frame->len = g_can_dlc_to_len[((rxbuffer[1] & BUFFER_R1_DLC_MASK) >>
-                                    BUFFER_R1_DLC_SHIFT)];
+      frame->len = can_dlc_to_len[((rxbuffer[1] & BUFFER_R1_DLC_MASK) >>
+                                   BUFFER_R1_DLC_SHIFT)];
 
       /* Get CANFD flags */
 
@@ -3191,7 +3191,7 @@ static int  fdcan_netdev_ioctl(struct net_driver_s *dev, int cmd,
 
   return ret;
 }
-#endif  /* CONFIG_NETDEV_IOCTL */
+#endif /* CONFIG_NETDEV_IOCTL */
 
 /****************************************************************************
  * Public Functions
