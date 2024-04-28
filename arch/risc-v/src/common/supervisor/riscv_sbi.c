@@ -22,6 +22,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* SBI Extension IDs */
+
+#define SBI_EXT_TIME            0x54494D45
+
+/* SBI function IDs for TIME extension */
+
+#define SBI_EXT_TIME_SET_TIMER  0x0
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -116,26 +124,11 @@ uint64_t riscv_sbi_get_time(void)
 
   do
     {
-      hi = READ_CSR(CSR_TIMEH);
-      lo = READ_CSR(CSR_TIME);
+      hi = READ_CSR(timeh);
+      lo = READ_CSR(time);
     }
-  while (hi != READ_CSR(CSR_TIMEH));
+  while (hi != READ_CSR(timeh));
 
   return (((uint64_t) hi) << 32) | lo;
 #endif
 }
-
-uintptr_t riscv_sbi_send_ipi(uint32_t hmask, uintptr_t hbase)
-{
-  return sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SEND_IPI,
-      hmask, hbase, 0, 0, 0, 0);
-}
-
-#ifndef CONFIG_NUTTSBI
-uintptr_t riscv_sbi_boot_secondary(uint32_t hartid, uintptr_t addr,
-                                   uintptr_t a1)
-{
-  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_START,
-      hartid, addr, a1, 0, 0, 0);
-}
-#endif /* CONFIG_NUTTSBI */
