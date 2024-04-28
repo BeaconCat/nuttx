@@ -146,14 +146,12 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
                       size_t msglen, unsigned int prio,
                       FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
   irqstate_t flags;
   sclock_t ticks;
   int ret;
-
-  DEBUGASSERT(up_interrupt_context() == false);
 
   /* Verify the input parameters on any failures to verify. */
 
@@ -168,6 +166,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   /* Disable interruption */
 
   flags = enter_critical_section();
+  rtcb = this_task_irq();
 
   /* Pre-allocate a message structure */
 
