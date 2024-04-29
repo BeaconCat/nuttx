@@ -95,10 +95,6 @@ if(CONFIG_STACK_CANARIES)
   add_compile_options(-fstack-protector-all)
 endif()
 
-if(CONFIG_ARCH_COVERAGE_ALL)
-  add_compile_options(-fprofile-generate -ftest-coverage)
-endif()
-
 if(CONFIG_MM_UBSAN_ALL)
   add_compile_options(${CONFIG_MM_UBSAN_OPTION})
 endif()
@@ -123,12 +119,8 @@ set(ARCHCFLAGS
     "-Wstrict-prototypes -fno-common -Wall -Wshadow -Werror -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 set(ARCHCXXFLAGS
-    "-fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas")
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
-endif()
-
+    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
+)
 if(NOT ${CONFIG_ARCH_TOOLCHAIN_CLANG})
   string(APPEND ARCHCFLAGS " -Wno-psabi")
   string(APPEND ARCHCXXFLAGS " -Wno-psabi")
@@ -158,7 +150,7 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g)
+  add_compile_options(-g3)
 endif()
 
 if(CONFIG_ARCH_TOOLCHAIN_GNU)
