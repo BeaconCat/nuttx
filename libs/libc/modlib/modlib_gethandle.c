@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/module/mod_rmmod.c
+ * libs/libc/modlib/modlib_gethandle.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,34 +23,54 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <assert.h>
+#include <debug.h>
+#include <errno.h>
 
-#include <nuttx/module.h>
 #include <nuttx/lib/modlib.h>
-
-#ifdef CONFIG_MODULE
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rmmod
+ * Name: modlib_modhandle
  *
  * Description:
- *   Remove a previously installed module from memory.
+ *   modlib_modhandle() returns the module handle for the installed
+ *   module with the provided name.  A secondary use of this function is to
+ *   determine if a module has been loaded or not.
  *
  * Input Parameters:
- *   handle - The module handler previously returned by insmod().
+ *   name   - A pointer to the module name string.
  *
  * Returned Value:
- *   Zero (OK) on success.  On any failure, -1 (ERROR) is returned the
- *   errno value is set appropriately.
+ *   The non-NULL module handle previously returned by modlib_insert() is
+ *   returned on success.  If no module with that name is installed,
+ *   modlib_modhandle() will return a NULL handle and the errno variable
+ *   will be set appropriately.
  *
  ****************************************************************************/
 
-int rmmod(FAR void *handle)
+FAR void *modlib_gethandle(FAR const char *name)
 {
-  return modlib_remove(handle);
-}
+  FAR struct module_s *modp;
 
-#endif /* CONFIG_MODULE */
+  DEBUGASSERT(name != NULL);
+
+  /* Get exclusive access to the module registry */
+
+  modlib_registry_lock();
+
+  /* Find the module entry for this name in the registry */
+
+  modp = modlib_registry_find(name);
+  if (modp == NULL)
+    {
+      berr("ERROR: Failed to find module %s\n", name);
+      set_errno(ENOENT);
+    }
+
+  modlib_registry_unlock();
+  return modp;
+}
