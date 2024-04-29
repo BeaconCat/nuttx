@@ -74,8 +74,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/open-amp)
       ${CMAKE_CURRENT_LIST_DIR}/0018-virtio-decoupling-the-transport-layer-and-virtio-dev.patch
       && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
       ${CMAKE_CURRENT_LIST_DIR}/0019-virtio.h-add-version-in-device-id-table.patch
-      && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-      ${CMAKE_CURRENT_LIST_DIR}/0020-virtio-Add-the-virtio_negotiate_features-interface.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -93,12 +91,8 @@ if(CONFIG_OPENAMP_CACHE)
   target_compile_options(openamp PRIVATE -DVIRTIO_CACHED_VRINGS)
 endif()
 
-if(CONFIG_OPENAMP_RPMSG_DEBUG)
-  target_compile_options(openamp PRIVATE -DRPMSG_DEBUG)
-endif()
-
-if(CONFIG_OPENAMP_VQUEUE_DEBUG)
-  target_compile_options(openamp PRIVATE -DVQUEUE_DEBUG)
+if(CONFIG_OPENAMP_DEBUG)
+  target_compile_options(openamp PRIVATE -DRPMSG_DEBUG -DVQUEUE_DEBUG)
 endif()
 
 target_sources(
