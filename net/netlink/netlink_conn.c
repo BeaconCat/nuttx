@@ -483,23 +483,19 @@ netlink_tryget_response(FAR struct netlink_conn_s *conn)
  *   Note:  The network will be momentarily locked to support exclusive
  *   access to the pending response list.
  *
- * Input Parameters:
- *   conn     - The Netlink connection
- *   response - The next response from the head of the pending response list
- *              is returned.  This function will block until a response is
- *              received if the pending response list is empty.  NULL will be
- *              returned only in the event of a failure.
- *
  * Returned Value:
- *   Zero (OK) is returned if the notification was successfully set up.
- *   A negated error value is returned if an unexpected error occurred
+ *   The next response from the head of the pending response list is
+ *   returned.  This function will block until a response is received if
+ *   the pending response list is empty.  NULL will be returned only in the
+ *   event of a failure.
  *
  ****************************************************************************/
 
-int netlink_get_response(FAR struct netlink_conn_s *conn,
-                         FAR struct netlink_response_s **response)
+FAR struct netlink_response_s *
+netlink_get_response(FAR struct netlink_conn_s *conn)
 {
-  int ret = OK;
+  FAR struct netlink_response_s *resp;
+  int ret;
 
   DEBUGASSERT(conn != NULL);
 
@@ -509,7 +505,7 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
    */
 
   net_lock();
-  while ((*response = netlink_tryget_response(conn)) == NULL)
+  while ((resp = netlink_tryget_response(conn)) == NULL)
     {
       sem_t waitsem;
 
@@ -531,7 +527,7 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
         {
           /* Wait for a response to be queued */
 
-          ret = net_sem_wait(&waitsem);
+          nxsem_post(&waitsem);
         }
 
       /* Clean-up the semaphore */
@@ -548,7 +544,7 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
     }
 
   net_unlock();
-  return ret;
+  return resp;
 }
 
 /****************************************************************************
