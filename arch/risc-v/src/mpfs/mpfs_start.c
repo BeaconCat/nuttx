@@ -98,10 +98,6 @@ void __mpfs_start(uint64_t mhartid)
       *dest++ = 0;
     }
 
-  /* Setup base stack */
-
-  riscv_set_basestack(MPFS_IDLESTACK_BASE, MPFS_IDLESTACK_SIZE);
-
   /* Move the initialized data section from his temporary holding spot in
    * FLASH into the correct place in SRAM.  The correct place in SRAM is
    * give by _sdata and _edata.  The temporary location is in FLASH at the
@@ -153,14 +149,14 @@ void __mpfs_start(uint64_t mhartid)
 
   mpfs_boardinitialize();
 
-#ifdef CONFIG_RISCV_PERCPU_SCRATCH
+#ifdef CONFIG_ARCH_USE_S_MODE
   /* Initialize the per CPU areas */
 
   if (mhartid != 0)
     {
       riscv_percpu_add_hart(mhartid);
     }
-#endif /* CONFIG_RISCV_PERCPU_SCRATCH */
+#endif /* CONFIG_ARCH_USE_S_MODE */
 
   /* Initialize the caches.  Should only be executed from E51 (hart 0) to be
    * functional.  Consider the caches already configured if running without
