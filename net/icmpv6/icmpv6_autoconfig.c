@@ -340,17 +340,21 @@ int icmpv6_autoconfig(FAR struct net_driver_s *dev)
    *    method must be employed.
    */
 
-  ret = icmpv6_neighbor(dev, lladdr);
-  if (ret >= 0)
+  if (dev->d_lltype == NET_LL_ETHERNET ||
+      dev->d_lltype == NET_LL_IEEE80211)
     {
-      /* Hmmm... someone else responded to our Neighbor Solicitation.  We
-       * have no back-up plan in place.  Just bail.
-       */
+      ret = icmpv6_neighbor(dev, lladdr);
+      if (ret >= 0)
+        {
+          /* Hmmm... someone else responded to our Neighbor Solicitation.  We
+           * have no back-up plan in place.  Just bail.
+           */
 
-      nerr("ERROR: IP conflict\n");
+          nerr("ERROR: IP conflict\n");
 
-      net_unlock();
-      return -EEXIST;
+          net_unlock();
+          return -EEXIST;
+        }
     }
 #endif
 
@@ -388,12 +392,6 @@ got_lladdr:
       ret = icmpv6_send_message(dev, false);
       if (ret < 0)
         {
-          /* Remove our wait structure from the list (we may no longer be
-           * at the head of the list).
-           */
-
-          icmpv6_rwait_cancel(&notify);
-
           nerr("ERROR: Failed send router solicitation: %d\n", ret);
           break;
         }
@@ -433,12 +431,9 @@ got_lladdr:
           nerr("ERROR: Failed send neighbor advertisement: %d\n", senderr);
         }
 
-      if (ret != -EADDRNOTAVAIL)
-        {
-          /* No off-link communications; No router address. */
+      /* No off-link communications; No router address. */
 
-          net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
-        }
+      net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
     }
 
   /* 5. Router Direction: The router provides direction to the node on how

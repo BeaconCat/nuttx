@@ -36,7 +36,7 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION += -g3
+  ARCHOPTIMIZATION += -g
 endif
 
 ifeq ($(CONFIG_FRAME_POINTER),y)
@@ -46,10 +46,14 @@ else
 endif
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCXXFLAGS += -fno-common
 
 ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
+
+ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
+  ARCHCXXFLAGS += -nostdinc++
+endif
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
