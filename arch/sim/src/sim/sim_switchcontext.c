@@ -32,7 +32,6 @@
 
 #include "clock/clock.h"
 #include "sim_internal.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Public Functions
@@ -64,10 +63,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   /* Are we in an interrupt handler? */
 
-  if (up_current_regs())
+  if (CURRENT_REGS)
     {
       /* Yes, then we have to do things differently.
-       * Just copy the current_regs into the OLD rtcb.
+       * Just copy the CURRENT_REGS into the OLD rtcb.
        */
 
       sim_savestate(rtcb->xcp.regs);
@@ -75,6 +74,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
       /* Update scheduler parameters */
 
       nxsched_resume_scheduler(tcb);
+
+      /* Restore the cpu lock */
+
+      restore_critical_section();
 
       /* Then switch contexts */
 
@@ -99,7 +102,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       /* Restore the cpu lock */
 
-      restore_critical_section(tcb, this_cpu());
+      restore_critical_section();
 
       /* Then switch contexts */
 

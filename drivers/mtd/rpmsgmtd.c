@@ -35,7 +35,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mutex.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 #include "rpmsgmtd.h"
 
