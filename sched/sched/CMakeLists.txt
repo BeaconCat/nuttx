@@ -19,9 +19,9 @@
 # ##############################################################################
 set(SRCS
     sched_getfiles.c
-    sched_profil.c
     sched_addreadytorun.c
     sched_removereadytorun.c
+    sched_addprioritized.c
     sched_mergeprioritized.c
     sched_mergepending.c
     sched_addblocked.c
@@ -42,7 +42,6 @@ set(SRCS
     sched_lockcount.c
     sched_idletask.c
     sched_self.c
-    sched_getcpu.c
     sched_get_stackinfo.c
     sched_get_tls.c
     sched_sysinfo.c
@@ -54,8 +53,14 @@ if(CONFIG_PRIORITY_INHERITANCE)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS sched_cpupause.c sched_getaffinity.c sched_setaffinity.c
-       sched_process_delivered.c)
+  list(
+    APPEND
+    SRCS
+    sched_cpuselect.c
+    sched_cpupause.c
+    sched_getcpu.c
+    sched_getaffinity.c
+    sched_setaffinity.c)
 endif()
 
 if(CONFIG_SIG_SIGSTOP_ACTION)
@@ -103,6 +108,10 @@ else()
   list(APPEND SRCS sched_processtimer.c)
 endif()
 
+if(CONFIG_SMP)
+  list(APPEND SRCS sched_thistask.c)
+endif()
+
 if(CONFIG_SCHED_CRITMONITOR)
   list(APPEND SRCS sched_critmonitor.c)
 endif()
@@ -117,10 +126,6 @@ endif()
 
 if(CONFIG_SMP_CALL)
   list(APPEND SRCS sched_smp.c)
-endif()
-
-if(CONFIG_SCHED_PERF_EVENTS)
-  list(APPEND SRCS sched_perf.c)
 endif()
 
 target_sources(sched PRIVATE ${SRCS})
