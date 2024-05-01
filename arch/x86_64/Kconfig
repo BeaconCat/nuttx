@@ -30,12 +30,8 @@ config ARCH_INTEL64
 	select ARCH_HAVE_SSE41
 	select ARCH_HAVE_SSE42
 	select ARCH_HAVE_SSE4A
-	select ARCH_HAVE_FMA if ARCH_X86_64_HAVE_XSAVE
-	select ARCH_HAVE_AVX if ARCH_X86_64_HAVE_XSAVE
-	select ARCH_HAVE_AVX512 if ARCH_X86_64_HAVE_XSAVE
 	select ARCH_ICACHE
 	select ARCH_DCACHE
-	select ARCH_HAVE_IRQTRIGGER
 	---help---
 		Intel x86_64 architecture
 
@@ -46,26 +42,6 @@ config ARCH_CHIP_X86_64_CUSTOM
 		Select this option if there is no directory for the chip under arch/x86_64/src/.
 
 endchoice
-
-if SCHED_BACKTRACE
-
-choice
-	prompt "Choose x86_64 unwinder"
-	default x86_64_UNWINDER_FRAME_POINTER
-	---help---
-		This determines which method will be used for unwinding nuttx stack
-		traces for debug.
-
-config x86_64_UNWINDER_FRAME_POINTER
-	bool "Frame pointer unwinder"
-	select FRAME_POINTER
-	---help---
-		This option enables the frame pointer unwinder for unwinding
-		nuttx stack traces.
-
-endchoice # Choose x86_64 unwinder
-
-endif
 
 # CPU features
 
@@ -101,10 +77,6 @@ config ARCH_HAVE_SSE4A
 	bool
 	default n
 
-config ARCH_HAVE_FMA
-	bool
-	default n
-
 config ARCH_HAVE_AVX
 	bool
 	default n
@@ -137,15 +109,9 @@ config MULTBOOT2_FB_TERM
 	bool "Multiboot2 framebuffer terminal"
 	default n
 	depends on NXFONTS
-    ---help---
-	Enable a framebuffer terminal for early debug printing
+	---help---
+		Enable a framebuffer terminal for early debug printing
 
 endif # ARCH_MULTIBOOT2
-
-config ARCH_PVHBOOT
-	bool "Append Xen PVH ELF Note"
-	default y
-	---help---
-		This allow x86 QEMU -kernel boot.
 
 endif # ARCH_X86_64
