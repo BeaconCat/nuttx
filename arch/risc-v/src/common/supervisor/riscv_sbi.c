@@ -22,6 +22,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* SBI Extension IDs */
+
+#define SBI_EXT_TIME            0x54494D45
+
+/* SBI function IDs for TIME extension */
+
+#define SBI_EXT_TIME_SET_TIMER  0x0
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -41,6 +49,7 @@
  * Private Functions
  ****************************************************************************/
 
+#ifndef CONFIG_NUTTSBI
 static inline uintptr_t sbi_ecall(unsigned int extid, unsigned int fid,
                                   uintptr_t parm0, uintptr_t parm1,
                                   uintptr_t parm2, uintptr_t parm3,
@@ -65,6 +74,7 @@ static inline uintptr_t sbi_ecall(unsigned int extid, unsigned int fid,
 
   return r1;
 }
+#endif /* CONFIG_NUTTSBI */
 
 /****************************************************************************
  * Public Functions
@@ -83,12 +93,16 @@ static inline uintptr_t sbi_ecall(unsigned int extid, unsigned int fid,
 
 void riscv_sbi_set_timer(uint64_t stime_value)
 {
+#ifdef CONFIG_NUTTSBI
+  sbi_mcall_set_timer(stime_value);
+#else
 #ifdef CONFIG_ARCH_RV64
   sbi_ecall(SBI_EXT_TIME, SBI_EXT_TIME_SET_TIMER, stime_value, 0, 0, 0, 0,
             0);
 #else
   sbi_ecall(SBI_EXT_TIME, SBI_EXT_TIME_SET_TIMER, stime_value,
             stime_value >> 32, 0, 0, 0, 0);
+#endif
 #endif
 }
 
@@ -106,36 +120,22 @@ void riscv_sbi_set_timer(uint64_t stime_value)
 uint64_t riscv_sbi_get_time(void)
 {
 #ifdef CONFIG_NUTTSBI
-  return sbi_ecall(SBI_EXT_FIRMWARE, SBI_EXT_FIRMWARE_GET_MTIME, 0, 0,
-                   0, 0, 0, 0);
-#elif defined(CONFIG_ARCH_RV64)
-  return READ_CSR(CSR_TIME);
+  return sbi_mcall_get_time();
+#else
+#ifdef CONFIG_ARCH_RV64
+  return READ_CSR(time);
 #else
   uint32_t hi;
   uint32_t lo;
 
   do
     {
-      hi = READ_CSR(CSR_TIMEH);
-      lo = READ_CSR(CSR_TIME);
+      hi = READ_CSR(timeh);
+      lo = READ_CSR(time);
     }
-  while (hi != READ_CSR(CSR_TIMEH));
+  while (hi != READ_CSR(timeh));
 
   return (((uint64_t) hi) << 32) | lo;
 #endif
+#endif
 }
-
-uintptr_t riscv_sbi_send_ipi(uint32_t hmask, uintptr_t hbase)
-{
-  return sbi_ecall(SBI_EXT_IPI, SBI_EXT_IPI_SEND_IPI,
-      hmask, hbase, 0, 0, 0, 0);
-}
-
-#ifndef CONFIG_NUTTSBI
-uintptr_t riscv_sbi_boot_secondary(uint32_t hartid, uintptr_t addr,
-                                   uintptr_t a1)
-{
-  return sbi_ecall(SBI_EXT_HSM, SBI_EXT_HSM_HART_START,
-      hartid, addr, a1, 0, 0, 0);
-}
-#endif /* CONFIG_NUTTSBI */
