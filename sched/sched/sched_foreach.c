@@ -63,15 +63,17 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
   /* Visit each active task */
 
   flags = enter_critical_section();
-  for (ndx = 0; ndx < g_npidhash; ndx++)
+  sched_lock();
+  for (ndx = 0; ndx < nxsched_npidhash(); ndx++)
     {
       /* This test and the function call must be atomic */
 
-      if (g_pidhash[ndx])
+      if (nxsched_pidhash()[ndx])
         {
-          handler(g_pidhash[ndx], arg);
+          handler(nxsched_pidhash()[ndx], arg);
         }
     }
 
+  sched_unlock();
   leave_critical_section(flags);
 }
