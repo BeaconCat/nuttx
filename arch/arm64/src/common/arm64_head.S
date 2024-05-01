@@ -26,7 +26,6 @@
 #include <nuttx/config.h>
 
 #include <arch/chip/chip.h>
-#include <arch/irq.h>
 #include "arm64_arch.h"
 #include "arm64_internal.h"
 #include "arm64_macro.inc"
@@ -90,6 +89,8 @@ label:  .asciz msg;                             \
      * This must be the very first address in the loaded image.
      * It should be loaded at any 4K-aligned address.
      */
+
+    .section .start, "ax"
     .globl __start;
 __start:
 
@@ -172,9 +173,6 @@ real_start:
     bne    .loop
 #  endif
 
-    /* Initialize percpu reg tpidr_el1 */
-
-    msr    tpidr_el1, xzr
     ldr    x25, =arm64_boot_secondary_c_routine
     bl     __reset_prep_c
 
@@ -203,9 +201,6 @@ primary_core:
     ldr    x24, =(g_idle_stack + CONFIG_IDLETHREAD_STACKSIZE)
 #endif /* CONFIG_SMP */
 
-    /* Initialize percpu reg tpidr_el1 */
-
-    msr    tpidr_el1, xzr
     ldr    x25, =arm64_boot_primary_c_routine
 
     /* Prepare for calling C code */
@@ -240,6 +235,15 @@ switch_el:
 
     bl    arm64_boot_el3_init
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+    msr   SPSel, #1
+
+    /* Set SP_EL3 (with SPSel = 1) */
+
+    mov   sp, x24
+    b     el3_boot
+#endif
+
     /* Get next EL */
 
     adr   x0, switch_el
@@ -273,6 +277,8 @@ switch_el:
 
     msr   SPSel, #1
     msr   DAIFClr, #(DAIFCLR_ABT_BIT)
+
+el3_boot:
     isb
 
 jump_to_c_entry:
@@ -348,18 +354,17 @@ out:
  */
 
 boot_stage_puts:
-    stp   xzr, x30, [sp, #-16]!
-1:
     ldrb  w0, [x1], #1       /* Load next char */
     cmp   w0, 0
-    beq   2f                 /* Exit on nul */
+    beq   1f                 /* Exit on nul */
+    stp   xzr, x30, [sp, #-16]!
     bl    arm64_lowputc
-    b     1b                 /* Loop */
-2:
     ldp   xzr, x30, [sp], #16
+    b     boot_stage_puts
+1:
     ret
 
-.type boot_stage_puts, %function;
+.type boot_low_puts, %function;
 
 #endif /* !CONFIG_ARCH_EARLY_PRINT */
 
