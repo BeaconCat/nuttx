@@ -30,11 +30,18 @@ set(CSRCS
     sem_post.c
     sem_recover.c
     sem_reset.c
-    sem_waitirq.c
-    sem_rw.c)
+    sem_waitirq.c)
 
 if(CONFIG_PRIORITY_INHERITANCE)
   list(APPEND CSRCS sem_initialize.c sem_holder.c sem_setprotocol.c)
+endif()
+
+if(CONFIG_SPINLOCK)
+  list(APPEND CSRCS spinlock.c)
+endif()
+
+if(CONFIG_TICKET_SPINLOCK)
+  list(APPEND CSRCS spinlock.c)
 endif()
 
 target_sources(sched PRIVATE ${CSRCS})
