@@ -27,12 +27,16 @@ if(CONFIG_DRIVERS_VIRTIO_MMIO)
   list(APPEND SRCS virtio-mmio.c)
 endif()
 
-if(CONFIG_DRIVERS_VIRTIO_PCI)
-  list(APPEND SRCS virtio-pci.c)
-endif()
-
 if(CONFIG_DRIVERS_VIRTIO_BLK)
   list(APPEND SRCS virtio-blk.c)
+endif()
+
+if(CONFIG_DRIVERS_VIRTIO_GPU)
+  list(APPEND SRCS virtio-gpu.c)
+endif()
+
+if(CONFIG_DRIVERS_VIRTIO_INPUT)
+  list(APPEND SRCS virtio-input.c)
 endif()
 
 if(CONFIG_DRIVERS_VIRTIO_NET)
@@ -41,6 +45,10 @@ endif()
 
 if(CONFIG_DRIVERS_VIRTIO_RNG)
   list(APPEND SRCS virtio-rng.c)
+endif()
+
+if(CONFIG_DRIVERS_VIRTIO_RPMB)
+  list(APPEND SRCS virtio-rpmb.c)
 endif()
 
 if(CONFIG_DRIVERS_VIRTIO_SERIAL)
