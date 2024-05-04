@@ -64,7 +64,6 @@
 int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 {
   FAR char **envp = NULL;
-  irqstate_t flags;
   size_t envc = 0;
   size_t size;
   int ret = OK;
@@ -79,7 +78,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
        * environment may be shared.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
 
       /* Count the strings */
 
@@ -89,6 +88,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
         }
 
       group->tg_envc = envc;
+      group->tg_envpc = (envc + SCHED_ENVIRON_RESERVED + 1);
 
       /* A special case is that the parent has an "empty" environment
        * allocation, i.e., there is an allocation in place but it
@@ -99,7 +99,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
         {
           /* There is an environment, duplicate it */
 
-          envp = group_malloc(group, sizeof(*envp) * (envc + 1));
+          envp = group_malloc(group, sizeof(*envp) * group->tg_envpc);
           if (envp == NULL)
             {
               /* The parent's environment can not be inherited due to a
@@ -140,7 +140,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
       group->tg_envp = envp;
 
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   return ret;
