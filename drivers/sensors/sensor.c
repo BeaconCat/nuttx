@@ -36,7 +36,7 @@
 #include <fcntl.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 #include <nuttx/mutex.h>
 #include <nuttx/sensors/sensor.h>
 
@@ -66,9 +66,9 @@ struct sensor_axis_map_s
   int8_t sign_z;
 };
 
-/* This structure describes sensor meta */
+/* This structure describes sensor info */
 
-struct sensor_meta_s
+struct sensor_info_s
 {
   unsigned long esize;
   FAR char *name;
@@ -87,8 +87,6 @@ struct sensor_user_s
   bool             changed;    /* This is used to indicate event happens and need to
                                 * asynchronous notify other users
                                 */
-  unsigned int     event;      /* The event of this sensor, eg: SENSOR_EVENT_FLUSH_COMPLETE. */
-  bool             flushing;   /* The is used to indicate user is flushing */
   sem_t            buffersem;  /* Wakeup user waiting for data in circular buffer */
   size_t           bufferpos;  /* The index of user generation in buffer */
 
@@ -147,7 +145,7 @@ static const struct sensor_axis_map_s g_remap_tbl[] =
   { 1, 0, 2,  1,  1, -1 }, /* P7 */
 };
 
-static const struct sensor_meta_s g_sensor_meta[] =
+static const struct sensor_info_s g_sensor_info[] =
 {
   {0,                                     NULL},
   {sizeof(struct sensor_accel),           "accel"},
@@ -444,17 +442,9 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
 
   if (user->state.interval == ULONG_MAX)
     {
-      if (buffer != NULL)
-        {
-          ret = circbuf_peekat(&upper->buffer,
-                        user->bufferpos * upper->state.esize,
-                        buffer, len);
-        }
-      else
-        {
-          ret = len;
-        }
-
+      ret = circbuf_peekat(&upper->buffer,
+                           user->bufferpos * upper->state.esize,
+                           buffer, len);
       user->bufferpos += nums;
       circbuf_peekat(&upper->timing,
                      (user->bufferpos - 1) * TIMING_BUF_ESIZE,
@@ -502,17 +492,9 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
               ((user->state.generation + user->state.interval) << 1);
       if (delta >= 0)
         {
-          if (buffer != NULL)
-            {
-              ret += circbuf_peekat(&upper->buffer,
-                                    (pos - 1) * upper->state.esize,
-                                    buffer + ret, upper->state.esize);
-            }
-          else
-            {
-              ret += upper->state.esize;
-            }
-
+          ret += circbuf_peekat(&upper->buffer,
+                                (pos - 1) * upper->state.esize,
+                                buffer + ret, upper->state.esize);
           user->bufferpos = pos;
           user->state.generation += user->state.interval;
           if (ret >= len)
@@ -697,7 +679,7 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   FAR struct sensor_user_s *user = filep->f_priv;
   ssize_t ret;
 
-  if (!len)
+  if (!buffer || !len)
     {
       return -EINVAL;
     }
@@ -705,11 +687,6 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   nxrmutex_lock(&upper->lock);
   if (lower->ops->fetch)
     {
-      if (buffer == NULL)
-        {
-          return -EINVAL;
-        }
-
       if (!(filep->f_oflags & O_NONBLOCK))
         {
           nxrmutex_unlock(&upper->lock);
@@ -739,18 +716,11 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
     }
   else if (lower->persist)
     {
-      if (buffer == NULL)
-        {
-          ret = upper->state.esize;
-        }
-      else
-        {
-          /* Persistent device can get latest old data if not updated. */
+      /* Persistent device can get latest old data if not updated. */
 
-          ret = circbuf_peekat(&upper->buffer,
-                               (user->bufferpos - 1) * upper->state.esize,
-                               buffer, upper->state.esize);
-        }
+      ret = circbuf_peekat(&upper->buffer,
+                           (user->bufferpos - 1) * upper->state.esize,
+                           buffer, upper->state.esize);
     }
   else
     {
@@ -896,64 +866,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
-      case SNIOC_GET_INFO:
-        {
-          if (lower->ops->get_info == NULL)
-            {
-              ret = -ENOTSUP;
-              break;
-            }
-
-          ret = lower->ops->get_info(lower, filep,
-                          (FAR struct sensor_device_info_s *)(uintptr_t)arg);
-        }
-        break;
-
-     case SNIOC_GET_EVENTS:
-        {
-          nxrmutex_lock(&upper->lock);
-          *(FAR unsigned int *)(uintptr_t)arg = user->event;
-          user->event = 0;
-          nxrmutex_unlock(&upper->lock);
-        }
-
-     case SNIOC_FLUSH:
-        {
-          nxrmutex_lock(&upper->lock);
-
-          /* If the sensor is not activated, return -EINVAL. */
-
-          if (upper->state.nsubscribers == 0)
-            {
-              nxrmutex_unlock(&upper->lock);
-              return -EINVAL;
-            }
-
-          if (lower->ops->flush != NULL)
-            {
-              /* Lower half driver will do flush in asynchronous mode,
-               * flush will be completed until push event happened with
-               * bytes is zero.
-               */
-
-              ret = lower->ops->flush(lower, filep);
-              if (ret >= 0)
-                {
-                  user->flushing = true;
-                }
-            }
-          else
-            {
-              /* If flush is not supported, complete immediately */
-
-              user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
-              sensor_pollnotify_one(user, POLLPRI);
-            }
-
-          nxrmutex_unlock(&upper->lock);
-        }
-        break;
-
       default:
 
         /* Lowerhalf driver process other cmd. */
@@ -1047,31 +959,13 @@ static ssize_t sensor_push_event(FAR void *priv, FAR const void *data,
   int semcount;
   int ret;
 
-  nxrmutex_lock(&upper->lock);
-  if (bytes == 0)
-    {
-      list_for_every_entry(&upper->userlist, user, struct sensor_user_s,
-                           node)
-        {
-          if (user->flushing)
-            {
-              user->flushing = false;
-              user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
-              sensor_pollnotify_one(user, POLLPRI);
-            }
-        }
-
-      nxrmutex_unlock(&upper->lock);
-      return 0;
-    }
-
   envcount = bytes / upper->state.esize;
-  if (bytes != envcount * upper->state.esize)
+  if (!envcount || bytes != envcount * upper->state.esize)
     {
-      nxrmutex_unlock(&upper->lock);
       return -EINVAL;
     }
 
+  nxrmutex_lock(&upper->lock);
   if (!circbuf_is_init(&upper->buffer))
     {
       /* Initialize sensor buffer when data is first generated */
@@ -1201,11 +1095,11 @@ int sensor_register(FAR struct sensor_lowerhalf_s *lower, int devno)
   DEBUGASSERT(lower != NULL);
 
   snprintf(path, PATH_MAX, DEVNAME_FMT,
-           g_sensor_meta[lower->type].name,
+           g_sensor_info[lower->type].name,
            lower->uncalibrated ? DEVNAME_UNCAL : "",
            devno);
   return sensor_custom_register(lower, path,
-                                g_sensor_meta[lower->type].esize);
+                                g_sensor_info[lower->type].esize);
 }
 
 /****************************************************************************
@@ -1293,7 +1187,7 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (lower == NULL)
     {
       ret = -EIO;
-      goto rpmsg_err;
+      goto drv_err;
     }
 #endif
 
@@ -1309,11 +1203,6 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   return ret;
 
 drv_err:
-#ifdef CONFIG_SENSORS_RPMSG
-  sensor_rpmsg_unregister(lower);
-rpmsg_err:
-#endif
-
   nxrmutex_destroy(&upper->lock);
 
   kmm_free(upper);
@@ -1340,7 +1229,7 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
   char path[PATH_MAX];
 
   snprintf(path, PATH_MAX, DEVNAME_FMT,
-           g_sensor_meta[lower->type].name,
+           g_sensor_info[lower->type].name,
            lower->uncalibrated ? DEVNAME_UNCAL : "",
            devno);
   sensor_custom_unregister(lower, path);
