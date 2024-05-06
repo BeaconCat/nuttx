@@ -241,6 +241,7 @@ int nxmutex_trylock(FAR mutex_t *mutex)
 {
   int ret;
 
+  DEBUGASSERT(!nxmutex_is_hold(mutex));
   ret = nxsem_trywait(&mutex->sem);
   if (ret < 0)
     {
