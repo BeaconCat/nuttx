@@ -59,7 +59,8 @@ if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
   list(APPEND SRCS arm_task_start.c arm_pthread_start.c arm_signal_dispatch.c)
 
   if(CONFIG_BUILD_PROTECTED)
-    list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_signal_handler.S)
+    target_sources(arch_interface
+                   PRIVATE ${ARCH_TOOLCHAIN_PATH}/arm_signal_handler.S)
   endif()
 endif()
 
@@ -85,6 +86,10 @@ endif()
 
 if(CONFIG_UNWINDER_ARM)
   list(APPEND SRCS arm_backtrace_unwind.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_TESTSET AND NOT CONFIG_ARCH_ARMV6M)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_testset.S)
 endif()
 
 if(CONFIG_ARCH_HAVE_FETCHADD)
