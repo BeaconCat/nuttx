@@ -174,26 +174,13 @@ struct xcptcontext
 
   uint32_t *regs;
 };
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-extern volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+#endif
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
+
+#ifndef __ASSEMBLY__
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -249,58 +236,6 @@ static inline uint32_t getcontrol(void)
   return 0;
 }
 
-/****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- ****************************************************************************/
-
-int up_cpu_index(void) noinstrument_function;
-
-static inline_function uint32_t *up_current_regs(void)
-{
-#ifdef CONFIG_SMP
-  return (uint32_t *)g_current_regs[up_cpu_index()];
-#else
-  return (uint32_t *)g_current_regs[0];
-#endif
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-#ifdef CONFIG_SMP
-  g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
-}
-
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-#ifdef CONFIG_SMP
-  irqstate_t flags = up_irq_save();
-#endif
-
-  bool ret = up_current_regs() != NULL;
-
-#ifdef CONFIG_SMP
-  up_irq_restore(flags);
-#endif
-
-  return ret;
-}
-
 static inline_function uint32_t up_getsp(void)
 {
   register uint32_t sp;
@@ -314,18 +249,17 @@ static inline_function uint32_t up_getsp(void)
   return sp;
 }
 
-#define up_switch_context(tcb, rtcb)                        \
-  do {                                                      \
-    if (!up_interrupt_context())                            \
-      {                                                     \
-        tc32_switchcontext(&rtcb->xcp.regs, tcb->xcp.regs); \
-      }                                                     \
-  } while (0)
+#endif /* __ASSEMBLY__ */
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -338,6 +272,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif /* __ASSEMBLY__ */
+#endif
 
 #endif /* __ARCH_ARM_INCLUDE_TLSR82_IRQ_H */
