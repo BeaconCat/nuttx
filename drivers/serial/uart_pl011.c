@@ -301,7 +301,7 @@ static struct pl011_uart_port_s g_uart0priv =
   .config =
     {
       .uart         = (FAR volatile struct pl011_regs *)CONFIG_UART0_BASE,
-      .sys_clk_freq = 24000000,
+      .sys_clk_freq = CONFIG_UART0_CLK_FREQ,
     },
 
     .irq_num    = CONFIG_UART0_IRQ,
@@ -344,7 +344,7 @@ static struct pl011_uart_port_s g_uart1priv =
   .config =
     {
       .uart         = (FAR volatile struct pl011_regs *)CONFIG_UART1_BASE,
-      .sys_clk_freq = 24000000,
+      .sys_clk_freq = CONFIG_UART1_CLK_FREQ,
     },
 
     .irq_num    = CONFIG_UART1_IRQ,
@@ -387,7 +387,7 @@ static struct pl011_uart_port_s g_uart2priv =
   .config =
     {
       .uart         = (FAR volatile struct pl011_regs *)CONFIG_UART2_BASE,
-      .sys_clk_freq = 24000000,
+      .sys_clk_freq = CONFIG_UART2_CLK_FREQ,
     },
 
     .irq_num    = CONFIG_UART2_IRQ,
@@ -430,7 +430,7 @@ static struct pl011_uart_port_s g_uart3priv =
   .config =
     {
       .uart         = (FAR volatile struct pl011_regs *)CONFIG_UART3_BASE,
-      .sys_clk_freq = 24000000,
+      .sys_clk_freq = CONFIG_UART3_CLK_FREQ,
     },
 
     .irq_num    = CONFIG_UART3_IRQ,
@@ -653,16 +653,6 @@ static void pl011_send(FAR struct uart_dev_s *dev, int ch)
   FAR const struct pl011_config *config = &sport->config;
 
   config->uart->dr = ch;
-}
-
-static void pl011_putc(struct uart_dev_s *dev, int ch)
-{
-  irqstate_t flags;
-
-  flags = spin_lock_irqsave(NULL);
-  while (!pl011_txempty(dev));
-  pl011_send(dev, ch);
-  spin_unlock_irqrestore(NULL, flags);
 }
 
 /***************************************************************************
@@ -966,7 +956,6 @@ static int pl011_setup(FAR struct uart_dev_s *dev)
     }
 
   up_irq_restore(i_flags);
-  pl011_enable(sport);
 
   return 0;
 }
@@ -1041,10 +1030,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      pl011_putc(dev, '\r');
+      pl011_send(dev, '\r');
     }
 
-  pl011_putc(dev, ch);
+  pl011_send(dev, ch);
 
   return ch;
 }
