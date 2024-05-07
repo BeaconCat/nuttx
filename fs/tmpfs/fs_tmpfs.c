@@ -281,13 +281,27 @@ static int tmpfs_realloc_file(FAR struct tmpfs_file_s *tfo,
        * zero.
        */
 
-      if (newsize > 0)
+      if (newsize == 0)
+        {
+          /* Free the file object */
+
+          kmm_free(tfo->tfo_data);
+          tfo->tfo_data = NULL;
+          tfo->tfo_alloc = 0;
+          tfo->tfo_size = 0;
+          return OK;
+        }
+      else if (newsize > 0)
         {
           /* Otherwise, don't realloc unless the object has shrunk by a
            * lot.
            */
 
           delta = tfo->tfo_alloc - newsize;
+
+          /* We should make sure the shrunked memory be zero */
+
+          memset(tfo->tfo_data + newsize, 0, delta);
           if (delta <= CONFIG_FS_TMPFS_FILE_FREEGUARD)
             {
               /* Hasn't shrunk enough.. Return doing nothing for now */
@@ -1605,7 +1619,15 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Handle attempts to write beyond the end of the file */
 
-  startpos = filep->f_pos;
+  if ((filep->f_oflags & O_APPEND) == O_APPEND)
+    {
+      startpos = tfo->tfo_size;
+    }
+  else
+    {
+      startpos = filep->f_pos;
+    }
+
   nwritten = buflen;
   endpos   = startpos + buflen;
 
@@ -1625,12 +1647,13 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
   if (tfo->tfo_data != NULL)
     {
       memcpy(&tfo->tfo_data[startpos], buffer, nwritten);
-      filep->f_pos += nwritten;
     }
   else
     {
       DEBUGASSERT(tfo->tfo_size == 0 && nwritten == 0);
     }
+
+  filep->f_pos = endpos;
 
   /* Release the lock on the file */
 
