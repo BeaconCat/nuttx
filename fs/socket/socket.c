@@ -192,7 +192,8 @@ int sockfd_allocate(FAR struct socket *psock, int oflags)
 
 FAR struct socket *file_socket(FAR struct file *filep)
 {
-  if (filep != NULL && INODE_IS_SOCKET(filep->f_inode))
+  if (filep != NULL && filep->f_inode != NULL &&
+      INODE_IS_SOCKET(filep->f_inode))
     {
       return filep->f_priv;
     }
@@ -200,20 +201,17 @@ FAR struct socket *file_socket(FAR struct file *filep)
   return NULL;
 }
 
-int sockfd_socket(int sockfd, FAR struct file **filep,
-                  FAR struct socket **socketp)
+int sockfd_socket(int sockfd, FAR struct socket **socketp)
 {
-  if (fs_getfilep(sockfd, filep) < 0)
+  FAR struct file *filep;
+
+  if (fs_getfilep(sockfd, &filep) < 0)
     {
       *socketp = NULL;
       return -EBADF;
     }
 
-  *socketp = file_socket(*filep);
-  if (*socketp == NULL)
-    {
-      fs_putfilep(*filep);
-    }
+  *socketp = file_socket(filep);
 
   return *socketp != NULL ? OK : -ENOTSOCK;
 }
