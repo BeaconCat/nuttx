@@ -392,6 +392,12 @@ got_lladdr:
       ret = icmpv6_send_message(dev, false);
       if (ret < 0)
         {
+          /* Remove our wait structure from the list (we may no longer be
+           * at the head of the list).
+           */
+
+          icmpv6_rwait_cancel(&notify);
+
           nerr("ERROR: Failed send router solicitation: %d\n", ret);
           break;
         }
@@ -431,9 +437,12 @@ got_lladdr:
           nerr("ERROR: Failed send neighbor advertisement: %d\n", senderr);
         }
 
-      /* No off-link communications; No router address. */
+      if (ret != -EADDRNOTAVAIL)
+        {
+          /* No off-link communications; No router address. */
 
-      net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
+          net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
+        }
     }
 
   /* 5. Router Direction: The router provides direction to the node on how
