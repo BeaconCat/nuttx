@@ -1,5 +1,5 @@
 ############################################################################
-# boards/xtensa/esp32s2/esp32s2-saola-1/scripts/Make.defs
+# boards/xtensa/esp32s2/esp32s2-devkitc/scripts/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -45,18 +45,3 @@ CXXFLAGS := $(ARCHCXXFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHXXINCLUDES
 CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
-
-# Loadable module definitions
-
-CMODULEFLAGS = $(CFLAGS) -mtext-section-literals
-
-LDMODULEFLAGS = -r -e module_initialize
-LDMODULEFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
-
-# ELF module definitions
-
-CELFFLAGS = $(CFLAGS) -mtext-section-literals
-CXXELFFLAGS = $(CXXFLAGS) -mtext-section-literals
-
-LDELFFLAGS = -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/binfmt/libelf/gnu-elf.ld)
