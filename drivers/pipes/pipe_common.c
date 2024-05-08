@@ -477,6 +477,7 @@ ssize_t pipecommon_read(FAR struct file *filep, FAR char *buffer, size_t len)
    * FIFO when buffer can accept more than d_polloutthrd bytes.
    */
 
+  leave_critical_section(flags);
   if (circbuf_used(&dev->d_buffer) <= (dev->d_bufsize - dev->d_polloutthrd))
     {
       poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLOUT);
@@ -575,6 +576,7 @@ ssize_t pipecommon_write(FAR struct file *filep, FAR const char *buffer,
                * FIFO when buffer used exceeds poll threshold.
                */
 
+              leave_critical_section(flags);
               if (circbuf_used(&dev->d_buffer) > dev->d_pollinthrd)
                 {
                   poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS,
