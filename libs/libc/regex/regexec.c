@@ -133,7 +133,7 @@ static int tre_tag_order(int num_tags, tre_tag_direction_t *tag_directions,
         }
     }
 
-  /*  ASSERT(0); */
+  /*  assert(0); */
 
   return 0;
 }
@@ -508,7 +508,7 @@ static reg_errcode_t tre_tnfa_run_parallel(const tre_tnfa_t *tnfa,
 
                   else
                     {
-                      ASSERT(reach_pos[trans_i->state_id].pos == pos);
+                      assert(reach_pos[trans_i->state_id].pos == pos);
 
                       /* Another path has also reached this state.  We choose
                        *  the winner by examining the tag values for both
@@ -681,7 +681,7 @@ typedef struct tre_backtrack_struct *tre_backtrack_t;
   do                                       \
     {                                      \
       int i;                               \
-      ASSERT(stack->prev);                 \
+      assert(stack->prev);                 \
       pos       = stack->item.pos;         \
       str_byte  = stack->item.str_byte;    \
       state     = stack->item.state;       \
@@ -1181,10 +1181,10 @@ static void tre_fill_pmatch(size_t nmatch, regmatch_t pmatch[], int cflags,
         {
           if (pmatch[i].rm_eo == -1)
             {
-              ASSERT(pmatch[i].rm_so == -1);
+              assert(pmatch[i].rm_so == -1);
             }
 
-          ASSERT(pmatch[i].rm_so <= pmatch[i].rm_eo);
+          assert(pmatch[i].rm_so <= pmatch[i].rm_eo);
 
           parents = submatch_data[i].parents;
           if (parents != NULL)
