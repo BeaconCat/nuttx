@@ -25,17 +25,12 @@ set(SRCS arm64_head.S)
 list(APPEND SRCS arm64_vector_table.S arm64_vectors.S arm64_smccc.S)
 list(APPEND SRCS arm64_cpu_idle.S arm64_fork_func.S)
 
-if(CONFIG_ARCH_HAVE_TESTSET)
-  list(APPEND SRCS arm64_testset.S)
-endif()
-
 # Common C source files ( OS call up_xxx)
 list(APPEND SRCS arm64_initialize.c arm64_initialstate.c arm64_boot.c)
 list(APPEND SRCS arm64_nputs.c arm64_idle.c arm64_copystate.c
      arm64_createstack.c)
 list(APPEND SRCS arm64_releasestack.c arm64_stackframe.c arm64_usestack.c)
-list(APPEND SRCS arm64_task_sched.c arm64_exit.c arm64_fork.c
-     arm64_switchcontext.c)
+list(APPEND SRCS arm64_exit.c arm64_fork.c)
 list(APPEND SRCS arm64_schedulesigaction.c arm64_sigdeliver.c)
 list(APPEND SRCS arm64_getintstack.c arm64_registerdump.c)
 list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c)
@@ -48,11 +43,11 @@ list(APPEND SRCS arm64_syscall.c)
 # Use common heap allocation for now (may need to be customized later)
 list(APPEND SRCS arm64_allocateheap.c)
 
-if(CONFIG_ARM_GIC_VERSION EQUAL 3)
+if(CONFIG_ARM64_GIC_VERSION EQUAL 3)
   list(APPEND SRCS arm64_gicv3.c)
 endif()
 
-if(CONFIG_ARM_GIC_VERSION EQUAL 2)
+if(CONFIG_ARM64_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm64_gicv2.c)
 endif()
 
@@ -64,7 +59,7 @@ if(CONFIG_ARCH_HAVE_MPU)
   list(APPEND SRCS arm64_mpu.c)
 endif()
 
-if(CONFIG_ARCH_HAVE_PSCI)
+if(CONFIG_ARM64_PSCI)
   list(APPEND SRCS arm64_cpu_psci.c arm64_systemreset.c)
 endif()
 
@@ -113,6 +108,10 @@ endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS arm64_hwdebug.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

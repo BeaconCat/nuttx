@@ -27,7 +27,7 @@ set(HOSTSRCS)
 set(HOST_INCLUDE_DIRS)
 set(STDLIBS pthread)
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_SCHED_GCOV)
   list(APPEND STDLIBS gcov)
 endif()
 
@@ -49,7 +49,6 @@ list(
   sim_stackframe.c
   sim_exit.c
   sim_schedulesigaction.c
-  sim_switchcontext.c
   sim_heap.c
   sim_uart.c
   sim_copyfullstate.c
@@ -57,7 +56,7 @@ list(
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
-  sim_textheap.c
+  sim_sectionheap.c
   sim_checkhostfstypes.c)
 
 if(CONFIG_HOST_X86_64)
@@ -117,6 +116,10 @@ if(CONFIG_LIBM_TOOLCHAIN)
   list(APPEND STDLIBS m)
 endif()
 
+if(CONFIG_RPMSG_VIRTIO)
+  list(APPEND SRCS sim_rpmsg_vritio.c)
+endif()
+
 if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
 endif()
@@ -140,19 +143,22 @@ list(
   sim_hosttime.c
   sim_hostuart.c)
 
-# Note: sim_macho_init.c is picky about the place in the object list for
-# linking. Namely, its constructor should be the first one in the executable.
-# For now, we are just assuming no other files in HOSTSRCS provide constructors.
-if(CONFIG_HOST_MACOS)
-  if(CONFIG_HAVE_CXXINITIALIZE)
-    list(APPEND HOSTSRCS sim_macho_init.c)
-  endif()
-endif()
-
 if(CONFIG_SIM_CAMERA_V4L2)
   list(APPEND HOSTSRCS sim_host_v4l2.c)
   list(APPEND SRCS sim_camera.c)
   list(APPEND STDLIBS v4l2)
+endif()
+
+if(CONFIG_SIM_VIDEO_DECODER)
+  list(APPEND HOSTSRCS sim_hostdecoder.c)
+  list(APPEND SRCS sim_decoder.c)
+  list(APPEND STDLIBS openh264)
+endif()
+
+if(CONFIG_SIM_VIDEO_ENCODER)
+  list(APPEND HOSTSRCS sim_hostencoder.c)
+  list(APPEND SRCS sim_encoder.c)
+  list(APPEND STDLIBS x264)
 endif()
 
 if(CONFIG_SPINLOCK)
@@ -166,12 +172,7 @@ endif()
 
 if(CONFIG_SIM_X11FB)
   list(APPEND HOSTSRCS sim_x11framebuffer.c)
-
-  find_package(X11 REQUIRED)
-  if(X11_FOUND)
-    target_include_directories(nuttx PRIVATE ${X11_INCLUDE_DIR})
-    target_link_libraries(nuttx PRIVATE ${X11_LIBRARIES})
-  endif()
+  list(APPEND STDLIBS X11 Xext)
 
   if(CONFIG_SIM_TOUCHSCREEN)
     list(APPEND SRCS sim_touchscreen.c)
@@ -255,7 +256,6 @@ target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
 
 target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
-target_compile_options(arch PRIVATE -fvisibility=default)
 
 if(WIN32)
   set(HOSTDIR win)

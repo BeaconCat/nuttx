@@ -38,6 +38,7 @@
 #include <arch/csr.h>
 #include <arch/chip/irq.h>
 #include <arch/mode.h>
+#include <arch/syscall.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -257,29 +258,6 @@
 #define XCPTCONTEXT_SIZE    (INT_XCPT_SIZE + FPU_XCPT_SIZE)
 #endif
 
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART_NDX    (0)
-#  define REG_VTYPE_NDX     (1)
-#  define REG_VL_NDX        (2)
-#  define REG_VCSR_NDX      (3)
-#  define REG_VLENB_NDX     (4)
-
-#  define VPU_XCPT_REGS     (5)
-#  define VPU_XCPT_SIZE     (INT_REG_SIZE * VPU_XCPT_REGS)
-
-#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
-
-/* There are 32 vector registers(v0 - v31) with vlenb length. */
-
-#    define VPU_XCPTC_SIZE  (CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH * 32 + VPU_XCPT_SIZE)
-
-#  endif
-#else /* !CONFIG_ARCH_RV_ISA_V */
-#  define VPU_XCPT_REGS     (0)
-#  define VPU_XCPT_SIZE     (0)
-#  define VPU_XCPTC_SIZE    (0)
-#endif /* CONFIG_ARCH_RV_ISA_V */
-
 /* In assembly language, values have to be referenced as byte address
  * offsets.  But in C, it is more convenient to reference registers as
  * register save table offsets.
@@ -356,14 +334,6 @@
 #  define REG_FCSR          (INT_REG_SIZE*REG_FCSR_NDX)
 #endif
 
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART        (INT_REG_SIZE*REG_VSTART_NDX)
-#  define REG_VTYPE         (INT_REG_SIZE*REG_VTYPE_NDX)
-#  define REG_VL            (INT_REG_SIZE*REG_VL_NDX)
-#  define REG_VCSR          (INT_REG_SIZE*REG_VCSR_NDX)
-#  define REG_VLENB         (INT_REG_SIZE*REG_VLENB_NDX)
-#endif
-
 #else
 #  define REG_EPC           REG_EPC_NDX
 #  define REG_X1            REG_X1_NDX
@@ -433,14 +403,6 @@
 #  define REG_F30           REG_F30_NDX
 #  define REG_F31           REG_F31_NDX
 #  define REG_FCSR          REG_FCSR_NDX
-#endif
-
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART        REG_VSTART_NDX
-#  define REG_VTYPE         REG_VTYPE_NDX
-#  define REG_VL            REG_VL_NDX
-#  define REG_VCSR          REG_VCSR_NDX
-#  define REG_VLENB         REG_VLENB_NDX
 #endif
 
 #endif
@@ -533,6 +495,8 @@
 #  define REG_FS11          REG_F27
 #endif
 
+#define up_irq_is_disabled(flags) (((flags) & STATUS_IE) != 0)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -618,16 +582,6 @@ struct xcptcontext
 #if defined(CONFIG_ARCH_FPU) && defined(CONFIG_ARCH_LAZYFPU)
   uintptr_t fregs[FPU_XCPT_REGS];
 #endif
-
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
-  /* There are 32 vector registers(v0 - v31) with vlenb length. */
-
-  uintptr_t vregs[VPU_XCPTC_SIZE];
-#  else
-  uintptr_t *vregs;
-#  endif
-#endif
 };
 
 #endif /* __ASSEMBLY__ */
@@ -669,9 +623,9 @@ extern "C"
 #endif
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -679,7 +633,6 @@ extern "C"
  */
 
 EXTERN volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 /****************************************************************************
  * Public Function Prototypes
@@ -720,6 +673,16 @@ int up_cpu_index(void);
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+static inline_function uintptr_t *up_current_regs(void)
+{
+  return (uintptr_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void up_set_current_regs(uintptr_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
 
 /****************************************************************************
  * Name: up_irq_save
@@ -778,13 +741,13 @@ noinstrument_function static inline void up_irq_restore(irqstate_t flags)
  *
  ****************************************************************************/
 
-noinstrument_function static inline bool up_interrupt_context(void)
+noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = CURRENT_REGS != NULL;
+  bool ret = up_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -792,6 +755,98 @@ noinstrument_function static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+#ifdef CONFIG_ARCH_FPU
+void riscv_fpuconfig(void);
+void riscv_savefpu(uintptr_t *regs, uintptr_t *fregs);
+void riscv_restorefpu(uintptr_t *regs, uintptr_t *fregs);
+
+/* Get FPU register save area */
+
+#ifdef CONFIG_ARCH_LAZYFPU
+  /* With lazy FPU the registers are simply in tcb */
+
+#define riscv_fpuregs(tcb) ((uintptr_t *)(tcb)->xcp.fregs)
+#else
+  /* Otherwise they are after the integer registers */
+#define riscv_fpuregs(tcb) (uintptr_t *)((uintptr_t)(tcb)->xcp.regs + INT_XCPT_SIZE)
+#endif
+#else
+#  define riscv_fpuconfig()
+#  define riscv_savefpu(regs, fregs)
+#  define riscv_restorefpu(regs, fregs)
+#  define riscv_fpuregs(tcb)
+#endif
+
+/* Save / restore context of task */
+
+#ifdef CONFIG_ARCH_FPU
+#  define riscv_savecontext(tcb) \
+  do { \
+    tcb->xcp.regs = up_current_regs(); \
+    riscv_savefpu(tcb->xcp.regs, riscv_fpuregs(tcb)); \
+  } while (0)
+#else
+#  define riscv_savecontext(tcb) \
+  do { \
+    tcb->xcp.regs = up_current_regs(); \
+  } while (0)
+#endif
+
+#ifdef CONFIG_ARCH_FPU
+#  define riscv_restorecontext(tcb) \
+  do { \
+    up_set_current_regs((uintptr_t *)tcb->xcp.regs); \
+    riscv_restorefpu(tcb->xcp.regs, riscv_fpuregs(tcb)); \
+  } \
+  while (0)
+#else
+#  define riscv_restorecontext(tcb) \
+  do { \
+      up_set_current_regs((uintptr_t *)tcb->xcp.regs); \
+  } while (0)
+#endif
+
+/* Context switching via system calls ***************************************/
+
+/* SYS call 1:
+ *
+ * void riscv_fullcontextrestore(struct tcb_s *next) noreturn_function;
+ */
+
+#define riscv_fullcontextrestore(next) \
+  sys_call1(SYS_restore_context, (uintptr_t)next)
+
+/* SYS call 2:
+ *
+ * riscv_switchcontext(struct tcb_s *prev, struct tcb_s *next);
+ */
+
+#define riscv_switchcontext(prev, next) \
+  sys_call2(SYS_switch_context, (uintptr_t)prev, (uintptr_t)next)
+
+#define up_switch_context(tcb, rtcb)    \
+  do {                                  \
+    nxsched_suspend_scheduler(rtcb);    \
+    if (up_current_regs())              \
+      {                                 \
+        riscv_savecontext(rtcb);        \
+        nxsched_resume_scheduler(tcb);  \
+        riscv_restorecontext(tcb);      \
+      }                                 \
+    else                                \
+      {                                 \
+        nxsched_resume_scheduler(tcb);  \
+        riscv_switchcontext(rtcb, tcb); \
+      }                                 \
+  } while (0)
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_EPC])
 
 #undef EXTERN
 #if defined(__cplusplus)

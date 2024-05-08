@@ -68,17 +68,16 @@ extern "C"
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile void *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
+EXTERN volatile xcpt_reg_t *g_current_regs[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Function Prototypes
@@ -124,6 +123,16 @@ void up_irq_enable(void);
  * Inline functions
  ****************************************************************************/
 
+static inline_function xcpt_reg_t *up_current_regs(void)
+{
+  return (xcpt_reg_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void up_set_current_regs(xcpt_reg_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
+
 /* Return the current value of the stack pointer */
 
 static inline uintptr_t up_getsp(void)
@@ -147,13 +156,13 @@ static inline uintptr_t up_getsp(void)
  ****************************************************************************/
 
 noinstrument_function
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = CURRENT_REGS != NULL;
+  bool ret = up_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -161,6 +170,75 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/* Macros to handle saving and restoring interrupt state ********************/
+
+#define sim_savestate(regs) sim_copyfullstate(regs, up_current_regs())
+#define sim_restorestate(regs) up_set_current_regs(regs)
+
+#define sim_saveusercontext(saveregs, ret)                      \
+    do                                                          \
+      {                                                         \
+        irqstate_t flags = up_irq_flags();                      \
+        xcpt_reg_t *env = (saveregs);                           \
+        uint32_t *val = (uint32_t *)&env[JB_FLAG];              \
+                                                                \
+        val[0] = flags & UINT32_MAX;                            \
+        val[1] = (flags >> 32) & UINT32_MAX;                    \
+                                                                \
+        (ret) = setjmp(saveregs);                               \
+      }                                                         \
+    while (0)
+
+#define sim_fullcontextrestore(restoreregs)                     \
+    do                                                          \
+      {                                                         \
+        xcpt_reg_t *env = (restoreregs);                        \
+        uint32_t *flags = (uint32_t *)&env[JB_FLAG];            \
+                                                                \
+        up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
+        longjmp(env, 1);                                        \
+      }                                                         \
+    while (0)
+
+#define up_switch_context(tcb, rtcb)                            \
+  do {                                                          \
+    int ret;                                                    \
+    nxsched_suspend_scheduler((rtcb));                          \
+    if (up_current_regs())                                      \
+      {                                                         \
+        sim_savestate((rtcb)->xcp.regs);                        \
+        nxsched_resume_scheduler((tcb));                        \
+        sim_restorestate((tcb)->xcp.regs);                      \
+      }                                                         \
+    else                                                        \
+      {                                                         \
+        sim_saveusercontext((rtcb)->xcp.regs, ret);             \
+      if (ret == 0)                                             \
+        {                                                       \
+          nxsched_resume_scheduler((tcb));                      \
+          restore_critical_section((tcb), this_cpu());          \
+          sim_fullcontextrestore((tcb)->xcp.regs);              \
+        }                                                       \
+      else                                                      \
+        {                                                       \
+          sim_sigdeliver();                                     \
+        }                                                       \
+      }                                                         \
+  } while (0)
+
+/****************************************************************************
+ * Name: up_getusrpc
+ *
+ * Description:
+ *   Get the PC value, The interrupted context PC register cannot be
+ *   correctly obtained in sim It will return the PC of the interrupt
+ *   handler function, normally it will return sim_doirq
+ *
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((xcpt_reg_t *)((regs) ? (regs) : up_current_regs()))[JB_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
