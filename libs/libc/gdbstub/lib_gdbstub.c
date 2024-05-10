@@ -30,6 +30,7 @@
 #include <sys/param.h>
 #include <sys/types.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/ascii.h>
 #include <nuttx/gdbstub.h>
@@ -67,15 +68,6 @@ struct gdb_state_s
   uint8_t running_regs[XCPTCONTEXT_SIZE]; /* Registers of running thread */
   size_t size;                            /* Size of registers */
   uintptr_t registers[0];                 /* Registers of other threads */
-};
-
-struct gdb_debugpoint_s
-{
-  int type;
-  FAR void *addr;
-  size_t size;
-  debug_callback_t callback;
-  FAR void *arg;
 };
 
 typedef CODE ssize_t (*gdb_format_func_t)(FAR void *buf, size_t buf_len,
@@ -880,7 +872,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context())
         {
-          reg = (FAR uint8_t *)up_current_regs();
+          reg = (FAR uint8_t *)CURRENT_REGS;
         }
       else
         {
@@ -1471,48 +1463,16 @@ retry:
 
 #ifdef CONFIG_ARCH_HAVE_DEBUG
 
-#ifdef CONFIG_SMP
-
 /****************************************************************************
- * Name: gdb_smp_debugpoint_add
- *
- * Description:
- *  Add debug point to all cpu.
- *
- ****************************************************************************/
-
-static int gdb_smp_debugpoint_add(FAR void *arg)
-{
-  FAR struct gdb_debugpoint_s *point = arg;
-  return up_debugpoint_add(point->type, point->addr, point->size,
-                           point->callback, point->arg);
-}
-
-/****************************************************************************
- * Name: gdb_smp_debugpoint_remove
- *
- * Description:
- *  Remove debug point to all cpu.
- *
- ****************************************************************************/
-
-static int gdb_smp_debugpoint_remove(FAR void *arg)
-{
-  FAR struct gdb_debugpoint_s *point = arg;
-  return up_debugpoint_remove(point->type, point->addr, point->size);
-}
-#endif
-
-/****************************************************************************
- * Name: gdb_debugpoint_callback
+ * Name: gdbstub_debugpoint_callback
  *
  * Description:
  *  The debugpoint callback is used by GDB to request.
  *
  ****************************************************************************/
 
-static void gdb_debugpoint_callback(int type, FAR void *addr,
-                                    size_t size, FAR void *arg)
+static void gdbstub_debugpoint_callback(int type, FAR void *addr,
+                                        size_t size, FAR void *arg)
 {
   int stopreason;
 
@@ -1614,13 +1574,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-          type = DEBUGPOINT_WATCHPOINT_WO;
+        type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-          type = DEBUGPOINT_WATCHPOINT_RO;
+        type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-          type = DEBUGPOINT_WATCHPOINT_RW;
+        type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1628,12 +1588,12 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
 
   if (enable)
     {
-      ret = gdbstub_debugpoint_add(type, (FAR void *)addr, size,
-                                   gdbstub_debugpoint_callback, state);
+      ret = up_debugpoint_add(type, (FAR void *)addr, size,
+                              gdbstub_debugpoint_callback, state);
     }
   else
     {
-      ret = gdbstub_debugpoint_remove(type, (FAR void *)addr, size);
+      ret = up_debugpoint_remove(type, (FAR void *)addr, size);
     }
 
   if (ret < 0)
@@ -1709,50 +1669,6 @@ extern const struct tcbinfo_s g_tcbinfo;
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifdef CONFIG_ARCH_HAVE_DEBUG
-
-/****************************************************************************
- * Name: gdbstub_debugpoint_add
- ****************************************************************************/
-
-int gdb_debugpoint_add(int type, FAR void *addr, size_t size,
-                       debug_callback_t callback, FAR void *arg)
-{
-#ifdef CONFIG_SMP
-  struct gdb_debugpoint_s point;
-  point.type = type;
-  point.addr = addr;
-  point.size = size;
-  point.callback = callback;
-  point.arg = arg;
-  return nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
-                          gdb_smp_debugpoint_add, &point, true);
-#else
-  return up_debugpoint_add(type, addr, size, callback, arg);
-#endif
-}
-
-/****************************************************************************
- * Name: gdb_debugpoint_remove
- ****************************************************************************/
-
-int gdb_debugpoint_remove(int type, FAR void *addr, size_t size)
-{
-#ifdef CONFIG_SMP
-  struct gdb_debugpoint_s point;
-  point.type = type;
-  point.addr = addr;
-  point.size = size;
-
-  retrun nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
-                          gdb_smp_debugpoint_remove, &point, true);
-#else
-  return up_debugpoint_remove(type, addr, size);
-#endif
-}
-
-#endif
 
 /****************************************************************************
  * Name: gdb_state_init
@@ -1959,7 +1875,9 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
+#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;

@@ -91,7 +91,7 @@ static inline uint16_t up_getsp(void)
  ****************************************************************************/
 
 /* This holds a references to the current interrupt level register storage
- * structure.  If is non-NULL only during interrupt processing.
+ * structure.  It is non-NULL only during interrupt processing.
  */
 
 EXTERN volatile uint8_t *g_current_regs;
@@ -122,16 +122,6 @@ EXTERN volatile uint8_t *g_current_regs;
  * Inline functions
  ****************************************************************************/
 
-static inline_function uint8_t *up_current_regs(void)
-{
-  return (FAR uint8_t *)g_current_regs;
-}
-
-static inline_function void up_set_current_regs(FAR uint8_t *regs)
-{
-  g_current_regs = regs;
-}
-
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -141,7 +131,7 @@ static inline_function void up_set_current_regs(FAR uint8_t *regs)
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (up_current_regs() != NULL)
+#define up_interrupt_context() (g_current_regs != NULL)
 
 /****************************************************************************
  * Public Function Prototypes
