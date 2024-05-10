@@ -31,7 +31,6 @@
 #include <nuttx/mtd/mtd.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 #if defined(CONFIG_MTD) && !defined(CONFIG_DISABLE_MOUNTPOINT)
 
@@ -91,11 +90,7 @@ int register_mtddriver(FAR const char *path, FAR struct mtd_dev_s *mtd,
 
       node->u.i_mtd   = mtd;
       node->i_private = priv;
-      inode_unlock();
-#ifdef CONFIG_FS_NOTIFY
-      notify_create(path);
-#endif
-      return OK;
+      ret             = OK;
     }
 
   inode_unlock();

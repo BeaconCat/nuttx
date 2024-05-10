@@ -190,9 +190,7 @@
 #    define CONFIG_ARCH_SHM_NPAGES 1
 #  endif
 
-#  define ARCH_SHM_MAXPAGES   (CONFIG_ARCH_SHM_NPAGES * CONFIG_ARCH_SHM_MAXREGIONS)
-#  define ARCH_SHM_REGIONSIZE (CONFIG_ARCH_SHM_NPAGES * CONFIG_MM_PGSIZE)
-#  define ARCH_SHM_SIZE       (CONFIG_ARCH_SHM_MAXREGIONS * ARCH_SHM_REGIONSIZE)
+#  define ARCH_SHM_SIZE       (CONFIG_ARCH_SHM_NPAGES * CONFIG_MM_PGSIZE)
 #  define ARCH_SHM_VEND       (CONFIG_ARCH_SHM_VBASE + ARCH_SHM_SIZE - 1)
 
 #  define ARCH_SCRATCH_VBASE   ARCH_SHM_VEND
@@ -282,7 +280,7 @@ typedef CODE void (*addrenv_sigtramp_t)(_sa_sigaction_t sighand, int signo,
                                         FAR siginfo_t *info,
                                         FAR void *ucontext);
 
-struct mm_heap_s; /* Forward reference */
+struct mm_heaps_s; /* Forward reference */
 
 /* This structure describes the format of the .bss/.data reserved area */
 

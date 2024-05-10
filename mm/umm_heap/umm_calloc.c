@@ -70,17 +70,6 @@ FAR void *calloc(size_t n, size_t elem_size)
 #else
   /* Use mm_calloc() because it implements the clear */
 
-  FAR void *mem = mm_calloc(USR_HEAP, n, elem_size);
-
-  if (mem == NULL)
-    {
-      set_errno(ENOMEM);
-    }
-  else
-    {
-      mm_notify_pressure(mm_heapfree(USR_HEAP));
-    }
-
-  return mem;
+  return mm_calloc(USR_HEAP, n, elem_size);
 #endif
 }
