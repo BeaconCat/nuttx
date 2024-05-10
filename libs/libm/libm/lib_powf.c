@@ -37,21 +37,5 @@
 
 float powf(float b, float e)
 {
-  if (b > 0.0)
-    {
-      return expf(e * logf(b));
-    }
-  else if (b < 0.0 && e == (int)e)
-    {
-      if ((int)e % 2 == 0)
-        {
-          return expf(e * logf(fabsf(b)));
-        }
-      else
-        {
-          return -expf(e * logf(fabsf(b)));
-        }
-    }
-
-  return 0.0;
+  return expf(e * logf(b));
 }
