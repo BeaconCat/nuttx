@@ -105,7 +105,7 @@ bool up_cpu_pausereq(int cpu)
 
 int up_cpu_paused_save(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   /* Update scheduler parameters */
 
@@ -117,7 +117,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at current_regs into the TCB at the head
+  /* Save the current context at CURRENT_REGS into the TCB at the head
    * of the assigned task list for this CPU.
    */
 
@@ -195,7 +195,7 @@ int up_cpu_paused(int cpu)
 
 int up_cpu_paused_restore(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that we have resumed */
@@ -211,40 +211,6 @@ int up_cpu_paused_restore(void)
    * will be made when the interrupt returns.
    */
 
-  arm_restorestate(tcb->xcp.regs);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: arm_pause_async_handler
- *
- * Description:
- *   This is the handler for async pause.
- *
- *   1. It saves the current task state at the head of the current assigned
- *      task list.
- *   2. It porcess g_delivertasks
- *   3. Returns from interrupt, restoring the state of the new task at the
- *      head of the ready to run list.
- *
- * Input Parameters:
- *   Standard interrupt handling
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-int arm_pause_async_handler(int irq, void *context, void *arg)
-{
-  struct tcb_s *tcb;
-  int cpu = this_cpu();
-
-  tcb = current_task(cpu);
-  arm_savestate(tcb->xcp.regs);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
   arm_restorestate(tcb->xcp.regs);
 
   return OK;
@@ -302,32 +268,6 @@ int arm_pause_handler(int irq, void *context, void *arg)
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
- *
- * Description:
- *   pause task execution on the CPU
- *   check whether there are tasks delivered to specified cpu
- *   and try to run them.
- *
- * Input Parameters:
- *   cpu - The index of the CPU to be paused.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section;
- *
- ****************************************************************************/
-
-inline_function int up_cpu_pause_async(int cpu)
-{
-  arm_cpu_sgi(GIC_SMP_CPUPAUSE_ASYNC, (1 << cpu));
-
-  return OK;
-}
-
-/****************************************************************************
  * Name: up_cpu_pause
  *
  * Description:
@@ -354,7 +294,7 @@ int up_cpu_pause(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the pause event */
 
-  sched_note_cpu_pause(this_task_irq(), cpu);
+  sched_note_cpu_pause(this_task(), cpu);
 #endif
 
   /* Take the both spinlocks.  The g_cpu_wait spinlock will prevent the SGI2
@@ -371,7 +311,9 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  arm_cpu_sgi(GIC_SMP_CPUPAUSE, (1 << cpu));
+  /* Execute SGI2 */
+
+  arm_cpu_sgi(GIC_IRQ_SGI2, (1 << cpu));
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
@@ -414,7 +356,7 @@ int up_cpu_resume(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the resume event */
 
-  sched_note_cpu_resume(this_task_irq(), cpu);
+  sched_note_cpu_resume(this_task(), cpu);
 #endif
 
   /* Release the spinlock.  Releasing the spinlock will cause the SGI2
