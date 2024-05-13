@@ -145,17 +145,6 @@ enum pm_state_e
   PM_COUNT,
 };
 
-typedef void (*pm_idle_handler_t)(enum pm_state_e);
-
-#ifdef CONFIG_PM_PROCFS
-struct pm_preparefail_s
-{
-  enum pm_state_e state;
-  struct timespec start;
-  struct timespec duration[PM_COUNT];
-};
-#endif
-
 /* This structure contain pointers callback functions in the driver.  These
  * callback functions can be used to provide power management information
  * to the driver.
@@ -222,10 +211,6 @@ struct pm_callback_s
 
   CODE void (*notify)(FAR struct pm_callback_s *cb, int domain,
                       enum pm_state_e pmstate);
-
-#ifdef CONFIG_PM_PROCFS
-  struct pm_preparefail_s preparefail[CONFIG_PM_NDOMAINS];
-#endif
 };
 
 /* An instance of a given PM governor */
@@ -365,19 +350,6 @@ extern "C"
  ****************************************************************************/
 
 void pm_initialize(void);
-
-/****************************************************************************
- * Name: pm_stability_governor_initialize
- *
- * Description:
- *   Return the stability governor instance.
- *
- * Returned Value:
- *   A pointer to the governor struct. Otherwise NULL is returned on error.
- *
- ****************************************************************************/
-
-FAR const struct pm_governor_s *pm_stability_governor_initialize(void);
 
 /****************************************************************************
  * Name: pm_greedy_governor_initialize
@@ -812,22 +784,6 @@ enum pm_state_e pm_querystate(int domain);
  ****************************************************************************/
 
 void pm_auto_updatestate(int domain);
-
-/****************************************************************************
- * Name: pm_idle
- *
- * Description:
- *   Standard pm idle work flow for up_idle, for not smp case.
- *
- * Input Parameters:
- *   handler - The execution after PM_IDLE_DOMAIN state changed.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void pm_idle(pm_idle_handler_t handler);
 
 #undef EXTERN
 #ifdef __cplusplus
