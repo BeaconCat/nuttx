@@ -149,7 +149,7 @@ audiopack
 ---------
 
 NuttShell configuration (console enabled in UART0, at 115200 bps) with
-support for NXPlayer audio player.
+support for NSPlayer audio player.
 
 composite
 ---------
@@ -249,9 +249,3 @@ waveshare-lcd-1.3
 NuttShell configuration (console enabled in UART0, at 115200 bps) with support for
 usbmsc.
 
-
-README.txt
-==========
-
-.. include:: README.txt
-   :literal:

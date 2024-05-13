@@ -615,6 +615,18 @@
 
 #define GIC_IRQ_SPI              32 /* First SPI interrupt ID */
 
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#  define GIC_SMP_CPUSTART       GIC_IRQ_SGI9
+#  define GIC_SMP_CPUPAUSE       GIC_IRQ_SGI10
+#  define GIC_SMP_CPUCALL        GIC_IRQ_SGI11
+#  define GIC_SMP_CPUPAUSE_ASYNC GIC_IRQ_SGI12
+#else
+#  define GIC_SMP_CPUSTART       GIC_IRQ_SGI1
+#  define GIC_SMP_CPUPAUSE       GIC_IRQ_SGI2
+#  define GIC_SMP_CPUCALL        GIC_IRQ_SGI3
+#  define GIC_SMP_CPUPAUSE_ASYNC GIC_IRQ_SGI4
+#endif
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -668,29 +680,7 @@ static inline unsigned int arm_gic_nlines(void)
  *
  ****************************************************************************/
 
-static inline void arm_cpu_sgi(int sgi, unsigned int cpuset)
-{
-  uint32_t regval;
-
-#ifdef CONFIG_SMP
-  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(cpuset) |
-           GIC_ICDSGIR_TGTFILTER_LIST;
-#else
-  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(0) |
-           GIC_ICDSGIR_TGTFILTER_THIS;
-#endif
-
-#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
-  /* Set NSATT be 1: forward the SGI specified in the SGIINTID field to a
-   * specified CPU interfaces only if the SGI is configured as Group 1 on
-   * that interface.
-   */
-
-  regval |= GIC_ICDSGIR_NSATT_GRP1;
-#endif
-
-  putreg32(regval, GIC_ICDSGIR);
-}
+void arm_cpu_sgi(int sgi, unsigned int cpuset);
 
 /****************************************************************************
  * Public Function Prototypes
@@ -852,6 +842,29 @@ int arm_pause_handler(int irq, void *context, void *arg);
 #endif
 
 /****************************************************************************
+ * Name: arm_pause_async_handler
+ *
+ * Description:
+ *   This is the handler for async pause.
+ *
+ *   1. It saves the current task state at the head of the current assigned
+ *      task list.
+ *   2. It porcess g_delivertasks
+ *   3. Returns from interrupt, restoring the state of the new task at the
+ *      head of the ready to run list.
+ *
+ * Input Parameters:
+ *   Standard interrupt handling
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+int arm_pause_async_handler(int irq, void *context, void *arg);
+#endif
+/****************************************************************************
  * Name: arm_gic_dump
  *
  * Description:
@@ -867,7 +880,7 @@ int arm_pause_handler(int irq, void *context, void *arg);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_IRQ_INFO
+#ifdef CONFIG_ARMV7A_GICv2_DUMP
 void arm_gic_dump(const char *msg, bool all, int irq);
 #else
 #  define arm_gic_dump(msg, all, irq)
