@@ -67,7 +67,7 @@
 #ifndef CONFIG_SMP
 bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
   bool ret;
 
   /* Check if pre-emption is disabled for the current running task and if
@@ -82,14 +82,14 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * g_pendingtasks task list for now.
        */
 
-      nxsched_add_prioritized(btcb, &g_pendingtasks);
+      nxsched_add_prioritized(btcb, list_pendingtasks());
       btcb->task_state = TSTATE_TASK_PENDING;
       ret = false;
     }
 
   /* Otherwise, add the new task to the ready-to-run task list */
 
-  else if (nxsched_add_prioritized(btcb, &g_readytorun))
+  else if (nxsched_add_prioritized(btcb, list_readytorun()))
     {
       /* The new btcb was added at the head of the ready-to-run list.  It
        * is now the new active task!
@@ -152,18 +152,31 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
   FAR struct tcb_s *rtcb;
-  FAR struct tcb_s *headtcb;
   FAR dq_queue_t *tasklist;
+  bool switched;
   bool doswitch;
   int task_state;
   int cpu;
   int me;
 
-  /* Only idle TCB has TCB_FLAG_CPU_LOCKED，btcb will not be the idle task */
+  /* Check if the blocked TCB is locked to this CPU */
 
-  DEBUGASSERT((btcb->flags & TCB_FLAG_CPU_LOCKED) == 0);
+  if ((btcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
+    {
+      /* Yes.. that is the CPU we must use */
 
-  cpu = nxsched_select_cpu(btcb->affinity);
+      task_state = TSTATE_TASK_ASSIGNED;
+      cpu = btcb->cpu;
+    }
+  else
+    {
+      /* Otherwise, find the CPU that is executing the lowest priority task
+       * (possibly its IDLE task).
+       */
+
+      task_state = TSTATE_TASK_READYTORUN;
+      cpu = nxsched_select_cpu(btcb->affinity);
+    }
 
   /* Get the task currently running on the CPU (may be the IDLE task) */
 
@@ -179,10 +192,6 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
     {
       task_state = TSTATE_TASK_RUNNING;
     }
-  else
-    {
-      task_state = TSTATE_TASK_READYTORUN;
-    }
 
   /* If the selected state is TSTATE_TASK_RUNNING, then we would like to
    * start running the task.  Be we cannot do that if pre-emption is
@@ -197,13 +206,15 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
    * situation.
    */
 
-  if (nxsched_islocked_global())
+  me = this_cpu();
+  if ((nxsched_islocked_global()) &&
+      task_state != TSTATE_TASK_ASSIGNED)
     {
       /* Add the new ready-to-run task to the g_pendingtasks task list for
        * now.
        */
 
-      nxsched_add_prioritized(btcb, &g_pendingtasks);
+      nxsched_add_prioritized(btcb, list_pendingtasks());
       btcb->task_state = TSTATE_TASK_PENDING;
       doswitch         = false;
     }
@@ -217,71 +228,137 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * Add the task to the ready-to-run (but not running) task list
        */
 
-      nxsched_add_prioritized(btcb, &g_readytorun);
+      nxsched_add_prioritized(btcb, list_readytorun());
 
       btcb->task_state = TSTATE_TASK_READYTORUN;
       doswitch         = false;
     }
-  else /* (task_state == TSTATE_TASK_RUNNING) */
+  else /* (task_state == TSTATE_TASK_ASSIGNED || task_state == TSTATE_TASK_RUNNING) */
     {
       /* If we are modifying some assigned task list other than our own, we
-       * will need to switch that CPU.
+       * will need to stop that CPU.
        */
 
-      me = this_cpu();
       if (cpu != me)
         {
-          if (g_delivertasks[cpu] == NULL)
+          DEBUGVERIFY(up_cpu_pause(cpu));
+        }
+
+      /* Add the task to the list corresponding to the selected state
+       * and check if a context switch will occur
+       */
+
+      tasklist = list_assignedtasks(cpu);
+      switched = nxsched_add_prioritized(btcb, tasklist);
+
+      /* If the selected task list was the g_assignedtasks[] list and if the
+       * new tasks is the highest priority (RUNNING) task, then a context
+       * switch will occur.
+       */
+
+      if (switched)
+        {
+          FAR struct tcb_s *next;
+
+          /* The new btcb was added at the head of the ready-to-run list.  It
+           * is now the new active task!
+           */
+
+          /* Assign the CPU and set the running state */
+
+          DEBUGASSERT(task_state == TSTATE_TASK_RUNNING);
+
+          btcb->cpu        = cpu;
+          btcb->task_state = TSTATE_TASK_RUNNING;
+
+          /* Adjust global pre-emption controls.  If the lockcount is
+           * greater than zero, then this task/this CPU holds the scheduler
+           * lock.
+           */
+
+          if (btcb->lockcount > 0)
             {
-              g_delivertasks[cpu] = btcb;
-              btcb->cpu = cpu;
-              btcb->task_state = TSTATE_TASK_ASSIGNED;
-              up_cpu_pause_async(cpu);
+              spin_setbit(&g_cpu_lockset, cpu, &g_cpu_locksetlock,
+                          &g_cpu_schedlock);
             }
           else
             {
-              rtcb = g_delivertasks[cpu];
-              if (rtcb->sched_priority < btcb->sched_priority)
-                {
-                  g_delivertasks[cpu] = btcb;
-                  btcb->cpu = cpu;
-                  btcb->task_state = TSTATE_TASK_ASSIGNED;
-                  btcb = rtcb;
-                }
-
-              nxsched_add_prioritized(btcb, &g_readytorun);
-              btcb->task_state = TSTATE_TASK_READYTORUN;
+              spin_clrbit(&g_cpu_lockset, cpu, &g_cpu_locksetlock,
+                          &g_cpu_schedlock);
             }
 
-          return false;
+          /* NOTE: If the task runs on another CPU(cpu), adjusting global IRQ
+           * controls will be done in the pause handler on the new CPU(cpu).
+           * If the task is scheduled on this CPU(me), do nothing because
+           * this CPU already has a critical section
+           */
+
+          /* If the following task is not locked to this CPU, then it must
+           * be moved to the g_readytorun list.  Since it cannot be at the
+           * head of the list, we can do this without invoking any heavy
+           * lifting machinery.
+           */
+
+          DEBUGASSERT(btcb->flink != NULL);
+          next = btcb->flink;
+
+          if ((next->flags & TCB_FLAG_CPU_LOCKED) != 0)
+            {
+              DEBUGASSERT(next->cpu == cpu);
+              next->task_state = TSTATE_TASK_ASSIGNED;
+            }
+          else
+            {
+              /* Remove the task from the assigned task list */
+
+              dq_rem((FAR dq_entry_t *)next, tasklist);
+
+              /* Add the task to the g_readytorun or to the g_pendingtasks
+               * list.  NOTE: That the above operations may cause the
+               * scheduler to become locked.  It may be assigned to a
+               * different CPU the next time that it runs.
+               */
+
+              if (nxsched_islocked_global())
+                {
+                  next->task_state = TSTATE_TASK_PENDING;
+                  tasklist         = list_pendingtasks();
+                }
+              else
+                {
+                  next->task_state = TSTATE_TASK_READYTORUN;
+                  tasklist         = list_readytorun();
+                }
+
+              nxsched_add_prioritized(next, tasklist);
+            }
+
+          doswitch = true;
+        }
+      else
+        {
+          /* No context switch.  Assign the CPU and set the assigned state.
+           *
+           * REVISIT: I have seen this assertion fire.  Apparently another
+           * CPU may add another, higher priority task to the same
+           * g_assignedtasks[] list sometime after nxsched_select_cpu() was
+           * called above, leaving this TCB in the wrong task list if
+           * task_state is TSTATE_TASK_ASSIGNED).
+           */
+
+          DEBUGASSERT(task_state == TSTATE_TASK_ASSIGNED);
+
+          btcb->cpu        = cpu;
+          btcb->task_state = TSTATE_TASK_ASSIGNED;
+          doswitch         = false;
         }
 
-      tasklist = &g_assignedtasks[cpu];
+      /* All done, restart the other CPU (if it was paused). */
 
-      /* Change "head" from TSTATE_TASK_RUNNING to TSTATE_TASK_ASSIGNED */
-
-      headtcb = (FAR struct tcb_s *)tasklist->head;
-      DEBUGASSERT(headtcb->task_state == TSTATE_TASK_RUNNING);
-      headtcb->task_state = TSTATE_TASK_ASSIGNED;
-
-      /* Add btcb to the head of the g_assignedtasks
-       * task list and mark it as running
-       */
-
-      dq_addfirst_notempty((FAR dq_entry_t *)btcb, tasklist);
-
-      DEBUGASSERT(task_state == TSTATE_TASK_RUNNING);
-      btcb->cpu        = cpu;
-      btcb->task_state = TSTATE_TASK_RUNNING;
-
-      doswitch = true;
-
-      /* Resume scheduling lock */
-
-      DEBUGASSERT(g_cpu_lockset == 0);
-      if (btcb->lockcount > 0)
+      if (cpu != me)
         {
-          g_cpu_lockset |= (1 << cpu);
+          DEBUGVERIFY(up_cpu_resume(cpu));
+          doswitch = false;
         }
     }
 
