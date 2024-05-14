@@ -364,7 +364,7 @@
 
 /* Set proximity sensor cancellation level */
 
-#define SNIOC_PS_CANC_LVL          _SNIOC(0x0095) /* uint16_t level        */
+#define SNIOC_PS_CANC_LVL          _SNIOC(0x0095) /* uint16_t level        */                                                  
 
 /* IOCTL commands for MPU60x0 IMU */
 
@@ -405,5 +405,34 @@
  */
 
 #define SNIOC_ENABLE_FIFO             _SNIOC(0x009A)
+
+/* Command:      SNIOC_GET_INFO
+ * Description:  Get device information.
+ * Argument:     This is the device info pointer.
+ */
+
+#define SNIOC_GET_INFO                _SNIOC(0x009B)
+
+#ifdef CONFIG_USENSOR
+/* Command:      SNIOC_SET_INFO
+ * Description:  Set device information. Only used by user space.
+ * Argument:     This is the device info pointer.
+ */
+
+#  define SNIOC_SET_INFO              _SNIOC(0x009C)
+#endif
+
+/* Command:      SNIOC_FLUSH
+ * Description:  Flush sensor harware fifo buffer.
+ */
+
+#define SNIOC_FLUSH                   _SNIOC(0x009D)
+
+/* Command:      SNIOC_GET_EVENTS
+ * Description:  Get events of the sensor device.
+ * Argument:     The events pointer, (unsigned int *)
+ */
+
+#define SNIOC_GET_EVENTS              _SNIOC(0x009E)
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
