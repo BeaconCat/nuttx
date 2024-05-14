@@ -198,11 +198,7 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
 
         {
           FAR struct flock *flock = va_arg(ap, FAR struct flock *);
-          ret = file_ioctl(filep, FIOC_GETLK, flock);
-          if (ret < 0)
-            {
-              ret = file_getlk(filep, flock);
-            }
+          ret = file_getlk(filep, flock);
         }
 
         break;
@@ -219,11 +215,7 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
 
         {
           FAR struct flock *flock = va_arg(ap, FAR struct flock *);
-          ret = file_ioctl(filep, FIOC_SETLK, flock);
-          if (ret < 0)
-            {
-              ret = file_setlk(filep, flock, true);
-            }
+          ret = file_setlk(filep, flock, true);
         }
 
         break;
@@ -239,11 +231,7 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
 
         {
           FAR struct flock *flock = va_arg(ap, FAR struct flock *);
-          ret = file_ioctl(filep, FIOC_SETLKW, flock);
-          if (ret < 0)
-            {
-              ret = file_setlk(filep, flock, false);
-            }
+          ret = file_setlk(filep, flock, false);
         }
 
         break;
