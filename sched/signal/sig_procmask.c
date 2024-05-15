@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/signal/sig_procmask.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -87,16 +89,9 @@
 
 int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int        ret = OK;
-
-  /* Some of these operations are non-atomic.  We need to protect
-   * ourselves from attempts to process signals from interrupts
-   */
-
-  flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Return the old signal mask if requested */
 
@@ -109,6 +104,12 @@ int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
 
   if (set != NULL)
     {
+      /* Some of these operations are non-atomic.  We need to protect
+       * ourselves from attempts to process signals from interrupts
+       */
+
+      flags = enter_critical_section();
+
       /* Okay, determine what we are supposed to do */
 
       switch (how)
@@ -140,12 +141,13 @@ int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
             break;
         }
 
+      leave_critical_section(flags);
+
       /* Now, process any pending signals that were just unmasked */
 
       nxsig_unmask_pendingsignal();
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 

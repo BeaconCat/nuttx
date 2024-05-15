@@ -18,7 +18,4 @@
 #
 # ##############################################################################
 
-if(CONFIG_SYSLOG)
-
-  target_sources(c PRIVATE lib_setlogmask.c lib_syslog.c)
-endif()
+target_sources(c PRIVATE lib_setlogmask.c lib_syslog.c)

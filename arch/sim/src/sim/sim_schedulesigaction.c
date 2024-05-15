@@ -83,13 +83,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   flags = enter_critical_section();
 
-  if (tcb->sigdeliver == NULL)
+  if (tcb->xcp.sigdeliver == NULL)
     {
-      tcb->sigdeliver = sigdeliver;
+      tcb->xcp.sigdeliver = sigdeliver;
       if (tcb == this_task())
         {
           sigdeliver(tcb);
-          tcb->sigdeliver = NULL;
+          tcb->xcp.sigdeliver = NULL;
         }
     }
 

@@ -80,16 +80,15 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   /* Refuse to handle nested signal actions */
 
-  if (!tcb->sigdeliver)
+  if (!tcb->xcp.sigdeliver)
     {
-      tcb->sigdeliver = sigdeliver;
+      tcb->xcp.sigdeliver = sigdeliver;
 
       /* First, handle some special cases when the signal is
        * being delivered to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n",
-            this_task(), up_current_regs());
+      sinfo("rtcb=%p g_current_regs=%p\n", this_task(), g_current_regs);
 
       if (tcb == this_task())
         {
@@ -97,12 +96,12 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!up_current_regs())
+          if (!g_current_regs)
             {
               /* In this case just deliver the signal now. */
 
               sigdeliver(tcb);
-              tcb->sigdeliver = NULL;
+              tcb->xcp.sigdeliver = NULL;
             }
 
           /* CASE 2:  We are in an interrupt handler AND the interrupted
@@ -114,28 +113,28 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
           else
             {
               FAR uint32_t *current_pc  =
-                (FAR uint32_t *)&up_current_regs()[REG_PC];
+                (FAR uint32_t *)&g_current_regs[REG_PC];
 
               /* Save the return address and interrupt state. These will be
                * restored by the signal trampoline after the signals have
                * been delivered.
                */
 
-              tcb->xcp.saved_pc = *current_pc;
-              tcb->xcp.saved_i  = up_current_regs()[REG_FLAGS];
+              tcb->xcp.saved_pc         = *current_pc;
+              tcb->xcp.saved_i          = g_current_regs[REG_FLAGS];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              *current_pc = (uint32_t)z16_sigdeliver;
-              up_current_regs()[REG_FLAGS] = 0;
+              *current_pc               = (uint32_t)z16_sigdeliver;
+              g_current_regs[REG_FLAGS] = 0;
 
               /* And make sure that the saved context in the TCB is the
                * same as the interrupt return context.
                */
 
-              z16_copystate(tcb->xcp.regs, up_current_regs());
+              z16_copystate(tcb->xcp.regs, g_current_regs);
             }
         }
 

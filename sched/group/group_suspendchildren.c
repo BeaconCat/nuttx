@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/group/group_suspendchildren.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -99,13 +101,16 @@ static int group_suspend_children_handler(pid_t pid, FAR void *arg)
 
 int group_suspend_children(FAR struct tcb_s *tcb)
 {
-  irqstate_t flags;
   int ret;
 
-  flags = enter_critical_section();
+  /* Lock the scheduler so that there this thread will not lose priority
+   * until all of its children are suspended.
+   */
+
+  sched_lock();
   ret = group_foreachchild(tcb->group, group_suspend_children_handler,
                            (FAR void *)((uintptr_t)tcb->pid));
-  leave_critical_section(flags);
+  sched_unlock();
   return ret;
 }
 
