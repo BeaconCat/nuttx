@@ -38,7 +38,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+static int notectl_ioctl(struct file *filep, int cmd, unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -62,7 +62,7 @@ static const struct file_operations g_notectl_fops =
  * Name: notectl_ioctl
  ****************************************************************************/
 
-static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+static int notectl_ioctl(struct file *filep, int cmd, unsigned long arg)
 {
   int ret = -ENOSYS;
 
@@ -77,8 +77,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_GETMODE:
         {
-          FAR struct note_filter_named_mode_s *mode =
-                         (FAR struct note_filter_named_mode_s *)arg;
+          struct note_filter_mode_s *mode = (struct note_filter_mode_s *)arg;
 
           if (mode == NULL)
             {
@@ -99,8 +98,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_SETMODE:
         {
-          FAR struct note_filter_named_mode_s *mode =
-                        (FAR struct note_filter_named_mode_s *)arg;
+          struct note_filter_mode_s *mode = (struct note_filter_mode_s *)arg;
 
           if (mode == NULL)
             {
@@ -122,8 +120,8 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_GETSYSCALLFILTER:
         {
-          FAR struct note_filter_named_syscall_s *filter;
-          filter = (FAR struct note_filter_named_syscall_s *)arg;
+          struct note_filter_syscall_s *filter;
+          filter = (struct note_filter_syscall_s *)arg;
 
           if (filter == NULL)
             {
@@ -144,8 +142,8 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_SETSYSCALLFILTER:
         {
-          FAR struct note_filter_named_syscall_s *filter;
-          filter = (FAR struct note_filter_named_syscall_s *)arg;
+          struct note_filter_syscall_s *filter;
+          filter = (struct note_filter_syscall_s *)arg;
 
           if (filter == NULL)
             {
@@ -168,8 +166,8 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_GETIRQFILTER:
         {
-          FAR struct note_filter_named_irq_s *filter;
-          filter = (FAR struct note_filter_named_irq_s *)arg;
+          struct note_filter_irq_s *filter;
+          filter = (struct note_filter_irq_s *)arg;
 
           if (filter == NULL)
             {
@@ -191,8 +189,8 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case NOTECTL_SETIRQFILTER:
         {
-          FAR struct note_filter_named_irq_s *filter;
-          filter = (FAR struct note_filter_named_irq_s *)arg;
+          struct note_filter_irq_s *filter;
+          filter = (struct note_filter_irq_s *)arg;
 
           if (filter == NULL)
             {
