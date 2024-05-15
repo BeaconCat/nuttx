@@ -366,9 +366,9 @@ void up_perf_init(FAR void *arg)
   UNUSED(arg);
 }
 
-clock_t up_perf_gettime(void)
+unsigned long up_perf_gettime(void)
 {
-  clock_t ret = 0;
+  unsigned long ret = 0;
 
   if (g_oneshot_lower != NULL)
     {
@@ -386,7 +386,7 @@ unsigned long up_perf_getfreq(void)
   return NSEC_PER_SEC;
 }
 
-void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
+void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts)
 {
   timespec_from_nsec(ts, elapsed);
 }
