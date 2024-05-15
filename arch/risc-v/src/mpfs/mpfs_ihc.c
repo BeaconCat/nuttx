@@ -34,7 +34,6 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
@@ -42,7 +41,6 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
 
-#include <nuttx/rptun/openamp.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/drivers/addrenv.h>
 #include <nuttx/list.h>
