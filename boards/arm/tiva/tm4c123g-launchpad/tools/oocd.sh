@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# See Documentation/platforms/arm/tiva/boards/tm4c123g-launchpad/README.txt for information about
+# See boards/arm/tiva/tm4c123g-launchpad/README.txt for information about
 # this file.
 
 TOPDIR=$1
