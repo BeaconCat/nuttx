@@ -60,27 +60,22 @@
 wint_t fputwc_unlocked(wchar_t c, FAR FILE *f)
 {
   char mbc[MB_LEN_MAX];
-  wint_t wc;
   int l;
 
   if (isascii(c))
     {
-      wc = putc_unlocked(c, f);
+      c = putc_unlocked(c, f);
     }
   else
     {
       l = wctomb(mbc, c);
       if (l < 0 || lib_fwrite_unlocked(mbc, l, f) < l)
         {
-          wc = WEOF;
-        }
-      else
-        {
-          wc = c;
+          c = WEOF;
         }
     }
 
-  return wc;
+  return c;
 }
 
 /****************************************************************************
@@ -102,9 +97,9 @@ wint_t fputwc_unlocked(wchar_t c, FAR FILE *f)
 wint_t fputwc(wchar_t c, FAR FILE *f)
 {
   flockfile(f);
-  wint_t wc = fputwc_unlocked(c, f);
+  c = fputwc_unlocked(c, f);
   funlockfile(f);
-  return wc;
+  return c;
 }
 
 #endif /* CONFIG_FILE_STREAM */
