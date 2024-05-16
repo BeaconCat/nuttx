@@ -42,7 +42,13 @@ FAR void *memmove(FAR void *dest, FAR const void *src, size_t count)
 
   if (dest <= src)
     {
-      memcpy(dest, src, count);
+      tmp = (FAR char *) dest;
+      s   = (FAR char *) src;
+
+      while (count--)
+        {
+          *tmp++ = *s++;
+        }
     }
   else
     {
