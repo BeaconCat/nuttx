@@ -194,6 +194,7 @@ __cpu3_start:
 	 */
 
 	mov		r0, #0
+	mcr		CP15_TPIDRPRW(r0)	/* Initialize percpu reg TPIDRPRW */
 #ifdef CONFIG_ARM_HAVE_MPCORE
 	mcr		CP15_TLBIALLIS(r0)	/* Invalidate the entire unified TLB */
 	mcr		CP15_BPIALLIS(r0)	/* Invalidate entire branch prediction array */
@@ -428,6 +429,15 @@ __cpu3_start:
 	cmp		r1, #0				/* Check (nwords == 0) */
 	str		r2, [r0, #-4]!			/* Save stack color word, increment stack address */
 	bne		1b				/* Bottom of the loop */
+#endif
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+	/* Perform init the secure monitor runtime. As the following arm_boot may
+	 * using smc to perform psci related func, so the secure monitor init
+	 * procedure should be placed before arm_boot
+	 */
+
+	bl		arm_sm_init
 #endif
 
 	/* Branch to continue C level CPU initialization */
