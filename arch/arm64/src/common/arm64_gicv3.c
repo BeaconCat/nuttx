@@ -69,8 +69,6 @@
 #  define IGROUPR_SGI_VAL 0xFFFFFFFFU
 #endif
 
-#define SMP_FUNC_CALL_IPI GIC_IRQ_SGI3
-
 /***************************************************************************
  * Private Data
  ***************************************************************************/
@@ -390,7 +388,7 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   return 0;
 }
 
-int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
+void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 {
   uint64_t pre_cluster_id = UINT64_MAX;
   uint64_t curr_cluster_id;
@@ -419,8 +417,6 @@ int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
     }
 
   arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
-
-  return 0;
 }
 
 /* Wake up GIC redistributor.
@@ -632,9 +628,12 @@ static void gicv3_dist_init(void)
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
-  DEBUGVERIFY(irq_attach(GIC_IRQ_SGI2, arm64_pause_handler, NULL));
+  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
+  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
+                         arm64_pause_async_handler, NULL));
+
 #  ifdef CONFIG_SMP_CALL
-  DEBUGVERIFY(irq_attach(SMP_FUNC_CALL_IPI,
+  DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
                          nxsched_smp_call_handler, NULL));
 #  endif
 #endif
@@ -827,7 +826,7 @@ static int gic_validate_dist_version(void)
     }
   else
     {
-      sinfo("No GIC version detect\n");
+      serr("No GIC version detect\n");
       return -ENODEV;
     }
 
@@ -846,7 +845,7 @@ static int gic_validate_dist_version(void)
 
   if (typer & GICD_TYPER_MBIS)
     {
-      sinfo("MBIs is present, But No support\n");
+      swarn("MBIs is present, But No support\n");
     }
 
   return 0;
@@ -867,7 +866,7 @@ static int gic_validate_redist_version(void)
   if (reg != GICR_PIDR2_ARCH_GICV3 &&
              reg != GICR_PIDR2_ARCH_GICV4)
     {
-      sinfo("No redistributor present 0x%lx\n", redist_base);
+      serr("No redistributor present 0x%lx\n", redist_base);
       return -ENODEV;
     }
 
@@ -901,7 +900,7 @@ static void arm64_gic_init(void)
   err = gic_validate_redist_version();
   if (err)
     {
-      sinfo("no redistributor detected, giving up ret=%d\n", err);
+      swarn("no redistributor detected, giving up ret=%d\n", err);
       return;
     }
 
@@ -910,9 +909,10 @@ static void arm64_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_SMP
-  up_enable_irq(GIC_IRQ_SGI2);
+  up_enable_irq(GIC_SMP_CPUPAUSE);
+  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
 #  ifdef CONFIG_SMP_CALL
-  up_enable_irq(SMP_FUNC_CALL_IPI);
+  up_enable_irq(GIC_SMP_CPUCALL);
 #  endif
 #endif
 }
@@ -924,7 +924,7 @@ int arm64_gic_initialize(void)
   err = gic_validate_dist_version();
   if (err)
     {
-      sinfo("no distributor detected, giving up ret=%d\n", err);
+      swarn("no distributor detected, giving up ret=%d\n", err);
       return err;
     }
 
@@ -940,11 +940,11 @@ void arm64_gic_secondary_init(void)
 {
   arm64_gic_init();
 }
-#endif
 
-#ifdef CONFIG_SMP_CALL
+#  ifdef CONFIG_SMP_CALL
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(SMP_FUNC_CALL_IPI, cpuset);
+  up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
 }
+#  endif
 #endif
