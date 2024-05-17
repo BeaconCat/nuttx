@@ -23,11 +23,7 @@ set(SRCS arm64_head.S)
 # TODO: support kernel startup obj ctr0
 
 list(APPEND SRCS arm64_vector_table.S arm64_vectors.S arm64_smccc.S)
-list(APPEND SRCS arm64_cpu_idle.S arm64_fork_func.S)
-
-if(CONFIG_ARCH_HAVE_TESTSET)
-  list(APPEND SRCS arm64_testset.S)
-endif()
+list(APPEND SRCS arm64_fork_func.S)
 
 # Common C source files ( OS call up_xxx)
 list(APPEND SRCS arm64_initialize.c arm64_initialstate.c arm64_boot.c)
@@ -61,6 +57,10 @@ endif()
 
 if(CONFIG_ARCH_HAVE_MPU)
   list(APPEND SRCS arm64_mpu.c)
+  set_source_files_properties(
+    arm64_mpu.c TARGET_DIRECTORY arch
+    PROPERTIES COMPILE_FLAGS -fno-sanitize=kernel-hwaddress
+               -fno-sanitize=kernel-address)
 endif()
 
 if(CONFIG_ARM64_PSCI)
@@ -112,6 +112,10 @@ endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS arm64_hwdebug.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
