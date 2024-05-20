@@ -33,6 +33,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/init.h>
 
 #include "group/group.h"
 #include "sched/sched.h"
@@ -64,13 +65,19 @@
 
 void nx_idle_trampoline(void)
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   FAR struct tcb_s *tcb = this_task();
 
   /* Announce that the IDLE task has started */
 
   sched_note_start(tcb);
 #endif
+
+  /* wait until cpu0 in idle() */
+
+  while (!OSINIT_IDLELOOP());
+
+  sched_unlock();
 
   /* Enter the IDLE loop */
 
