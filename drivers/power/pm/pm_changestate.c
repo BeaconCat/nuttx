@@ -39,6 +39,21 @@
  * Private Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: pm_stats
+ *
+ * Description:
+ *   Statistic when domain on state change events.
+ *
+ * Input Parameters:
+ *   dom      - Identifies the target domain for Statistic
+ *   curstate - Identifies the current PM state
+ *   newstate - Identifies the new PM state
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
 #ifdef CONFIG_PM_PROCFS
 static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
 {
@@ -68,6 +83,23 @@ static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
       dom->in_sleep = true;
     }
 }
+
+/****************************************************************************
+ * Name: pm_stats_preparefail
+ *
+ * Description:
+ *   Statistic the domain on drivers prepare failed.
+ *
+ * Input Parameters:
+ *   domain   - Identifies the target domain for Statistic
+ *   callback - The prepare failed callback
+ *   newstate - The target new state to prepare
+ *   ret      - The driver prepare failed returned value
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
 
 static void pm_stats_preparefail(int domain,
                                  FAR struct pm_callback_s *callback,
@@ -106,6 +138,7 @@ static void pm_stats_preparefail(int domain,
  * Input Parameters:
  *   domain   - Identifies the domain of the new PM state
  *   newstate - Identifies the new PM state
+ *   restore  - Indicate currently in revert the preceding prepare stage.
  *
  * Returned Value:
  *   0 (OK) means that the callback function for all registered drivers
