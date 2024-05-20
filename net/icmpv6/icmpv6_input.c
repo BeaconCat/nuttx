@@ -36,6 +36,7 @@
 #include <nuttx/net/dns.h>
 
 #include "devif/devif.h"
+#include "netlink/netlink.h"
 #include "neighbor/neighbor.h"
 #include "utils/utils.h"
 #include "icmpv6/icmpv6.h"
@@ -441,19 +442,17 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                     FAR struct icmpv6_prefixinfo_s *prefixopt =
                                       (FAR struct icmpv6_prefixinfo_s *)opt;
 
-                   /* Is the "A" flag set? */
+                    /* if "M" flag isn't set, and the "A" flag is set.
+                     * Set the new network addresses.
+                     */
 
-                    if ((prefixopt->flags & ICMPv6_PRFX_FLAG_A) != 0)
+                    if ((adv->flags & ICMPv6_RADV_FLAG_M) == 0 &&
+                        (prefixopt->flags & ICMPv6_PRFX_FLAG_A) != 0)
                       {
-                        /* Yes.. Set the new network addresses. */
-
-                        icmpv6_setaddresses(dev, ipv6->srcipaddr,
+                         icmpv6_setaddresses(dev, ipv6->srcipaddr,
                                     prefixopt->prefix, prefixopt->preflen);
-                      }
-                    else if ((adv->flags & ICMPv6_RADV_FLAG_M) != 0)
-                      {
-                        net_ipv6addr_copy(dev->d_ipv6draddr,
-                                          ipv6->srcipaddr);
+                        netlink_ipv6_prefix_notify(dev, RTM_NEWPREFIX,
+                                                   prefixopt);
                       }
 
                       /* Notify any waiting threads */
