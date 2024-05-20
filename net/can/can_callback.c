@@ -199,19 +199,7 @@ uint16_t can_datahandler(FAR struct net_driver_s *dev,
                          FAR struct can_conn_s *conn)
 {
   FAR struct iob_s *iob = dev->d_iob;
-  int ret = 0;
-
-#if CONFIG_NET_RECV_BUFSIZE > 0
-  /* Check the frame count pending on conn->readahead */
-
-  if (iob_get_queue_entry_count(&conn->readahead) >= conn->recv_buffnum)
-    {
-      nwarn("WARNNING: There are no free recive buffer to retain the data. "
-            "Recive buffer number:%"PRId32", recived frames:%"PRIuPTR" \n",
-            conn->recv_buffnum, iob_get_queue_entry_count(&conn->readahead));
-      goto errout;
-    }
-#endif
+  int ret;
 
   /* Concat the iob to readahead */
 
@@ -234,13 +222,9 @@ uint16_t can_datahandler(FAR struct net_driver_s *dev,
   else
     {
       nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-      goto errout;
+      netdev_iob_release(dev);
     }
 
-  return ret;
-
-errout:
-  netdev_iob_release(dev);
   return ret;
 }
 
