@@ -38,10 +38,6 @@
 #include "irq/irq.h"
 #include "arm64_fatal.h"
 
-#ifdef CONFIG_ARCH_FPU
-#include "arm64_fpu.h"
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -58,32 +54,18 @@ void arm64_init_signal_process(struct tcb_s *tcb, struct regs_context *regs)
   struct regs_context  *psigctx;
   char *stack_ptr = (char *)pctx->sp_elx - sizeof(struct regs_context);
 
-#ifdef CONFIG_ARCH_FPU
-  struct fpu_reg      *pfpuctx;
-  pfpuctx      = STACK_PTR_TO_FRAME(struct fpu_reg, stack_ptr);
-  tcb->xcp.fpu_regs   = (uint64_t *)pfpuctx;
-
-  /* set fpu context */
-
-  arm64_init_fpu(tcb);
-  stack_ptr  = (char *)pfpuctx;
-#endif
   psigctx      = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
   memset(psigctx, 0, sizeof(struct regs_context));
   psigctx->elr           = (uint64_t)arm64_sigdeliver;
 
   /* Keep using SP_EL1 */
 
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-  psigctx->spsr      = SPSR_MODE_EL3H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-#else
   psigctx->spsr      = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-#endif
   psigctx->sp_elx    = (uint64_t)stack_ptr;
   psigctx->sp_el0    = (uint64_t)psigctx;
   psigctx->exe_depth = 1;
   psigctx->tpidr_el0 = (uint64_t)tcb;
-  psigctx->tpidr_el1 = (uint64_t)tcb;
+
   tcb->xcp.regs      = (uint64_t *)psigctx;
 }
 
@@ -136,13 +118,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on this CPU.
        */
 
-      if (tcb == this_task())
+      if (tcb == this_task_irq())
         {
           /* CASE 1:  We are not in an interrupt handler and a task is
            * signaling itself for some reason.
            */
 
-          if (!CURRENT_REGS)
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -160,7 +142,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * Hmmm... there looks like a latent bug here: The following logic
            * would fail in the strange case where we are in an interrupt
            * handler, the thread is signaling itself, but a context switch
-           * to another task has occurred so that CURRENT_REGS does not
+           * to another task has occurred so that current_regs does not
            * refer to the thread of this_task()!
            */
 
@@ -173,16 +155,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* create signal process context */
 
-              tcb->xcp.saved_reg = (uint64_t *)CURRENT_REGS;
-#ifdef CONFIG_ARCH_FPU
-              tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
-#endif
+              tcb->xcp.saved_reg = up_current_regs();
               arm64_init_signal_process(tcb,
-              (struct regs_context *)CURRENT_REGS);
+              (struct regs_context *)up_current_regs());
 
               /* trigger switch to signal process */
 
-              CURRENT_REGS = tcb->xcp.regs;
+              up_set_current_regs(tcb->xcp.regs);
             }
         }
 
@@ -198,9 +177,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * have been delivered.
            */
 
-#ifdef CONFIG_ARCH_FPU
-          tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
-#endif
           /* create signal process context */
 
           tcb->xcp.saved_reg = tcb->xcp.regs;
@@ -228,7 +204,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task(), CURRENT_REGS);
+      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
+            up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -239,7 +216,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !CURRENT_REGS)
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -282,9 +259,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * been delivered.
                    */
 
-#ifdef CONFIG_ARCH_FPU
-                  tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
-#endif
                   /* create signal process context */
 
                   tcb->xcp.saved_reg = tcb->xcp.regs;
@@ -302,16 +276,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
                   /* create signal process context */
 
-                  tcb->xcp.saved_reg = (uint64_t *)CURRENT_REGS;
-#ifdef CONFIG_ARCH_FPU
-                  tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
-#endif
+                  tcb->xcp.saved_reg = up_current_regs();
                   arm64_init_signal_process(tcb,
-                  (struct regs_context *)CURRENT_REGS);
+                  (struct regs_context *)up_current_regs());
 
                   /* trigger switch to signal process */
 
-                  CURRENT_REGS = tcb->xcp.regs;
+                  up_set_current_regs(tcb->xcp.regs);
                 }
 
               /* NOTE: If the task runs on another CPU(cpu), adjusting
@@ -342,9 +313,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * have been delivered.
            */
 
-#ifdef CONFIG_ARCH_FPU
-          tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
-#endif
           tcb->xcp.saved_reg = tcb->xcp.regs;
 
           /* create signal process context */
