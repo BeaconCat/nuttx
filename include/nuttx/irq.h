@@ -218,8 +218,10 @@ int irqchain_detach(int irq, xcpt_t isr, FAR void *arg);
  ****************************************************************************/
 
 #ifdef CONFIG_IRQCOUNT
+irqstate_t enter_critical_section_nonirq(void) noinstrument_function;
 irqstate_t enter_critical_section(void) noinstrument_function;
 #else
+#  define enter_critical_section_nonirq() up_irq_save()
 #  define enter_critical_section() up_irq_save()
 #endif
 
@@ -248,8 +250,10 @@ irqstate_t enter_critical_section(void) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_IRQCOUNT
+void leave_critical_section_nonirq(irqstate_t flags) noinstrument_function;
 void leave_critical_section(irqstate_t flags) noinstrument_function;
 #else
+#  define leave_critical_section_nonirq(f) up_irq_restore(f)
 #  define leave_critical_section(f) up_irq_restore(f)
 #endif
 
@@ -268,9 +272,30 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-void restore_critical_section(void);
+#  define cpu_irqlock_clear() \
+  do \
+    { \
+      g_cpu_irqset = 0; \
+      SP_DMB(); \
+      g_cpu_irqlock = SP_UNLOCKED; \
+      SP_DSB(); \
+    } \
+  while (0)
+
+#  define restore_critical_section(tcb, cpu) \
+  do \
+    { \
+      if (tcb->irqcount <= 0) \
+        {\
+          if ((g_cpu_irqset & (1 << cpu)) != 0) \
+            { \
+              cpu_irqlock_clear(); \
+            } \
+        } \
+    } \
+  while (0)
 #else
-#  define restore_critical_section()
+#  define restore_critical_section(tcb, cpu)
 #endif
 
 #undef EXTERN
