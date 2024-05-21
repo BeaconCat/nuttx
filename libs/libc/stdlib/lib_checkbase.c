@@ -71,19 +71,16 @@ int lib_checkbase(int base, FAR const char **pptr)
         {
           /* Assume octal */
 
-          if (lib_isbasedigit(ptr[1], 8, NULL))
-            {
-              base = 8;
-              ptr++;
-            }
+          base = 8;
+          ptr++;
 
           /* Check for hexadecimal */
 
-          else if ((ptr[1] == 'X' || ptr[1] == 'x') &&
-                   lib_isbasedigit(ptr[2], 16, NULL))
+          if ((*ptr == 'X' || *ptr == 'x') &&
+              lib_isbasedigit(ptr[1], 16, NULL))
             {
               base = 16;
-              ptr += 2;
+              ptr++;
             }
         }
     }
