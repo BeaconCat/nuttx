@@ -398,6 +398,28 @@ FAR struct mtd_dev_s *at24c_initialize(FAR struct i2c_master_s *dev);
 #endif
 
 /****************************************************************************
+ * Name: at25xx_initialize
+ *
+ * Description:
+ *   Create an initialized MTD device instance for an AT25 SPI EEPROM
+ *   MTD devices are not registered in the file system, but are created
+ *   as instances that can be bound to other functions
+ *   (such as a block or character driver front end).
+ *
+ * Input Parameters:
+ *   dev        - a reference to the spi device structure
+ *   devtype    - device type, from include/nuttx/eeprom/spi_xx25xx.h
+ *   readonly   - sets block driver to be readonly
+ *
+ * Returned Value:
+ *   Initialised device structure (success) of NULL (fail)
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *at25ee_initialize(FAR struct spi_dev_s *dev,
+                                        int devtype, int readonly);
+
+/****************************************************************************
  * Name: at24c_uninitialize
  *
  * Description:
@@ -634,7 +656,7 @@ FAR struct mtd_dev_s *w25qxxxjv_initialize(FAR struct qspi_dev_s *qspi,
  *
  ****************************************************************************/
 
-FAR struct mtd_dev_s *filemtd_initialize(FAR const char *path, off_t offset,
+FAR struct mtd_dev_s *filemtd_initialize(FAR const char *path, size_t offset,
                                          int16_t sectsize,
                                          int32_t erasesize);
 

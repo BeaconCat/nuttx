@@ -33,7 +33,6 @@
 
 #include <nuttx/cancelpt.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -69,7 +68,6 @@ ssize_t file_write(FAR struct file *filep, FAR const void *buf,
                    size_t nbytes)
 {
   FAR struct inode *inode;
-  ssize_t ret;
 
   /* Was this file opened for write access? */
 
@@ -88,15 +86,7 @@ ssize_t file_write(FAR struct file *filep, FAR const void *buf,
 
   /* Yes, then let the driver perform the write */
 
-  ret = inode->u.i_ops->write(filep, buf, nbytes);
-#ifdef CONFIG_FS_NOTIFY
-  if (ret > 0)
-    {
-      notify_write(filep);
-    }
-#endif
-
-  return ret;
+  return inode->u.i_ops->write(filep, buf, nbytes);
 }
 
 /****************************************************************************
