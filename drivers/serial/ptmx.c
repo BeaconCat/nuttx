@@ -180,10 +180,10 @@ static int ptmx_open(FAR struct file *filep)
   /* Allocate a PTY minor */
 
   minor = ptmx_minor_allocate();
-  nxmutex_unlock(&g_ptmx.px_lock);
   if (minor < 0)
     {
-      return minor;
+      ret = minor;
+      goto errout_with_lock;
     }
 
   /* Create the master slave pair.  This should create:
@@ -197,8 +197,7 @@ static int ptmx_open(FAR struct file *filep)
   ret = pty_register2(minor, true);
   if (ret < 0)
     {
-      ptmx_minor_free(minor);
-      return ret;
+      goto errout_with_minor;
     }
 
   /* Open the master device:  /dev/ptyN, where N=minor */
@@ -221,7 +220,15 @@ static int ptmx_open(FAR struct file *filep)
   ret = unregister_driver(devname);
   DEBUGASSERT(ret >= 0 || ret == -EBUSY);  /* unregister_driver() should never fail */
 
+  nxmutex_unlock(&g_ptmx.px_lock);
   return OK;
+
+errout_with_minor:
+  ptmx_minor_free(minor);
+
+errout_with_lock:
+  nxmutex_unlock(&g_ptmx.px_lock);
+  return ret;
 }
 
 /****************************************************************************

@@ -76,11 +76,10 @@ wint_t putwc_unlocked(wchar_t c, FAR FILE *f)
 
 wint_t putwc(wchar_t c, FAR FILE *f)
 {
-  wint_t wc;
   flockfile(f);
-  wc = putwc_unlocked(c, f);
+  c = putwc_unlocked(c, f);
   funlockfile(f);
-  return wc;
+  return c;
 }
 
 #endif /* CONFIG_FILE_STREAM */
