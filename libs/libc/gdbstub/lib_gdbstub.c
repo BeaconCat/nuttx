@@ -782,6 +782,39 @@ static int gdb_send_ok_packet(FAR struct gdb_state_s *state)
 }
 
 /****************************************************************************
+ * Name: gdb_send_signal_packet
+ *
+ * Description:
+ *   Send a signal packet (S AA).
+ *
+ * Input Parameters:
+ *   state   - The pointer to the GDB state structure.
+ *   signal  - The signal to send.
+ *
+ * Returned Value:
+ *   Zero on success.
+ *   Negative value on error.
+ *
+ ****************************************************************************/
+
+static int gdb_send_signal_packet(FAR struct gdb_state_s *state,
+                                  unsigned char signal)
+{
+  int ret;
+
+  state->pkt_buf[0] = 'S';
+  ret = gdb_bin2hex(&state->pkt_buf[1], sizeof(state->pkt_buf) - 1,
+                    &signal, 1);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  state->pkt_len = 1 + ret;
+  return gdb_send_packet(state);
+}
+
+/****************************************************************************
  * Name: gdb_send_error_packet
  *
  * Description:
@@ -839,7 +872,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context())
         {
-          reg = (FAR uint8_t *)CURRENT_REGS;
+          reg = (FAR uint8_t *)up_current_regs();
         }
       else
         {
@@ -1316,6 +1349,7 @@ static int gdb_is_thread_active(FAR struct gdb_state_s *state)
  *   Negative value on error.
  *
  * Note : Comand Format: Hg<id>
+ *                       Hc-<id>
  *        Rsponse Format: OK
  ****************************************************************************/
 
@@ -1325,12 +1359,19 @@ static int gdb_thread_context(FAR struct gdb_state_s *state)
   uintptr_t pid;
   int ret;
 
-  if (state->pkt_buf[1] != 'g')
+  if (state->pkt_buf[1] == 'g')
+    {
+      state->pkt_next += 2;
+    }
+  else if  (state->pkt_buf[1] == 'c')
+    {
+      state->pkt_next += 3;
+    }
+  else
     {
       return -EINVAL;
     }
 
-  state->pkt_next += 2;
   ret = gdb_expect_integer(state, &pid);
   if (ret < 0)
     {
@@ -1381,32 +1422,32 @@ static int gdb_send_stop(FAR struct gdb_state_s *state, int stopreason,
 retry:
   switch (stopreason)
     {
-      case GDBSTUB_STOPREASON_WATCHPOINT_RO:
+      case GDB_STOPREASON_WATCHPOINT_RO:
         ret = sprintf(state->pkt_buf, "T05thread:%x;rwatch:%" PRIxPTR ";",
                       state->pid + 1, (uintptr_t)stopaddr);
         break;
-      case GDBSTUB_STOPREASON_WATCHPOINT_WO:
+      case GDB_STOPREASON_WATCHPOINT_WO:
         ret = sprintf(state->pkt_buf, "T05thread:%x;awatch:%" PRIxPTR ";",
                       state->pid + 1, (uintptr_t)stopaddr);
         break;
-      case GDBSTUB_STOPREASON_WATCHPOINT_RW:
+      case GDB_STOPREASON_WATCHPOINT_RW:
         ret = sprintf(state->pkt_buf, "T05thread:%x;watch:%" PRIxPTR ";",
                       state->pid + 1, (uintptr_t)stopaddr);
         break;
-      case GDBSTUB_STOPREASON_BREAKPOINT:
+      case GDB_STOPREASON_BREAKPOINT:
         ret = sprintf(state->pkt_buf, "T05thread:%x;hwbreak:;",
                       state->pid + 1);
         break;
-      case GDBSTUB_STOPREASON_STEPPOINT:
-        if (state->last_stopreason == GDBSTUB_STOPREASON_WATCHPOINT_RW ||
-            state->last_stopreason == GDBSTUB_STOPREASON_WATCHPOINT_WO)
+      case GDB_STOPREASON_STEPPOINT:
+        if (state->last_stopreason == GDB_STOPREASON_WATCHPOINT_RW ||
+            state->last_stopreason == GDB_STOPREASON_WATCHPOINT_WO)
           {
             stopreason = state->last_stopreason;
             stopaddr = state->last_stopaddr;
             goto retry;
           }
 
-      case GDBSTUB_STOPREASON_CTRLC:
+      case GDB_STOPREASON_CTRLC:
       default:
         ret = sprintf(state->pkt_buf, "T05thread:%d;", state->pid + 1);
     }
@@ -1438,19 +1479,19 @@ static void gdbstub_debugpoint_callback(int type, FAR void *addr,
   switch (type)
     {
       case DEBUGPOINT_BREAKPOINT:
-        stopreason = GDBSTUB_STOPREASON_BREAKPOINT;
+        stopreason = GDB_STOPREASON_BREAKPOINT;
         break;
       case DEBUGPOINT_WATCHPOINT_RO:
-        stopreason = GDBSTUB_STOPREASON_WATCHPOINT_RO;
+        stopreason = GDB_STOPREASON_WATCHPOINT_RO;
         break;
       case DEBUGPOINT_WATCHPOINT_WO:
-        stopreason = GDBSTUB_STOPREASON_WATCHPOINT_WO;
+        stopreason = GDB_STOPREASON_WATCHPOINT_WO;
         break;
       case DEBUGPOINT_WATCHPOINT_RW:
-        stopreason = GDBSTUB_STOPREASON_WATCHPOINT_RW;
+        stopreason = GDB_STOPREASON_WATCHPOINT_RW;
         break;
       case DEBUGPOINT_STEPPOINT:
-        stopreason = GDBSTUB_STOPREASON_STEPPOINT;
+        stopreason = GDB_STOPREASON_STEPPOINT;
         up_debugpoint_remove(DEBUGPOINT_STEPPOINT, NULL, 0);
         break;
       default:
@@ -1533,13 +1574,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-        type = DEBUGPOINT_WATCHPOINT_WO;
+          type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-        type = DEBUGPOINT_WATCHPOINT_RO;
+          type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-        type = DEBUGPOINT_WATCHPOINT_RW;
+          type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1744,7 +1785,7 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
 {
   int ret;
 
-  if (stopreason != GDBSTUB_STOPREASON_NONE)
+  if (stopreason != GDB_STOPREASON_NONE)
     {
       gdb_send_stop(state, stopreason, stopaddr);
     }
@@ -1756,7 +1797,7 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
       switch (state->pkt_buf[0])
         {
           case '?': /* gdbserial status */
-            ret = gdb_send_stop(state, stopreason, stopaddr);
+            ret = gdb_send_signal_packet(state, 0x00);
             break;
           case 'g': /* Read registers */
             ret = gdb_read_registers(state);
@@ -1834,9 +1875,7 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
-#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
-#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;

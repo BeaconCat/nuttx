@@ -171,8 +171,10 @@ ip_fragout_allocfragbuf(FAR struct iob_queue_s *fragq);
 
 static void ip_fragin_timerout_expiry(wdparm_t arg)
 {
-  ASSERT(g_wkfragtimeout.worker == NULL);
-  work_queue(IPFRAGWORK, &g_wkfragtimeout, ip_fragin_timerwork, NULL, 0);
+  if (g_wkfragtimeout.worker == NULL)
+    {
+      work_queue(IPFRAGWORK, &g_wkfragtimeout, ip_fragin_timerwork, NULL, 0);
+    }
 }
 
 /****************************************************************************
@@ -189,7 +191,7 @@ static void ip_fragin_timerout_expiry(wdparm_t arg)
 static void ip_fragin_timerwork(FAR void *arg)
 {
   clock_t curtick = clock_systime_ticks();
-  sclock_t interval;
+  sclock_t interval = 0;
   FAR sq_entry_t *entry;
   FAR sq_entry_t *entrynext;
   FAR struct ip_fragsnode_s *node;
