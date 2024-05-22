@@ -32,7 +32,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <dirent.h>
-#include <sched.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
@@ -66,22 +65,7 @@
     } \
   while (0)
 
-#if CONFIG_FS_BACKTRACE > 0
-#  define FS_ADD_BACKTRACE(buffer) \
-     do \
-       { \
-          int n = sched_backtrace(_SCHED_GETTID(), buffer, \
-                                  CONFIG_FS_BACKTRACE, \
-                                  CONFIG_FS_BACKTRACE_SKIP); \
-          if (n < CONFIG_FS_BACKTRACE) \
-            { \
-              (buffer)[n] = NULL; \
-            } \
-       } \
-     while (0)
-#else
-#  define FS_ADD_BACKTRACE(buffer)
-#endif
+#define inode_root() g_root_inode
 
 /****************************************************************************
  * Public Types
