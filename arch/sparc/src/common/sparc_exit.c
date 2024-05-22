@@ -54,17 +54,13 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = this_task();
 
   /* Make sure that we are in a critical section with local interrupts.
    * The IRQ state will be restored when the next task is started.
    */
 
   (void)enter_critical_section();
-
-  sinfo("TCB=%p exiting\n", this_task_irq());
-
-  nxsched_dumponexit();
 
   /* Update scheduler parameters */
 
@@ -78,7 +74,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_irq();
+  tcb = this_task();
 
   /* Reset scheduler parameters */
 

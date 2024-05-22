@@ -33,7 +33,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 /****************************************************************************
  * Pre-processor Definitions
