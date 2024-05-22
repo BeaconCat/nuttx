@@ -46,22 +46,41 @@
 #include "chip.h"
 #include "arm64_fatal.h"
 
+#ifdef CONFIG_ARCH_FPU
+#include "arm64_fpu.h"
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void arm64_new_task(struct tcb_s * tcb)
 {
-  char *stack_ptr = tcb->stack_base_ptr + tcb->adj_stack_size;
+  uint64_t stack_ptr = (uintptr_t)tcb->stack_base_ptr + tcb->adj_stack_size;
   struct regs_context *pinitctx;
+
+#ifdef CONFIG_ARCH_FPU
+  struct fpu_reg *pfpuctx;
+  pfpuctx = STACK_PTR_TO_FRAME(struct fpu_reg, stack_ptr);
+  tcb->xcp.fpu_regs   = (uint64_t *)pfpuctx;
+
+  /* set fpu context */
+
+  arm64_init_fpu(tcb);
+  stack_ptr  = (uintptr_t)pfpuctx;
+#endif
 
   pinitctx = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
   memset(pinitctx, 0, sizeof(struct regs_context));
   pinitctx->elr       = (uint64_t)tcb->start;
 
-  /* Keep using SP_EL1 */
+  /* Keep using SP_EL1 or SP_EL3 */
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  pinitctx->spsr      = SPSR_MODE_EL3H;
+#else
   pinitctx->spsr      = SPSR_MODE_EL1H;
+#endif
 
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   pinitctx->spsr       |= (DAIF_IRQ_BIT | DAIF_FIQ_BIT);
@@ -71,6 +90,7 @@ void arm64_new_task(struct tcb_s * tcb)
   pinitctx->sp_el0    = (uint64_t)pinitctx;
   pinitctx->exe_depth = 0;
   pinitctx->tpidr_el0 = (uint64_t)tcb;
+  pinitctx->tpidr_el1 = (uint64_t)tcb;
 
   tcb->xcp.regs       = (uint64_t *)pinitctx;
 }
@@ -106,11 +126,17 @@ void up_initial_state(struct tcb_s *tcb)
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
 
+#ifdef CONFIG_ARCH_FPU
+      /* set fpu context */
+
+      arm64_init_fpu(tcb);
+#endif
       /* set initialize idle thread tcb and exception depth
        * core 0, idle0
        */
 
       write_sysreg(0, tpidrro_el0);
+      write_sysreg(tcb, tpidr_el1);
       write_sysreg(tcb, tpidr_el0);
 
 #ifdef CONFIG_STACK_COLORATION
