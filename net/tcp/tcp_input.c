@@ -1028,7 +1028,6 @@ found:
     {
       uint32_t unackseq;
       uint32_t ackseq;
-      int timeout = 0;
 
       /* The next sequence number is equal to the current sequence
        * number (sndseq) plus the size of the outstanding, unacknowledged
@@ -1138,16 +1137,9 @@ found:
 
       flags |= TCP_ACKDATA;
 
-      /* Check if no packet need to retransmission, clear timer. */
-
-      if (conn->tx_unacked != 0)
-        {
-          timeout = conn->rto;
-        }
-
       /* Reset the retransmission timer. */
 
-      tcp_update_retrantimer(conn, timeout);
+      tcp_update_retrantimer(conn, conn->rto);
     }
 
   /* Check if the sequence number of the incoming packet is what we are
@@ -1216,6 +1208,10 @@ found:
           /* Window updated, set the acknowledged flag. */
 
           flags |= TCP_ACKDATA;
+
+          /* Reset the retransmission timer. */
+
+          tcp_update_retrantimer(conn, conn->rto);
         }
     }
 
@@ -1620,12 +1616,6 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
-
-            /* In the TCP_FIN_WAIT_1, we need call tcp_close_eventhandler to
-             * release nofosegs, that we received in this state.
-             */
-
-            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
@@ -1659,12 +1649,6 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
-
-            /* In the TCP_FIN_WAIT_2, we need call tcp_close_eventhandler to
-             * release nofosegs, that we received in this state.
-             */
-
-            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
