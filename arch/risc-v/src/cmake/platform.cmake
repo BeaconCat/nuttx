@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/risc-v/src/cmake/platform.cmake
+# ./arch/risc-v/src/cmake/platform.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -18,20 +18,8 @@
 #
 # ##############################################################################
 
-get_directory_property(TOOLCHAIN_DIR_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
-                                                     COMPILE_OPTIONS)
-
-set(NUTTX_EXTRA_FLAGS "")
-foreach(FLAG ${TOOLCHAIN_DIR_FLAGS})
-  if(NOT FLAG MATCHES "^\\$<.*>$")
-    list(APPEND NUTTX_EXTRA_FLAGS ${FLAG})
-  else()
-    string(REGEX MATCH "\\$<\\$<COMPILE_LANGUAGE:C>:(.*)>" matched ${FLAG})
-    if(matched)
-      list(APPEND NUTTX_EXTRA_FLAGS ${CMAKE_MATCH_1})
-    endif()
-  endif()
-endforeach()
+get_directory_property(NUTTX_EXTRA_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
+                                                   COMPILE_OPTIONS)
 
 separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
 
@@ -61,7 +49,7 @@ if(CONFIG_LIBSUPCXX)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_SCHED_GCOV)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a

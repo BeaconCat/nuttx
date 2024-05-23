@@ -151,7 +151,20 @@ static const struct note_driver_ops_s g_notesnap_ops =
 
 static struct notesnap_s g_notesnap =
 {
-  {&g_notesnap_ops}
+  {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+    "snap",
+    {
+      {
+        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
+#  ifdef CONFIG_SMP
+        CONFIG_SCHED_INSTRUMENTATION_CPUSET
+#  endif
+      },
+    },
+#endif
+    &g_notesnap_ops
+  }
 };
 
 static FAR const char *g_notesnap_type[] =
@@ -318,7 +331,7 @@ static void notesnap_spinlock(FAR struct note_driver_s *drv,
 static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
                                 FAR void *handler, bool enter)
 {
-  notesnap_common(drv, this_task(), enter ? NOTE_IRQ_ENTER :
+  notesnap_common(drv, this_task_irq(), enter ? NOTE_IRQ_ENTER :
                   NOTE_IRQ_LEAVE, irq);
 }
 #endif
@@ -327,13 +340,13 @@ static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
 static void notesnap_syscall_enter(FAR struct note_driver_s *drv, int nr,
                                    int argc, FAR va_list *ap)
 {
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_ENTER, nr);
+  notesnap_common(drv, this_task_irq(), NOTE_SYSCALL_ENTER, nr);
 }
 
 static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
                                    uintptr_t result)
 {
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_LEAVE, nr);
+  notesnap_common(drv, this_task_irq(), NOTE_SYSCALL_LEAVE, nr);
 }
 #endif
 
@@ -369,39 +382,28 @@ int notesnap_register(void)
 
 void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 {
-  size_t i;
   size_t index = g_notesnap.index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
-  clock_t lastcount = g_notesnap.buffer[index].count;
-  struct timespec lasttime =
-  {
-    0
-  };
+  size_t i;
 
   /* Stop recording while dumping */
 
   atomic_store(&g_notesnap.dumping, true);
 
-  for (i = index; i != index - 1;
-       i == CONFIG_DRIVERS_NOTESNAP_NBUFFERS - 1 ? i = 0 : i++)
+  for (i = 0; i < CONFIG_DRIVERS_NOTESNAP_NBUFFERS; i++)
     {
-      FAR struct notesnap_chunk_s *note = &g_notesnap.buffer[i];
-
+      FAR struct notesnap_chunk_s *note = &g_notesnap.buffer
+          [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
       struct timespec time;
-      clock_t elapsed = note->count < lastcount ?
-                        note->count + CLOCK_MAX - lastcount :
-                        note->count - lastcount;
-      perf_convert(elapsed, &time);
-      clock_timespec_add(&lasttime, &time, &lasttime);
-      lastcount = note->count;
 
+      perf_convert(note->count, &time);
       lib_sprintf(stream,
                   "snapshoot: [%u.%09u] "
 #ifdef CONFIG_SMP
                   "[CPU%d] "
 #endif
                   "[%d] %-16s %#" PRIxPTR "\n",
-                  (unsigned)lasttime.tv_sec,
-                  (unsigned)lasttime.tv_nsec,
+                  (unsigned)time.tv_sec,
+                  (unsigned)time.tv_nsec,
 #ifdef CONFIG_SMP
                   note->cpu,
 #endif
