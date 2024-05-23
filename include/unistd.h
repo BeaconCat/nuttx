@@ -59,6 +59,9 @@
 #undef  _POSIX_MEMLOCK_RANGE
 #undef  _POSIX_FSYNC
 #define _POSIX_SYNCHRONIZED_IO 1
+#ifdef CONFIG_LIBC_PASSWD_LINESIZE
+#  define _POSIX_GETPW_R_SIZE_MAX CONFIG_LIBC_PASSWD_LINESIZE
+#endif
 
 #define _POSIX_VERSION 201712L
 #define _POSIX_PRIORITIZED_IO _POSIX_VERSION
@@ -455,6 +458,11 @@ int     getentropy(FAR void *buffer, size_t length);
 
 void    sync(void);
 int     syncfs(int fd);
+
+int     profil(FAR unsigned short *buf, size_t bufsiz,
+               size_t offset, unsigned int scale);
+
+FAR char *getpass(FAR const char *prompt);
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(getcwd) FAR char *getcwd(FAR char *buf,

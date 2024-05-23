@@ -38,7 +38,6 @@
 #include "sched/sched.h"
 #include "init/init.h"
 #include "riscv_internal.h"
-#include "riscv_ipi.h"
 
 #ifdef CONFIG_BUILD_KERNEL
 #  include "riscv_mmu.h"
@@ -68,7 +67,7 @@ void riscv_cpu_boot(int cpu)
 {
   /* Clear IPI for CPU(cpu) */
 
-  riscv_ipi_clear(cpu);
+  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
 
   /* Enable machine software interrupt for IPI to boot */
 
@@ -78,13 +77,11 @@ void riscv_cpu_boot(int cpu)
 
   asm("WFI");
 
-#ifdef CONFIG_RISCV_PERCPU_SCRATCH
+#ifdef CONFIG_BUILD_KERNEL
   /* Initialize the per CPU areas */
 
   riscv_percpu_add_hart((uintptr_t)cpu);
-#endif
 
-#ifdef CONFIG_BUILD_KERNEL
   /* Enable MMU */
 
   binfo("mmu_enable: satp=%lx\n", g_kernel_pgt_pbase);
@@ -94,7 +91,7 @@ void riscv_cpu_boot(int cpu)
   _info("CPU%d Started\n", this_cpu());
 
 #ifdef CONFIG_STACK_COLORATION
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_irq();
 
   /* If stack debug is enabled, then fill the stack with a
    * recognizable value that we can use later to test for high
@@ -108,12 +105,12 @@ void riscv_cpu_boot(int cpu)
 
   /* Clear machine software interrupt for CPU(cpu) */
 
-  riscv_ipi_clear(cpu);
+  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
 
-  sched_note_cpu_started(this_task());
+  sched_note_cpu_started(this_task_irq());
 #endif
 
   up_irq_enable();
@@ -157,12 +154,12 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task(), cpu);
+  sched_note_cpu_start(this_task_irq(), cpu);
 #endif
 
   /* Send IPI to CPU(cpu) */
 
-  riscv_ipi_send(cpu);
+  putreg32(1, (uintptr_t)RISCV_IPI + (cpu * 4));
 
   return 0;
 }
