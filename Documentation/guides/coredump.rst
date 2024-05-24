@@ -1,6 +1,6 @@
-=========
+====================
 Core Dump
-=========
+====================
 
 Overview
 ========
@@ -29,7 +29,7 @@ Enable Kconfig
       CONFIG_BOARD_COREDUMP_COMPRESSION=y /* Default y, enable Coredump compression to
                                              reduce the size of the original core image */
 
-      CONFIG_BOARD_COREDUMP_FULL=y        /* Default y, save all task information */
+      CONFIG_BOARD_COREDUMP_FULL=y        /* Default y, save all task informations */
 
 2. Run Coredump on nsh (CONFIG_SYSTEM_COREDUMP=y)
 

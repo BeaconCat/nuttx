@@ -983,10 +983,10 @@ void stm32_stdclockconfig(void)
 
       /* Configure ADC source clock */
 
-#if defined(STM32_RCC_D3CCIPR_ADCSRC)
+#if defined(STM32_RCC_D3CCIPR_ADCSEL)
       regval = getreg32(STM32_RCC_D3CCIPR);
       regval &= ~RCC_D3CCIPR_ADCSEL_MASK;
-      regval |= STM32_RCC_D3CCIPR_ADCSRC;
+      regval |= STM32_RCC_D3CCIPR_ADCSEL;
       putreg32(regval, STM32_RCC_D3CCIPR);
 #endif
 
