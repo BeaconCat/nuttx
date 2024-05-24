@@ -107,15 +107,10 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
-  struct tcb_s *rtcb = (struct tcb_s *)arch_get_current_tcb();
+  struct tcb_s *rtcb = running_task();
   struct regs_context * p_regs;
   irqstate_t flags;
   int ret;
-
-  if (rtcb == NULL)
-    {
-      rtcb = running_task();
-    }
 
   if (size <= 0 || !buffer)
     {
@@ -140,7 +135,7 @@ int up_backtrace(struct tcb_s *tcb,
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
           if (ret < size)
             {
-              p_regs = (struct regs_context *)CURRENT_REGS;
+              p_regs = (struct regs_context *)up_current_regs();
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
                                (void *)p_regs->regs[REG_X29],
