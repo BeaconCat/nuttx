@@ -796,7 +796,7 @@ static int start_capture(FAR struct capture_mng_s *cmng,
   convert_to_imgsensorinterval(interval, &si);
 
   IMGDATA_SET_BUF(cmng->imgdata,
-     nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
+    nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
   IMGDATA_START_CAPTURE(cmng->imgdata,
      nr_fmt, df, &di, complete_capture, cmng);
   IMGSENSOR_START_CAPTURE(cmng->imgsensor,
@@ -1940,7 +1940,7 @@ static int complete_capture(uint8_t err_code,
   FAR capture_type_inf_t *type_inf;
   FAR vbuf_container_t *container = NULL;
   enum v4l2_buf_type buf_type;
-  irqstate_t           flags;
+  irqstate_t flags;
   imgdata_format_t df[MAX_CAPTURE_FMT];
   video_format_t c_fmt[MAX_CAPTURE_FMT];
 
@@ -2132,8 +2132,7 @@ static int capture_reqbufs(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR capture_mng_t *cmng = inode->i_private;
   FAR capture_type_inf_t *type_inf;
-  struct imgdata_s *imgdata = cmng->imgdata;
-
+  struct imgdata_s *imgdata;
   irqstate_t flags;
   int ret = OK;
 
@@ -2142,6 +2141,7 @@ static int capture_reqbufs(FAR struct file *filep,
       return -EINVAL;
     }
 
+  imgdata  = cmng->imgdata;
   type_inf = get_capture_type_inf(cmng, reqbufs->type);
   if (type_inf == NULL)
     {
@@ -2379,10 +2379,9 @@ static int capture_dqbuf(FAR struct file *filep,
            * Therefore, Check cause.
            */
 
-          if (type_inf->wait_capture.waitend_cause == WAITEND_CAUSE_DQCANCEL)
-            {
-              return -ECANCELED;
-            }
+          DEBUGASSERT(type_inf->wait_capture.waitend_cause ==
+                      WAITEND_CAUSE_DQCANCEL);
+          return -ECANCELED;
         }
 
       type_inf->wait_capture.done_container = NULL;
@@ -2907,7 +2906,7 @@ static int capture_s_selection(FAR struct file *filep,
   FAR capture_type_inf_t *type_inf;
   uint32_t p_u32[IMGSENSOR_CLIP_NELEM];
   imgsensor_value_t val;
-  int32_t id;
+  uint32_t id;
   int ret;
 
   if (cmng == NULL || clip == NULL)
@@ -3715,8 +3714,6 @@ static int capture_unlink(FAR struct inode *inode)
       cmng->unlinked = true;
       nxmutex_unlock(&cmng->lock_open_num);
     }
-
-  nxmutex_destroy(&cmng->lock_open_num);
 
   return OK;
 }
