@@ -27,12 +27,23 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <nuttx/fdt.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/virtio/virtio-mmio.h>
+#include <nuttx/fdt.h>
+
+#ifdef CONFIG_LIBC_FDT
+#  include <libfdt.h>
+#endif
 
 #include "chip.h"
 #include "qemu-armv7a.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef QEMU_SPI_IRQ_BASE
+#define QEMU_SPI_IRQ_BASE     32
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -60,14 +71,6 @@ static void register_devices_from_fdt(void)
     {
       syslog(LOG_ERR, "fdt_virtio_mmio_devices_register failed, ret=%d\n",
              ret);
-    }
-#endif
-
-#ifdef CONFIG_PCI
-  ret = fdt_pci_ecam_register(fdt);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "fdt_pci_ecam_register failed, ret=%d\n", ret);
     }
 #endif
 
