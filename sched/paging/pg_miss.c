@@ -33,7 +33,7 @@
 #include <nuttx/page.h>
 #include <nuttx/signal.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -106,9 +106,11 @@
  *
  ****************************************************************************/
 
-void pg_miss(FAR struct tcb_s *ftcb)
+void pg_miss(void)
 {
+  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
+  bool switch_needed;
 
   /* Sanity checking
    *
@@ -134,18 +136,21 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   DEBUGASSERT(!is_idle_task(ftcb));
 
-  /* Remove the tcb task from the running list. */
+  /* Remove the tcb task from the ready-to-run list. */
 
-  nxsched_remove_running(ftcb);
+  switch_needed = nxsched_remove_readytorun(ftcb, true);
 
   /* Add the task to the specified blocked task list */
 
   ftcb->task_state = TSTATE_WAIT_PAGEFILL;
-  nxsched_add_prioritized(ftcb, &g_waitingforfill);
+  nxsched_add_prioritized(ftcb, list_waitingforfill());
 
-  /* Now, perform the context switch */
+  /* Now, perform the context switch if one is needed */
 
-  up_switch_context(this_task_irq(), ftcb);
+  if (switch_needed)
+    {
+      up_switch_context(this_task(), ftcb);
+    }
 
   /* Boost the page fill worker thread priority.
    * - Check the priority of the task at the head of the g_waitingforfill
@@ -178,4 +183,4 @@ void pg_miss(FAR struct tcb_s *ftcb)
     }
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
