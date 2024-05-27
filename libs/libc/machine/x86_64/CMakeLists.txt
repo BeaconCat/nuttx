@@ -17,9 +17,3 @@
 # the License.
 #
 # ##############################################################################
-
-add_subdirectory(gnu)
-
-set(SRCS)
-
-target_sources(c PRIVATE ${SRCS})
