@@ -40,7 +40,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 #include "semaphore/semaphore.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
@@ -223,9 +222,6 @@ FAR sem_t *nxsem_open(FAR const char *name, int oflags, ...)
     }
 
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_open(fullpath, oflags);
-#endif
   return sem;
 
 errout_with_inode:
