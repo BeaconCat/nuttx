@@ -118,8 +118,6 @@ SECTIONS
     *libsched.a:irq_csection.*(.literal .text .literal.* .text.*)
     *libsched.a:irq_dispatch.*(.literal .text .literal.* .text.*)
 
-    *libc.a:*lib_instrument.*(.text .text.* .literal .literal.*)
-
     *(.wifirxiram .wifirxiram.*)
     *(.wifi0iram  .wifi0iram.*)
     *(.wifiorslpiram .wifiorslpiram.*)
@@ -170,8 +168,6 @@ SECTIONS
     *libsched.a:irq_csection.*(.bss  .bss.*  COMMON)
     *libsched.a:irq_dispatch.*(.bss  .bss.*  COMMON)
 
-    *libc.a:*lib_instrument.*(.bss  .bss.*  COMMON)
-
     . = ALIGN(8);
     _ebss = ABSOLUTE(.);
   } >KDRAM
@@ -218,8 +214,6 @@ SECTIONS
     *libsched.a:irq_csection.*(.rodata  .rodata.*)
     *libsched.a:irq_dispatch.*(.rodata  .rodata.*)
 
-    *libc.a:*lib_instrument.*(.rodata  .rodata.*)
-
     . = ALIGN(4);
     _edata = ABSOLUTE(.);
 
@@ -231,8 +225,6 @@ SECTIONS
   .flash.text :
   {
     _stext = .;
-    _instruction_reserved_start = ABSOLUTE(.);
-
     *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
     *(.irom0.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.fini.literal)
@@ -247,7 +239,6 @@ SECTIONS
 
     . += 16;
 
-    _instruction_reserved_end = ABSOLUTE(.);
     _etext = .;
   } >KIROM
 
