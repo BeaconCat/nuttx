@@ -77,7 +77,8 @@ config ARCH_INTEL64_CORE_FREQ_KHZ
 	default 2000000
 	---help---
 		The CPU Core frequency (without Turbo boost). This is used
-		to set the TSC deadline timer frequency.
+		to set the TSC deadline timer frequency. If set to 0 we try to get
+		frequency from CPUID.
 
 endif
 
@@ -148,13 +149,6 @@ config INTEL64_ONESHOT_MAXTIMERS
 		supported.
 
 endif
-
-config ARCH_INTEL64_HAVE_XSAVE
-	bool "XSAVE support"
-	default y
-	---help---
-		Select to enable the use of XSAVE and FPU/SSE/AVX functions
-		of x86_64
 
 config ARCH_INTEL64_HAVE_PCID
 	bool "PCID support"

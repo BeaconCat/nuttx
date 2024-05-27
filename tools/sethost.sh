@@ -79,7 +79,6 @@ done
 #   Cygwin: CYGWIN_NT-10.0-WOW
 #   Linux: Linux
 #   MSYS: MINGW32_NT-6.2
-#   MSYS2: MSYS_NT-6.3-9600
 #   BSD: FreeBSD, OpenBSD, NetBSD, *BSD
 
 if [ -z "$host" ]; then
@@ -96,10 +95,6 @@ if [ -z "$host" ]; then
       wenv=cygwin
       ;;
     MINGW32*)
-      host=windows
-      wenv=msys
-      ;;
-    MSYS*)
       host=windows
       wenv=msys
       ;;
@@ -218,7 +213,6 @@ else
       kconfig-tweak --file $nuttx/.config --enable CONFIG_WINDOWS_MSYS
     else
       echo "  Select CONFIG_WINDOWS_NATIVE=y"
-      kconfig-tweak --file $nuttx/.config --enable CONFIG_EXPERIMENTAL
       kconfig-tweak --file $nuttx/.config --enable CONFIG_WINDOWS_NATIVE
     fi
   fi
