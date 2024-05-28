@@ -25,8 +25,6 @@
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
 
-#include "riscv_internal.h"
-
     .section .init
     .globl bl602_start
     .globl __start
@@ -42,13 +40,16 @@ bl602_start:
   /*disable IRQ*/
 
     li t0, MSTATUS_MIE
-    csrc CSR_MSTATUS, t0
+    csrc mstatus, t0
 
     la gp, __global_pointer$
 .option pop
-    la sp, _ebss
-    li t0, SMP_STACK_SIZE
+    la sp, g_idle_stack
+    add s11, sp, zero
+
+    li t0, CONFIG_IDLETHREAD_STACKSIZE
     add sp, sp, t0
+    andi sp, sp, ~0xF
 
 #ifndef RUN_IN_RAM
 
@@ -103,8 +104,8 @@ bl602_entry_load_data_section_end:
 
     /* Clear bss section */
 
-    la a0, _sbss
-    la a1, _ebss
+    la a0, __bss_start
+    la a1, __bss_end
     bgeu a0, a1, bl602_entry_zero_bss_end
 
 bl602_entry_zero_bss_loop:
