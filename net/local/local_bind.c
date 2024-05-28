@@ -51,7 +51,6 @@ int psock_local_bind(FAR struct socket *psock,
   FAR struct local_conn_s *conn = psock->s_conn;
   FAR const struct sockaddr_un *unaddr =
     (FAR const struct sockaddr_un *)addr;
-  int index;
 
   DEBUGASSERT(unaddr->sun_family == AF_LOCAL);
 
@@ -60,21 +59,9 @@ int psock_local_bind(FAR struct socket *psock,
       return -EINVAL;
     }
 
-  conn = psock->s_conn;
-
-  /* Check if local address is already in use */
-
-  net_lock();
-  if (local_findconn(conn, unaddr) != NULL)
-    {
-      net_unlock();
-      return -EADDRINUSE;
-    }
-
-  net_unlock();
-
   /* Save the address family */
 
+  conn->lc_proto = psock->s_type;
   conn->lc_instance_id = -1;
 
   /* Now determine the type of the Unix domain socket by comparing the size
@@ -86,17 +73,21 @@ int psock_local_bind(FAR struct socket *psock,
       /* Zero-length sun_path... This is an abstract Unix domain socket */
 
       conn->lc_type = LOCAL_TYPE_ABSTRACT;
-      index = 1;
+
+      /* Copy the path into the connection structure */
+
+      strlcpy(conn->lc_path, &unaddr->sun_path[1], sizeof(conn->lc_path));
     }
   else
     {
       /* This is an normal, pathname Unix domain socket */
 
       conn->lc_type = LOCAL_TYPE_PATHNAME;
-      index = 0;
-    }
 
-  strlcpy(conn->lc_path, &unaddr->sun_path[index], sizeof(conn->lc_path));
+      /* Copy the path into the connection structure */
+
+      strlcpy(conn->lc_path, unaddr->sun_path, sizeof(conn->lc_path));
+    }
 
   conn->lc_state = LOCAL_STATE_BOUND;
   return OK;
