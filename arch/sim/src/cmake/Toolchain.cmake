@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/sim/src/cmake/Toolchain.cmake
+# arch/sim/cmake/Toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -30,7 +30,7 @@ endif()
 add_compile_options(-fno-common)
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g)
+  add_compile_options(-g3)
 endif()
 
 if(CONFIG_SIM_M32)
@@ -69,12 +69,13 @@ if(CONFIG_STACK_USAGE_WARNING)
   add_compile_options(-Wstack-usage=${CONFIG_STACK_USAGE_WARNING})
 endif()
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_SCHED_GCOV)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_SIM_ASAN)
   add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
   add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
@@ -99,10 +100,7 @@ if(CONFIG_CXX_STANDARD)
 endif()
 
 set(ARCHCFLAGS "-Wstrict-prototypes")
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
-endif()
+set(ARCHCXXFLAGS "-nostdinc++")
 
 if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
