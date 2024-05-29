@@ -28,7 +28,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/queue.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 #include <nuttx/clock.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/wqueue.h>
@@ -52,12 +52,6 @@ struct pm_domain_s
    */
 
   uint8_t state;
-
-  /* Registry is a doubly-linked list of registered power management
-   * callback structures.
-   */
-
-  dq_queue_t registry;
 
   /* The power state lock count */
 
@@ -88,9 +82,31 @@ struct pm_domain_s
 
   FAR const struct pm_governor_s *governor;
 
-  /* Spinlock for data read/write protect inside this struct */
+  /* Recursive lock for race condition */
 
-  spinlock_t lock;
+  rmutex_t lock;
+};
+
+/* This structure encapsulates all of the global data used by the PM system */
+
+struct pm_global_s
+{
+  /* This rmutex manages mutually exclusive access to the power management
+   * registry.  It must be initialized to the value 1.
+   */
+
+  rmutex_t reglock;
+
+  /* registry is a doubly-linked list of registered power management
+   * callback structures.  To ensure mutually exclusive access, this list
+   * must be locked by calling pm_lock() before it is accessed.
+   */
+
+  dq_queue_t registry;
+
+  /* The state information for each PM domain */
+
+  struct pm_domain_s domain[CONFIG_PM_NDOMAINS];
 };
 
 /****************************************************************************
@@ -108,11 +124,43 @@ extern "C"
 
 /* All PM global data: */
 
-EXTERN struct pm_domain_s g_pmdomains[CONFIG_PM_NDOMAINS];
+EXTERN struct pm_global_s g_pmglobals;
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: pm_lock
+ *
+ * Description:
+ *   Lock the power management operation.
+ *
+ * Input Parameters:
+ *   lock - The lock subjuct
+ *
+ * Returned Value:
+ *   Return current state
+ *
+ ****************************************************************************/
+
+irqstate_t pm_lock(FAR rmutex_t *lock);
+
+/****************************************************************************
+ * Name: pm_unlock
+ *
+ * Description:
+ *   Unlock the power management operation.
+ *
+ * Input Parameters:
+ *   lock - The lock subjuct
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void pm_unlock(FAR rmutex_t *lock, irqstate_t flags);
 
 /****************************************************************************
  * Name: pm_domain_lock

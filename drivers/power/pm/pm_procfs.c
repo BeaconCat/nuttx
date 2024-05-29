@@ -260,6 +260,14 @@ static int pm_close(FAR struct file *filep)
   return OK;
 }
 
+/****************************************************************************
+ * Name: pm_read_state
+ *
+ * Description:
+ *   The statistic values about every domain states.
+ *
+ ****************************************************************************/
+
 static ssize_t pm_read_state(FAR struct file *filep, FAR char *buffer,
                              size_t buflen)
 {
@@ -280,7 +288,7 @@ static ssize_t pm_read_state(FAR struct file *filep, FAR char *buffer,
   /* Recover our private data from the struct file instance */
 
   pmfile = (FAR struct pm_file_s *)filep->f_priv;
-  dom    = &g_pmdomains[pmfile->domain];
+  dom    = &g_pmglobals.domain[pmfile->domain];
   DEBUGASSERT(pmfile);
   DEBUGASSERT(dom);
 
@@ -322,8 +330,6 @@ static ssize_t pm_read_state(FAR struct file *filep, FAR char *buffer,
       sum += wake[state] + sleep[state];
     }
 
-  pm_domain_unlock(pmfile->domain, flags);
-
   sum = sum ? sum : 1;
 
   for (state = 0; state < PM_COUNT && totalsize < buflen; state++)
@@ -349,6 +355,8 @@ static ssize_t pm_read_state(FAR struct file *filep, FAR char *buffer,
       totalsize += copysize;
     }
 
+  pm_domain_unlock(pmfile->domain, flags);
+
   filep->f_pos += totalsize;
   return totalsize;
 }
@@ -370,7 +378,7 @@ static ssize_t pm_read_wakelock(FAR struct file *filep, FAR char *buffer,
   /* Recover our private data from the struct file instance */
 
   pmfile = (FAR struct pm_file_s *)filep->f_priv;
-  dom    = &g_pmdomains[pmfile->domain];
+  dom    = &g_pmglobals.domain[pmfile->domain];
   DEBUGASSERT(pmfile);
   DEBUGASSERT(dom);
 
@@ -427,6 +435,14 @@ static ssize_t pm_read_wakelock(FAR struct file *filep, FAR char *buffer,
   return totalsize;
 }
 
+/****************************************************************************
+ * Name: pm_read_preparefail
+ *
+ * Description:
+ *   The statistic values about prepare callback failed.
+ *
+ ****************************************************************************/
+
 static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
                                    size_t buflen)
 {
@@ -448,7 +464,7 @@ static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
   /* Recover our private data from the struct file instance */
 
   pmfile = (FAR struct pm_file_s *)filep->f_priv;
-  dom    = &g_pmdomains[pmfile->domain];
+  dom    = &g_pmglobals.domain[pmfile->domain];
   DEBUGASSERT(pmfile);
   DEBUGASSERT(dom);
 
@@ -464,12 +480,11 @@ static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
   totalsize += copysize;
 
   flags = pm_domain_lock(pmfile->domain);
-
-  for (entry = dq_peek(&dom->registry);
+  for (entry = dq_peek(&g_pmglobals.registry);
        entry; entry = dq_next(entry))
     {
       cb = (FAR struct pm_callback_s *)entry;
-      pf = &cb->preparefail;
+      pf = &cb->preparefail[pmfile->domain];
       for (state = 0; state < PM_COUNT; state++)
         {
           sum +=  pf->duration[state].tv_sec;
@@ -477,13 +492,13 @@ static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
     }
 
   sum = sum ? sum : 1;
-  for (entry = dq_peek(&dom->registry);
+  for (entry = dq_peek(&g_pmglobals.registry);
        entry; entry = dq_next(entry))
     {
       time_t total = 0;
 
       cb = (FAR struct pm_callback_s *)entry;
-      pf = &cb->preparefail;
+      pf = &cb->preparefail[pmfile->domain];
       for (state = 0; state < PM_COUNT; state++)
         {
           total +=  pf->duration[state].tv_sec;
