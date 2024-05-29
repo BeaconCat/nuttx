@@ -71,26 +71,26 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
     }
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    *
    * Nested interrupts are not supported
    */
 
-  DEBUGASSERT(up_current_regs() == NULL);
-  up_set_current_regs(regs);
+  DEBUGASSERT(CURRENT_REGS == NULL);
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
 
   /* Check for a context switch.  If a context switch occurred, then
-   * current_regs will have a different value than it did on entry.  If an
+   * CURRENT_REGS will have a different value than it did on entry.  If an
    * interrupt level context switch has occurred, then restore the floating
    * point state and the establish the correct address environment before
    * returning from the interrupt.
    */
 
-  if (regs != up_current_regs())
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -107,22 +107,26 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
+      g_running_tasks[this_cpu()] = this_task();
+
+      /* Restore the cpu lock */
+
+      restore_critical_section();
 
       /* If a context switch occurred while processing the interrupt then
-       * current_regs may have change value.  If we return any value
+       * CURRENT_REGS may have change value.  If we return any value
        * different from the input regs, then the lower level will know
        * that a context switch occurred during interrupt processing.
        */
 
-      regs = up_current_regs();
+      regs = (uintptr_t *)CURRENT_REGS;
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 
 #endif
   board_autoled_off(LED_INIRQ);
