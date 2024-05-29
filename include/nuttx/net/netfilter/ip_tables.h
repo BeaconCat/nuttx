@@ -58,10 +58,6 @@
 #define IPT_INV_PROTO              XT_INV_PROTO
 #define IPT_INV_MASK               0x7F    /* All possible flag bits mask. */
 
-/* Values for "inv" field for struct ipt_icmp. */
-
-#define IPT_ICMP_INV               0x01    /* Invert the sense of type/code test */
-
 /* Standard return verdict, or do jump. */
 
 #define IPT_STANDARD_TARGET        XT_STANDARD_TARGET
@@ -82,10 +78,8 @@
        (entry) = (FAR struct ipt_entry *) \
                      ((FAR uint8_t *)(entry) + (entry)->next_offset))
 
-/* Get pointer to match / target from an entry pointer. */
+/* Get pointer to target from an entry pointer. */
 
-#define IPT_MATCH(e) \
-  ((FAR struct xt_entry_match *)((FAR struct ipt_entry *)(e) + 1))
 #define IPT_TARGET(e) \
   ((FAR struct xt_entry_target *)((FAR uint8_t *)(e) + (e)->target_offset))
 
@@ -94,10 +88,9 @@
 #define IPT_FILL_ENTRY(e, target_name) \
   do \
     { \
-      (e)->entry.target_offset = offsetof(typeof(*(e)), target); \
+      (e)->entry.target_offset = sizeof((e)->entry); \
       (e)->entry.next_offset = sizeof(*(e)); \
-      (e)->target.target.u.target_size = sizeof(*(e)) - \
-                                         (e)->entry.target_offset; \
+      (e)->target.target.u.target_size = sizeof(*(e)) - sizeof((e)->entry); \
       strlcpy((e)->target.target.u.user.name, (target_name), \
               sizeof((e)->target.target.u.user.name)); \
     } \
@@ -276,15 +269,6 @@ struct ipt_get_entries
   struct ipt_entry entrytable[0];
 };
 
-/* ICMP matching stuff */
-
-struct ipt_icmp
-{
-  uint8_t type;     /* type to match */
-  uint8_t code[2];  /* range of code */
-  uint8_t invflags; /* Inverse flags */
-};
-
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
@@ -294,7 +278,7 @@ struct ipt_icmp
 static inline FAR struct xt_entry_target *
 ipt_get_target(FAR struct ipt_entry *e)
 {
-  return (FAR struct xt_entry_target *)((FAR char *)e + e->target_offset);
+  return (FAR char *)e + e->target_offset;
 }
 
 #endif /* __INCLUDE_NUTTX_NET_NETFILTER_IP_TABLES_H */
