@@ -29,7 +29,6 @@
 
 #include <nuttx/tls.h>
 #include <nuttx/mutex.h>
-#include <assert.h>
 
 /****************************************************************************
  * Private Data
@@ -103,9 +102,6 @@ int task_tls_alloc(tls_dtor_t dtor)
     }
 
   nxmutex_unlock(&g_tlslock);
-
-  DEBUGASSERT(ret != -EUSERS);
-
   return ret;
 }
 
