@@ -66,22 +66,27 @@ int b64_ntop(FAR const unsigned char *src, size_t srclen,
           return -1;
         }
 
-     *target++ = g_base64[src[0] >> 2];
-     if (srclen == 1)
-       {
-         *target++ = g_base64[(src[0] & 0x03) << 4];
-         *target++ = g_pad64;
-       }
-     else
-       {
-         *target++ = g_base64[((src[0] & 0x03) << 4) + (src[1] >> 4)];
-         *target++ = g_base64[(src[1] & 0x0f) << 2];
-       }
+      *target++ = g_base64[src[0] >> 2];
+      if (srclen == 1)
+        {
+          *target++ = g_base64[(src[0] & 0x03) << 4];
+          *target++ = g_pad64;
+        }
+      else
+        {
+          *target++ = g_base64[((src[0] & 0x03) << 4) + (src[1] >> 4)];
+          *target++ = g_base64[(src[1] & 0x0f) << 2];
+        }
 
-    *target++ = g_pad64;
-  }
+      *target++ = g_pad64;
+    }
 
-  *target = '\0';
+  if (datalen >= targsize)
+    {
+      return -1;
+    }
+
+  *target = '\0'; /* Returned length doesn't include '\0' */
   return datalen;
 }
 

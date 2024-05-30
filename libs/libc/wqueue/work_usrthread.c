@@ -191,7 +191,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
     {
       /* Wait indefinitely until work_queue has new items */
 
-      nxsem_wait(&wqueue->wake);
+      _SEM_WAIT(&wqueue->wake);
     }
   else
     {
@@ -205,10 +205,10 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
        */
 
       clock_gettime(CLOCK_REALTIME, &now);
-      clock_ticks2time(next, &delay);
+      clock_ticks2time(&delay, next);
       clock_timespec_add(&now, &delay, &rqtp);
 
-      nxsem_timedwait(&wqueue->wake, &rqtp);
+      _SEM_TIMEDWAIT(&wqueue->wake, &rqtp);
     }
 }
 
