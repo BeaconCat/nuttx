@@ -155,17 +155,13 @@ function(nuttx_add_application)
 
     # loadable build requires applying ELF flags to all applications
 
-    if(CONFIG_MODULES)
+    if(CONFIG_BUILD_LOADABLE)
       target_compile_options(
         ${TARGET}
         PRIVATE
           $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
     endif()
   endif()
-
-  # apps applications need to depends on apps_context by default
-
-  add_dependencies(${TARGET} apps_context)
 
   # store parameters into properties (used during builtin list generation)
 
