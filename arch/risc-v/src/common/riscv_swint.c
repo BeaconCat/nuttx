@@ -48,15 +48,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_LIB_SYSCALL
-#  define TCB_FLAGS_OFFSET offsetof(struct tcb_s, flags)
-#endif
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#ifdef CONFIG_LIB_SYSCALL
 
 /****************************************************************************
  * Name: dispatch_syscall
@@ -75,38 +69,14 @@
  *
  ****************************************************************************/
 
-uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
-                           uintptr_t parm2, uintptr_t parm3,
-                           uintptr_t parm4, uintptr_t parm5,
-                           uintptr_t parm6)
+#ifdef CONFIG_LIB_SYSCALL
+static void dispatch_syscall(void) naked_function;
+static void dispatch_syscall(void)
 {
-  register long a0 asm("a0") = (long)(nbr);
-  register long a1 asm("a1") = (long)(parm1);
-  register long a2 asm("a2") = (long)(parm2);
-  register long a3 asm("a3") = (long)(parm3);
-  register long a4 asm("a4") = (long)(parm4);
-  register long a5 asm("a5") = (long)(parm5);
-  register long a6 asm("a6") = (long)(parm6);
-
-  uintptr_t ret;
-
-  /* Valid system call ? */
-
-  if (a0 > SYS_maxsyscall)
-    {
-      /* Nope, get out */
-
-      return -ENOSYS;
-    }
-
-  /* ra gets clobbered below, but it does not matter */
-
   asm volatile
     (
-     REGLOAD " t0, %1(tp)\n"                /* Load tcb->flags */
-     "ori  t0, t0, %2\n"                    /* tcb->flags |= TCB_FLAG_SYSCALL */
-     REGSTORE " t0, %1(tp)\n"
-     "addi a0, a0, -%3\n"                   /* Offset a0 to account for the reserved syscalls */
+     "addi sp, sp, -" STACK_FRAME_SIZE "\n" /* Create a stack frame to hold ra */
+     REGSTORE " ra, 0(sp)\n"                /* Save ra in the stack frame */
      "la   t0, g_stublookup\n"              /* t0=The base of the stub lookup table */
 #ifdef CONFIG_ARCH_RV32
      "slli a0, a0, 2\n"                     /* a0=Offset for the stub lookup table */
@@ -116,26 +86,16 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
      "add  t0, t0, a0\n"                    /* t0=The address in the table */
      REGLOAD " t0, 0(t0)\n"                 /* t0=The address of the stub for this syscall */
      "jalr ra, t0\n"                        /* Call the stub (modifies ra) */
-     REGLOAD " t0, %1(tp)\n"                /* Load tcb->flags */
-     "andi  t0, t0, ~%2\n"                  /* tcb->flags &= ~TCB_FLAG_SYSCALL */
-     REGSTORE " t0, %1(tp)\n"
-     : "+r"(a0)
-     : "i"(TCB_FLAGS_OFFSET),
-       "i"(TCB_FLAG_SYSCALL),
-       "i"(CONFIG_SYS_RESERVED),
-       "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6)
-     : "t0", "memory"
+     REGLOAD " ra, 0(sp)\n"                 /* Restore ra */
+     "addi sp, sp, " STACK_FRAME_SIZE "\n"  /* Destroy the stack frame */
+     "mv   a2, a0\n"                        /* a2=Save return value in a0 */
+     "li   a0, 3\n"                         /* a0=SYS_syscall_return (3) */
+#ifdef CONFIG_ARCH_USE_S_MODE
+     "j    sys_call2"                       /* Return from the syscall */
+#else
+     "ecall"                                /* Return from the syscall */
+#endif
   );
-
-  /* a0 gets clobbered below, save it locally here */
-
-  ret = a0;
-
-  /* Unmask any pending signals now */
-
-  nxsig_unmask_pendingsignal();
-
-  return ret;
 }
 #endif
 
@@ -156,7 +116,7 @@ int riscv_swint(int irq, void *context, void *arg)
 {
   uintptr_t *regs = (uintptr_t *)context;
 
-  DEBUGASSERT(regs && regs == CURRENT_REGS);
+  DEBUGASSERT(regs && regs == up_current_regs());
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -182,9 +142,9 @@ int riscv_swint(int irq, void *context, void *arg)
        *   A0 = SYS_restore_context
        *   A1 = next
        *
-       * In this case, we simply need to set CURRENT_REGS to restore register
-       * area referenced in the saved A1. context == CURRENT_REGS is the
-       * normal exception return.  By setting CURRENT_REGS = context[A1], we
+       * In this case, we simply need to set current_regs to restore register
+       * area referenced in the saved A1. context == current_regs is the
+       * normal exception return.  By setting current_regs = context[A1], we
        * force the return to the saved context referenced in $a1.
        */
 
@@ -210,7 +170,7 @@ int riscv_swint(int irq, void *context, void *arg)
        *
        * In this case, we save the context registers to the save register
        * area referenced by the saved contents of R5 and then set
-       * CURRENT_REGS to the save register area referenced by the saved
+       * current_regs to the save register area referenced by the saved
        * contents of R6.
        */
 
@@ -224,6 +184,70 @@ int riscv_swint(int irq, void *context, void *arg)
           riscv_restorecontext(next);
         }
         break;
+
+      /* A0=SYS_syscall_return: This is a SYSCALL return command:
+       *
+       *   void up_sycall_return(void);
+       *
+       * At this point, the following values are saved in context:
+       *
+       *   A0 = SYS_syscall_return
+       *
+       * We need to restore the saved return address and return in
+       * unprivileged thread mode.
+       */
+
+#ifdef CONFIG_LIB_SYSCALL
+      case SYS_syscall_return:
+        {
+          struct tcb_s *rtcb = nxsched_self();
+          int index = (int)rtcb->xcp.nsyscalls - 1;
+
+          /* Make sure that there is a saved syscall return address. */
+
+          DEBUGASSERT(index >= 0);
+
+          /* Setup to return to the saved syscall return address in
+           * the original mode.
+           */
+
+          regs[REG_EPC]         = rtcb->xcp.syscall[index].sysreturn;
+#ifndef CONFIG_BUILD_FLAT
+          regs[REG_INT_CTX]     = rtcb->xcp.syscall[index].int_ctx;
+#endif
+
+          /* The return value must be in A0-A1.
+           * dispatch_syscall() temporarily moved the value for R0 into A2.
+           */
+
+          regs[REG_A0]         = regs[REG_A2];
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the outermost SYSCALL and if there is a saved user
+           * stack pointer, then restore the user stack pointer on this
+           * final return to user code.
+           */
+
+          if (index == 0 && rtcb->xcp.ustkptr != NULL)
+            {
+              regs[REG_SP]      = (uintptr_t)rtcb->xcp.ustkptr;
+              rtcb->xcp.ustkptr = NULL;
+            }
+#endif
+
+          /* Save the new SYSCALL nesting level */
+
+          rtcb->xcp.nsyscalls  = index;
+
+          /* Handle any signal actions that were deferred while processing
+           * the system call.
+           */
+
+          rtcb->flags          &= ~TCB_FLAG_SYSCALL;
+          nxsig_unmask_pendingsignal();
+        }
+        break;
+#endif
 
       /* R0=SYS_task_start:  This a user task start
        *
@@ -367,7 +391,6 @@ int riscv_swint(int irq, void *context, void *arg)
           if (rtcb->xcp.kstack != NULL)
             {
               uintptr_t usp;
-              uintptr_t *usr_regs;
 
               /* Store the current kernel stack pointer so it is not lost */
 
@@ -375,9 +398,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
               /* Copy "info" into user stack */
 
-              usr_regs = (uintptr_t *)((uintptr_t)rtcb->xcp.ktopstk -
-                                                  XCPTCONTEXT_SIZE);
-              usp = usr_regs[REG_SP];
+              usp = rtcb->xcp.saved_regs[REG_SP];
 
               /* Create a frame for info and copy the kernel info */
 
@@ -433,9 +454,66 @@ int riscv_swint(int irq, void *context, void *arg)
         break;
 #endif
 
-      default:
+      /* This is not an architecture-specify system call.  If NuttX is built
+       * as a standalone kernel with a system call interface, then all of the
+       * additional system calls must be handled as in the default case.
+       */
 
-        DEBUGPANIC();
+      default:
+        {
+#ifdef CONFIG_LIB_SYSCALL
+          struct tcb_s *rtcb = nxsched_self();
+          int index = rtcb->xcp.nsyscalls;
+
+          /* Verify that the SYS call number is within range */
+
+          DEBUGASSERT(up_current_regs()[REG_A0] < SYS_maxsyscall);
+
+          /* Make sure that we got here that there is a no saved syscall
+           * return address.  We cannot yet handle nested system calls.
+           */
+
+          DEBUGASSERT(index < CONFIG_SYS_NNEST);
+
+          /* Setup to return to dispatch_syscall in privileged mode. */
+
+          rtcb->xcp.syscall[index].sysreturn  = regs[REG_EPC];
+#ifndef CONFIG_BUILD_FLAT
+          rtcb->xcp.syscall[index].int_ctx    = regs[REG_INT_CTX];
+#endif
+
+          rtcb->xcp.nsyscalls  = index + 1;
+
+          regs[REG_EPC]        = (uintptr_t)dispatch_syscall;
+
+#ifndef CONFIG_BUILD_FLAT
+          regs[REG_INT_CTX]   |= STATUS_PPP; /* Privileged mode */
+#endif
+
+          /* Offset A0 to account for the reserved values */
+
+          regs[REG_A0]        -= CONFIG_SYS_RESERVED;
+
+          /* Indicate that we are in a syscall handler. */
+
+          rtcb->flags         |= TCB_FLAG_SYSCALL;
+#else
+          svcerr("ERROR: Bad SYS call: %" PRIdPTR "\n", regs[REG_A0]);
+#endif
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the first level system call, we must store the user
+           * stack pointer so it doesn't get lost.
+           */
+
+          if (index == 0 && rtcb->xcp.kstack != NULL)
+            {
+              DEBUGASSERT(rtcb->xcp.ustkptr == NULL);
+              rtcb->xcp.ustkptr = (uintptr_t *)regs[REG_SP];
+              regs[REG_SP]      = (uintptr_t)regs;
+            }
+#endif
+        }
         break;
     }
 
@@ -444,10 +522,10 @@ int riscv_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != CURRENT_REGS)
+  if (regs != up_current_regs())
     {
       svcinfo("SWInt Return: Context switch!\n");
-      up_dump_register(CURRENT_REGS);
+      up_dump_register(up_current_regs());
     }
   else
     {
