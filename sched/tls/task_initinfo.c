@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/tls/task_initinfo.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -54,7 +52,8 @@ static void task_init_stream(FAR struct streamlist *list)
   /* Initialize the list access mutex */
 
   nxmutex_init(&list->sl_lock);
-  sq_init(&list->sl_queue);
+  list->sl_head = NULL;
+  list->sl_tail = NULL;
 
   /* Initialize stdin, stdout and stderr stream */
 
@@ -120,15 +119,11 @@ int task_init_info(FAR struct task_group_s *group)
 
   /* Allocate task info for group */
 
-#ifdef CONFIG_MM_KERNEL_HEAP
   info = group_zalloc(group, sizeof(struct task_info_s));
   if (info == NULL)
     {
       return -ENOMEM;
     }
-#else
-  info = &group->tg_info_;
-#endif
 
   /* Initialize user space mutex */
 

@@ -1,8 +1,6 @@
 # ##############################################################################
 # binfmt/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -39,8 +37,7 @@ list(
   binfmt_exec.c
   binfmt_copyargv.c
   binfmt_copyactions.c
-  binfmt_dumpmodule.c
-  binfmt_coredump.c)
+  binfmt_dumpmodule.c)
 
 if(CONFIG_BINFMT_LOADABLE)
   list(APPEND SRCS binfmt_exit.c)

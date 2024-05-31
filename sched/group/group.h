@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/group/group.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -58,11 +56,11 @@ void task_initialize(void);
 
 /* Task group data structure management */
 
-int  group_initialize(FAR struct task_tcb_s *tcb, uint8_t ttype);
-void group_postinitialize(FAR struct task_tcb_s *tcb);
+int  group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype);
+void group_initialize(FAR struct task_tcb_s *tcb);
 #ifndef CONFIG_DISABLE_PTHREAD
-void group_bind(FAR struct pthread_tcb_s *tcb);
-void group_join(FAR struct pthread_tcb_s *tcb);
+int  group_bind(FAR struct pthread_tcb_s *tcb);
+int  group_join(FAR struct pthread_tcb_s *tcb);
 #endif
 void group_leave(FAR struct tcb_s *tcb);
 void group_drop(FAR struct task_group_s *group);

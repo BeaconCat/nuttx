@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/semaphore/semaphore.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -61,7 +59,7 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode);
 
 /* Handle semaphore timer expiration */
 
-void nxsem_timeout(wdparm_t pid);
+void nxsem_timeout(wdparm_t arg);
 
 /* Recover semaphore resources with a task or thread is destroyed */
 
