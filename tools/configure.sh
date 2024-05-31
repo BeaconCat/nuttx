@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # tools/configure.sh
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -26,7 +24,7 @@ TOPDIR="${WD}/.."
 MAKECMD="make"
 USAGE="
 
-USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [-L [boardname]] [-a <app-dir>] <board-selection> [make-opts]
+USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [L] [-a <app-dir>] <board-selection> [make-opts]
 
 Where:
   -E enforces distclean if already configured.
@@ -39,8 +37,7 @@ Where:
   -B selects the *BSD (B) host environment.
   Default: Use host setup in the defconfig file
   Default Windows: Cygwin
-  -L lists available configurations for given boards, or all boards if no
-     board is given. board name can be partial here.
+  -L  Lists all available configurations.
   -a <app-dir> is the path to the apps/ directory, relative to the nuttx
      directory
   <board-selection> is either:
@@ -73,13 +70,7 @@ unset distclean
 
 function dumpcfgs
 {
-  if [ -n "$1" ]; then
-    local boards=$(find ${TOPDIR}/boards -mindepth 3 -maxdepth 3 -type d -name "*$1*")
-    [ -z "$boards" ] && { echo board "$1" not found; return ;}
-    configlist=$(find $boards -name defconfig -type f)
-  else
-    configlist=$(find ${TOPDIR}/boards -name defconfig -type f)
-  fi
+  configlist=`find ${TOPDIR}/boards -name defconfig`
   for defconfig in ${configlist}; do
     config=`dirname ${defconfig} | sed -e "s,${TOPDIR}/boards/,,g"`
     boardname=`echo ${config} | cut -d'/' -f3`
@@ -118,8 +109,7 @@ while [ ! -z "$1" ]; do
     exit 0
     ;;
   -L )
-    shift
-    dumpcfgs $1
+    dumpcfgs
     exit 0
     ;;
   *)
@@ -223,7 +213,7 @@ echo "  Copy files"
 ln -sf ${src_makedefs} ${dest_makedefs} || \
   { echo "Failed to symlink ${src_makedefs}" ; exit 8 ; }
 ${TOPDIR}/tools/process_config.sh -I ${configpath}/../../common/configs \
-  -I ${configpath}/../common -o ${dest_config} ${src_config}
+  -I ${configpath}/../common -I ${configpath} -o ${dest_config} ${src_config}
 install -m 644 ${src_config} "${backup_config}" || \
   { echo "Failed to backup ${src_config}" ; exit 10 ; }
 
@@ -279,10 +269,6 @@ if [ -z "${appdir}" ]; then
 
   if [ -d "${TOPDIR}/../apps" ]; then
     appdir="../apps"
-  elif [ -d "${TOPDIR}/../nuttx-apps" ]; then
-    appdir="../nuttx-apps"
-  elif [ -d "${TOPDIR}/../nuttx-apps.git" ]; then
-    appdir="../nuttx-apps.git"
   else
     # Check for a versioned apps/ directory
 

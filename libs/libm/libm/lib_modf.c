@@ -29,9 +29,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/compiler.h>
-
 #include <stdint.h>
 #include <math.h>
 
@@ -40,7 +37,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_DOUBLE
-double modf(double x, FAR double *iptr)
+double modf(double x, double *iptr)
 {
   if (fabs(x) >= 4503599627370496.0)
     {

@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/ipfrag/ipfrag.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Handling incoming IPv4 and IPv6 fragment input
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -192,7 +191,7 @@ static void ip_fragin_timerout_expiry(wdparm_t arg)
 static void ip_fragin_timerwork(FAR void *arg)
 {
   clock_t curtick = clock_systime_ticks();
-  sclock_t interval;
+  sclock_t interval = 0;
   FAR sq_entry_t *entry;
   FAR sq_entry_t *entrynext;
   FAR struct ip_fragsnode_s *node;
