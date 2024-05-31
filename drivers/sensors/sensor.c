@@ -36,7 +36,7 @@
 #include <fcntl.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/mutex.h>
 #include <nuttx/sensors/sensor.h>
 
@@ -66,13 +66,21 @@ struct sensor_axis_map_s
   int8_t sign_z;
 };
 
-/* This structure describes sensor info */
+/* This structure describes sensor meta */
 
-struct sensor_info_s
+struct sensor_meta_s
 {
   unsigned long esize;
   FAR char *name;
 };
+
+typedef enum sensor_role_e
+{
+  SENSOR_ROLE_NONE,
+  SENSOR_ROLE_WR,
+  SENSOR_ROLE_RD,
+  SENSOR_ROLE_RDWR,
+} sensor_role_t;
 
 /* This structure describes user info of sensor, the user may be
  * advertiser or subscriber
@@ -84,9 +92,12 @@ struct sensor_user_s
 
   struct list_node node;       /* Node of users list */
   struct pollfd   *fds;        /* The poll structure of thread waiting events */
+  sensor_role_t    role;       /* The is used to indicate user's role based on open flags */
   bool             changed;    /* This is used to indicate event happens and need to
                                 * asynchronous notify other users
                                 */
+  unsigned int     event;      /* The event of this sensor, eg: SENSOR_EVENT_FLUSH_COMPLETE. */
+  bool             flushing;   /* The is used to indicate user is flushing */
   sem_t            buffersem;  /* Wakeup user waiting for data in circular buffer */
   size_t           bufferpos;  /* The index of user generation in buffer */
 
@@ -115,7 +126,7 @@ struct sensor_upperhalf_s
  ****************************************************************************/
 
 static void    sensor_pollnotify(FAR struct sensor_upperhalf_s *upper,
-                                 pollevent_t eventset);
+                                 pollevent_t eventset, sensor_role_t role);
 static int     sensor_open(FAR struct file *filep);
 static int     sensor_close(FAR struct file *filep);
 static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
@@ -145,7 +156,7 @@ static const struct sensor_axis_map_s g_remap_tbl[] =
   { 1, 0, 2,  1,  1, -1 }, /* P7 */
 };
 
-static const struct sensor_info_s g_sensor_info[] =
+static const struct sensor_meta_s g_sensor_meta[] =
 {
   {0,                                     NULL},
   {sizeof(struct sensor_accel),           "accel"},
@@ -284,7 +295,7 @@ static int sensor_update_interval(FAR struct file *filep,
 
   upper->state.min_interval = min_interval;
   user->state.interval = interval;
-  sensor_pollnotify(upper, POLLPRI);
+  sensor_pollnotify(upper, POLLPRI, SENSOR_ROLE_WR);
   return ret;
 }
 
@@ -350,7 +361,7 @@ update:
 
   upper->state.min_latency = min_latency;
   user->state.latency = latency;
-  sensor_pollnotify(upper, POLLPRI);
+  sensor_pollnotify(upper, POLLPRI, SENSOR_ROLE_WR);
   return ret;
 }
 
@@ -442,9 +453,17 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
 
   if (user->state.interval == ULONG_MAX)
     {
-      ret = circbuf_peekat(&upper->buffer,
-                           user->bufferpos * upper->state.esize,
-                           buffer, len);
+      if (buffer != NULL)
+        {
+          ret = circbuf_peekat(&upper->buffer,
+                        user->bufferpos * upper->state.esize,
+                        buffer, len);
+        }
+      else
+        {
+          ret = len;
+        }
+
       user->bufferpos += nums;
       circbuf_peekat(&upper->timing,
                      (user->bufferpos - 1) * TIMING_BUF_ESIZE,
@@ -492,9 +511,17 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
               ((user->state.generation + user->state.interval) << 1);
       if (delta >= 0)
         {
-          ret += circbuf_peekat(&upper->buffer,
-                                (pos - 1) * upper->state.esize,
-                                buffer + ret, upper->state.esize);
+          if (buffer != NULL)
+            {
+              ret += circbuf_peekat(&upper->buffer,
+                                    (pos - 1) * upper->state.esize,
+                                    buffer + ret, upper->state.esize);
+            }
+          else
+            {
+              ret += upper->state.esize;
+            }
+
           user->bufferpos = pos;
           user->state.generation += user->state.interval;
           if (ret >= len)
@@ -518,8 +545,14 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
 }
 
 static void sensor_pollnotify_one(FAR struct sensor_user_s *user,
-                                  pollevent_t eventset)
+                                  pollevent_t eventset,
+                                  sensor_role_t role)
 {
+  if (!(user->role & role))
+    {
+      return;
+    }
+
   if (eventset == POLLPRI)
     {
       user->changed = true;
@@ -529,13 +562,13 @@ static void sensor_pollnotify_one(FAR struct sensor_user_s *user,
 }
 
 static void sensor_pollnotify(FAR struct sensor_upperhalf_s *upper,
-                              pollevent_t eventset)
+                              pollevent_t eventset, sensor_role_t role)
 {
   FAR struct sensor_user_s *user;
 
   list_for_every_entry(&upper->userlist, user, struct sensor_user_s, node)
     {
-      sensor_pollnotify_one(user, eventset);
+      sensor_pollnotify_one(user, eventset, role);
     }
 }
 
@@ -575,11 +608,13 @@ static int sensor_open(FAR struct file *filep)
             }
         }
 
+      user->role |= SENSOR_ROLE_RD;
       upper->state.nsubscribers++;
     }
 
   if (filep->f_oflags & O_WROK)
     {
+      user->role |= SENSOR_ROLE_WR;
       upper->state.nadvertisers++;
       if (filep->f_oflags & SENSOR_PERSIST)
         {
@@ -590,12 +625,12 @@ static int sensor_open(FAR struct file *filep)
   if (upper->state.generation && lower->persist)
     {
       user->state.generation = upper->state.generation - 1;
-      user->bufferpos  = upper->timing.head / TIMING_BUF_ESIZE - 1;
+      user->bufferpos = upper->timing.head / TIMING_BUF_ESIZE - 1;
     }
   else
     {
       user->state.generation = upper->state.generation;
-      user->bufferpos  = upper->timing.head / TIMING_BUF_ESIZE;
+      user->bufferpos = upper->timing.head / TIMING_BUF_ESIZE;
     }
 
   user->state.interval = ULONG_MAX;
@@ -605,7 +640,7 @@ static int sensor_open(FAR struct file *filep)
 
   /* The new user generation, notify to other users */
 
-  sensor_pollnotify(upper, POLLPRI);
+  sensor_pollnotify(upper, POLLPRI, SENSOR_ROLE_WR);
 
   filep->f_priv = user;
   goto errout_with_lock;
@@ -663,7 +698,7 @@ static int sensor_close(FAR struct file *filep)
 
   /* The user is closed, notify to other users */
 
-  sensor_pollnotify(upper, POLLPRI);
+  sensor_pollnotify(upper, POLLPRI, SENSOR_ROLE_WR);
   nxrmutex_unlock(&upper->lock);
 
   kmm_free(user);
@@ -679,7 +714,7 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   FAR struct sensor_user_s *user = filep->f_priv;
   ssize_t ret;
 
-  if (!buffer || !len)
+  if (!len)
     {
       return -EINVAL;
     }
@@ -687,6 +722,11 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   nxrmutex_lock(&upper->lock);
   if (lower->ops->fetch)
     {
+      if (buffer == NULL)
+        {
+          return -EINVAL;
+        }
+
       if (!(filep->f_oflags & O_NONBLOCK))
         {
           nxrmutex_unlock(&upper->lock);
@@ -716,11 +756,18 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
     }
   else if (lower->persist)
     {
-      /* Persistent device can get latest old data if not updated. */
+      if (buffer == NULL)
+        {
+          ret = upper->state.esize;
+        }
+      else
+        {
+          /* Persistent device can get latest old data if not updated. */
 
-      ret = circbuf_peekat(&upper->buffer,
-                           (user->bufferpos - 1) * upper->state.esize,
-                           buffer, upper->state.esize);
+          ret = circbuf_peekat(&upper->buffer,
+                               (user->bufferpos - 1) * upper->state.esize,
+                               buffer, upper->state.esize);
+        }
     }
   else
     {
@@ -749,8 +796,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct sensor_lowerhalf_s *lower = upper->lower;
   FAR struct sensor_user_s *user = filep->f_priv;
   int ret = 0;
-
-  sninfo("cmd=%x arg=%08lx\n", cmd, arg);
 
   switch (cmd)
     {
@@ -866,6 +911,65 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
+      case SNIOC_GET_INFO:
+        {
+          if (lower->ops->get_info == NULL)
+            {
+              ret = -ENOTSUP;
+              break;
+            }
+
+          ret = lower->ops->get_info(lower, filep,
+                          (FAR struct sensor_device_info_s *)(uintptr_t)arg);
+        }
+        break;
+
+     case SNIOC_GET_EVENTS:
+        {
+          nxrmutex_lock(&upper->lock);
+          *(FAR unsigned int *)(uintptr_t)arg = user->event;
+          user->event = 0;
+          nxrmutex_unlock(&upper->lock);
+        }
+        break;
+
+     case SNIOC_FLUSH:
+        {
+          nxrmutex_lock(&upper->lock);
+
+          /* If the sensor is not activated, return -EINVAL. */
+
+          if (upper->state.nsubscribers == 0)
+            {
+              nxrmutex_unlock(&upper->lock);
+              return -EINVAL;
+            }
+
+          if (lower->ops->flush != NULL)
+            {
+              /* Lower half driver will do flush in asynchronous mode,
+               * flush will be completed until push event happened with
+               * bytes is zero.
+               */
+
+              ret = lower->ops->flush(lower, filep);
+              if (ret >= 0)
+                {
+                  user->flushing = true;
+                }
+            }
+          else
+            {
+              /* If flush is not supported, complete immediately */
+
+              user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
+              sensor_pollnotify_one(user, POLLPRI, user->role);
+            }
+
+          nxrmutex_unlock(&upper->lock);
+        }
+        break;
+
       default:
 
         /* Lowerhalf driver process other cmd. */
@@ -959,13 +1063,31 @@ static ssize_t sensor_push_event(FAR void *priv, FAR const void *data,
   int semcount;
   int ret;
 
-  envcount = bytes / upper->state.esize;
-  if (!envcount || bytes != envcount * upper->state.esize)
+  nxrmutex_lock(&upper->lock);
+  if (bytes == 0)
     {
+      list_for_every_entry(&upper->userlist, user, struct sensor_user_s,
+                           node)
+        {
+          if (user->flushing)
+            {
+              user->flushing = false;
+              user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
+              sensor_pollnotify_one(user, POLLPRI, user->role);
+            }
+        }
+
+      nxrmutex_unlock(&upper->lock);
+      return 0;
+    }
+
+  envcount = bytes / upper->state.esize;
+  if (bytes != envcount * upper->state.esize)
+    {
+      nxrmutex_unlock(&upper->lock);
       return -EINVAL;
     }
 
-  nxrmutex_lock(&upper->lock);
   if (!circbuf_is_init(&upper->buffer))
     {
       /* Initialize sensor buffer when data is first generated */
@@ -1000,7 +1122,7 @@ static ssize_t sensor_push_event(FAR void *priv, FAR const void *data,
               nxsem_post(&user->buffersem);
             }
 
-          sensor_pollnotify_one(user, POLLIN);
+          sensor_pollnotify_one(user, POLLIN, SENSOR_ROLE_RD);
         }
     }
 
@@ -1023,7 +1145,7 @@ static void sensor_notify_event(FAR void *priv)
           nxsem_post(&user->buffersem);
         }
 
-      sensor_pollnotify_one(user, POLLIN);
+      sensor_pollnotify_one(user, POLLIN, SENSOR_ROLE_RD);
     }
 
   nxrmutex_unlock(&upper->lock);
@@ -1095,11 +1217,11 @@ int sensor_register(FAR struct sensor_lowerhalf_s *lower, int devno)
   DEBUGASSERT(lower != NULL);
 
   snprintf(path, PATH_MAX, DEVNAME_FMT,
-           g_sensor_info[lower->type].name,
+           g_sensor_meta[lower->type].name,
            lower->uncalibrated ? DEVNAME_UNCAL : "",
            devno);
   return sensor_custom_register(lower, path,
-                                g_sensor_info[lower->type].esize);
+                                g_sensor_meta[lower->type].esize);
 }
 
 /****************************************************************************
@@ -1187,7 +1309,7 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   if (lower == NULL)
     {
       ret = -EIO;
-      goto drv_err;
+      goto rpmsg_err;
     }
 #endif
 
@@ -1203,6 +1325,11 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   return ret;
 
 drv_err:
+#ifdef CONFIG_SENSORS_RPMSG
+  sensor_rpmsg_unregister(lower);
+rpmsg_err:
+#endif
+
   nxrmutex_destroy(&upper->lock);
 
   kmm_free(upper);
@@ -1229,7 +1356,7 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
   char path[PATH_MAX];
 
   snprintf(path, PATH_MAX, DEVNAME_FMT,
-           g_sensor_info[lower->type].name,
+           g_sensor_meta[lower->type].name,
            lower->uncalibrated ? DEVNAME_UNCAL : "",
            devno);
   sensor_custom_unregister(lower, path);
