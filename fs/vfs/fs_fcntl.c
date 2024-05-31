@@ -35,6 +35,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "lock.h"
 
 /****************************************************************************
  * Private Functions
@@ -196,8 +197,8 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
          */
 
         {
-          ret = file_ioctl(filep, FIOC_GETLK,
-                           va_arg(ap, FAR struct flock *));
+          FAR struct flock *flock = va_arg(ap, FAR struct flock *);
+          ret = file_getlk(filep, flock);
         }
 
         break;
@@ -213,8 +214,8 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
          */
 
         {
-          ret = file_ioctl(filep, FIOC_SETLK,
-                           va_arg(ap, FAR struct flock *));
+          FAR struct flock *flock = va_arg(ap, FAR struct flock *);
+          ret = file_setlk(filep, flock, true);
         }
 
         break;
@@ -229,8 +230,8 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
          */
 
         {
-          ret = file_ioctl(filep, FIOC_SETLKW,
-                           va_arg(ap, FAR struct flock *));
+          FAR struct flock *flock = va_arg(ap, FAR struct flock *);
+          ret = file_setlk(filep, flock, false);
         }
 
         break;
