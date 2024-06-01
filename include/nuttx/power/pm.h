@@ -145,8 +145,6 @@ enum pm_state_e
   PM_COUNT,
 };
 
-typedef void (*pm_idle_handler_t)(enum pm_state_e);
-
 #ifdef CONFIG_PM_PROCFS
 struct pm_preparefail_s
 {
@@ -224,7 +222,7 @@ struct pm_callback_s
                       enum pm_state_e pmstate);
 
 #ifdef CONFIG_PM_PROCFS
-  struct pm_preparefail_s preparefail;
+  struct pm_preparefail_s preparefail[CONFIG_PM_NDOMAINS];
 #endif
 };
 
@@ -442,15 +440,14 @@ int pm_set_governor(int domain, FAR const struct pm_governor_s *gov);
 void pm_auto_update(int domain, bool auto_update);
 
 /****************************************************************************
- * Name: pm_domain_register
+ * Name: pm_register
  *
  * Description:
  *   This function is called by a device driver in order to register to
  *   receive power management event callbacks.
  *
  * Input Parameters:
- *   domain - Target register domain.
- *   cb     - An instance of struct pm_callback_s providing the driver
+ *   callbacks - An instance of struct pm_callback_s providing the driver
  *               callback functions.
  *
  * Returned Value:
@@ -458,20 +455,17 @@ void pm_auto_update(int domain, bool auto_update);
  *
  ****************************************************************************/
 
-int pm_domain_register(int domain, FAR struct pm_callback_s *cb);
-
-#define pm_register(cb) pm_domain_register(PM_IDLE_DOMAIN, cb)
+int pm_register(FAR struct pm_callback_s *callbacks);
 
 /****************************************************************************
- * Name: pm_domain_unregister
+ * Name: pm_unregister
  *
  * Description:
  *   This function is called by a device driver in order to unregister
  *   previously registered power management event callbacks.
  *
  * Input parameters:
- *   domain - Target unregister domain.
- *   cb     - An instance of struct pm_callback_s providing the driver
+ *   callbacks - An instance of struct pm_callback_s providing the driver
  *               callback functions.
  *
  * Returned Value:
@@ -479,9 +473,7 @@ int pm_domain_register(int domain, FAR struct pm_callback_s *cb);
  *
  ****************************************************************************/
 
-int pm_domain_unregister(int domain, FAR struct pm_callback_s *cb);
-
-#define pm_unregister(cb) pm_domain_unregister(PM_IDLE_DOMAIN, cb)
+int pm_unregister(FAR struct pm_callback_s *callbacks);
 
 /****************************************************************************
  * Name: pm_activity
@@ -818,22 +810,6 @@ enum pm_state_e pm_querystate(int domain);
  ****************************************************************************/
 
 void pm_auto_updatestate(int domain);
-
-/****************************************************************************
- * Name: pm_idle
- *
- * Description:
- *   Standard pm idle work flow for up_idle, for not smp case.
- *
- * Input Parameters:
- *   handler - The execution after PM_IDLE_DOMAIN state changed.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void pm_idle(pm_idle_handler_t handler);
 
 #undef EXTERN
 #ifdef __cplusplus

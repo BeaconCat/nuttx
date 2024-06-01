@@ -38,15 +38,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_domain_unregister
+ * Name: pm_unregister
  *
  * Description:
  *   This function is called by a device driver in order to unregister
  *   previously registered power management event callbacks.
  *
  * Input parameters:
- *   domain - Target unregister domain.
- *   cb     - An instance of struct pm_callback_s providing the driver
+ *   callbacks - An instance of struct pm_callback_s providing the driver
  *               callback functions.
  *
  * Returned Value:
@@ -54,17 +53,19 @@
  *
  ****************************************************************************/
 
-int pm_domain_unregister(int domain, FAR struct pm_callback_s *cb)
+int pm_unregister(FAR struct pm_callback_s *callbacks)
 {
   irqstate_t flags;
-  struct pm_domain_s *pdom = &g_pmdomains[domain];
-  flags = spin_lock_irqsave(&pdom->lock);
+
+  DEBUGASSERT(callbacks);
 
   /* Remove entry from the list of registered callbacks. */
 
-  dq_rem(&cb->entry, &pdom->registry);
-  spin_unlock_irqrestore(&pdom->lock, flags);
-  return OK;
+  flags = pm_lock(&g_pmglobals.reglock);
+  dq_rem(&callbacks->entry, &g_pmglobals.registry);
+  pm_unlock(&g_pmglobals.reglock, flags);
+
+  return 0;
 }
 
 #endif /* CONFIG_PM */
