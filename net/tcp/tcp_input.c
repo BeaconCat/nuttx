@@ -1,6 +1,7 @@
 /****************************************************************************
  * net/tcp/tcp_input.c
- * Handling incoming TCP input
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright (C) 2007-2014, 2017-2019, 2020 Gregory Nutt. All rights
  *     reserved.
@@ -1173,27 +1174,6 @@ found:
       seq = tcp_getsequence(tcp->seqno);
       rcvseq = tcp_getsequence(conn->rcvseq);
 
-      /* According to RFC793, Section 3.4, Page 33.
-       * In the SYN_SENT state, if receive a ACK without SYN,
-       * we should reset the connection and retransmit the SYN.
-       */
-
-      if (((conn->tcpstateflags & TCP_STATE_MASK) == TCP_SYN_SENT) &&
-          ((tcp->flags & TCP_SYN) == 0 && (tcp->flags & TCP_ACK) != 0))
-        {
-          /* Send the RST to close the half-open connection. */
-
-          tcp_reset(dev, conn);
-
-          /* Retransmit the SYN as soon as possible in order to establish
-           * the tcp connection.
-           */
-
-          tcp_update_retrantimer(conn, 1);
-
-          return;
-        }
-
       if (seq != rcvseq)
         {
           /* Trim the head of the segment */
@@ -1213,15 +1193,18 @@ found:
                   return;
                 }
             }
-          else if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
+          else
             {
 #ifdef CONFIG_NET_TCP_OUT_OF_ORDER
               /* Queue out-of-order segments. */
 
               tcp_input_ofosegs(dev, conn, iplen);
 #endif
-              tcp_send(dev, conn, TCP_ACK, tcpiplen);
-              return;
+              if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
+                {
+                  tcp_send(dev, conn, TCP_ACK, tcpiplen);
+                  return;
+                }
             }
         }
     }

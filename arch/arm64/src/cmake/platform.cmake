@@ -1,5 +1,5 @@
 # ##############################################################################
-# ./arch/arm64/src/cmake/platform.cmake
+# arch/arm64/src/cmake/platform.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -56,7 +56,7 @@ if(CONFIG_LIBSUPCXX)
     OUTPUT_VARIABLE extra_library)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a
@@ -67,4 +67,4 @@ endif()
 
 nuttx_add_extra_library(${EXTRA_LIB})
 
-set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

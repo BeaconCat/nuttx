@@ -405,7 +405,6 @@ static int ez80_setrelative(FAR struct rtc_lowerhalf_s *lower,
   struct tm time;
   time_t seconds;
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->id == 0);
 
@@ -413,7 +412,7 @@ static int ez80_setrelative(FAR struct rtc_lowerhalf_s *lower,
    * about being suspended and working on an old time.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Get the current time in broken out format */
 
@@ -442,7 +441,7 @@ static int ez80_setrelative(FAR struct rtc_lowerhalf_s *lower,
       ret = ez80_setalarm(lower, &setalarm);
     }
 
-  leave_critical_section(flags);
+  sched_unlock();
   return ret;
 }
 #endif
@@ -517,7 +516,6 @@ static int ez80_rdalarm(FAR struct rtc_lowerhalf_s *lower,
                         FAR struct lower_rdalarm_s *alarminfo)
 {
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL &&
               alarminfo->time != NULL && alarminfo->id == 0);
@@ -526,9 +524,9 @@ static int ez80_rdalarm(FAR struct rtc_lowerhalf_s *lower,
    * about being suspended and working on an old time.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
   ret = ez80_rtc_rdalarm((FAR struct tm *)alarminfo->time);
-  leave_critical_section(flags);
+  sched_unlock();
 
   return ret;
 }
