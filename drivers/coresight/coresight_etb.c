@@ -30,7 +30,6 @@
 #include <nuttx/bits.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/irq.h>
 
 #include <nuttx/coresight/coresight_etb.h>
 
