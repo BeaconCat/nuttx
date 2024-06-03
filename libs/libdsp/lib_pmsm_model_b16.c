@@ -22,6 +22,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <assert.h>
 #include <dspb16.h>
 #include <string.h>
 
