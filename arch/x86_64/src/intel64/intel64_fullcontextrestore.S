@@ -115,14 +115,8 @@ x86_64_fullcontextrestore:
 	* XXX: Should use wrgsbase and wrfsbase to restore the gs and fs register
 	*/
 
-#ifndef CONFIG_ARCH_X86_64_HAVE_XSAVE
-	/* Restore xmm registers */
+	/* restore xmm registers */
 	fxrstorq (%rdi)
-#else
-	movl     $XSAVE_STATE_COMPONENTS, %eax
-	xor      %edx, %edx
-	xrstor   (%rdi)
-#endif
 
 	/* Restore the correct value of EAX and then return */
 
