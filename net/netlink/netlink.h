@@ -455,21 +455,16 @@ netlink_tryget_response(FAR struct netlink_conn_s *conn);
  *   Note:  The network will be momentarily locked to support exclusive
  *   access to the pending response list.
  *
- * Input Parameters:
- *   conn     - The Netlink connection
- *   response - The next response from the head of the pending response list
- *              is returned.  This function will block until a response is
- *              received if the pending response list is empty.  NULL will be
- *              returned only in the event of a failure.
- *
  * Returned Value:
- *   Zero (OK) is returned if the notification was successfully set up.
- *   A negated error value is returned if an unexpected error occurred
+ *   The next response from the head of the pending response list is
+ *   returned.  This function will block until a response is received if
+ *   the pending response list is empty.  NULL will be returned only in the
+ *   event of a failure.
  *
  ****************************************************************************/
 
-int netlink_get_response(FAR struct netlink_conn_s *conn,
-                         FAR struct netlink_response_s **response);
+FAR struct netlink_response_s *
+netlink_get_response(FAR struct netlink_conn_s *conn);
 
 /****************************************************************************
  * Name: netlink_check_response
@@ -567,7 +562,7 @@ void netlink_neigh_notify(FAR const void *neigh, int type, int domain);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_NETLINK_DISABLE_NEWPREFIX) || !defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NETLINK_DISABLE_NEWPREFIX) || !defined(CONFIG_NET_IPV6)
 #  define netlink_ipv6_prefix_notify(dev, type, pinfo)
 #else
 void netlink_ipv6_prefix_notify(FAR struct net_driver_s *dev, int type,

@@ -68,16 +68,17 @@ extern "C"
  ****************************************************************************/
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
+ * register storage structure.  It is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile xcpt_reg_t *g_current_regs[CONFIG_SMP_NCPUS];
+EXTERN volatile void *g_current_regs[CONFIG_SMP_NCPUS];
+#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 /****************************************************************************
  * Public Function Prototypes
@@ -123,16 +124,6 @@ void up_irq_enable(void);
  * Inline functions
  ****************************************************************************/
 
-static inline_function xcpt_reg_t *up_current_regs(void)
-{
-  return (xcpt_reg_t *)g_current_regs[up_cpu_index()];
-}
-
-static inline_function void up_set_current_regs(xcpt_reg_t *regs)
-{
-  g_current_regs[up_cpu_index()] = regs;
-}
-
 /* Return the current value of the stack pointer */
 
 static inline uintptr_t up_getsp(void)
@@ -156,13 +147,13 @@ static inline uintptr_t up_getsp(void)
  ****************************************************************************/
 
 noinstrument_function
-static inline_function bool up_interrupt_context(void)
+static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = up_current_regs() != NULL;
+  bool ret = CURRENT_REGS != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -170,19 +161,6 @@ static inline_function bool up_interrupt_context(void)
 
   return ret;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- *
- * Description:
- *   Get the PC value, The interrupted context PC register cannot be
- *   correctly obtained in sim It will return the PC of the interrupt
- *   handler function, normally it will return sim_doirq
- *
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((xcpt_reg_t *)((regs) ? (regs) : up_current_regs()))[JB_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
