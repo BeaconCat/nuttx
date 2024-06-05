@@ -53,6 +53,8 @@
 #  define CONFIG_LIBC_HOMEDIR "/"
 #endif
 
+#define LIB_BUFLEN_UNKNOWN INT_MAX
+
 #if ((!defined(CONFIG_LIBC_PREVENT_MEMCHR_USER) && !defined(__KERNEL__))  || \
      (!defined(CONFIG_LIBC_PREVENT_MEMCHR_KERNEL) && defined(__KERNEL__)))
 #  define LIBC_BUILD_MEMCHR
@@ -151,12 +153,6 @@
 #if ((!defined(CONFIG_LIBC_PREVENT_STRRCHR_USER) && !defined(__KERNEL__))  || \
      (!defined(CONFIG_LIBC_PREVENT_STRRCHR_KERNEL) && defined(__KERNEL__)))
 #  define LIBC_BUILD_STRRCHR
-#endif
-
-#ifdef CONFIG_MM_KASAN
-#  define ARCH_LIBCFUN(x)  arch_##x
-#else
-#  define ARCH_LIBCFUN(x)  x
 #endif
 
 /****************************************************************************

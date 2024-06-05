@@ -90,10 +90,11 @@ void ipcc_rxfree_notify(FAR struct ipcc_driver_s *priv)
 
   /* Notify all blocked readers that data is available to read */
 
-  while (nxsem_get_value(&priv->rxsem, &semval) >= 0 && semval <= 0)
+  do
     {
       nxsem_post(&priv->rxsem);
     }
+  while (nxsem_get_value(&priv->rxsem, &semval) == 0 && semval <= 0);
 }
 
 /****************************************************************************
