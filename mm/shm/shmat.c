@@ -36,8 +36,6 @@
 
 #include "shm/shm.h"
 
-#ifdef CONFIG_MM_SHM
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -222,7 +220,7 @@ FAR void *shmat(int shmid, FAR const void *shmaddr, int shmflg)
 
   /* Get the TCB and group containing our virtual memory allocator */
 
-  tcb = nxsched_self();
+  tcb = this_task();
   DEBUGASSERT(tcb && tcb->group);
 
   group = tcb->group;
@@ -306,4 +304,3 @@ errout_with_ret:
   return (FAR void *)ERROR;
 }
 
-#endif /* CONFIG_MM_SHM */
