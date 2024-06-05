@@ -43,6 +43,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Avoid undefined error when CONFIG_SPINLOCK=n */
+
+#ifndef spin_lock
+#  define spin_lock(s)
+#endif
+
 #define IRQ_STACK_ALLOC (IRQ_STACK_SIZE * CONFIG_SMP_NCPUS)
 
 /****************************************************************************
@@ -58,8 +64,8 @@ struct intel64_cpu_s g_cpu_priv[CONFIG_SMP_NCPUS];
 
 /* Allocate stack for interrupts and isr */
 
-uint8_t  g_intstackalloc[IRQ_STACK_ALLOC] aligned_data(64);
-uint8_t  g_isrstackalloc[IRQ_STACK_ALLOC] aligned_data(64);
+uint8_t  g_intstackalloc[IRQ_STACK_ALLOC] aligned_data(16);
+uint8_t  g_isrstackalloc[IRQ_STACK_ALLOC] aligned_data(16);
 
 /****************************************************************************
  * Private Functions
