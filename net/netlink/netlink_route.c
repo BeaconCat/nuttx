@@ -696,10 +696,7 @@ netlink_get_neighbor(FAR const void *neigh, int domain, int type,
 
   if (req == NULL)
     {
-      if (neigh == NULL)
-        {
-          return NULL;
-        }
+      DEBUGASSERT(neigh != NULL);
 
       /* Only one entry need to notify */
 
@@ -807,9 +804,8 @@ netlink_get_ipv4_route(FAR const struct net_route_ipv4_s *route, int type,
 /****************************************************************************
  * Name: netlink_ipv4route_callback
  *
- * Input Parameters:
- *   route - The entry of IPV4 routing table.
- *   arg   - The netlink info of request.
+ * Description:
+ *   Response netlink message from ipv4 route list.
  *
  ****************************************************************************/
 
@@ -925,10 +921,6 @@ netlink_get_ipv6_route(FAR const struct net_route_ipv6_s *route, int type,
  *
  * Description:
  *   Response netlink message from ipv6 route list.
- *
- * Input Parameters:
- *   route - The entry of IPV6 routing table.
- *   arg   - The netlink info of request.
  *
  ****************************************************************************/
 
@@ -1276,7 +1268,7 @@ static int netlink_get_addr(NETLINK_HANDLE handle,
 }
 #endif
 
-#if !defined(CONFIG_NETLINK_DISABLE_NEWADDR) && defined(CONFIG_NET_IPV6)
+#if !defined(CONFIG_NETLINK_DISABLE_NEWADDR) && defined(CONFIG_NET_IPv6)
 static FAR struct netlink_response_s *
 netlink_fill_ipv6prefix(FAR struct net_driver_s *dev, int type,
                         FAR const struct icmpv6_prefixinfo_s *pinfo)
@@ -1669,7 +1661,7 @@ void netlink_neigh_notify(FAR const void *neigh, int type, int domain)
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_NETLINK_DISABLE_NEWADDR) && defined(CONFIG_NET_IPV6)
+#if !defined(CONFIG_NETLINK_DISABLE_NEWADDR) && defined(CONFIG_NET_IPv6)
 void netlink_ipv6_prefix_notify(FAR struct net_driver_s *dev, int type,
                                 FAR const struct icmpv6_prefixinfo_s *pinfo)
 {
