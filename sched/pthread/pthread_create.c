@@ -40,7 +40,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/pthread.h>
 
-#include "task/task.h"
 #include "sched/sched.h"
 #include "group/group.h"
 #include "clock/clock.h"
@@ -181,6 +180,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   FAR struct pthread_tcb_s *ptcb;
   struct sched_param param;
   FAR struct tcb_s *parent;
+  irqstate_t flags;
   int policy;
   int errcode;
   pid_t pid;
@@ -209,7 +209,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Allocate a TCB for the new task. */
 
-  ptcb = kmm_zalloc(sizeof(struct pthread_tcb_s));
+  ptcb = (FAR struct pthread_tcb_s *)
+            kmm_zalloc(sizeof(struct pthread_tcb_s));
   if (!ptcb)
     {
       serr("ERROR: Failed to allocate TCB\n");
@@ -217,10 +218,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     }
 
   ptcb->cmn.flags |= TCB_FLAG_FREE_TCB;
-
-  /* Initialize the task join */
-
-  nxtask_joininit(&ptcb->cmn);
 
   /* Bind the parent's group to the new TCB (we have not yet joined the
    * group).
@@ -236,7 +233,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 #ifdef CONFIG_ARCH_ADDRENV
   /* Share the address environment of the parent task group. */
 
-  ret = addrenv_join(this_task(), (FAR struct tcb_s *)ptcb);
+  ret = addrenv_join(parent, (FAR struct tcb_s *)ptcb);
   if (ret < 0)
     {
       errcode = -ret;
@@ -344,8 +341,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
       /* Convert timespec values to system clock ticks */
 
-      clock_time2ticks(&param.sched_ss_repl_period, &repl_ticks);
-      clock_time2ticks(&param.sched_ss_init_budget, &budget_ticks);
+      repl_ticks = clock_time2ticks(&param.sched_ss_repl_period);
+      budget_ticks = clock_time2ticks(&param.sched_ss_init_budget);
 
       /* The replenishment period must be greater than or equal to the
        * budget period.
@@ -391,7 +388,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   /* Initialize the task control block */
 
   ret = pthread_setup_scheduler(ptcb, param.sched_priority, pthread_start,
-                                entry);
+                                entry, parent);
   if (ret != OK)
     {
       errcode = EBUSY;
@@ -462,24 +459,22 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Then activate the task */
 
-  sched_lock();
   if (ret == OK)
     {
-      nxtask_activate((FAR struct tcb_s *)ptcb);
-
-      /* Return the thread information to the caller */
+      /* Return the thread information to the caller and new thread */
 
       if (thread)
         {
           *thread = (pthread_t)pid;
         }
 
-      sched_unlock();
+      nxtask_activate((FAR struct tcb_s *)ptcb);
     }
   else
     {
-      sched_unlock();
-      dq_rem((FAR dq_entry_t *)ptcb, list_inactivetasks());
+      flags = spin_lock_irqsave(NULL);
+      dq_rem((FAR dq_entry_t *)ptcb, &g_inactivetasks);
+      spin_unlock_irqrestore(NULL, flags);
 
       errcode = EIO;
       goto errout_with_tcb;

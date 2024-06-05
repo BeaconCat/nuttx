@@ -82,7 +82,6 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
   va_list ap;
   mode_t mode;
   unsigned int value;
-  int errcode;
 
   /* Make sure that a non-NULL name is supplied */
 
@@ -112,10 +111,10 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
   /* Let nxsem_open() do the work */
 
-  errcode = nxsem_open(&sem, name, oflags, mode, value);
-  if (errcode < 0)
+  sem = nxsem_open(name, oflags, mode, value);
+  if (sem < 0)
     {
-      set_errno(-errcode);
+      set_errno(-((intptr_t)sem));
       return SEM_FAILED;
     }
 
