@@ -36,7 +36,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 #include <nuttx/semaphore.h>
 #include <time.h>
 #include <inttypes.h>
@@ -89,12 +89,8 @@
                                              * int Y threshold value
                                              */
 
-#define TSIOC_GRAB           _TSIOC(0x000e) /* arg: Pointer to
-                                             * int for enable grab
-                                             */
-
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            14              /* Thirteen common commands */
+#define TSC_NCMDS            13              /* Thirteen common commands */
 
 /* Backward compatible IOCTL */
 
