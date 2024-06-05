@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/Make.defs
+include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
 include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_ARMV7A),y)          # ARMv7-A
@@ -117,7 +117,7 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
     LDENDGROUP   ?= -Wl,--end-group
     LDFLAGS      := $(addprefix -Xlinker ,$(LDFLAGS))
     LDFLAGS      += $(filter-out $(STRIPCFLAGS),$(CFLAGS))
-  else ifneq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
+  else
     LDSTARTGROUP ?= --start-group
     LDENDGROUP   ?= --end-group
   endif

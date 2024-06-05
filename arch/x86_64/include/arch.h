@@ -31,8 +31,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/types.h>
-
 /* Include chip-specific definitions */
 
 #  include <arch/chip/arch.h>
@@ -47,17 +45,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* 4 levels of page table.
- * NOTE: in this implementation:
- *   PTL4 index = 0
- *   PDPT index = 1
- *   PD   index = 2
- *   PT   index = 3
- */
-
-#define ARCH_PGT_MAX_LEVELS 4
-#define ARCH_SPGTS          (ARCH_PGT_MAX_LEVELS - 1)
-
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
@@ -65,44 +52,6 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-
-#ifdef CONFIG_ARCH_ADDRENV
-#ifndef __ASSEMBLY__
-
-/* The task group resources are retained in a single structure, task_group_s
- * that is defined in the header file nuttx/include/nuttx/sched.h. The type
- * arch_addrenv_t must be defined by platform specific logic in
- * nuttx/arch/<architecture>/include/arch.h.
- */
-
-struct arch_addrenv_s
-{
-  /* Physical addresses of the static page tables here, these
-   * are allocated when a task is created:
-   *
-   *   spgtables[0] - PML4
-   *   spgtables[1] - PDPT
-   *   spgtables[2] - PD
-   *   PT - dynamic allocation
-   */
-
-  uintptr_t spgtables[ARCH_SPGTS];
-
-  /* The text, data, heap bases and heap size here */
-
-  uintptr_t textvbase;
-  uintptr_t datavbase;
-  uintptr_t heapvbase;
-  size_t    heapsize;
-
-  /* The page directory root (pml4) is stored in CR3 register */
-
-  uintptr_t cr3;
-};
-
-typedef struct arch_addrenv_s arch_addrenv_t;
-#endif /* __ASSEMBLY__ */
-#endif /* CONFIG_ARCH_ADDRENV */
 
 /****************************************************************************
  * Public Data
