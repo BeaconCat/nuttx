@@ -44,6 +44,9 @@ struct note_sysview_driver_s
 {
   struct note_driver_s driver;
   unsigned int irq[CONFIG_SMP_NCPUS];
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  struct note_filter_syscall_s syscall_marker;
+#endif
 };
 
 /****************************************************************************
@@ -115,17 +118,6 @@ static const struct note_driver_ops_s g_note_sysview_ops =
 static struct note_sysview_driver_s g_note_sysview_driver =
 {
   {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    "sysview",
-    {
-      {
-        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  endif
-      },
-    },
-#endif
     &g_note_sysview_ops
   }
 };
@@ -255,7 +247,7 @@ static void note_sysview_irqhandler(FAR struct note_driver_s *drv, int irq,
 
   if (enter)
     {
-      driver->irq[up_cpu_index()] = irq;
+      driver->irq[this_cpu()] = irq;
 
       SEGGER_SYSVIEW_OnTaskStopExec();
       SEGGER_SYSVIEW_RecordEnterISR();
@@ -266,7 +258,7 @@ static void note_sysview_irqhandler(FAR struct note_driver_s *drv, int irq,
 
       if (up_interrupt_context())
         {
-          FAR struct tcb_s *tcb = this_task_irq();
+          FAR struct tcb_s *tcb = this_task();
 
           if (tcb && !is_idle_task(tcb))
             {
@@ -278,7 +270,7 @@ static void note_sysview_irqhandler(FAR struct note_driver_s *drv, int irq,
             }
         }
 
-      driver->irq[up_cpu_index()] = 0;
+      driver->irq[this_cpu()] = 0;
     }
 }
 #endif
@@ -293,8 +285,7 @@ static void note_sysview_syscall_enter(FAR struct note_driver_s *drv, int nr,
 
   /* Set the name marker if the current syscall nr is not active */
 
-  if (NOTE_FILTER_SYSCALLMASK_ISSET(nr,
-                          &driver->driver.filter.syscall_mask) == 0)
+  if (NOTE_FILTER_SYSCALLMASK_ISSET(nr, &driver->syscall_marker) == 0)
     {
       /* Set the name marker */
 
@@ -302,18 +293,16 @@ static void note_sysview_syscall_enter(FAR struct note_driver_s *drv, int nr,
 
       /* Mark the syscall active */
 
-      NOTE_FILTER_SYSCALLMASK_SET(nr, &driver->driver.filter.syscall_mask);
+      NOTE_FILTER_SYSCALLMASK_SET(nr, &driver->syscall_marker);
 
       /* Use the Syscall "0" to identify whether the syscall is enabled,
        * if the host tool is closed abnormally, use this bit to clear
        * the active set.
        */
 
-      if (NOTE_FILTER_SYSCALLMASK_ISSET(0,
-                              &driver->driver.filter.syscall_mask) == 0)
+      if (NOTE_FILTER_SYSCALLMASK_ISSET(0, &driver->syscall_marker) == 0)
         {
-          NOTE_FILTER_SYSCALLMASK_SET(0,
-                              &driver->driver.filter.syscall_mask);
+          NOTE_FILTER_SYSCALLMASK_SET(0, &driver->syscall_marker);
         }
     }
 
@@ -327,7 +316,7 @@ static void note_sysview_syscall_leave(FAR struct note_driver_s *drv,
       (FAR struct note_sysview_driver_s *)drv;
   nr -= CONFIG_SYS_RESERVED;
 
-  if (NOTE_FILTER_SYSCALLMASK_ISSET(nr, &driver->driver.filter.syscall_mask))
+  if (NOTE_FILTER_SYSCALLMASK_ISSET(nr, &driver->syscall_marker) != 0)
     {
       SEGGER_SYSVIEW_MarkStop(nr);
     }
@@ -348,7 +337,7 @@ static void note_sysview_syscall_leave(FAR struct note_driver_s *drv,
 
 unsigned int note_sysview_get_interrupt_id(void)
 {
-  return g_note_sysview_driver.irq[up_cpu_index()];
+  return g_note_sysview_driver.irq[this_cpu()];
 }
 
 /****************************************************************************

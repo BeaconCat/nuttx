@@ -58,32 +58,6 @@ static uint8_t    g_fdcheck_tag = 0;
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: fdcheck_restore
- *
- * Description: Obtain original fd information
- *
- * Val carries the pid, tag and fd information.
- * The original fd information is stored in low bit of val.
- * The pid and tag information is stored in the high bit of val.
- * For ease of understanding, let's give an example where
- * the following information is represented in 32-bit binary format
- *
- *  val       00000000 01010101 00000001 10001010
- *  fd        00000000 00000000 00000000 10001010
- *  pid       00000000 00000000 00000000 01010101
- *  tag       00000000 00000000 00000000 00000001
- *
- * In this function, we also check if the pid and tag information is correct.
- * If there is an error, it will panic.
- *
- * Input Parameters:
- *   val - this val carrying pid, tag and original fd information
- *
- * Returned Value: The original fd is returned.
- *
- ****************************************************************************/
-
 int fdcheck_restore(int val)
 {
   uint8_t tag_store;
@@ -112,29 +86,6 @@ int fdcheck_restore(int val)
   return fd;
 }
 
-/****************************************************************************
- * Name: fdcheck_protect
- *
- * Description: Obtain the combined value of fd, pid and tag
- *
- * the return value carries the pid, tag and fd information.
- * The original fd information is stored in low bit of val.
- * The pid and tag information is stored in high bit of val.
- * For ease of understanding, let's give an example where
- * the following information is represented in 32-bit binary format
- *
- *  fd        00000000 00000000 00000000 10001010
- *  pid       00000000 00000000 00000000 01010101
- *  tag       00000000 00000000 00000000 00000001
- *  val       00000000 01010101 00000001 10001010
- *
- * Input Parameters:
- *   fd - original fd
- *
- * Returned Value: the combined value of fd and pid
- *
- ****************************************************************************/
-
 int fdcheck_protect(int fd)
 {
   int protect_fd;
@@ -151,8 +102,6 @@ int fdcheck_protect(int fd)
   DEBUGASSERT(ret >= 0);
   if (tag == 0)
     {
-      uint8_t fdcheck_tag;
-
       irqstate_t flags = spin_lock_irqsave(&g_fdcheck_lock);
       if ((++g_fdcheck_tag & TAG_MASK) == 0)
         {
@@ -161,11 +110,9 @@ int fdcheck_protect(int fd)
 
       g_fdcheck_tag &= TAG_MASK;
       protect_fd |= g_fdcheck_tag << TAG_SHIFT;
-      fdcheck_tag = g_fdcheck_tag;
-      spin_unlock_irqrestore(&g_fdcheck_lock, flags);
-
-      ret = ioctl(fd, FIOC_SETTAG_FDCHECK, &fdcheck_tag);
+      ret = ioctl(fd, FIOC_SETTAG_FDCHECK, &g_fdcheck_tag);
       DEBUGASSERT(ret == 0);
+      spin_unlock_irqrestore(&g_fdcheck_lock, flags);
     }
   else
     {

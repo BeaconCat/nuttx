@@ -40,21 +40,17 @@
 #undef strrchr /* See mm/README.txt */
 FAR char *strrchr(FAR const char *s, int c)
 {
-  FAR const char *last = NULL;
+  FAR const char *r = NULL;
 
-  if (c)
+  do
     {
-      while ((s = strchr(s, c)))
+      if (*s == c)
         {
-          last = s;
-          s++;
+          r = s;
         }
     }
-  else
-    {
-      last = strchr(s, c);
-    }
+  while (*s++ != '\0');
 
-  return (FAR char *)last;
+  return (FAR char *)r;
 }
 #endif
