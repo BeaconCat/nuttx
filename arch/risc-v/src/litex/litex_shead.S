@@ -56,23 +56,25 @@
 __start:
   /* Disable all interrupts in sie */
 
-  csrw CSR_SIE, zero
-  csrw CSR_SIP, zero
+
+  csrw sie, zero
+  csrw sip, zero
+
 
   /* Set the S-mode trap vector */
 
   la   t0, __trap_vec
-  csrw CSR_STVEC, t0
+  csrw stvec, t0
 
   /* Clear sscratch */
 
-  csrw CSR_SSCRATCH, zero
-  csrw CSR_SCAUSE, zero
-  csrw CSR_SEPC, zero
+  csrw sscratch, zero
+  csrw scause, zero
+  csrw sepc, zero
 
   /* initialize global pointer, global data */
 
-
+  
 .option push
 .option norelax
   la  gp, __global_pointer$
