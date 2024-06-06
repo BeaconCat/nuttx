@@ -28,7 +28,6 @@
 #include <stdio.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/streams.h>
 
 /****************************************************************************
  * Pre-processor Definitions
