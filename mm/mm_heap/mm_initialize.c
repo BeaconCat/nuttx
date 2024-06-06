@@ -29,9 +29,9 @@
 #include <debug.h>
 
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -197,7 +197,6 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   /* Add the single, large free node to the nodelist */
 
   mm_addfreechunk(heap, node);
-  heap->mm_curused += 2 * MM_SIZEOF_ALLOCNODE;
   mm_unlock(heap);
 }
 
@@ -277,7 +276,6 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
 
   /* Add the initial region of memory to the heap */
 
-  heap->mm_curused = sizeof(struct mm_heap_s);
   mm_addregion(heap, heapstart, heapsize);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
@@ -322,16 +320,9 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
 
 void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
-  int i;
-
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   mempool_multiple_deinit(heap->mm_mpool);
 #endif
-
-  for (i = 0; i < CONFIG_MM_REGIONS; i++)
-    {
-      kasan_unregister(heap->mm_heapstart[i]);
-    }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
