@@ -25,58 +25,45 @@
  * Included Files
  ****************************************************************************/
 
-#include <sys/utsname.h>
-#include <unistd.h>
-
-#include <nuttx/streams.h>
 #include <nuttx/memoryregion.h>
-#include <nuttx/elf.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define COREDUMP_MAGIC    0x434f5245
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/* Coredump information for block header */
-
-struct coredump_info_s
-{
-  uint32_t        magic;
-  struct utsname  name;
-  struct timespec time;
-  size_t          size;
-};
+#include <unistd.h>
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Name: coredump_add_memory_region
+ * Name: coredump_set_memory_region
  *
  * Description:
- *   Use coredump to dump the memory of the specified area.
+ *   Set do coredump memory region.
  *
  ****************************************************************************/
 
-int coredump_add_memory_region(FAR const void *ptr, size_t size,
-                               uint32_t flags);
+int coredump_set_memory_region(FAR struct memory_region_s *region);
 
 /****************************************************************************
- * Name: coredump
+ * Name: coredump_initialize
  *
  * Description:
- *   This function for generating core dump stream.
+ *   Initialize the coredump facility.  Called once and only from
+ *   nx_start_application.
  *
  ****************************************************************************/
 
-int coredump(FAR const struct memory_region_s *regions,
-             FAR struct lib_outstream_s *stream,
-             pid_t pid);
+int coredump_initialize(void);
+
+/****************************************************************************
+ * Name: coredump_dump
+ *
+ * Description:
+ *   Do coredump of the task specified by pid.
+ *
+ * Input Parameters:
+ *   pid - The task/thread ID of the thread to dump
+ *
+ ****************************************************************************/
+
+void coredump_dump(pid_t pid);
 
 #endif /* __INCLUDE_NUTTX_COREDUMP_H */
