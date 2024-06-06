@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/semaphore/sem_wait.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -69,7 +71,7 @@
 
 int nxsem_wait(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret;
 
@@ -84,7 +86,6 @@ int nxsem_wait(FAR sem_t *sem)
    */
 
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Make sure we were supplied with a valid semaphore. */
 
@@ -168,7 +169,7 @@ int nxsem_wait(FAR sem_t *sem)
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_running(rtcb);
+      nxsched_remove_self(rtcb);
 
       /* Add the task to the specified blocked task list */
 

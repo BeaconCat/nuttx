@@ -70,20 +70,20 @@ static int uuid_getrandom(FAR void *buf, size_t size, int flags)
  *
  ****************************************************************************/
 
-void uuid_create(uuid_t *u, uint32_t *status)
+void uuid_create(FAR uuid_t *u, FAR uint32_t *status)
 {
   int ret;
 
-  ret = uuid_getrandom(u, sizeof(uuid_t), GRND_RANDOM);
+  ret = uuid_getrandom(u, sizeof(uuid_t), 0);
   if (ret < 0)
     {
-      ret = uuid_getrandom(u, sizeof(uuid_t), 0);
+      ret = uuid_getrandom(u, sizeof(uuid_t), GRND_RANDOM);
     }
 
   if (ret < 0)
     {
-      unsigned long *beg = (unsigned long *)u;
-      unsigned long *end = (unsigned long *)(u + 1);
+      FAR unsigned long *beg = (FAR unsigned long *)u;
+      FAR unsigned long *end = (FAR unsigned long *)(u + 1);
 
       while (beg < end)
         {
