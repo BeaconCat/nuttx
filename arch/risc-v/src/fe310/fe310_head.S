@@ -48,12 +48,12 @@ __start:
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
-  csrw CSR_MIE, zero
+  csrw mie, zero
 
   /* Initialize the Machine Trap Vector */
 
   la   t0, __trap_vec
-  csrw CSR_MTVEC, t0
+  csrw mtvec, t0
 
   /* Jump to __fe310_start */
 
