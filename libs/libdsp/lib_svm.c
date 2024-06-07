@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <dsp.h>
 #include <string.h>
 
