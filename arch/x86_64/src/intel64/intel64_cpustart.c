@@ -127,8 +127,10 @@ static int x86_64_ap_startup(int cpu)
 
 void x86_64_ap_boot(void)
 {
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = this_task();
   uint8_t cpu = 0;
+
+  UNUSED(tcb);
 
   /* Do some checking on CPU compatibilities at the top of this function */
 
@@ -145,8 +147,6 @@ void x86_64_ap_boot(void)
   /* Store CPU private data */
 
   x86_64_cpu_priv_set(cpu);
-
-  tcb = this_task();
 
   /* Configure interrupts */
 
