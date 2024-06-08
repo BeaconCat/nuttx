@@ -25,7 +25,6 @@
  * Included Files
  ****************************************************************************/
 
-#include "riscv_common_memorymap.h"
 #include "hardware/litex_memorymap.h"
 #include "hardware/litex_uart.h"
 #include "hardware/litex_clint.h"
@@ -43,6 +42,6 @@
 #define LITEX_IDLESTACK_BASE  _ebss
 #endif
 
-#define LITEX_IDLESTACK_TOP  (LITEX_IDLESTACK_BASE + SMP_STACK_SIZE)
+#define LITEX_IDLESTACK_TOP  (LITEX_IDLESTACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
 
 #endif /* __ARCH_RISCV_SRC_LITEX_LITEX_MEMORYMAP_H */
