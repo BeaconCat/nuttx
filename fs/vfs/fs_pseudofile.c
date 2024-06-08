@@ -37,7 +37,6 @@
 #include <nuttx/lib/math32.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 /****************************************************************************
  * Private Types
@@ -506,9 +505,6 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
   (*node)->i_private = pf;
 
   inode_unlock();
-#ifdef CONFIG_FS_NOTIFY
-  notify_create(path);
-#endif
   return 0;
 
 reserve_err:
