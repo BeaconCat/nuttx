@@ -41,6 +41,12 @@
 #define VIRTIO_BLK_REQ_HEADER_SIZE  sizeof(struct virtio_blk_req_s)
 #define VIRTIO_BLK_RESP_HEADER_SIZE sizeof(struct virtio_blk_resp_s)
 
+/* Block feature bits */
+
+#define VIRTIO_BLK_F_RO             5  /* Disk is read-only */
+#define VIRTIO_BLK_F_BLK_SIZE       6  /* Block size of disk is available */
+#define VIRTIO_BLK_F_FLUSH          9  /* Cache flush command support */
+
 /* Block request type */
 
 #define VIRTIO_BLK_T_IN             0  /* READ */
@@ -55,7 +61,8 @@
 
 /* Block device sector size */
 
-#define VIRTIO_BLK_SECTOR_SIZE      512
+#define VIRTIO_BLK_SECTOR_BITS      9
+#define VIRTIO_BLK_SECTOR_SIZE      (1UL << VIRTIO_BLK_SECTOR_BITS)
 
 /****************************************************************************
  * Private Types
@@ -108,10 +115,9 @@ begin_packed_struct struct virtio_blk_config_s
 struct virtio_blk_priv_s
 {
   FAR struct virtio_device     *vdev;           /* Virtio deivce */
-  FAR struct virtio_blk_req_s  *req;            /* Virtio block out header */
-  FAR struct virtio_blk_resp_s *resp;           /* Virtio block in header */
   mutex_t                       lock;           /* Lock */
   uint64_t                      nsectors;       /* Sectore numbers */
+  uint32_t                      block_size;     /* Block size */
   char                          name[NAME_MAX]; /* Device name */
 };
 
@@ -176,6 +182,38 @@ static int g_virtio_blk_idx = 0;
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: virtio_blk_wait_complete
+ *
+ * Description:
+ *   Wait the virtio block request complete
+ *
+ ****************************************************************************/
+
+static void virtio_blk_wait_complete(FAR struct virtqueue *vq,
+                                     FAR sem_t *respsem)
+{
+  if (up_interrupt_context())
+    {
+      for (; ; )
+        {
+          FAR sem_t * tmpsem = virtqueue_get_buffer(vq, NULL, NULL);
+          if (tmpsem == respsem)
+            {
+              break;
+            }
+          else if (tmpsem != NULL)
+            {
+              nxsem_post(tmpsem);
+            }
+        }
+    }
+  else
+    {
+      nxsem_wait_uninterruptible(respsem);
+    }
+}
+
+/****************************************************************************
  * Name: virtio_blk_rdwr
  *
  * Description:
@@ -190,24 +228,20 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   FAR struct virtio_device *vdev = priv->vdev;
   FAR struct virtqueue *vq = vdev->vrings_info[0].vq;
   FAR struct virtqueue_buf vb[3];
+  struct virtio_blk_resp_s resp;
+  struct virtio_blk_req_s req;
   sem_t respsem;
   ssize_t ret;
   int readnum;
-
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   nxsem_init(&respsem, 0, 0);
 
   /* Build the block request */
 
-  priv->req->type     = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
-  priv->req->reserved = 0;
-  priv->req->sector   = startsector;
-  priv->resp->status  = VIRTIO_BLK_S_IOERR;
+  req.type     = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
+  req.reserved = 0;
+  req.sector   = startsector * priv->block_size >> VIRTIO_BLK_SECTOR_BITS;
+  resp.status  = VIRTIO_BLK_S_IOERR;
 
   /* Fill the virtqueue buffer:
    * Buffer 0: the block out header;
@@ -215,13 +249,27 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
    * Buffer 2: the block in header, return the status.
    */
 
-  vb[0].buf = priv->req;
+  vb[0].buf = &req;
   vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
   vb[1].buf = buffer;
-  vb[1].len = nsectors * VIRTIO_BLK_SECTOR_SIZE;
-  vb[2].buf = priv->resp;
+  vb[1].len = nsectors * priv->block_size;
+  vb[2].buf = &resp;
   vb[2].len = VIRTIO_BLK_RESP_HEADER_SIZE;
   readnum = write ? 2 : 1;
+
+  if (up_interrupt_context())
+    {
+      virtqueue_disable_cb(vq);
+    }
+  else
+    {
+      ret = nxmutex_lock(&priv->lock);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
   ret = virtqueue_add_buffer(vq, vb, readnum, 3 - readnum, &respsem);
   if (ret < 0)
     {
@@ -233,15 +281,24 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   /* Wait for the request completion */
 
-  nxsem_wait_uninterruptible(&respsem);
-  if (priv->resp->status != VIRTIO_BLK_S_OK)
+  virtio_blk_wait_complete(vq, &respsem);
+
+  if (resp.status != VIRTIO_BLK_S_OK)
     {
       vrterr("%s Error\n", write ? "Write" : "Read");
       ret = -EIO;
     }
 
 err:
-  nxmutex_unlock(&priv->lock);
+  if (up_interrupt_context())
+    {
+      virtqueue_enable_cb(vq);
+    }
+  else
+    {
+      nxmutex_unlock(&priv->lock);
+    }
+
   return ret >= 0 ? nsectors : ret;
 }
 
@@ -308,6 +365,11 @@ static ssize_t virtio_blk_write(FAR struct inode *inode,
 
   DEBUGASSERT(inode->i_private);
   priv = inode->i_private;
+  if (virtio_has_feature(priv->vdev, VIRTIO_BLK_F_RO))
+    {
+      return -EPERM;
+    }
+
   return virtio_blk_rdwr(priv, (FAR void *)buffer, startsector, nsectors,
                          true);
 }
@@ -334,7 +396,7 @@ static int virtio_blk_geometry(FAR struct inode *inode,
       geometry->geo_mediachanged = false;
       geometry->geo_writeenabled = true;
       geometry->geo_nsectors     = priv->nsectors;
-      geometry->geo_sectorsize   = VIRTIO_BLK_SECTOR_SIZE;
+      geometry->geo_sectorsize   = priv->block_size;
       ret = OK;
     }
 
@@ -350,8 +412,24 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
   FAR struct virtio_device *vdev = priv->vdev;
   FAR struct virtqueue *vq = vdev->vrings_info[0].vq;
   FAR struct virtqueue_buf vb[2];
+  struct virtio_blk_resp_s resp;
+  struct virtio_blk_req_s req;
   sem_t respsem;
   int ret;
+
+  nxsem_init(&respsem, 0, 0);
+
+  /* Build the block request */
+
+  req.type     = VIRTIO_BLK_T_FLUSH;
+  req.reserved = 0;
+  req.sector   = 0;
+  resp.status  = VIRTIO_BLK_S_IOERR;
+
+  vb[0].buf = &req;
+  vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
+  vb[1].buf = &resp;
+  vb[1].len = VIRTIO_BLK_RESP_HEADER_SIZE;
 
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
@@ -359,19 +437,6 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
       return ret;
     }
 
-  nxsem_init(&respsem, 0, 0);
-
-  /* Build the block request */
-
-  priv->req->type     = VIRTIO_BLK_T_FLUSH;
-  priv->req->reserved = 0;
-  priv->req->sector   = 0;
-  priv->resp->status  = VIRTIO_BLK_S_IOERR;
-
-  vb[0].buf = priv->req;
-  vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
-  vb[1].buf = priv->resp;
-  vb[1].len = VIRTIO_BLK_RESP_HEADER_SIZE;
   ret = virtqueue_add_buffer(vq, vb, 1, 1, &respsem);
   if (ret < 0)
     {
@@ -383,7 +448,7 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
   /* Wait for the request completion */
 
   nxsem_wait_uninterruptible(&respsem);
-  if (priv->resp->status != VIRTIO_BLK_S_OK)
+  if (resp.status != VIRTIO_BLK_S_OK)
     {
       vrterr("Flush Error\n");
       ret = -EIO;
@@ -410,7 +475,10 @@ static int virtio_blk_ioctl(FAR struct inode *inode, int cmd,
   switch (cmd)
     {
       case BIOC_FLUSH:
-        ret = virtio_blk_flush(priv);
+        if (virtio_has_feature(priv->vdev, VIRTIO_BLK_F_FLUSH))
+          {
+            ret = virtio_blk_flush(priv);
+          }
         break;
     }
 
@@ -447,26 +515,12 @@ static int virtio_blk_init(FAR struct virtio_blk_priv_s *priv,
   vdev->priv = priv;
   nxmutex_init(&priv->lock);
 
-  /* Alloc the request and in header from tansport layer */
-
-  priv->req = virtio_alloc_buf(vdev, sizeof(*priv->req), 16);
-  if (priv->req == NULL)
-    {
-      ret = -ENOMEM;
-      goto err_with_lock;
-    }
-
-  priv->resp = virtio_alloc_buf(vdev, sizeof(*priv->resp), 16);
-  if (priv->resp == NULL)
-    {
-      ret = -ENOMEM;
-      goto err_with_req;
-    }
-
   /* Initialize the virtio device */
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER);
-  virtio_set_features(vdev, 0);
+  virtio_negotiate_features(vdev, (1UL << VIRTIO_BLK_F_RO) |
+                                  (1UL << VIRTIO_BLK_F_BLK_SIZE) |
+                                  (1UL << VIRTIO_BLK_F_FLUSH));
   virtio_set_status(vdev, VIRTIO_CONFIG_FEATURES_OK);
 
   vqname[0]   = "virtio_blk_vq";
@@ -475,18 +529,14 @@ static int virtio_blk_init(FAR struct virtio_blk_priv_s *priv,
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);
-      goto err_with_resp;
+      goto err;
     }
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
   virtqueue_enable_cb(vdev->vrings_info[0].vq);
   return OK;
 
-err_with_resp:
-  virtio_free_buf(vdev, priv->resp);
-err_with_req:
-  virtio_free_buf(vdev, priv->req);
-err_with_lock:
+err:
   nxmutex_destroy(&priv->lock);
   return ret;
 }
@@ -501,8 +551,6 @@ static void virtio_blk_uninit(FAR struct virtio_blk_priv_s *priv)
 
   virtio_reset_device(vdev);
   virtio_delete_virtqueues(vdev);
-  virtio_free_buf(vdev, priv->resp);
-  virtio_free_buf(vdev, priv->req);
   nxmutex_destroy(&priv->lock);
 }
 
@@ -538,6 +586,17 @@ static int virtio_blk_probe(FAR struct virtio_device *vdev)
   virtio_read_config_member(priv->vdev, struct virtio_blk_config_s, capacity,
                             &priv->nsectors);
   vrtinfo("Virio blk capacity=%" PRIu64 " sectors\n", priv->nsectors);
+
+  if (virtio_has_feature(vdev, VIRTIO_BLK_F_BLK_SIZE))
+    {
+      virtio_read_config_member(priv->vdev, struct virtio_blk_config_s,
+                                blk_size, &priv->block_size);
+      vrtinfo("Virio blk block_size=%" PRIu32 "\n", priv->block_size);
+    }
+  else
+    {
+      priv->block_size = VIRTIO_BLK_SECTOR_SIZE;
+    }
 
   /* Register block driver */
 
