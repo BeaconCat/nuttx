@@ -72,14 +72,6 @@ ifdef ESPTOOL_BINDIR
 		BOOTLOADER      := $(ESPTOOL_BINDIR)/mcuboot-$(CHIP_SERIES).bin
 		FLASH_BL        := $(BL_OFFSET) $(BOOTLOADER)
 		ESPTOOL_BINS    := $(FLASH_BL)
-	else
-		BL_OFFSET       := 0x0
-		PT_OFFSET       := $(CONFIG_ESPRESSIF_PARTITION_TABLE_OFFSET)
-		BOOTLOADER      := $(ESPTOOL_BINDIR)/bootloader-$(CHIP_SERIES).bin
-		PARTITION_TABLE := $(ESPTOOL_BINDIR)/partition-table-$(CHIP_SERIES).bin
-		FLASH_BL        := $(BL_OFFSET) $(BOOTLOADER)
-		FLASH_PT        := $(PT_OFFSET) $(PARTITION_TABLE)
-		ESPTOOL_BINS    := $(FLASH_BL) $(FLASH_PT)
 	endif
 endif
 
@@ -98,17 +90,14 @@ ifeq ($(CONFIG_ESPRESSIF_BOOTLOADER_MCUBOOT),y)
 	IMGTOOL_SIGN_ARGS  := --pad $(VERIFIED) $(IMGTOOL_ALIGN_ARGS) -v 0 -s auto \
 		-H $(CONFIG_ESPRESSIF_APP_MCUBOOT_HEADER_SIZE) --pad-header \
 		-S $(CONFIG_ESPRESSIF_OTA_SLOT_SIZE)
-else
-	APP_OFFSET     := 0x10000
+else ifeq ($(CONFIG_ESPRESSIF_SIMPLE_BOOT),y)
+	APP_OFFSET     := 0x0000
 	APP_IMAGE      := nuttx.bin
 	FLASH_APP      := $(APP_OFFSET) $(APP_IMAGE)
+	ESPTOOL_BINDIR := .
 endif
 
 ESPTOOL_BINS += $(FLASH_APP)
-
-ifeq ($(CONFIG_BUILD_PROTECTED),y)
-	ESPTOOL_BINS += $(CONFIG_ESPRESSIF_USER_IMAGE_OFFSET) nuttx_user.bin
-endif
 
 # MERGEBIN -- Merge raw binary files into a single file
 
@@ -148,7 +137,7 @@ define MKIMAGE
 	$(Q) echo "MKIMAGE: NuttX binary"
 	$(Q) if ! esptool.py version 1>/dev/null 2>&1; then \
 		echo ""; \
-		echo "esptool.py not found.  Please run: \"pip install esptool\""; \
+		echo "esptool.py not found.  Please run: \"pip install esptool==4.8.dev4\""; \
 		echo ""; \
 		echo "Run make again to create the nuttx.bin image."; \
 		exit 1; \
@@ -157,7 +146,7 @@ define MKIMAGE
 		echo "Missing Flash memory size configuration."; \
 		exit 1; \
 	fi
-	$(eval ELF2IMAGE_OPTS := -fs $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ))
+	$(eval ELF2IMAGE_OPTS := $(if $(CONFIG_ESPRESSIF_SIMPLE_BOOT),--ram-only-header) -fs $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ))
 	esptool.py -c $(CHIP_SERIES) elf2image $(ELF2IMAGE_OPTS) -o nuttx.bin nuttx
 	$(Q) echo nuttx.bin >> nuttx.manifest
 	$(Q) echo "Generated: nuttx.bin"
