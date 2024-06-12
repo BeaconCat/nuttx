@@ -33,6 +33,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
 
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
@@ -67,10 +68,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
-#endif
 
 /* IRQ Stack Frame Format.  Each value is a uint32_t register index */
 
@@ -155,6 +152,8 @@
 #endif
 
 #define XCPTCONTEXT_SIZE    (4 * XCPTCONTEXT_REGS)
+
+#define up_irq_is_disabled(flags) (((flags) & XCHAL_IRQ_LEVEL) != 0)
 
 /****************************************************************************
  * Public Types
@@ -367,9 +366,9 @@ extern "C"
 
 #ifndef __ASSEMBLY__
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -377,7 +376,6 @@ extern "C"
  */
 
 EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 #endif
 
 /****************************************************************************
@@ -430,6 +428,16 @@ int up_cpu_index(void);
 #  define up_cpu_index() (0)
 #endif
 
+static inline_function uint32_t *up_current_regs(void)
+{
+  return (uint32_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void up_set_current_regs(uint32_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
+
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -440,13 +448,13 @@ int up_cpu_index(void);
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-noinstrument_function static inline bool up_interrupt_context(void)
+noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = CURRENT_REGS != NULL;
+  bool ret = up_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -455,6 +463,13 @@ noinstrument_function static inline bool up_interrupt_context(void)
   return ret;
 }
 #endif
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
