@@ -27,5 +27,19 @@ if(CONFIG_RPMSG)
     list(APPEND SRCS rpmsg_ping.c)
   endif()
 
+  if(CONFIG_RPMSG_PORT)
+    list(APPEND SRCS rpmsg_port.c)
+    target_include_directories(drivers
+                               PRIVATE ${NUTTX_DIR}/openamp/open-amp/lib)
+  endif()
+
+  if(CONFIG_RPMSG_PORT_SPI)
+    list(APPEND SRCS rpmsg_port_spi.c)
+  endif()
+
+  if(CONFIG_RPMSG_VIRTIO)
+    list(APPEND SRCS rpmsg_virtio.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

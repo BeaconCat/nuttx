@@ -128,7 +128,10 @@ static int local_sockif_alloc(FAR struct socket *psock)
 {
   /* Allocate the local connection structure */
 
-  FAR struct local_conn_s *conn = local_alloc();
+  FAR struct local_conn_s *conn;
+  net_lock();
+  conn = local_alloc();
+  net_unlock();
   if (conn == NULL)
     {
       /* Failed to reserve a connection structure */
@@ -138,6 +141,7 @@ static int local_sockif_alloc(FAR struct socket *psock)
 
   /* Save the pre-allocated connection in the socket structure */
 
+  conn->lc_proto = psock->s_type;
   psock->s_conn = conn;
   return OK;
 }
