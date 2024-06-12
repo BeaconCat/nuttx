@@ -44,9 +44,11 @@
 #include "esp32s3_twai.h"
 #include "esp32s3_irq.h"
 #include "esp32s3_clockconfig.h"
-#include "esp32s3_periph.h"
+
+#include "periph_ctrl.h"
 
 #include "hardware/esp32s3_system.h"
+#include "hardware/esp32s3_twai.h"
 #include "hardware/esp32s3_gpio_sigmap.h"
 
 #if defined(CONFIG_ESP32S3_TWAI)
@@ -470,7 +472,7 @@ static int esp32s3twai_setup(struct can_dev_s *dev)
       up_disable_irq(priv->irq);
     }
 
-  priv->cpu = this_cpu();
+  priv->cpu = up_cpu_index();
   priv->cpuint = esp32s3_setup_irq(priv->cpu, priv->periph,
                                    1, ESP32S3_CPUINT_LEVEL);
   if (priv->cpuint < 0)
@@ -1241,7 +1243,7 @@ struct can_dev_s *esp32s3_twaiinitialize(void)
    * Enable clocking to the TWAI module
    */
 
-  esp32s3_periph_module_enable(PERIPH_TWAI_MODULE);
+  periph_module_enable(PERIPH_TWAI_MODULE);
 
   /* Configure CAN GPIO pins */
 
