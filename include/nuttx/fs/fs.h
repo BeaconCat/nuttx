@@ -37,10 +37,8 @@
 
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/spawn.h>
-#include <nuttx/queue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -413,7 +411,7 @@ struct inode
   uint16_t          i_flags;    /* Flags for inode */
   union inode_ops_u u;          /* Inode operations */
   ino_t             i_ino;      /* Inode serial number */
-#if defined(CONFIG_PSEUDOFS_FILE) || defined(CONFIG_FS_SHMFS)
+#ifdef CONFIG_PSEUDOFS_FILE
   size_t            i_size;     /* The size of per inode driver */
 #endif
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
@@ -465,6 +463,7 @@ typedef struct cookie_io_functions_t
 struct file
 {
   int               f_oflags;   /* Open mode flags */
+  int               f_refs;     /* Reference count */
   off_t             f_pos;      /* File position */
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
@@ -474,6 +473,10 @@ struct file
 
 #ifdef CONFIG_FDCHECK
   uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
+#endif
+
+#if CONFIG_FS_BACKTRACE > 0
+  FAR void         *backtrace[CONFIG_FS_BACKTRACE]; /* Backtrace for caller */
 #endif
 };
 
@@ -486,7 +489,6 @@ struct file
 
 struct filelist
 {
-  spinlock_t        fl_lock;    /* Manage access to the file list */
   uint8_t           fl_rows;    /* The number of rows of fl_files array */
   FAR struct file **fl_files;   /* The pointer of two layer file descriptors array */
 
@@ -539,7 +541,7 @@ struct filelist
 #ifdef CONFIG_FILE_STREAM
 struct file_struct
 {
-  sq_entry_t              fs_entry;     /* Entry of file stream */
+  FAR struct file_struct *fs_next;      /* Pointer to next file stream */
   rmutex_t                fs_lock;      /* Recursive lock */
   cookie_io_functions_t   fs_iofunc;    /* Callbacks to user / system functions */
   FAR void               *fs_cookie;    /* Pointer to file descriptor / cookie struct */
@@ -564,7 +566,8 @@ struct streamlist
 {
   mutex_t                 sl_lock;   /* For thread safety */
   struct file_struct      sl_std[3];
-  sq_queue_t              sl_queue;
+  FAR struct file_struct *sl_head;
+  FAR struct file_struct *sl_tail;
 };
 #endif /* CONFIG_FILE_STREAM */
 
@@ -1122,6 +1125,21 @@ int nx_open(FAR const char *path, int oflags, ...);
  ****************************************************************************/
 
 int fs_getfilep(int fd, FAR struct file **filep);
+
+/****************************************************************************
+ * Name: fs_putfilep
+ *
+ * Description:
+ *   Release reference counts for files, less than or equal to 0 and close
+ *   the file
+ *
+ * Input Parameters:
+ *   filep  - The caller provided location in which to return the 'struct
+ *            file' instance.
+ *
+ ****************************************************************************/
+
+int fs_putfilep(FAR struct file *filep);
 
 /****************************************************************************
  * Name: file_close
