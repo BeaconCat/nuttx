@@ -25,6 +25,10 @@ set(SRCS arm64_head.S)
 list(APPEND SRCS arm64_vector_table.S arm64_vectors.S arm64_smccc.S)
 list(APPEND SRCS arm64_cpu_idle.S arm64_fork_func.S)
 
+if(CONFIG_ARCH_HAVE_TESTSET)
+  list(APPEND SRCS arm64_testset.S)
+endif()
+
 # Common C source files ( OS call up_xxx)
 list(APPEND SRCS arm64_initialize.c arm64_initialstate.c arm64_boot.c)
 list(APPEND SRCS arm64_nputs.c arm64_idle.c arm64_copystate.c
@@ -60,7 +64,7 @@ if(CONFIG_ARCH_HAVE_MPU)
 endif()
 
 if(CONFIG_ARM64_PSCI)
-  list(APPEND SRCS arm64_cpu_psci.c arm64_systemreset.c)
+  list(APPEND SRCS arm64_cpu_psci.c)
 endif()
 
 if(CONFIG_SMP)
@@ -108,10 +112,6 @@ endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
-endif()
-
-if(CONFIG_ARCH_HAVE_DEBUG)
-  list(APPEND SRCS arm64_hwdebug.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
