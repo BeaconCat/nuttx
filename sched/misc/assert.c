@@ -29,9 +29,11 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/cache.h>
+#include <nuttx/coredump.h>
 #include <nuttx/compiler.h>
 #include <nuttx/irq.h>
 #include <nuttx/init.h>
+#include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
@@ -56,7 +58,6 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
-#include "coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -81,6 +82,13 @@
 #endif
 
 #define DUMP_PTR(p, x) ((uintptr_t)(&(p)[(x)]) < stack_top ? (p)[(x)] : 0)
+#define DUMP_STRIDE    (sizeof(FAR void *) * 8)
+
+#if UINTPTR_MAX <= UINT32_MAX
+#  define DUMP_FORMAT " %08" PRIxPTR ""
+#elif UINTPTR_MAX <= UINT64_MAX
+#  define DUMP_FORMAT " %016" PRIxPTR ""
+#endif
 
 /* Architecture can overwrite the default XCPTCONTEXT alignment */
 
@@ -99,7 +107,7 @@ static bool g_cpu_paused[CONFIG_SMP_NCPUS];
 static uintptr_t g_last_regs[CONFIG_SMP_NCPUS][XCPTCONTEXT_REGS]
                  aligned_data(XCPTCONTEXT_ALIGN);
 
-static FAR const char *g_policy[4] =
+static FAR const char * const g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
 };
@@ -150,13 +158,12 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
 {
   uintptr_t stack;
 
-  for (stack = sp; stack <= stack_top; stack += 32)
+  for (stack = sp; stack <= stack_top; stack += DUMP_STRIDE)
     {
-      FAR uint32_t *ptr = (FAR uint32_t *)stack;
+      FAR uintptr_t *ptr = (FAR uintptr_t *)stack;
 
-      _alert("%p: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-             " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-             " %08" PRIx32 "\n",
+      _alert("%p:"DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
+             DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT "\n",
              (FAR void *)stack, DUMP_PTR(ptr, 0), DUMP_PTR(ptr , 1),
              DUMP_PTR(ptr, 2), DUMP_PTR(ptr, 3), DUMP_PTR(ptr, 4),
              DUMP_PTR(ptr, 5), DUMP_PTR(ptr , 6), DUMP_PTR(ptr, 7));
@@ -182,9 +189,9 @@ static void dump_stackinfo(FAR const char *tag, uintptr_t sp,
 
       /* Get more information */
 
-      if (sp - 32 >= base)
+      if (sp - DUMP_STRIDE >= base)
         {
-          sp -= 32;
+          sp -= DUMP_STRIDE;
         }
 
       stack_dump(sp, top);
@@ -429,7 +436,7 @@ static void dump_backtrace(FAR struct tcb_s *tcb, FAR void *arg)
  * Name: dump_filelist
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_DUMP_ON_EXIT
+#ifdef CONFIG_DUMP_ON_EXIT
 static void dump_filelist(FAR struct tcb_s *tcb, FAR void *arg)
 {
   FAR struct filelist *filelist = &tcb->group->tg_filelist;
@@ -519,7 +526,7 @@ static void dump_tasks(void)
   nxsched_foreach(dump_backtrace, NULL);
 #endif
 
-#ifdef CONFIG_SCHED_DUMP_ON_EXIT
+#ifdef CONFIG_DUMP_ON_EXIT
   nxsched_foreach(dump_filelist, NULL);
 #endif
 }
@@ -531,7 +538,7 @@ static void dump_tasks(void)
 #if CONFIG_LIBC_MUTEX_BACKTRACE > 0
 static void dump_lockholder(pid_t tid)
 {
-  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_MUTEX_BACKTRACE)];
+  char buf[CONFIG_LIBC_MUTEX_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
   FAR mutex_t *mutex;
 
   mutex = (FAR mutex_t *)nxsched_get_tcb(tid)->waitobj;
@@ -539,7 +546,7 @@ static void dump_lockholder(pid_t tid)
   backtrace_format(buf, sizeof(buf), mutex->backtrace,
                    CONFIG_LIBC_MUTEX_BACKTRACE);
 
-  _alert("Mutex holder(%d) backtrace: %s\n", mutex->holder, buf);
+  _alert("Mutex holder(%d) backtrace:%s\n", mutex->holder, buf);
 }
 #else
 #  define dump_lockholder(tid)
@@ -735,12 +742,7 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
 
 #if defined(CONFIG_BOARD_COREDUMP_SYSLOG) || \
     defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-
-  /* Flush previous SYSLOG data before possible long time coredump */
-
-  syslog_flush();
-
-  /* Dump core information */
+      /* Dump core information */
 
 #  ifdef CONFIG_BOARD_COREDUMP_FULL
   coredump_dump(INVALID_PROCESS_ID);
@@ -792,6 +794,7 @@ static void reset_board(void)
 void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
+  const bool os_ready = OSINIT_OS_READY();
   FAR struct tcb_s *rtcb = running_task();
   struct panic_notifier_s notifier_data;
   irqstate_t flags;
@@ -803,7 +806,11 @@ void _assert(FAR const char *filename, int linenum,
       reset_board(); /* Should not return. */
     }
 
-  flags = enter_critical_section();
+  flags = 0; /* suppress GCC warning */
+  if (os_ready)
+    {
+      flags = enter_critical_section();
+    }
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
   if (up_interrupt_context() ||
@@ -819,7 +826,10 @@ void _assert(FAR const char *filename, int linenum,
       kasan_stop();
 
 #ifdef CONFIG_SMP
-      pause_all_cpu();
+      if (os_ready)
+        {
+          pause_all_cpu();
+        }
 #endif
     }
 
@@ -868,5 +878,8 @@ void _assert(FAR const char *filename, int linenum,
       reset_board(); /* Should not return. */
     }
 
-  leave_critical_section(flags);
+  if (os_ready)
+    {
+      leave_critical_section(flags);
+    }
 }

@@ -44,10 +44,6 @@
 #  include <nuttx/wqueue.h>
 #endif
 
-#ifdef CONFIG_CAN_TIMESTAMP
-#include <sys/time.h>
-#endif
-
 #ifdef CONFIG_CAN
 
 /****************************************************************************
@@ -326,7 +322,7 @@
 #define CANIOC_GET_TRANSVSTATE    _CANIOC(19)
 
 #define CAN_FIRST                 0x0001         /* First common command */
-#define CAN_NCMDS                 15             /* 16 common commands   */
+#define CAN_NCMDS                 19             /* 20 common commands   */
 
 /* User defined ioctl commands are also supported. These will be forwarded
  * by the upper-half CAN driver to the lower-half CAN driver via the
@@ -523,6 +519,11 @@
 
 #define CAN_TRANSVSTATE_NORMAL    2
 
+/* CAN bit timing support ***************************************************/
+
+#define CAN_BITTIMING_NOMINAL     0  /* Specifies nominal bittiming */
+#define CAN_BITTIMING_DATA        1  /* Specifies data bittiming */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -591,9 +592,6 @@ begin_packed_struct struct can_hdr_s
   uint8_t      ch_esi    : 1; /* Error State Indicator */
 #endif
   uint8_t      ch_tcf    : 1; /* Tx confirmation flag */
-#ifdef CONFIG_CAN_TIMESTAMP
-  struct timeval ch_ts;       /* record the timestamp of each frame */
-#endif
 } end_packed_struct;
 
 #else
@@ -611,9 +609,6 @@ begin_packed_struct struct can_hdr_s
   uint8_t      ch_esi    : 1; /* Error State Indicator */
 #endif
   uint8_t      ch_tcf    : 1; /* Tx confirmation flag */
-#ifdef CONFIG_CAN_TIMESTAMP
-  struct timeval ch_ts;       /* record the timestamp of each frame */
-#endif
 } end_packed_struct;
 #endif
 
@@ -821,6 +816,13 @@ struct canioc_rtr_s
 
 struct canioc_bittiming_s
 {
+#ifdef CONFIG_CAN_FD
+  uint8_t               type;            /* Nominal/Data bit timing. This is
+                                          * used to specify which bit timing
+                                          * should be set/obtained. Applies
+                                          * only if CAN FD is configured.
+                                          */
+#endif
   uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
   uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
   uint8_t               bt_tseg2;        /* TSEG2 in time quanta */

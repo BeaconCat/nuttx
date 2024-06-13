@@ -81,6 +81,32 @@ int can_setsockopt(FAR struct socket *psock, int level, int option,
 
   conn = psock->s_conn;
 
+#ifdef CONFIG_NET_TIMESTAMP
+
+  /* Generates a timestamp for each incoming packet */
+
+  if (level == SOL_SOCKET && option == SO_TIMESTAMP)
+    {
+      /* Verify that option is at least the size of an integer. */
+
+      if (value_len < sizeof(int32_t))
+        {
+          return -EINVAL;
+        }
+
+      /* Lock the network so that we have exclusive access to the socket
+       * options.
+       */
+
+      net_lock();
+
+      conn->timestamp = *((FAR int32_t *)value);
+
+      net_unlock();
+      return OK;
+    }
+#endif
+
   if (level != SOL_CAN_RAW)
     {
       return -ENOPROTOOPT;
@@ -126,53 +152,63 @@ int can_setsockopt(FAR struct socket *psock, int level, int option,
           }
         break;
 
-#ifdef CONFIG_NET_CAN_ERRORS
       case CAN_RAW_ERR_FILTER:
+#ifdef CONFIG_NET_CAN_ERRORS
         if (value_len != sizeof(can_err_mask_t))
           {
             return -EINVAL;
           }
 
         conn->err_mask = *(FAR can_err_mask_t *)value & CAN_ERR_MASK;
-        break;
 #endif
+        break;
 
       case CAN_RAW_LOOPBACK:
-      case CAN_RAW_RECV_OWN_MSGS:
-#ifdef CONFIG_NET_CAN_CANFD
-      case CAN_RAW_FD_FRAMES:
-#endif
-#ifdef CONFIG_NET_CAN_RAW_TX_DEADLINE
-      case CAN_RAW_TX_DEADLINE:
-#endif
-        /* Verify that option is the size of an 'int'.  Should also check
-         * that 'value' is properly aligned for an 'int'
-         */
-
-        if (value_len != sizeof(int))
+        if (value_len != sizeof(conn->loopback))
           {
             return -EINVAL;
           }
 
-        /* Lock the network so that we have exclusive access to the socket
-         * options.
-         */
+        conn->loopback = *(FAR int32_t *)value;
 
-        net_lock();
-
-        /* Set or clear the option bit */
-
-        if (*(FAR int *)value)
-          {
-            _SO_SETOPT(conn->sconn.s_options, option);
-          }
-        else
-          {
-            _SO_CLROPT(conn->sconn.s_options, option);
-          }
-
-        net_unlock();
         break;
+
+      case CAN_RAW_RECV_OWN_MSGS:
+        if (value_len != sizeof(conn->recv_own_msgs))
+          {
+            return -EINVAL;
+          }
+
+        conn->recv_own_msgs = *(FAR int32_t *)value;
+
+        break;
+
+#ifdef CONFIG_NET_CAN_CANFD
+      case CAN_RAW_FD_FRAMES:
+        if (value_len != sizeof(conn->fd_frames))
+          {
+            return -EINVAL;
+          }
+
+        conn->fd_frames = *(FAR int32_t *)value;
+
+        break;
+#endif
+
+      case CAN_RAW_JOIN_FILTERS:
+        break;
+
+#ifdef CONFIG_NET_CAN_RAW_TX_DEADLINE
+      case CAN_RAW_TX_DEADLINE:
+        if (value_len != sizeof(conn->tx_deadline))
+          {
+            return -EINVAL;
+          }
+
+        conn->tx_deadline = *(FAR int32_t *)value;
+
+        break;
+#endif
 
 #if CONFIG_NET_RECV_BUFSIZE > 0
       case SO_RCVBUF:

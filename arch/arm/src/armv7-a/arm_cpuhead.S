@@ -27,7 +27,6 @@
 #include <arch/irq.h>
 
 #include "arm.h"
-#include "cp15.h"
 #include "sctlr.h"
 #include "mmu.h"
 #include "smp.h"
@@ -429,15 +428,6 @@ __cpu3_start:
 	cmp		r1, #0				/* Check (nwords == 0) */
 	str		r2, [r0, #-4]!			/* Save stack color word, increment stack address */
 	bne		1b				/* Bottom of the loop */
-#endif
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-	/* Perform init the secure monitor runtime. As the following arm_boot may
-	 * using smc to perform psci related func, so the secure monitor init
-	 * procedure should be placed before arm_boot
-	 */
-
-	bl		arm_sm_init
 #endif
 
 	/* Branch to continue C level CPU initialization */
