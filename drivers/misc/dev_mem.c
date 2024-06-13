@@ -91,6 +91,8 @@ static ssize_t devmem_read(FAR struct file *filep, FAR char *buffer,
   ssize_t len;
   int i;
 
+  DEBUGASSERT(region && src);
+
   for (i = 0; i < DEVMEM_REGION; i++)
     {
       if (region[i].start == 0 && region[i].end == 0)
@@ -126,6 +128,8 @@ static ssize_t devmem_write(FAR struct file *filep, FAR const char *buffer,
   ssize_t len;
   int i;
 
+  DEBUGASSERT(region && dest);
+
   for (i = 0; i < DEVMEM_REGION; i++)
     {
       if (region[i].start == 0 && region[i].end == 0)
@@ -158,6 +162,8 @@ static int devmem_mmap(FAR struct file *filep,
   uintptr_t start;
   uintptr_t end;
   int i;
+
+  DEBUGASSERT(region);
 
   if (map->offset < 0)
     {

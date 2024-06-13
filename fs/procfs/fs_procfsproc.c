@@ -1128,7 +1128,8 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
   size_t copysize;
   size_t totalsize;
 #ifdef HAVE_GROUP_MEMBERS
-  int i;
+  FAR sq_entry_t *curr;
+  FAR sq_entry_t *next;
 #endif
 
   DEBUGASSERT(group != NULL);
@@ -1174,13 +1175,14 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
   buffer    += copysize;
   remaining -= copysize;
 
+#ifdef HAVE_GROUP_MEMBERS
   if (totalsize >= buflen)
     {
       return totalsize;
     }
 
-  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
-                               "Members:", group->tg_nmembers);
+  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%zu\n",
+                               "Members:", sq_count(&group->tg_members));
   copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                              remaining, &offset);
 
@@ -1188,7 +1190,6 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
   buffer    += copysize;
   remaining -= copysize;
 
-#ifdef HAVE_GROUP_MEMBERS
   if (totalsize >= buflen)
     {
       return totalsize;
@@ -1208,10 +1209,11 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
       return totalsize;
     }
 
-  for (i = 0; i < group->tg_nmembers; i++)
+  sq_for_every_safe(&group->tg_members, curr, next)
     {
+      tcb = container_of(curr, struct tcb_s, member);
       linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, " %d",
-                                   group->tg_members[i]);
+                                   tcb->pid);
       copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                                  remaining, &offset);
 
@@ -1247,7 +1249,6 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 {
   FAR struct task_group_s *group = tcb->group;
   FAR struct file *filep;
-  char backtrace[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
   char path[PATH_MAX];
   size_t remaining;
   size_t linesize;
@@ -1307,22 +1308,24 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
         }
 
       linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                   "%-3d %-7d %-4x %-9ld %-14s %s\n",
+                                   "%-3d %-7d %-4x %-9ld %-14s ",
                                    i, filep->f_oflags,
                                    INODE_GET_TYPE(filep->f_inode),
-                                   (long)filep->f_pos, path,
-                                   file_dump_backtrace(filep,
-                                                       backtrace,
-                                                       sizeof(backtrace)
-                                                      ));
+                                   (long)filep->f_pos, path);
+      if (linesize < STATUS_LINELEN)
+        {
+#if CONFIG_FS_BACKTRACE > 0
+          linesize += backtrace_format(procfile->line + linesize,
+                                       STATUS_LINELEN - linesize,
+                                       filep->f_backtrace,
+                                       CONFIG_FS_BACKTRACE);
+#endif
+          procfile->line[linesize - 2] = '\n';
+        }
+
       fs_putfilep(filep);
       copysize   = procfs_memcpy(procfile->line, linesize,
                                  buffer, remaining, &offset);
-      if (linesize + 1 == STATUS_LINELEN)
-        {
-          procfile->line[STATUS_LINELEN - 2] = '\n';
-          linesize = STATUS_LINELEN;
-        }
 
       totalsize += copysize;
       buffer    += copysize;
@@ -1811,8 +1814,8 @@ static int proc_opendir(FAR const char *relpath,
     }
 
   /* Allocate the directory structure.  Note that the index and procentry
-   * pointer are implicitly nullified by fs_heap_zalloc().  Only the remaining,
-   * non-zero entries will need be initialized.
+   * pointer are implicitly nullified by fs_heap_zalloc().
+   * Only the remaining, non-zero entries will need be initialized.
    */
 
   procdir = fs_heap_zalloc(sizeof(struct proc_dir_s));
