@@ -68,7 +68,7 @@
  ****************************************************************************/
 
 FAR struct usbdev_req_s *usbdev_allocreq(FAR struct usbdev_ep_s *ep,
-                                         uint32_t len)
+                                         uint16_t len)
 {
   FAR struct usbdev_req_s *req;
 
