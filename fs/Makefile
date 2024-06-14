@@ -20,7 +20,7 @@
 
 include $(TOPDIR)/Make.defs
 
-CSRCS = fs_initialize.c
+CSRCS = fs_initialize.c fs_heap.c
 
 include inode/Make.defs
 include vfs/Make.defs
@@ -56,8 +56,10 @@ include userfs/Make.defs
 include hostfs/Make.defs
 include littlefs/Make.defs
 include rpmsgfs/Make.defs
+include fatfs/Make.defs
 include zipfs/Make.defs
-
+include yaffs/Make.defs
+include notify/Make.defs
 endif
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs

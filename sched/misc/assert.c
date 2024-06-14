@@ -26,6 +26,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/coredump.h>
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
@@ -36,6 +37,7 @@
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/usb/usbdev_trace.h>
+#include <nuttx/mm/kasan.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -46,7 +48,6 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
-#include "misc/coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -71,19 +72,19 @@
 #endif
 
 #define DUMP_PTR(p, x) ((uintptr_t)(&(p)[(x)]) < stack_top ? (p)[(x)] : 0)
-#define DUMP_STRIDE    (sizeof(FAR void *) * 8)
 
-#if UINTPTR_MAX <= UINT32_MAX
-#  define DUMP_FORMAT " %08" PRIxPTR ""
-#elif UINTPTR_MAX <= UINT64_MAX
-#  define DUMP_FORMAT " %016" PRIxPTR ""
+/* Architecture can overwrite the default XCPTCONTEXT alignment */
+
+#ifndef XCPTCONTEXT_ALIGN
+#  define XCPTCONTEXT_ALIGN 16
 #endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static uintptr_t g_last_regs[XCPTCONTEXT_REGS] aligned_data(16);
+static uintptr_t
+g_last_regs[XCPTCONTEXT_REGS] aligned_data(XCPTCONTEXT_ALIGN);
 static FAR const char *g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
@@ -96,6 +97,8 @@ static FAR const char * const g_ttypenames[4] =
   "Kthread",
   "Invalid"
 };
+
+static bool g_fatal_assert = false;
 
 /****************************************************************************
  * Private Functions
@@ -135,12 +138,13 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
 {
   uintptr_t stack;
 
-  for (stack = sp; stack <= stack_top; stack += DUMP_STRIDE)
+  for (stack = sp; stack <= stack_top; stack += 32)
     {
-      FAR uintptr_t *ptr = (FAR uintptr_t *)stack;
+      FAR uint32_t *ptr = (FAR uint32_t *)stack;
 
-      _alert("%p:"DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
-             DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT "\n",
+      _alert("%p: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+             " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+             " %08" PRIx32 "\n",
              (FAR void *)stack, DUMP_PTR(ptr, 0), DUMP_PTR(ptr , 1),
              DUMP_PTR(ptr, 2), DUMP_PTR(ptr, 3), DUMP_PTR(ptr, 4),
              DUMP_PTR(ptr, 5), DUMP_PTR(ptr , 6), DUMP_PTR(ptr, 7));
@@ -166,9 +170,9 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
 
       /* Get more information */
 
-      if (sp - DUMP_STRIDE >= base)
+      if (sp - 32 >= base)
         {
-          sp -= DUMP_STRIDE;
+          sp -= 32;
         }
 
       stack_dump(sp, top);
@@ -200,7 +204,7 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
 static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 {
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  uintptr_t intstack_base = up_get_intstackbase(up_cpu_index());
+  uintptr_t intstack_base = up_get_intstackbase(this_cpu());
   size_t intstack_size = CONFIG_ARCH_INTERRUPTSTACK;
   uintptr_t intstack_top = intstack_base + intstack_size;
   uintptr_t intstack_sp = 0;
@@ -249,13 +253,14 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
                  intstack_base,
                  intstack_size,
 #ifdef CONFIG_STACK_COLORATION
-                 up_check_intstack(up_cpu_index())
+                 up_check_intstack(this_cpu())
 #else
                  0
 #endif
                  );
 
-      tcbstack_sp = up_getusrsp((FAR void *)CURRENT_REGS);
+      tcbstack_sp = up_current_regs() ?
+                    up_getusrsp((FAR void *)up_current_regs()) : 0;
       if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
         {
           tcbstack_sp = 0;
@@ -514,6 +519,25 @@ static void dump_deadlock(void)
 #endif
 
 /****************************************************************************
+ * Name: pause_all_cpu
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void pause_all_cpu(void)
+{
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      if (cpu != this_cpu())
+        {
+          up_cpu_pause(cpu);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -542,6 +566,11 @@ void _assert(FAR const char *filename, int linenum,
 
   flags = enter_critical_section();
 
+  if (g_fatal_assert)
+    {
+      goto reset;
+    }
+
   /* try to save current context if regs is null */
 
   if (regs == NULL)
@@ -560,7 +589,22 @@ void _assert(FAR const char *filename, int linenum,
     {
       fatal = false;
     }
+  else
 #endif
+    {
+      g_fatal_assert = true;
+    }
+
+  if (fatal)
+    {
+      /* Disable KASAN to avoid false positive */
+
+      kasan_stop();
+
+#ifdef CONFIG_SMP
+      pause_all_cpu();
+#endif
+    }
 
   notifier_data.rtcb = rtcb;
   notifier_data.regs = regs;
@@ -659,6 +703,7 @@ void _assert(FAR const char *filename, int linenum,
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
+reset:
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
