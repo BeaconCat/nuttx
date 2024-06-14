@@ -47,7 +47,7 @@ config DISABLE_ENVIRON
 endif # DISABLE_OS_API
 
 config DISABLE_IDLE_LOOP
-	bool
+	bool "Disable idle loop support"
 	default n
 	---help---
 		This option allows nx_start to return instead of
@@ -310,15 +310,15 @@ config TICKET_SPINLOCK
 	---help---
 		Use ticket spinlock algorithm.
 
-endif # SPINLOCK
-
 config RW_SPINLOCK
 	bool "Support read-write Spinlocks"
-	default n
+	default y
 	---help---
 		Spinlocks are spilit into read and write lock.
 		Reader can take read lock simultaneously and only one writer
 		can take write lock.
+
+endif # SPINLOCK
 
 config IRQCHAIN
 	bool "Enable multi handler sharing a IRQ"
@@ -755,13 +755,15 @@ endif # SCHED_CHILD_STATUS
 config SCHED_WAITPID
 	bool "Enable waitpid() API"
 	default n
+	depends on SCHED_HAVE_PARENT || !BUILD_KERNEL
 	---help---
 		Enables the waitpid() interface in a default, non-standard mode
 		(non-standard in the sense that the waited for PID need not be child
 		of the caller).  If SCHED_HAVE_PARENT is also defined, then this
 		setting will modify the behavior or waitpid() (making more spec
 		compliant) and will enable the waitid() and wait() interfaces as
-		well.
+		well. Note that SCHED_HAVE_PARENT must be defined in BUILD_KERNEL if
+		SCHED_WAITPID is needed.
 
 config SCHED_DUMP_LEAK
 	bool "Enable catch task memory leak"
@@ -862,6 +864,20 @@ config PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT
 
 endchoice # Default pthread mutex protocol
 
+config PTHREAD_CLEANUP_STACKSIZE
+	int "pthread cleanup stack size"
+	default 0
+	range 0 255
+	---help---
+		The maximum number of cleanup actions that may be pushed by
+		pthread_cleanup_push().
+		if 0 disable the interfaces pthread_cleanup_push() and pthread_cleanup_pop().
+		This setting will increase the size of EVERY
+		pthread task control block by about n * CONFIG_PTHREAD_CLEANUP_STACKSIZE
+		where n is the size of a pointer, 2 * sizeof(uintptr_t), this would be
+		8 for a CPU with 32-bit addressing and 4 for a CPU with 16-bit
+		addressing.
+
 config CANCELLATION_POINTS
 	bool "Cancellation points"
 	default n
@@ -919,7 +935,7 @@ config SCHED_CRITMONITOR_MAXTIME_THREAD
 
 config SCHED_CRITMONITOR_MAXTIME_WQUEUE
 	int "WORK queue max execution time"
-	default -1
+	default SCHED_CRITMONITOR_MAXTIME_THREAD
 	---help---
 		Worker execution time should be smaller than
 		SCHED_CRITMONITOR_MAXTIME_WQUEUE, or system will give a warning.
@@ -1040,7 +1056,7 @@ config SCHED_CPULOAD_EXTCLK
 
 config SCHED_CPULOAD_CRITMONITOR
 	bool "Use critical monitor"
-	depends on SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+	depends on SCHED_CRITMONITOR
 	---help---
 		Use the perfcounter in the core of the chip as a counter, no need to
 		use an external timer. Need to depend on SCHED_CRITMONITOR.
@@ -1133,13 +1149,6 @@ config SCHED_CPULOAD_TIMECONSTANT
 		The accumulated CPU count is divided by two when the accumulated
 		tick count exceeds this time constant.  This time constant is in
 		units of seconds.
-
-config SCHED_PROFIL_TICKSPERSEC
-	int "Profile sampling rate"
-	default 1000
-	---help---
-		This is the frequency at which the profil functon will sample the
-		running program. The default is 1000Hz.
 
 menuconfig SCHED_INSTRUMENTATION
 	bool "System performance monitor hooks"
@@ -1263,23 +1272,18 @@ config SCHED_INSTRUMENTATION_IRQHANDLER
 
 			void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 
-config SCHED_INSTRUMENTATION_HEAP
-	bool "Heap monitor hooks"
-	default n
-	---help---
-		Enables additional hooks for heap allocation.
-
-			void sched_note_heap(bool alloc, FAR void* heap, FAR void *mem, size_t size)
-
 config SCHED_INSTRUMENTATION_DUMP
 	bool "Use note dump for instrumentation"
 	default n
 	---help---
 		Use note dump for instrumentation.
 
-			void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event, FAR const void *buf, size_t len);
-			void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt, uint32_t type, va_list va) printf_like(3, 0);
-			void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt, uint32_t type, ...) printf_like(3, 5);
+			void sched_note_string(FAR const char *buf);
+			void sched_note_dump(uint32_t module, uint8_t event, FAR const void *buf, size_t len);
+			void sched_note_vprintf(FAR const char *fmt, va_list va);
+			void sched_note_vbprintf(uint32_t module, uint8_t event, FAR const char *fmt, va_list va);
+			void sched_note_printf(FAR const char *fmt, ...) printf_like(1, 2);
+			void sched_note_bprintf(uint32_t module, uint8_t event, FAR const char *fmt, ...);
 
 config SCHED_INSTRUMENTATION_FUNCTION
 	bool "Enable function auto-tracing"
@@ -1308,39 +1312,6 @@ config SCHED_STACK_RECORD
 		TCB.  Useful if scheduler instrumentation is selected.  Set to zero
 		to disable.Through instrumentation, record the backtrace at
 		the deepest point in the stack.
-
-config SCHED_GPROF
-	bool "Enable gprof profiling"
-	default n
-	---help---
-		Enable gprof profiling support.  This will cause the compiler to
-		generate additional code to support profiling.  This will also
-		cause the linker to include the gmon.out file in the final
-		executable.
-		Add the "-pg" parameter to the Makefile when compiling to obtain
-		the function call graph of the specified module.
-
-config SCHED_GPROF_ALL
-	bool "Enable gprof call graph for all modules"
-	depends on SCHED_GPROF
-	default n
-	---help---
-		Enable gprof profiling for all code, it will instrument
-		all code, which will cause a large performance penalty for the code.
-		You can add the '-pg' parameter to the specified module in the
-		makefile to only analyze the content of the module.
-
-config SCHED_GCOV
-	bool "Enable GCOV support"
-	select HAVE_CXXINITIALIZE
-	default n
-	---help---
-		Enable GCOV support for code coverage analysis.
-		After turning on this option, code coverage can be analyzed.
-		If this option is enabled, image size and performance will be
-		significantly reduced. Before use, you need to add the
-		"-fprofile-generate -ftest-coverage" compilation parameters
-		to the file to be analyzed.
 
 endmenu
 
@@ -1968,10 +1939,12 @@ config GROUP_KILL_CHILDREN_TIMEOUT_MS
 		> 0 means wait timeout
 		= 0 means don't do kill signal
 
-config SCHED_PERF_EVENTS
-	bool "Support Perf Events"
-	select SCHED_RESUMESCHEDULER
-	select SCHED_SUSPENDSCHEDULER
-	default n
+config PID_INITIAL_COUNT
+	int "Initial length of pid table"
+	default 8 if DEFAULT_SMALL
+	default 16 if !DEFAULT_SMALL
 	---help---
-		Enable to support perf events.
+		This is the initial length of pid table, which the system
+		can still expand when needed. It is rounded up to power of
+		two by current implementation. If the number of threads in
+		your system is known at design time, setting this to it.
