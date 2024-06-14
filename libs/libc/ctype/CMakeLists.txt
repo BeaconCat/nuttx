@@ -34,5 +34,4 @@ target_sources(
           lib_isupper.c
           lib_isxdigit.c
           lib_tolower.c
-          lib_toupper.c
-          lib_ctype.c)
+          lib_toupper.c)
