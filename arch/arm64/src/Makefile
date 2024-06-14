@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
+include $(TOPDIR)/Make.defs
 include chip/Make.defs
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
@@ -54,7 +54,7 @@ CSRCS = $(CHIP_CSRCS) $(CMN_CSRCS)
 COBJS = $(CSRCS:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS)
-OBJS = $(AOBJS) $(COBJS) $(HEAD_OBJ)
+OBJS = $(AOBJS) $(COBJS)
 
 # User-mode objects
 
