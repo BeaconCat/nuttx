@@ -81,6 +81,15 @@ config LIBC_FTOK_VFS_PATH
 	---help---
 		The relative path to where ftok will exist in the root namespace.
 
+config LIBC_UNAME_DISABLE_TIMESTAMP
+	bool "Disable uname timestamp support"
+	default n
+	---help---
+		Currently uname command will print the timestamp
+		when the binary was built, and it generates an issue
+		because two identical built binaries will have differents
+		hashes/CRC.
+
 choice
 	prompt "Select memfd implementation"
 
@@ -103,11 +112,3 @@ config LIBC_MEM_FD_VFS_PATH
 	depends on !LIBC_MEMFD_ERROR
 	---help---
 		The relative path to where memfd will exist in the tmpfs namespace.
-
-config LIBC_MAX_PATHBUFFER
-	int "Maximum size of a temporary file path buffer array"
-	range 0 32
-	default 2
-	---help---
-		This value is the maximum size of the buffer that will hold the full
-		file path.

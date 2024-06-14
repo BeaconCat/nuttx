@@ -17,10 +17,6 @@ config ARMV7A_HAVE_GICv2
 
 if ARMV7A_HAVE_GICv2
 
-config ARMV7A_GICv2_DUMP
-	bool "Dump the gic register"
-	default DEBUG_IRQ_INFO
-
 config ARMV7A_GIC_EOIMODE
 	bool "Enable GIC EOImode"
 	default n
@@ -50,17 +46,6 @@ config ARMV7A_HAVE_L2CC
 	---help---
 		Selected by the configuration tool if the architecture supports any
 		kind of L2 cache.
-
-config ARMV7A_SMP_BUSY_WAIT
-	bool "Busy wait when SMP boot"
-	default n
-	depends on SMP
-	---help---
-		Enables busy wait when SMP boot
-
-config ARMV7A_SMP_BUSY_WAIT_FLAG_ADDR
-	hex "Busy wait flag address"
-	depends on ARMV7A_SMP_BUSY_WAIT
 
 config ARMV7A_HAVE_L2CC_PL310
 	bool
@@ -209,9 +194,3 @@ config ARMV7A_ICACHE_DISABLE
 config ARMV7A_AFE_ENABLE
 	bool "Enable Access Flag at __start"
 	default n
-
-config ARMV7A_MONITOR_STACK_SIZE
-	int "monitor stack size"
-	default DEFAULT_TASK_STACKSIZE
-	---help---
-		The size of the monitor stack in armv7-a platform.
