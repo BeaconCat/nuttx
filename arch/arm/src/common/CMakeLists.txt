@@ -88,12 +88,12 @@ if(CONFIG_UNWINDER_ARM)
   list(APPEND SRCS arm_backtrace_unwind.c)
 endif()
 
-if(CONFIG_ARCH_HAVE_FETCHADD)
-  list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_fetchadd.S)
+if(CONFIG_ARCH_HAVE_TESTSET AND NOT CONFIG_ARCH_ARMV6M)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_testset.S)
 endif()
 
-if(NOT CONFIG_SMP)
-  list(APPEND SRCS arm_cpuindex.c)
+if(CONFIG_ARCH_HAVE_FETCHADD)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_fetchadd.S)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

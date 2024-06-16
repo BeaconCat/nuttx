@@ -61,7 +61,7 @@ SECTIONS
     {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
+        KEEP(*(.init_array .ctors))
         _einit = ABSOLUTE(.);
     } > ddr3
 
@@ -91,6 +91,13 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > ddr3
 
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
+    } > ddr3
+
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -99,13 +106,6 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
-    } > ddr3
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
     } > ddr3
 
     /* Stabs debugging sections. */

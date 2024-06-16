@@ -80,40 +80,35 @@ FAR struct aio_container_s *aio_contain(FAR struct aiocb *aiocbp)
    */
 
   aioc = aioc_alloc();
-  if (aioc == NULL)
+  if (aioc != NULL)
     {
-      ret = -ENOMEM;
-      goto err_putfilep;
-    }
+      /* Initialize the container */
 
-  /* Initialize the container */
-
-  memset(aioc, 0, sizeof(struct aio_container_s));
-  aioc->aioc_aiocbp = aiocbp;
-  aioc->aioc_filep  = filep;
-  aioc->aioc_pid    = nxsched_getpid();
+      memset(aioc, 0, sizeof(struct aio_container_s));
+      aioc->aioc_aiocbp = aiocbp;
+      aioc->aioc_filep  = filep;
+      aioc->aioc_pid    = nxsched_getpid();
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
-  DEBUGVERIFY(nxsched_get_param(aioc->aioc_pid, &param));
-  aioc->aioc_prio   = param.sched_priority;
+      DEBUGVERIFY(nxsched_get_param (aioc->aioc_pid, &param));
+      aioc->aioc_prio   = param.sched_priority;
 #endif
 
-  /* Add the container to the pending transfer list. */
+      /* Add the container to the pending transfer list. */
 
-  ret = aio_lock();
-  if (ret < 0)
-    {
-      aioc_free(aioc);
-      goto err_putfilep;
+      ret = aio_lock();
+      if (ret < 0)
+        {
+          aioc_free(aioc);
+          goto errout;
+        }
+
+      dq_addlast(&aioc->aioc_link, &g_aio_pending);
+      aio_unlock();
     }
-
-  dq_addlast(&aioc->aioc_link, &g_aio_pending);
-  aio_unlock();
 
   return aioc;
 
-err_putfilep:
-  fs_putfilep(filep);
 errout:
   set_errno(-ret);
   return NULL;
@@ -153,7 +148,6 @@ FAR struct aiocb *aioc_decant(FAR struct aio_container_s *aioc)
        */
 
       aiocbp = aioc->aioc_aiocbp;
-      fs_putfilep(aioc->aioc_filep);
       aioc_free(aioc);
 
       aio_unlock();

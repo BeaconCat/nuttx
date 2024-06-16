@@ -156,6 +156,10 @@ struct udp_conn_s
    */
 
   struct udp_poll_s pollinfo[CONFIG_NET_UDP_NPOLLWAITERS];
+
+#ifdef CONFIG_NET_TIMESTAMP
+  int timestamp; /* Nonzero when SO_TIMESTAMP is enabled */
+#endif
 };
 
 /* This structure supports UDP write buffering.  It is simply a container
@@ -542,7 +546,11 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout);
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
+#ifdef CONFIG_NET_JUMBO_FRAME
+FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(int len);
+#else
 FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(void);
+#endif
 #endif /* CONFIG_NET_UDP_WRITE_BUFFERS */
 
 /****************************************************************************

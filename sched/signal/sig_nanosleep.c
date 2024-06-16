@@ -172,7 +172,7 @@ int nxsig_nanosleep(FAR const struct timespec *rqtp,
        * wait.
        */
 
-      ticks = clock_time2ticks(rqtp);
+      clock_time2ticks(rqtp, &ticks);
 
       /* Get the number of ticks that we actually waited */
 
@@ -192,7 +192,7 @@ int nxsig_nanosleep(FAR const struct timespec *rqtp,
           remaining = (clock_t)ticks - elapsed;
         }
 
-      clock_ticks2time(rmtp, remaining);
+      clock_ticks2time((sclock_t)remaining, rmtp);
     }
 
   leave_critical_section(flags);
