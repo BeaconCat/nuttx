@@ -66,11 +66,11 @@
     .syntax unified
     .text
     .align  2
-    .global ARCH_LIBCFUN(strcpy)
+    .global strcpy
     .thumb
-    .type   ARCH_LIBCFUN(strcpy), %function
+    .type   strcpy, %function
 
-ARCH_LIBCFUN(strcpy):
+strcpy:
 #if __ARM_FEATURE_PAC_DEFAULT
 #  if __ARM_FEATURE_BTI_DEFAULT
     pacbti  ip, lr, sp

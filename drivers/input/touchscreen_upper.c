@@ -38,7 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 
 /****************************************************************************
  * Private Types
@@ -366,12 +366,15 @@ errout:
   return ret;
 }
 
+/****************************************************************************
+ * Name: touch_event_notify
+ ****************************************************************************/
+
 static void touch_event_notify(FAR struct touch_openpriv_s  *openpriv,
                                FAR const struct touch_sample_s *sample)
 {
   int semcount;
 
-  nxmutex_lock(&openpriv->lock);
   circbuf_overwrite(&openpriv->circbuf, sample,
                     SIZEOF_TOUCH_SAMPLE_S(sample->npoints));
 
@@ -382,7 +385,6 @@ static void touch_event_notify(FAR struct touch_openpriv_s  *openpriv,
     }
 
   poll_notify(&openpriv->fds, 1, POLLIN);
-  nxmutex_unlock(&openpriv->lock);
 }
 
 /****************************************************************************

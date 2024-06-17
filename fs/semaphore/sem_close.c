@@ -33,7 +33,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
 
@@ -71,6 +70,7 @@ int nxsem_close(FAR sem_t *sem)
 {
   FAR struct nsem_inode_s *nsem;
   struct inode *inode;
+  int ret;
 
   DEBUGASSERT(sem);
 
@@ -80,13 +80,34 @@ int nxsem_close(FAR sem_t *sem)
   DEBUGASSERT(nsem->ns_inode);
   inode = nsem->ns_inode;
 
+  /* Decrement the reference count on the inode */
+
+  do
+    {
+      ret = inode_lock();
+
+      /* The only error that is expected is due to thread cancellation.
+       * At this point, we must continue to free the semaphore anyway.
+       */
+
+      DEBUGASSERT(ret == OK || ret == -ECANCELED);
+    }
+  while (ret < 0);
+
+  if (inode->i_crefs > 0)
+    {
+      inode->i_crefs--;
+    }
+
   /* If the semaphore was previously unlinked and the reference count has
    * decremented to zero, then release the semaphore and delete the inode
    * now.
    */
 
-  if (atomic_fetch_sub(&inode->i_crefs, 1) <= 1)
+  if (inode->i_crefs <= 0 && (inode->i_flags & FSNODEFLAG_DELETED) != 0)
     {
+      /* Destroy the semaphore and free the container */
+
       nxsem_destroy(&nsem->ns_sem);
       group_free(NULL, nsem);
 
@@ -94,14 +115,14 @@ int nxsem_close(FAR sem_t *sem)
        * unlinked, then the peer pointer should be NULL.
        */
 
-#ifdef CONFIG_FS_NOTIFY
-      notify_close2(inode);
-#endif
+      inode_unlock();
+
       DEBUGASSERT(inode->i_peer == NULL);
       inode_free(inode);
       return OK;
     }
 
+  inode_unlock();
   return OK;
 }
 
