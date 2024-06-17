@@ -90,10 +90,11 @@ void ipcc_txfree_notify(FAR struct ipcc_driver_s *priv)
 
   /* Notify all blocked writers that data is available to write */
 
-  while (nxsem_get_value(&priv->txsem, &semval) >= 0 && semval <= 0)
+  do
     {
       nxsem_post(&priv->txsem);
     }
+  while (nxsem_get_value(&priv->txsem, &semval) == 0 && semval <= 0);
 }
 
 /****************************************************************************
