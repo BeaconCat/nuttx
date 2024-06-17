@@ -3370,7 +3370,7 @@ static int khci_epconfigure(struct usbdev_ep_s *ep,
   uint32_t regval;
   uint8_t  epno;
   bool     epin;
-  bool     bidi = false;
+  bool     bidi;
   int      index;
 
 #ifdef CONFIG_DEBUG_FEATURES
