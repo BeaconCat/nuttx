@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86_64/src/common/x86_64_allocateheap.c
+ * arch/x86_64/src/intel64/intel64_pgalloc.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,67 +22,52 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/arch.h>
 #include <nuttx/config.h>
 
-#include <sys/types.h>
+#include <assert.h>
 #include <debug.h>
-
-#include <nuttx/arch.h>
-#include <nuttx/board.h>
-#include <arch/board/board.h>
-
-#include "x86_64_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
+/* Additional checks for CONFIG_ARCH_PGPOOL_MAPPING */
 
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
+#ifdef CONFIG_ARCH_PGPOOL_MAPPING
+#  if CONFIG_ARCH_PGPOOL_VBASE != (CONFIG_ARCH_PGPOOL_PBASE + X86_64_LOAD_OFFSET)
+#    error invalid PGPOOL configuration
+#  endif
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-const uintptr_t g_idle_topstack = (uintptr_t)_ebss +
-  CONFIG_IDLETHREAD_STACKSIZE;
-
 /****************************************************************************
- * Name: up_allocate_heap
+ * Name: up_allocate_pgheap
  *
  * Description:
- *   This function will be called to dynamically set aside the heap region.
- *
- *   For the kernel build (CONFIG_BUILD_KERNEL=y) with both kernel- and
- *   user-space heaps (CONFIG_MM_KERNEL_HEAP=y), this function provides the
- *   size of the unprotected, user-space heap.
- *
- *   If a protected kernel-space heap is provided, the kernel heap must be
- *   allocated (and protected) by an analogous up_allocate_kheap().
+ *   If there is a page allocator in the configuration, then this function
+ *   must be provided by the platform-specific code.  The OS initialization
+ *   logic will call this function early in the initialization sequence to
+ *   get the page heap information needed to configure the page allocator.
  *
  ****************************************************************************/
 
-void up_allocate_heap(void **heap_start, size_t *heap_size)
+void up_allocate_pgheap(void **heap_start, size_t *heap_size)
 {
-  board_autoled_on(LED_HEAPALLOCATE);
+  DEBUGASSERT(heap_start && heap_size);
 
-  /* Calculate the end of .bss section */
+#ifndef CONFIG_ARCH_PGPOOL_MAPPING
+  /* pgheap at the end of RAM */
 
-  uintptr_t hstart = (g_idle_topstack + PAGE_SIZE - 1) & PAGE_MASK;
-  *heap_start = (void *)hstart;
-
-  /* The size is the rest of the RAM minus page pool */
-
-#ifdef CONFIG_ARCH_PGPOOL_PBASE
-  *heap_size = (size_t)(CONFIG_ARCH_PGPOOL_PBASE -
-                        (hstart - X86_64_LOAD_OFFSET - 1));
+  *heap_start = (void *)(X86_64_PGPOOL_BASE + X86_64_LOAD_OFFSET);
+  *heap_size  = (size_t)X86_64_PGPOOL_SIZE;
 #else
-  *heap_size = (size_t)(X86_64_PGPOOL_BASE -
-                        (hstart - X86_64_LOAD_OFFSET - 1));
+  /* pgheap defined with Kconfig options */
+
+  *heap_start = (void *)CONFIG_ARCH_PGPOOL_VBASE;
+  *heap_size  = (size_t)CONFIG_ARCH_PGPOOL_SIZE;
 #endif
 }
