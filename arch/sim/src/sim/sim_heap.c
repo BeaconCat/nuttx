@@ -33,6 +33,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/sched_note.h>
 
 #include "sim_internal.h"
 
@@ -86,11 +87,11 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 
   flags = up_irq_save();
 
-  tmp->flink = heap->mm_delaylist[up_cpu_index()];
-  heap->mm_delaylist[up_cpu_index()] = tmp;
+  tmp->flink = heap->mm_delaylist[this_cpu()];
+  heap->mm_delaylist[this_cpu()] = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  heap->mm_delaycount[up_cpu_index()]++;
+  heap->mm_delaycount[this_cpu()]++;
 #endif
 
   up_irq_restore(flags);
@@ -99,29 +100,29 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 
 static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
 {
-  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
+  bool ret = false;
 
   /* Move the delay list to local */
 
   flags = up_irq_save();
 
-  tmp = heap->mm_delaylist[up_cpu_index()];
+  tmp = heap->mm_delaylist[this_cpu()];
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   if (tmp == NULL ||
       (!force &&
-        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+        heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       up_irq_restore(flags);
       return false;
     }
 
-  heap->mm_delaycount[up_cpu_index()] = 0;
+  heap->mm_delaycount[this_cpu()] = 0;
 #endif
-  heap->mm_delaylist[up_cpu_index()] = NULL;
+  heap->mm_delaylist[this_cpu()] = NULL;
 
   up_irq_restore(flags);
 
@@ -145,8 +146,8 @@ static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-#endif
   return ret;
+#endif
 }
 
 /****************************************************************************
@@ -185,6 +186,7 @@ static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay)
       int size = host_mallocsize(mem);
       atomic_fetch_sub(&heap->aordblks, 1);
       atomic_fetch_sub(&heap->uordblks, size);
+      sched_note_heap(false, heap, mem, size);
       host_free(mem);
     }
 }
@@ -323,22 +325,27 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int uordblks;
   int usmblks;
   int newsize;
+  int oldsize;
 
   mm_free_delaylist(heap, false);
 
-  if (size == 0)
-    {
-      mm_free(heap, oldmem);
-      return NULL;
-    }
-
-  atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
+  oldsize = host_mallocsize(oldmem);
+  atomic_fetch_sub(&heap->uordblks, oldsize);
   mem = host_realloc(oldmem, size);
 
   atomic_fetch_add(&heap->aordblks, oldmem == NULL && mem != NULL);
   newsize = host_mallocsize(mem ? mem : oldmem);
   atomic_fetch_add(&heap->uordblks, newsize);
   usmblks = atomic_load(&heap->usmblks);
+  if (mem != NULL)
+    {
+      if (oldmem != NULL)
+        {
+          sched_note_heap(false, heap, oldmem, oldsize);
+        }
+
+      sched_note_heap(true, heap, mem, newsize);
+    }
 
   do
     {
@@ -429,6 +436,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
     }
 
   size = host_mallocsize(mem);
+  sched_note_heap(true, heap, mem, size);
   atomic_fetch_add(&heap->aordblks, 1);
   atomic_fetch_add(&heap->uordblks, size);
   usmblks = atomic_load(&heap->usmblks);
@@ -595,6 +603,18 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
   *heap_size  = 0;
 }
 
+/****************************************************************************
+ * Name: mm_heapfree
+ *
+ * Description:
+ *   Return the total free size (in bytes) in the heap
+ *
+ ****************************************************************************/
+
+size_t mm_heapfree(struct mm_heap_s *heap)
+{
+  return SIZE_MAX;
+}
 #else /* CONFIG_MM_CUSTOMIZE_MANAGER */
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
