@@ -17,10 +17,9 @@
 # the License.
 #
 # ##############################################################################
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
-  if(CONFIG_FS_BINFS)
 
-    target_sources(fs PRIVATE fs_binfs.c)
+if(CONFIG_FS_BINFS)
 
-  endif()
+  target_sources(fs PRIVATE fs_binfs.c)
+
 endif()
