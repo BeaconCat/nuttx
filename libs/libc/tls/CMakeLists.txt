@@ -28,8 +28,4 @@ if(NOT CONFIG_TLS_NELEM EQUAL 0)
   list(APPEND SRCS tls_destruct.c)
 endif()
 
-if(NOT CONFIG_TLS_NCLEANUP EQUAL 0)
-  list(APPEND SRCS tls_cleanup.c)
-endif()
-
 target_sources(c PRIVATE ${SRCS})
