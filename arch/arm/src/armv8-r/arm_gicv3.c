@@ -247,7 +247,7 @@ void arm_gic_irq_enable(unsigned int intid)
 
   if (GIC_IS_SPI(intid))
     {
-      arm_gic_write_irouter(this_cpu(), intid);
+      arm_gic_write_irouter(up_cpu_index(), intid);
     }
 }
 
@@ -560,14 +560,7 @@ static void gicv3_dist_init(void)
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm64_pause_async_handler, NULL));
-
-#  ifdef CONFIG_SMP_CALL
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
-                         nxsched_smp_call_handler, NULL));
-#  endif
+  DEBUGVERIFY(irq_attach(GIC_IRQ_SGI2, arm64_pause_handler, NULL));
 #endif
 }
 
@@ -793,7 +786,7 @@ static void arm_gic_init(void)
 
   cpu             = this_cpu();
   gic_rdists[cpu] = CONFIG_GICR_BASE +
-                    this_cpu() * CONFIG_GICR_OFFSET;
+                    up_cpu_index() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
@@ -807,8 +800,7 @@ static void arm_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_SMP
-  up_enable_irq(GIC_SMP_CPUPAUSE);
-  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
+  up_enable_irq(GIC_IRQ_SGI2);
 #endif
 }
 
@@ -836,10 +828,4 @@ void arm_gic_secondary_init(void)
   arm_gic_init();
 }
 
-#  ifdef CONFIG_SMP_CALL
-void up_send_smp_call(cpu_set_t cpuset)
-{
-  up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
-}
-#  endif
 #endif

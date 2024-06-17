@@ -29,8 +29,6 @@
 #include <netinet/if_ether.h>
 #include <nuttx/wireless/wireless.h>
 #include <nuttx/net/netdev_lowerhalf.h>
-#include <netpacket/netlink.h>
-#include <nuttx/net/netlink.h>
 
 #include "sim_internal.h"
 
@@ -161,7 +159,7 @@ struct sim_netdev_s
   char bssid[ETH_ALEN];
   uint16_t channel;
   uint32_t freq;
-  char password[64];
+  uint8_t password[64];
   int key_mgmt;
   int proto;
   int auth_alg;
@@ -176,23 +174,6 @@ struct sim_netdev_s
   bool psk_flag;                /* for psk, 0: unset, 1: set */
   char host_ifname[IFNAMSIZ];   /* The wlan interface name on the host */
   uint8_t network_id;           /* for sta, default is 0 */
-};
-
-/* for wireless event */
-
-struct wireless_event_s
-{
-  struct nlmsghdr  hdr;                 /* netlink message header */
-  struct ifinfomsg iface;               /* interface info */
-
-  struct rtattr    attrevent;           /* IFLA_WIRELESS */
-  struct iw_event  event;               /* wireless event */
-};
-
-struct wireless_event_list_s
-{
-  sq_entry_t flink;
-  struct wireless_event_s payload;
 };
 
 /****************************************************************************
@@ -861,7 +842,7 @@ get_scan:
       goto get_scan;
     }
 
-  /* Add a terminator fot the rbuf */
+  /* Add a terminator for the rbuf */
 
   rbuf[ret] = '\0';
 
@@ -903,40 +884,6 @@ static bool get_wpa_state(struct sim_netdev_s *wifidev)
 
   if (ret > 0 && !strncmp(rbuf, "COMPLETED", strlen("COMPLETED")))
     {
-      return true;
-    }
-
-  return false;
-}
-
-static bool get_wpa_bssid(struct sim_netdev_s *wifidev,
-                          unsigned char *bssid)
-{
-  int ret;
-  char rbuf[BUF_LEN];
-
-  ret = get_cmd(wifidev, rbuf, BUF_LEN, "%s",
-                "status | grep bssid | awk -F'=' '{print $2}'");
-  if (ret > 0)
-    {
-      mac_addr_a2n(bssid, rbuf);
-      return true;
-    }
-
-  return false;
-}
-
-static bool get_wpa_rssi(struct sim_netdev_s *wifidev, int32_t *rssi)
-{
-  int ret;
-  char rbuf[BUF_LEN];
-
-  ret = host_system(rbuf, BUF_LEN, "iwconfig wlan%d | grep level "
-                    "| awk '{print $4}'| awk -F'=' '{print $2}'",
-                    wifidev->devidx);
-  if (ret > 0)
-    {
-      *rssi = atoi(rbuf);
       return true;
     }
 
@@ -1014,59 +961,6 @@ static int freq_to_channel(uint16_t freq)
       return channel;
     }
 
-  return OK;
-}
-
-static int wifi_send_event(FAR struct net_driver_s *dev,
-                           unsigned int cmd, FAR union iwreq_data *wrqu)
-{
-  FAR struct wireless_event_list_s *alloc;
-  FAR struct wireless_event_s *wev;
-
-  DEBUGASSERT(dev != NULL);
-
-  int up = IFF_IS_UP(dev->d_flags);
-
-  /* Allocate the response buffer */
-
-  alloc = (FAR struct wireless_event_list_s *)
-          kmm_zalloc(RTA_SPACE(sizeof(struct wireless_event_list_s)));
-  if (alloc == NULL)
-    {
-      nerr("ERROR: Failed to allocate wifi event buffer.\n");
-      return -ENOMEM;
-    }
-
-  /* Initialize the response buffer */
-
-  wev                   = &alloc->payload;
-
-  wev->hdr.nlmsg_len    = sizeof(struct wireless_event_s);
-  wev->hdr.nlmsg_type   = up ? RTM_NEWLINK : RTM_DELLINK;
-  wev->hdr.nlmsg_flags  = 0;
-  wev->hdr.nlmsg_seq    = 0;
-  wev->hdr.nlmsg_pid    = 0;
-
-  wev->iface.ifi_family = AF_UNSPEC;
-  wev->iface.ifi_type   = ARPHRD_IEEE80211;
-#ifdef CONFIG_NETDEV_IFINDEX
-  wev->iface.ifi_index  = dev->d_ifindex;
-#endif
-  wev->iface.ifi_flags  = dev->d_flags;
-  wev->iface.ifi_change = 0;
-
-  /* add wireless event info */
-
-  wev->attrevent.rta_len  = RTA_SPACE(sizeof(struct iw_event));
-  wev->attrevent.rta_type = IFLA_WIRELESS;
-  wev->event.len          = sizeof(union iwreq_data);
-  wev->event.cmd          = cmd;
-
-  memset(&wev->event.u, 0, sizeof(union iwreq_data));
-  memcpy(&wev->event.u, ((FAR char *)wrqu), sizeof(union iwreq_data));
-
-  netlink_add_broadcast(RTNLGRP_LINK,
-                        (FAR struct netlink_response_s *)alloc);
   return OK;
 }
 
@@ -1209,16 +1103,16 @@ static int wifidriver_get_auth(struct sim_netdev_s *wifidev,
 static int wifidriver_set_psk(struct sim_netdev_s *wifidev,
                               struct iwreq *pwrq)
 {
+  char psk_buf[64];
   struct iw_encode_ext *ext;
   int ret = 0;
 
   ext = (struct iw_encode_ext *)pwrq->u.encoding.pointer;
 
-  memset(wifidev->password, 0, sizeof(wifidev->password));
-  memcpy(wifidev->password, ext->key, ext->key_len);
+  memset(psk_buf, 0, sizeof(psk_buf));
+  memcpy(psk_buf, ext->key, ext->key_len);
 
-  ninfo("psk=%s, key_len= %d, alg=%u\n", wifidev->password,
-        ext->key_len, ext->alg);
+  ninfo("psk=%s, key_len= %d, alg=%u\n", psk_buf, ext->key_len, ext->alg);
 
   /* set auth_alg */
 
@@ -1233,13 +1127,11 @@ static int wifidriver_set_psk(struct sim_netdev_s *wifidev,
       return -ENOSYS;
     }
 
-  wifidev->auth_alg = ext->alg;
-
   switch (wifidev->mode)
     {
     case IW_MODE_INFRA:
       WPA_SET_NETWORK(wifidev, "auth_alg %s", get_auth_algstr(ext->alg));
-      WPA_SET_NETWORK(wifidev, "psk \\\"%s\\\"", wifidev->password);
+      WPA_SET_NETWORK(wifidev, "psk \\\"%s\\\"", psk_buf);
       WPA_SET_NETWORK(wifidev, "key_mgmt %s", "WPA-PSK WPA-EAP");
 
       /* Set the psk flag for security ap. */
@@ -1250,44 +1142,8 @@ static int wifidriver_set_psk(struct sim_netdev_s *wifidev,
 
        /* set wpa_passphrase psk_buf */
 
-      ret = set_cmd(wifidev, "set wpa_passphrase %s", wifidev->password);
+      ret = set_cmd(wifidev, "set wpa_passphrase %s", psk_buf);
       wifidev->psk_flag = 1;
-      break;
-    default:
-      break;
-    }
-
-  return ret ;
-}
-
-static int wifidriver_get_psk(struct sim_netdev_s *wifidev,
-                              struct iwreq *pwrq)
-{
-  struct iw_encode_ext *ext;
-  int ret = 0;
-  int len;
-  int size;
-
-  ext = (struct iw_encode_ext *)pwrq->u.encoding.pointer;
-  len = pwrq->u.encoding.length - sizeof(*ext);
-
-  switch (wifidev->mode)
-    {
-    case IW_MODE_INFRA:
-      size = strnlen(wifidev->password, 64);
-      if (len < size)
-        {
-          return -EINVAL;
-        }
-      else
-        {
-          ext->key_len = size;
-          memcpy(ext->key, wifidev->password, ext->key_len);
-          ext->alg = wifidev->auth_alg;
-        }
-      break;
-
-    case IW_MODE_MASTER:
       break;
     default:
       break;
@@ -1426,42 +1282,8 @@ static int wifidriver_set_bssid(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_bssid(struct sim_netdev_s *wifidev,
-                                FAR struct iwreq *pwrq)
-{
-  FAR struct sockaddr *sockaddr = &pwrq->u.ap_addr;
-  FAR unsigned char *bssid = (FAR unsigned char *)sockaddr->sa_data;
-  int ret;
-
-  switch (wifidev->mode)
-    {
-      case IW_MODE_INFRA:
-        if (get_wpa_state(wifidev) && get_wpa_bssid(wifidev, bssid))
-          {
-            ret = OK;
-          }
-        else
-          {
-            ret = -ENOTTY;
-          }
-        break;
-
-      case IW_MODE_MASTER:
-        ret = -ENOSYS;
-        break;
-
-      default:
-        ret = -EINVAL;
-        break;
-    }
-
-  return ret;
-}
-
 static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
 {
-  int timeout = 10;
-
   switch (wifidev->mode)
     {
     case IW_MODE_INFRA:
@@ -1478,28 +1300,7 @@ static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
         {
           wifidev->psk_flag = 0;
         }
-
-      /* Wait the connect sucess. */
-
-      while (timeout--)
-        {
-           if (get_wpa_state(wifidev))
-             {
-               unsigned char bssid[ETH_ALEN];
-               union iwreq_data wrqu;
-
-               get_wpa_bssid(wifidev, bssid);
-
-               memset(&wrqu, 0, sizeof(wrqu));
-               memcpy(wrqu.ap_addr.sa_data, bssid, ETH_ALEN);
-               wifi_send_event(&wifidev->dev.netdev, SIOCGIWAP, &wrqu);
-               return OK;
-             }
-
-           sleep(1);
-        }
-
-      return ERROR;
+      break;
     case IW_MODE_MASTER:
 
       set_cmd(wifidev, "disable");
@@ -1658,32 +1459,6 @@ static int wifidriver_get_country(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_sensitivity(struct sim_netdev_s *wifidev,
-                                      struct iwreq *pwrq)
-{
-  int32_t rssi;
-  int ret;
-
-  if (wifidev->mode != IW_MODE_INFRA)
-    {
-      return OK;
-    }
-
-  if (get_wpa_state(wifidev) && get_wpa_rssi(wifidev, &rssi))
-    {
-      pwrq->u.sens.value = -rssi;
-      ret = OK;
-
-      ninfo("get rssi is %"PRId32 "\n", pwrq->u.sens.value);
-    }
-  else
-    {
-      ret = -ENOTTY;
-    }
-
-  return ret;
-}
-
 int wifidriver_set_freq(struct sim_netdev_s *wifidev, struct iwreq *pwrq)
 {
   int channel;
@@ -1772,15 +1547,11 @@ static int wifidriver_connect(struct netdev_lowerhalf_s *dev)
 static int wifidriver_disconnect(struct netdev_lowerhalf_s *dev)
 {
   int ret;
-  union iwreq_data wrqu;
 
   ret = wifidriver_start_disconnect((struct sim_netdev_s *)dev);
   if (ret >= 0)
     {
       netdev_lower_carrier_off(dev);
-      memset(&wrqu, 0, sizeof(wrqu));
-      wrqu.ap_addr.sa_family = ARPHRD_ETHER;
-      wifi_send_event(&dev->netdev, SIOCGIWAP, &wrqu);
     }
 
   return ret;
@@ -1817,7 +1588,7 @@ static int wifidriver_bssid(struct netdev_lowerhalf_s *dev,
     }
   else
     {
-      ret = wifidriver_get_bssid(wifidev, iwr);
+      return -ENOTTY;
     }
 
   return ret;
@@ -1832,7 +1603,7 @@ static int wifidriver_passwd(struct netdev_lowerhalf_s *dev,
     }
   else
     {
-      return wifidriver_get_psk((struct sim_netdev_s *)dev, iwr);
+      return -ENOTTY;
     }
 }
 
@@ -1911,16 +1682,7 @@ static int wifidriver_country(struct netdev_lowerhalf_s *dev,
 static int wifidriver_sensitivity(struct netdev_lowerhalf_s *dev,
                                   struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
-
-  if (set)
-    {
-      return -ENOTTY;
-    }
-  else
-    {
-      return wifidriver_get_sensitivity(wifidev, iwr);
-    }
+  return -ENOTTY;
 }
 
 static int wifidriver_scan(struct netdev_lowerhalf_s *dev,
