@@ -22,12 +22,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include  <nuttx/config.h>
 
-#include <sched.h>
-#include <debug.h>
+#include  <sched.h>
 
-#include "sched/sched.h"
+#include  "sched/sched.h"
 
 #ifdef CONFIG_SMP
 #  include "irq/irq.h"
@@ -86,15 +85,8 @@ int nxtask_exit(void)
   cpu  = this_cpu();
   dtcb = current_task(cpu);
 #else
-  dtcb = this_task();
+  dtcb = this_task_irq();
 #endif
-
-#if CONFIG_TASK_NAME_SIZE > 0
-  sinfo("%s pid=%d,TCB=%p\n", dtcb->name,
-#else
-  sinfo("pid=%d,TCB=%p\n",
-#endif  
-        dtcb->pid, dtcb);
 
   /* Update scheduler parameters */
 
@@ -108,14 +100,14 @@ int nxtask_exit(void)
    * ready-to-run with state == TSTATE_TASK_RUNNING
    */
 
-  nxsched_remove_readytorun(dtcb, true);
+  nxsched_remove_running(dtcb);
 
   /* Get the new task at the head of the ready to run list */
 
 #ifdef CONFIG_SMP
   rtcb = current_task(cpu);
 #else
-  rtcb = this_task();
+  rtcb = this_task_irq();
 #endif
 
   /* NOTE: nxsched_resume_scheduler() was moved to up_exit()
@@ -134,13 +126,6 @@ int nxtask_exit(void)
    */
 
   rtcb->lockcount++;
-
-#ifdef CONFIG_SMP
-  /* Make sure that the system knows about the locked state */
-
-  spin_setbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
-              &g_cpu_schedlock);
-#endif
 
   rtcb->task_state = TSTATE_TASK_READYTORUN;
 
@@ -175,16 +160,6 @@ int nxtask_exit(void)
   /* Decrement the lockcount on rctb. */
 
   rtcb->lockcount--;
-
-#ifdef CONFIG_SMP
-  if (rtcb->lockcount == 0)
-    {
-      /* Make sure that the system knows about the unlocked state */
-
-      spin_clrbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
-                  &g_cpu_schedlock);
-    }
-#endif
 
   return ret;
 }
