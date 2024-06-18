@@ -78,6 +78,7 @@ struct btuart_upperhalf_s
   /* Work queue support */
 
   struct work_s work;
+  volatile bool busy;
 };
 
 /****************************************************************************

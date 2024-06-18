@@ -73,8 +73,10 @@ volatile bool g_rtc_enabled = false;
  * Private Functions
  ****************************************************************************/
 
-extern unsigned long g_x86_64_timer_freq;
+static unsigned long rtc_freq;
+static unsigned long rtc_overflow;
 static unsigned long rtc_last;
+static unsigned long rtc_overflows;
 
 /****************************************************************************
  * Private Functions
@@ -90,7 +92,7 @@ static unsigned long rtc_read(void)
     }
 
   rtc_last = tmr;
-  tmr = (tmr / (g_x86_64_timer_freq / 1000000ul)) * 1000l;
+  tmr = (tmr / (rtc_freq / 1000000ul)) * 1000l;
   return tmr;
 }
 
@@ -115,6 +117,7 @@ static unsigned long rtc_read(void)
 
 int up_rtc_initialize(void)
 {
+  rtc_freq = comm_region->tsc_khz * 1000L;
   g_rtc_enabled = true;
 
   return OK;
