@@ -52,10 +52,7 @@
 
 #ifdef CONFIG_RPTUN
 #  include <nuttx/wireless/bluetooth/bt_rpmsghci.h>
-#  ifdef CONFIG_UART_BTH4
-#    include <nuttx/serial/uart_bth4.h>
-#  endif
-#  ifdef CONFIG_NET_BLUETOOTH
+#  ifdef CONFIG_DRIVERS_BLUETOOTH
 #    include <nuttx/wireless/bluetooth/bt_driver.h>
 #  endif
 #  include "nrf53_rptun.h"
@@ -66,6 +63,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define NRF53_TIMER (0)
 
 /****************************************************************************
  * Private Functions
@@ -91,21 +90,11 @@ static int nrf53_appcore_bleinit(void)
       return -ENOMEM;
     }
 
-#  ifdef CONFIG_UART_BTH4
-  /* Register UART BT H4 device */
-
-  ret = uart_bth4_register("/dev/ttyHCI", bt_dev);
+#  ifdef CONFIG_DRIVERS_BLUETOOTH
+  ret = bt_driver_register(bt_dev);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "bt_bth4_register error: %d\n", ret);
-    }
-#  elif defined(CONFIG_NET_BLUETOOTH)
-  /* Register network device */
-
-  ret = bt_netdev_register(bt_dev);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "bt_netdev_register error: %d\n", ret);
+      syslog(LOG_ERR, "bt_driver_register error: %d\n", ret);
     }
 #  else
 #    error
@@ -257,16 +246,6 @@ int nrf53_bringup(void)
       syslog(LOG_ERR, "ERROR: nrf53_rgbled_init failed: %d\n", ret);
     }
 #endif
-
-  /* Initialize on-board sensors */
-
-  ret = nrf53_sensors_init();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to initialize sensors: %d\n",
-             ret);
-    }
 
   UNUSED(ret);
   return OK;
