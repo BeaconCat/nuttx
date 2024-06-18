@@ -34,32 +34,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: clock_timespec_compare
- *
- * Description:
- *    Return < 0 if time a is before time b
- *    Return > 0 if time b is before time a
- *    Return 0 if time a is the same as time b
- *
- ****************************************************************************/
-
-int clock_timespec_compare(FAR const struct timespec *a,
-                           FAR const struct timespec *b)
-{
-  if (a->tv_sec < b->tv_sec)
-    {
-      return -1;
-    }
-
-  if (a->tv_sec > b->tv_sec)
-    {
-      return 1;
-    }
-
-  return a->tv_nsec - b->tv_nsec;
-}
-
-/****************************************************************************
  * Name: clock_abstime2ticks
  *
  * Description:
@@ -124,5 +98,7 @@ int clock_abstime2ticks(clockid_t clockid,
 
   /* Convert this relative time into clock ticks. */
 
-  return clock_time2ticks(&reltime, ticks);
+  *ticks = clock_time2ticks(&reltime);
+
+  return OK;
 }
