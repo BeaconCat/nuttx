@@ -101,6 +101,191 @@ static void nxmq_sndtimeout(wdparm_t pid)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: file_mq_timedsend_internal
+ *
+ * Description:
+ *   This is an internal function of file_mq_timedsend()/file_mq_ticksend(),
+ *   please refer to the detailed description for more information.
+ *
+ * Input Parameters:
+ *   mq      - Message queue descriptor
+ *   msg     - Message to send
+ *   msglen  - The length of the message in bytes
+ *   prio    - The priority of the message
+ *   abstime - the absolute time to wait until a timeout is decleared
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedsend() for the list list valid return values).
+ *
+ *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
+ *            message queue description referred to by mq.
+ *   EINVAL   Either msg or mq is NULL or the value of prio is invalid.
+ *   EBADF    Message queue opened not opened for writing.
+ *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
+ *            message queue.
+ *   EINTR    The call was interrupted by a signal handler.
+ *
+ ****************************************************************************/
+
+static int
+file_mq_timedsend_internal(FAR struct file *mq, FAR const char *msg,
+                           size_t msglen, unsigned int prio,
+                           FAR const struct timespec *abstime,
+                           sclock_t ticks)
+{
+  FAR struct tcb_s *rtcb = this_task();
+  FAR struct mqueue_inode_s *msgq;
+  FAR struct mqueue_msg_s *mqmsg;
+  irqstate_t flags;
+  int ret;
+
+  DEBUGASSERT(up_interrupt_context() == false);
+
+  /* Verify the input parameters on any failures to verify. */
+
+  ret = nxmq_verify_send(mq, msg, msglen, prio);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  msgq = mq->f_inode->i_private;
+
+  /* Disable interruption */
+
+  flags = enter_critical_section();
+
+  /* Pre-allocate a message structure */
+
+  mqmsg = nxmq_alloc_msg();
+  if (mqmsg == NULL)
+    {
+      /* Failed to allocate the message. nxmq_alloc_msg() does not set the
+       * errno value.
+       */
+
+      ret = -ENOMEM;
+      goto errout_in_critical_section;
+    }
+
+  /* OpenGroup.org: "Under no circumstance shall the operation fail with a
+   * timeout if there is sufficient room in the queue to add the message
+   * immediately. The validity of the abstime parameter need not be checked
+   * when there is sufficient room in the queue."
+   *
+   * Also ignore the time value if for some crazy reason we were called from
+   * an interrupt handler.  This probably really should be an assertion.
+   *
+   * NOTE: There is a race condition here: What if a message is added by
+   * interrupt related logic so that queue again becomes non-empty.  That
+   * is handled because nxmq_do_send() will permit the maxmsgs limit to be
+   * exceeded in that case.
+   */
+
+  if (msgq->nmsgs < msgq->maxmsgs || up_interrupt_context())
+    {
+      /* Do the send with no further checks (possibly exceeding maxmsgs)
+       * Currently nxmq_do_send() always returns OK.
+       */
+
+      goto out_send_message;
+    }
+
+  /* The message queue is full... We are going to wait.
+   * Now we must have a valid time value.
+   */
+
+  if (abstime != NULL)
+    {
+      if (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
+        {
+          ret = -EINVAL;
+        }
+      else
+        {
+          /* We are not in an interrupt handler and the message queue
+           * is full. Set up a timed wait for the message queue to
+           * become non-full.
+           *
+           * Convert the timespec to clock ticks.  We must have interrupts
+           * disabled here so that this time stays valid until the wait
+           * begins.
+           */
+
+          ret = clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
+        }
+
+      /* Handle any time-related errors */
+
+      if (ret != OK)
+        {
+          nxmq_free_msg(mqmsg);
+          goto errout_in_critical_section;
+        }
+    }
+
+  /* If the time has already expired and the message queue is empty,
+   * return immediately.
+   */
+
+  if (ticks <= 0)
+    {
+      ret = -ETIMEDOUT;
+      nxmq_free_msg(mqmsg);
+      goto errout_in_critical_section;
+    }
+
+  /* Start the watchdog and begin the wait for MQ not full */
+
+  wd_start(&rtcb->waitdog, ticks, nxmq_sndtimeout, nxsched_gettid());
+
+  /* And wait for the message queue to be non-empty */
+
+  ret = nxmq_wait_send(msgq, mq->f_oflags);
+
+  /* This may return with an error and errno set to either EINTR
+   * or ETIMEDOUT.  Cancel the watchdog timer in any event.
+   */
+
+  wd_cancel(&rtcb->waitdog);
+
+  /* Check if nxmq_wait_send() failed */
+
+  if (ret == OK)
+    {
+      /* If any of the above failed, set the errno.  Otherwise, there should
+       * be space for another message in the message queue.  NOW we can
+       * allocate the message structure.
+       *
+       * Currently nxmq_do_send() always returns OK.
+       */
+
+out_send_message:
+      ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
+    }
+  else
+    {
+      /* free the message as it can't be sent */
+
+      nxmq_free_msg(mqmsg);
+    }
+
+  /* Exit here with (1) the scheduler locked, (2) a message allocated, (3) a
+   * wdog allocated, and (4) interrupts disabled.
+   */
+
+errout_in_critical_section:
+  leave_critical_section(flags);
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: file_mq_timedsend
  *
  * Description:
@@ -146,139 +331,56 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
                       size_t msglen, unsigned int prio,
                       FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb;
-  FAR struct mqueue_inode_s *msgq;
-  FAR struct mqueue_msg_s *mqmsg;
-  irqstate_t flags;
-  sclock_t ticks;
-  int ret;
+  return file_mq_timedsend_internal(mq, msg, msglen, prio, abstime, 0);
+}
 
-  /* Verify the input parameters on any failures to verify. */
+/****************************************************************************
+ * Name: file_mq_ticksend
+ *
+ * Description:
+ *   This function adds the specified message (msg) to the message queue
+ *   (mq).  file_mq_ticksend() behaves just like mq_send(), except that if
+ *   the queue is full and the O_NONBLOCK flag is not enabled for the
+ *   message queue description, then abstime points to a structure which
+ *   specifies a ceiling on the time for which the call will block.
+ *
+ *   file_mq_ticksend() is functionally equivalent to mq_timedsend() except
+ *   that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedsend() for a more complete description of the
+ *  behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message queue descriptor
+ *   msg     - Message to send
+ *   msglen  - The length of the message in bytes
+ *   prio    - The priority of the message
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedsend() for the list list valid return values).
+ *
+ *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
+ *            message queue description referred to by mq.
+ *   EINVAL   Either msg or mq is NULL or the value of prio is invalid.
+ *   EBADF    Message queue opened not opened for writing.
+ *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
+ *            message queue.
+ *   EINTR    The call was interrupted by a signal handler.
+ *
+ ****************************************************************************/
 
-  ret = nxmq_verify_send(mq, msg, msglen, prio);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  msgq = mq->f_inode->i_private;
-
-  /* Disable interruption */
-
-  flags = enter_critical_section();
-  rtcb = this_task_irq();
-
-  /* Pre-allocate a message structure */
-
-  mqmsg = nxmq_alloc_msg();
-  if (mqmsg == NULL)
-    {
-      /* Failed to allocate the message. nxmq_alloc_msg() does not set the
-       * errno value.
-       */
-
-      ret = -ENOMEM;
-      goto errout_in_critical_section;
-    }
-
-  /* OpenGroup.org: "Under no circumstance shall the operation fail with a
-   * timeout if there is sufficient room in the queue to add the message
-   * immediately. The validity of the abstime parameter need not be checked
-   * when there is sufficient room in the queue."
-   *
-   * Also ignore the time value if for some crazy reason we were called from
-   * an interrupt handler.  This probably really should be an assertion.
-   *
-   * NOTE: There is a race condition here: What if a message is added by
-   * interrupt related logic so that queue again becomes non-empty.  That
-   * is handled because nxmq_do_send() will permit the maxmsgs limit to be
-   * exceeded in that case.
-   */
-
-  if (msgq->nmsgs < msgq->maxmsgs || up_interrupt_context())
-    {
-      /* Do the send with no further checks (possibly exceeding maxmsgs)
-       * Currently nxmq_do_send() always returns OK.
-       */
-
-      goto out_send_message;
-    }
-
-  /* The message queue is full... We are going to wait.  Now we must have a
-   * valid time value.
-   */
-
-  if (!abstime || abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
-    {
-      ret = -EINVAL;
-      nxmq_free_msg(mqmsg);
-      goto errout_in_critical_section;
-    }
-
-  /* We are not in an interrupt handler and the message queue is full.
-   * Set up a timed wait for the message queue to become non-full.
-   *
-   * Convert the timespec to clock ticks.  We must have interrupts
-   * disabled here so that this time stays valid until the wait begins.
-   */
-
-  ret = clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
-
-  /* If the time has already expired and the message queue is empty,
-   * return immediately.
-   */
-
-  if (ret == OK && ticks <= 0)
-    {
-      ret = ETIMEDOUT;
-    }
-
-  /* Handle any time-related errors */
-
-  if (ret != OK)
-    {
-      ret = -ret;
-      nxmq_free_msg(mqmsg);
-      goto errout_in_critical_section;
-    }
-
-  /* Start the watchdog and begin the wait for MQ not full */
-
-  wd_start(&rtcb->waitdog, ticks, nxmq_sndtimeout, nxsched_gettid());
-
-  /* And wait for the message queue to be non-empty */
-
-  ret = nxmq_wait_send(msgq, mq->f_oflags);
-
-  /* This may return with an error and errno set to either EINTR
-   * or ETIMEDOUT.  Cancel the watchdog timer in any event.
-   */
-
-  wd_cancel(&rtcb->waitdog);
-
-  /* Check if nxmq_wait_send() failed */
-
-  if (ret == OK)
-    {
-      /* If any of the above failed, set the errno.  Otherwise, there should
-       * be space for another message in the message queue.  NOW we can
-       * allocate the message structure.
-       *
-       * Currently nxmq_do_send() always returns OK.
-       */
-
-out_send_message:
-      ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
-    }
-
-  /* Exit here with (1) the scheduler locked, (2) a message allocated, (3) a
-   * wdog allocated, and (4) interrupts disabled.
-   */
-
-errout_in_critical_section:
-  leave_critical_section(flags);
-
-  return ret;
+int file_mq_ticksend(FAR struct file *mq, FAR const char *msg,
+                     size_t msglen, unsigned int prio, sclock_t ticks)
+{
+  return file_mq_timedsend_internal(mq, msg, msglen, prio, NULL, ticks);
 }
 
 /****************************************************************************
@@ -335,9 +437,7 @@ int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_timedsend(filep, msg, msglen, prio, abstime);
-  fs_putfilep(filep);
-  return ret;
+  return file_mq_timedsend_internal(filep, msg, msglen, prio, abstime, 0);
 }
 
 /****************************************************************************

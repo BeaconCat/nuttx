@@ -39,10 +39,6 @@
 
 /* Configuration ************************************************************/
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD >= 0
-#  define CONFIG_MM_HEAP_MEMPOOL
-#endif
-
 /* If the MCU has a small (16-bit) address capability, then we will use
  * a smaller chunk header that contains 16-bit size/offset information.
  * We will also use the smaller header on MCUs with wider addresses if
@@ -147,23 +143,11 @@
 #define MM_ALLOC_MAGIC   0xaa
 #define MM_FREE_MAGIC    0x55
 
-#define MM_PTR_FMT_WIDTH ((int)sizeof(uintptr_t) * 2 + 3) /* 3: ' 0x' prefix */
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
 struct mm_heap_s; /* Forward reference */
-
-struct mempool_init_s
-{
-  FAR const size_t *poolsize;
-  size_t            npools;
-  size_t            threshold;
-  size_t            chunksize;
-  size_t            expandsize;
-  size_t            dict_expendsize;
-};
 
 /****************************************************************************
  * Public Data
@@ -225,18 +209,6 @@ EXTERN FAR struct mm_heap_s *g_kmmheap;
 
 FAR struct mm_heap_s *mm_initialize(FAR const char *name,
                                     FAR void *heap_start, size_t heap_size);
-
-#ifdef CONFIG_MM_HEAP_MEMPOOL
-FAR struct mm_heap_s *
-mm_initialize_pool(FAR const char *name,
-                   FAR void *heap_start, size_t heap_size,
-                   FAR const struct mempool_init_s *init);
-
-#else
-#  define mm_initialize_pool(name, heap_start, heap_size, init) \
-          mm_initialize(name, heap_start, heap_size)
-#endif
-
 void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
                   size_t heapsize);
 void mm_uninitialize(FAR struct mm_heap_s *heap);
@@ -389,8 +361,6 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap);
 struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
                                       FAR const struct malltask *task);
 
-size_t mm_heapfree(FAR struct mm_heap_s *heap);
-
 /* Functions contained in kmm_mallinfo.c ************************************/
 
 #ifdef CONFIG_MM_KERNEL_HEAP
@@ -405,6 +375,10 @@ struct mallinfo_task kmm_mallinfo_task(FAR const struct malltask *task);
 void mm_memdump(FAR struct mm_heap_s *heap,
                 FAR const struct mm_memdump_s *dump);
 
+/* Functions contained in umm_memdump.c *************************************/
+
+void umm_memdump(FAR const struct mm_memdump_s *dump);
+
 #ifdef CONFIG_DEBUG_MM
 /* Functions contained in mm_checkcorruption.c ******************************/
 
@@ -413,10 +387,6 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap);
 /* Functions contained in umm_checkcorruption.c *****************************/
 
 FAR void umm_checkcorruption(void);
-
-/* Functions contained in umm_memdump.c *************************************/
-
-void umm_memdump(FAR const struct mm_memdump_s *dump);
 
 /* Functions contained in kmm_checkcorruption.c *****************************/
 
@@ -433,14 +403,6 @@ FAR void kmm_checkcorruption(void);
 #define kmm_checkcorruption()
 
 #endif /* CONFIG_DEBUG_MM */
-
-/* Functions contained in fs_procfspressure.c *******************************/
-
-#ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
-void mm_notify_pressure(size_t remaining);
-#else
-#  define mm_notify_pressure(remaining)
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus
