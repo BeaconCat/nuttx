@@ -38,6 +38,10 @@
 #include "irq/irq.h"
 #include "arm64_fatal.h"
 
+#ifdef CONFIG_ARCH_FPU
+#include "arm64_fpu.h"
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -54,7 +58,7 @@
 
 void arm64_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s  *rtcb = this_task();
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal
@@ -64,7 +68,10 @@ void arm64_sigdeliver(void)
 
   irqstate_t  flags;
   int16_t saved_irqcount;
-  flags = (rtcb->xcp.saved_reg[REG_SPSR] & SPSR_DAIF_MASK);
+  struct regs_context  *pctx =
+                (struct regs_context *)rtcb->xcp.saved_reg;
+  flags = (pctx->spsr & SPSR_DAIF_MASK);
+  enter_critical_section();
 #endif
 
   sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
@@ -79,16 +86,17 @@ retry:
    */
 
   saved_irqcount = rtcb->irqcount;
-  DEBUGASSERT(saved_irqcount >= 0);
+  DEBUGASSERT(saved_irqcount >= 1);
 
   /* Now we need call leave_critical_section() repeatedly to get the irqcount
    * to zero, freeing all global spinlocks that enforce the critical section.
    */
 
-  while (rtcb->irqcount > 0)
+  do
     {
       leave_critical_section(flags);
     }
+  while (rtcb->irqcount > 0);
 #endif /* CONFIG_SMP */
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
@@ -119,7 +127,7 @@ retry:
    */
 
   DEBUGASSERT(rtcb->irqcount == 0);
-  while (rtcb->irqcount < saved_irqcount + 1)
+  while (rtcb->irqcount < saved_irqcount)
     {
       enter_critical_section();
     }
@@ -132,9 +140,6 @@ retry:
   if (!sq_empty(&rtcb->sigpendactionq) &&
       (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
     {
-#ifdef CONFIG_SMP
-      leave_critical_section(flags);
-#endif
       goto retry;
     }
 
@@ -150,6 +155,11 @@ retry:
 
   rtcb->xcp.sigdeliver = NULL;  /* Allows next handler to be scheduled */
   rtcb->xcp.regs = rtcb->xcp.saved_reg;
+
+#ifdef CONFIG_ARCH_FPU
+  arm64_destory_fpu(rtcb);
+  rtcb->xcp.fpu_regs = rtcb->xcp.saved_fpu_regs;
+#endif
 
   /* Then restore the correct state for this thread of execution. */
 

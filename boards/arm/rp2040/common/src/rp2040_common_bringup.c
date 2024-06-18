@@ -63,6 +63,11 @@
 #include "rp2040_bmp180.h"
 #endif
 
+#ifdef CONFIG_SENSORS_BMP280
+#include <nuttx/sensors/bmp280.h>
+#include "rp2040_bmp280.h"
+#endif
+
 #ifdef CONFIG_RP2040_PWM
 #include "rp2040_pwm.h"
 #include "rp2040_pwmdev.h"
@@ -116,7 +121,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize I2C0.\n");
-      return ret;
     }
   #endif
 
@@ -125,7 +129,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize I2C1.\n");
-      return ret;
     }
   #endif
 #endif
@@ -136,7 +139,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SPI0.\n");
-      return ret;
     }
   #endif
 
@@ -145,7 +147,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SPI1.\n");
-      return ret;
     }
   #endif
 #endif
@@ -182,7 +183,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM0.\n");
-      return ret;
     }
 #  endif
 
@@ -217,7 +217,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM1.\n");
-      return ret;
     }
 #  endif
 
@@ -252,7 +251,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM2.\n");
-      return ret;
     }
 #  endif
 
@@ -287,7 +285,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM3.\n");
-      return ret;
     }
 #  endif
 
@@ -322,7 +319,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM4.\n");
-      return ret;
     }
 #  endif
 
@@ -357,7 +353,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM5.\n");
-      return ret;
     }
 #  endif
 
@@ -392,7 +387,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM6.\n");
-      return ret;
     }
 #  endif
 
@@ -427,7 +421,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PWM7.\n");
-      return ret;
     }
 #  endif
 #endif
@@ -460,7 +453,16 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize BMP180 driver: %d\n", ret);
-      return ret;
+    }
+#endif
+
+#ifdef CONFIG_SENSORS_BMP280
+  /* Try to register BMP280 device in I2C0 */
+
+  ret = board_bmp280_initialize(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize BMP280 driver: %d\n", ret);
     }
 #endif
 
@@ -471,7 +473,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: rp2040_ina219_initialize() failed: %d\n", ret);
-      return ret;
     }
 #endif
 
@@ -480,14 +481,12 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize Frame Buffer Driver.\n");
-      return ret;
     }
 #elif defined(CONFIG_LCD)
   ret = board_lcd_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize LCD.\n");
-      return ret;
     }
 #endif
 
@@ -496,7 +495,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: lcddev_register() failed: %d\n", ret);
-      return ret;
     }
 #endif
 
@@ -507,8 +505,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize PCF8574 LCD, error %d\n", ret);
-      return ret;
-      return ret;
     }
 #endif
 
@@ -517,7 +513,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize I2S.\n");
-      return ret;
     }
 #endif
 
@@ -526,7 +521,6 @@ int rp2040_common_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize GPIO Driver: %d\n", ret);
-      return ret;
     }
 #endif
 
@@ -568,7 +562,6 @@ int rp2040_common_bringup(void)
   if (ret != OK)
     {
       syslog(LOG_ERR, "Failed to initialize ADC Driver: %d\n", ret);
-      return ret;
     }
 
 #endif /* defined(CONFIG_ADC) && defined(CONFIG_RP2040_ADC) */
@@ -584,7 +577,6 @@ int rp2040_common_bringup(void)
                           HAS_WHITE) == NULL)
     {
       syslog(LOG_ERR, "Failed to initialize WS2812: %d\n", errno);
-      return -errno;
     }
 #endif
 
@@ -671,5 +663,5 @@ int rp2040_common_bringup(void)
     }
 
 #endif
-  return OK;
+  return ret;
 }
