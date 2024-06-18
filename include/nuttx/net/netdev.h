@@ -445,6 +445,18 @@ struct net_driver_s
   struct netdev_statistics_s d_statistics;
 #endif
 
+#if defined(CONFIG_NET_TIMESTAMP)
+  /* Reception timestamp of packet being currently processed.
+   * If CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP is true, the timestamp is provided
+   * by hardware driver. Otherwise it is filled in by kernel when packet
+   * enters ipv4_input or ipv6_input.
+   *
+   * The timestamp is in CLOCK_REALTIME.
+   */
+
+  struct timespec d_rxtime;
+#endif
+
   /* Application callbacks:
    *
    * Network device event handlers are retained in a 'list' and are called
@@ -984,6 +996,21 @@ int netdev_lladdrsize(FAR struct net_driver_s *dev);
 
 int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
                        unsigned int timeout);
+
+/****************************************************************************
+ * Name: netdev_iob_prepare_dynamic
+ *
+ * Description:
+ *   Pre-alloc the iob for the data to be sent.
+ *
+ * Assumptions:
+ *   The caller has locked the network.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_IOB_ALLOC
+void netdev_iob_prepare_dynamic(FAR struct net_driver_s *dev, uint16_t size);
+#endif
 
 /****************************************************************************
  * Name: netdev_iob_replace
