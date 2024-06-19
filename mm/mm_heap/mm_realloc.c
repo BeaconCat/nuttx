@@ -31,10 +31,9 @@
 #include <assert.h>
 
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
-#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -84,27 +83,23 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   DEBUGASSERT(mm_heapmember(heap, oldmem));
 
-#ifdef CONFIG_MM_HEAP_MEMPOOL
-  if (heap->mm_mpool)
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  newmem = mempool_multiple_realloc(heap->mm_mpool, oldmem, size);
+  if (newmem != NULL)
     {
-      newmem = mempool_multiple_realloc(heap->mm_mpool, oldmem, size);
+      return newmem;
+    }
+  else if (size <= CONFIG_MM_HEAP_MEMPOOL_THRESHOLD ||
+           mempool_multiple_alloc_size(heap->mm_mpool, oldmem) >= 0)
+    {
+      newmem = mm_malloc(heap, size);
       if (newmem != NULL)
         {
-          return newmem;
+          memcpy(newmem, oldmem, MIN(size, mm_malloc_size(heap, oldmem)));
+          mm_free(heap, oldmem);
         }
-      else if (size <= heap->mm_threshold ||
-               mempool_multiple_alloc_size(heap->mm_mpool, oldmem) >= 0)
-        {
-          newmem = mm_malloc(heap, size);
-          if (newmem != NULL)
-            {
-              memcpy(newmem, oldmem,
-                     MIN(size, mm_malloc_size(heap, oldmem)));
-              mm_free(heap, oldmem);
-            }
 
-          return newmem;
-        }
+      return newmem;
     }
 #endif
 
@@ -130,7 +125,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   /* Map the memory chunk into an allocated node structure */
 
   oldnode = (FAR struct mm_allocnode_s *)
-    ((FAR char *)kasan_reset_tag(oldmem) - MM_SIZEOF_ALLOCNODE);
+    ((FAR char *)oldmem - MM_SIZEOF_ALLOCNODE);
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
@@ -381,14 +376,11 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
           heap->mm_maxused = heap->mm_curused;
         }
 
-      sched_note_heap(false, heap, oldmem, oldsize);
-      sched_note_heap(true, heap, newmem, newsize);
       mm_unlock(heap);
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - MM_SIZEOF_ALLOCNODE);
 
-      newmem = kasan_unpoison(newmem, MM_SIZEOF_NODE(oldnode) -
-                              MM_ALLOCNODE_OVERHEAD);
-      if (kasan_reset_tag(newmem) != kasan_reset_tag(oldmem))
+      kasan_unpoison(newmem, mm_malloc_size(heap, newmem));
+      if (newmem != oldmem)
         {
           /* Now we have to move the user contents 'down' in memory.  memcpy
            * should be safe for this.
