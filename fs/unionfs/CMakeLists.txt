@@ -17,8 +17,7 @@
 # the License.
 #
 # ##############################################################################
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
-  if(CONFIG_FS_UNIONFS)
-    target_sources(fs PRIVATE fs_unionfs.c)
-  endif()
+
+if(CONFIG_FS_UNIONFS)
+  target_sources(fs PRIVATE fs_unionfs.c)
 endif()
