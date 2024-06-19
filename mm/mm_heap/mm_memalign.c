@@ -27,9 +27,10 @@
 #include <assert.h>
 
 #include <nuttx/mm/mm.h>
+#include <nuttx/mm/kasan.h>
+#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
-#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -72,11 +73,14 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
       return NULL;
     }
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  node = mempool_multiple_memalign(heap->mm_mpool, alignment, size);
-  if (node != NULL)
+#ifdef CONFIG_MM_HEAP_MEMPOOL
+  if (heap->mm_mpool)
     {
-      return node;
+      node = mempool_multiple_memalign(heap->mm_mpool, alignment, size);
+      if (node != NULL)
+        {
+          return node;
+        }
     }
 #endif
 
@@ -134,6 +138,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   kasan_poison((FAR void *)rawchunk,
                mm_malloc_size(heap, (FAR void *)rawchunk));
+
+  rawchunk = (uintptr_t)kasan_reset_tag((FAR void *)rawchunk);
 
   /* We need to hold the MM mutex while we muck with the chunks and
    * nodelist.
@@ -262,7 +268,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   /* Update heap statistics */
 
-  heap->mm_curused += MM_SIZEOF_NODE(node);
+  size = MM_SIZEOF_NODE(node);
+  heap->mm_curused += size;
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -272,8 +279,9 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   MM_ADD_BACKTRACE(heap, node);
 
-  kasan_unpoison((FAR void *)alignedchunk,
-                 mm_malloc_size(heap, (FAR void *)alignedchunk));
+  alignedchunk = (uintptr_t)kasan_unpoison((FAR const void *)alignedchunk,
+                                           size - MM_ALLOCNODE_OVERHEAD);
+  sched_note_heap(true, heap, (FAR void *)alignedchunk, size);
 
   DEBUGASSERT(alignedchunk % alignment == 0);
   return (FAR void *)alignedchunk;

@@ -52,7 +52,6 @@
 #include "ipforward/ipforward.h"
 #include "inet/inet.h"
 #include "devif/devif.h"
-#include "ipfilter/ipfilter.h"
 #include "ipfrag/ipfrag.h"
 
 /****************************************************************************
@@ -421,14 +420,6 @@ static int ipv6_in(FAR struct net_driver_s *dev)
     }
 #endif
 
-#ifdef CONFIG_NET_IPFILTER
-  if (ipv6_filter_in(dev) != IPFILTER_TARGET_ACCEPT)
-    {
-      ninfo("Drop/Reject INPUT packet due to filter.\n");
-      goto done;
-    }
-#endif
-
   /* Now process the incoming packet according to the protocol specified in
    * the next header IPv6 field.
    */
@@ -527,11 +518,7 @@ static int ipv6_in(FAR struct net_driver_s *dev)
         goto drop;
     }
 
-#ifdef CONFIG_NET_IPFILTER
-  ipfilter_out(dev);
-#endif
-
-#if defined(CONFIG_NET_IPFORWARD) || defined(CONFIG_NET_IPFILTER)
+#ifdef CONFIG_NET_IPFORWARD
 done:
 #endif
 
@@ -628,12 +615,6 @@ int ipv6_input(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
-
-  /* Store reception timestamp if enabled and not provided by hardware. */
-
-#if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
-  clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
-#endif
 
   if (dev->d_iob != NULL)
     {
