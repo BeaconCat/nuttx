@@ -90,7 +90,7 @@ void backtrace(uint64_t rbp)
 
   for (i = 0; i < 16; i++)
     {
-      if ((rbp < 0x200000) || (rbp > 0xffffffff))
+      if ((rbp < 0x200000) || (rbp > 0xfffffffff))
         {
           break;
         }
@@ -111,7 +111,7 @@ void backtrace(uint64_t rbp)
 
 void up_dump_register(void *dumpregs)
 {
-  volatile uint64_t *regs = dumpregs ? dumpregs : g_current_regs;
+  volatile uint64_t *regs = dumpregs ? dumpregs : up_current_regs();
   uint64_t mxcsr;
   uint64_t cr2;
 
@@ -151,19 +151,5 @@ void up_dump_register(void *dumpregs)
   _alert("R14: %016" PRIx64 ", R15: %016" PRIx64 "\n",
          regs[REG_R14], regs[REG_R15]);
   _alert("Dumping Stack (+-64 bytes):\n");
-
-  if (regs[REG_RSP] > 0 && regs[REG_RSP] < 0x1000000)
-    {
-      print_mem((void *)regs[REG_RSP] - 512,
-          128 * 0x200000 - regs[REG_RSP] + 512);
-    }
-  else
-    {
-      print_mem((void *)regs[REG_RSP] - 512, 1024);
-    }
-
-#ifdef CONFIG_DEBUG_NOOPT
-  backtrace(regs[REG_RBP]);
-#endif
   _alert("-----------------------------------------\n");
 }
