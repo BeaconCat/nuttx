@@ -1,6 +1,8 @@
 # ##############################################################################
 # sched/paging/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -18,7 +20,7 @@
 #
 # ##############################################################################
 
-if(CONFIG_PAGING)
+if(CONFIG_LEGACY_PAGING)
 
   target_sources(sched PRIVATE pg_miss.c pg_worker.c)
 

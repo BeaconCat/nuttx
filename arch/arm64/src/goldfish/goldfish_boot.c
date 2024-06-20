@@ -29,7 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/cache.h>
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -169,10 +169,6 @@ void arm64_chip_boot(void)
    */
 
   arm64_earlyserialinit();
-#endif
-
-#ifdef CONFIG_ARCH_PERF_EVENTS
-  up_perf_init((void *)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
 #endif
 }
 

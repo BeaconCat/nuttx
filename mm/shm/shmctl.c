@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/shm/shmctl.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -37,6 +39,8 @@
 #include <nuttx/pgalloc.h>
 
 #include "shm/shm.h"
+
+#ifdef CONFIG_MM_SHM
 
 /****************************************************************************
  * Public Functions
@@ -245,3 +249,4 @@ void shm_destroy(int shmid)
   memset(region, 0, sizeof(struct shm_region_s));
 }
 
+#endif /* CONFIG_MM_SHM */
