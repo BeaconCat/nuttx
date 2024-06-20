@@ -1,6 +1,8 @@
 # ##############################################################################
 # sched/semaphore/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -30,8 +32,7 @@ set(CSRCS
     sem_post.c
     sem_recover.c
     sem_reset.c
-    sem_waitirq.c
-    sem_rw.c)
+    sem_waitirq.c)
 
 if(CONFIG_PRIORITY_INHERITANCE)
   list(APPEND CSRCS sem_initialize.c sem_holder.c sem_setprotocol.c)

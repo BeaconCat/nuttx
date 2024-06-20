@@ -470,10 +470,8 @@ int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
  *   work   - The previously queued work structure to cancel
  *
  * Returned Value:
- *   Zero means the work was successfully cancelled.
- *   One means the work was not cancelled because it is currently being
- *   processed by work thread, but wait for it to finish.
- *   A negated errno value is returned on any failure:
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
  *
  *   -ENOENT - There is no such work queued.
  *   -EINVAL - An invalid work queue was specified
