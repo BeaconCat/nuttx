@@ -23,7 +23,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/power/pm.h>
+#include <assert.h>
+#include <sched.h>
 #include "pm.h"
 
 #if defined(CONFIG_PM)
@@ -32,42 +37,14 @@
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: pm_domain_lock
- *
- * Description:
- *   Lock the power management operation.
- *
- * Input Parameters:
- *   domain - The PM domain to lock
- *
- * Returned Value:
- *   Return current state
- *
- ****************************************************************************/
-
 irqstate_t pm_domain_lock(int domain)
 {
-  return spin_lock_irqsave(&g_pmdomains[domain].lock);
+  return pm_lock(&g_pmdomains[domain].lock);
 }
-
-/****************************************************************************
- * Name: pm_domain_unlock
- *
- * Description:
- *   Unlock the power management operation.
- *
- * Input Parameters:
- *   domain - The PM domain to unlock
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
 
 void pm_domain_unlock(int domain, irqstate_t flags)
 {
-  spin_unlock_irqrestore(&g_pmdomains[domain].lock, flags);
+  pm_unlock(&g_pmdomains[domain].lock, flags);
 }
 
 #endif /* CONFIG_PM */
