@@ -109,7 +109,7 @@ static inline void xtensa_attach_fromcpu0_interrupt(void)
 
 void IRAM_ATTR xtensa_appcpu_start(void)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_irq();
   register uint32_t sp;
 
   /* Move to the stack assigned to us by up_smp_start immediately.  Although
@@ -122,7 +122,7 @@ void IRAM_ATTR xtensa_appcpu_start(void)
                  XCPTCONTEXT_SIZE;
   __asm__ __volatile__("mov sp, %0\n" : : "r"(sp));
 
-  sinfo("CPU%d Started\n", up_cpu_index());
+  sinfo("CPU%d Started\n", this_cpu());
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
@@ -235,7 +235,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
       /* Notify of the start event */
 
-      sched_note_cpu_start(this_task(), cpu);
+      sched_note_cpu_start(this_task_irq(), cpu);
 #endif
 
       /* This spinlock will be used as a handshake between the two CPUs.
