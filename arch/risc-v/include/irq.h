@@ -50,9 +50,31 @@
 #endif
 #define __XSTR(s)   __STR(s)
 
-/* Map RISC-V exception code to NuttX IRQ */
+/****************************************************************************
+ * Map RISC-V exception code to NuttX IRQ,
+ * the exception that code > 19 is reserved or custom exception.
+ *
+ * The content of vector table:
+ *
+ * |            IRQ            |              Comments              |
+ * |:-------------------------:|:----------------------------------:|
+ * |             0             |   Instruction Address Misaligned   |
+ * |             1             |      Instruction Access Fault      |
+ * |             2             |         Illegal Instruction        |
+ * |            ...            |          Other exceptions          |
+ * |    RISCV_MAX_EXCEPTION    |  The IRQ number of last exception  |
+ * |  RISCV_MAX_EXCEPTION + 1  |  The IRQ number of first interrupt |
+ * |  RISCV_MAX_EXCEPTION + 2  | The IRQ number of second interrupt |
+ * | RISCV_MAX_EXCEPTION + xxx |   The IRQ number of xxx interrupt  |
+ *
+ * And please provide the definition of custom exception if exists:
+ * #define RISCV_CUSTOM_EXCEPTION_REASONS  \
+ *    "Custom exception1", \
+ *    "Custom exception2",
+ *
+ ****************************************************************************/
 
-/* IRQ 0-15 : (exception:interrupt=0) */
+/* IRQ 0-RISCV_MAX_EXCEPTION : (exception:interrupt=0) */
 
 #define RISCV_IRQ_IAMISALIGNED  (0)   /* Instruction Address Misaligned */
 #define RISCV_IRQ_IAFAULT       (1)   /* Instruction Access Fault */
@@ -68,14 +90,22 @@
 #define RISCV_IRQ_ECALLM        (11)  /* Environment Call from M-mode */
 #define RISCV_IRQ_INSTRUCTIONPF (12)  /* Instruction page fault */
 #define RISCV_IRQ_LOADPF        (13)  /* Load page fault */
-#define RISCV_IRQ_RESERVED      (14)  /* Reserved */
+#define RISCV_IRQ_RESERVED14    (14)  /* Reserved */
 #define RISCV_IRQ_STOREPF       (15)  /* Store/AMO page fault */
+#define RISCV_IRQ_RESERVED16    (16)  /* Reserved */
+#define RISCV_IRQ_RESERVED17    (17)  /* Reserved */
+#define RISCV_IRQ_SOFTWARE      (18)  /* Software check */
+#define RISCV_IRQ_HARDWARE      (19)  /* Hardware error */
 
-#define RISCV_MAX_EXCEPTION     (15)
+/* Keep origin definition here for compatibility */
 
-/* IRQ 16- : (async event:interrupt=1) */
+#ifndef RISCV_MAX_EXCEPTION
+#  define RISCV_MAX_EXCEPTION   (15)
+#endif
 
-#define RISCV_IRQ_ASYNC         (16)
+/* IRQ (RISCV_MAX_EXCEPTION + 1)- : (async event:interrupt=1) */
+
+#define RISCV_IRQ_ASYNC         (RISCV_MAX_EXCEPTION + 1)
 #define RISCV_IRQ_SSOFT         (RISCV_IRQ_ASYNC + 1)  /* Supervisor Software Int */
 #define RISCV_IRQ_MSOFT         (RISCV_IRQ_ASYNC + 3)  /* Machine Software Int */
 #define RISCV_IRQ_STIMER        (RISCV_IRQ_ASYNC + 5)  /* Supervisor Timer Int */
@@ -95,6 +125,14 @@
 #define RISCV_IRQ_MASK            (~RISCV_IRQ_BIT)
 
 /* Configuration ************************************************************/
+
+/* If this is a kernel build, how many nested system calls should we
+ * support?
+ */
+
+#ifndef CONFIG_SYS_NNEST
+#  define CONFIG_SYS_NNEST  2
+#endif
 
 /* Processor PC */
 
@@ -249,29 +287,6 @@
 #define XCPTCONTEXT_SIZE    (INT_XCPT_SIZE + FPU_XCPT_SIZE)
 #endif
 
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART_NDX    (0)
-#  define REG_VTYPE_NDX     (1)
-#  define REG_VL_NDX        (2)
-#  define REG_VCSR_NDX      (3)
-#  define REG_VLENB_NDX     (4)
-
-#  define VPU_XCPT_REGS     (5)
-#  define VPU_XCPT_SIZE     (INT_REG_SIZE * VPU_XCPT_REGS)
-
-#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
-
-/* There are 32 vector registers(v0 - v31) with vlenb length. */
-
-#    define VPU_XCPTC_SIZE  (CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH * 32 + VPU_XCPT_SIZE)
-
-#  endif
-#else /* !CONFIG_ARCH_RV_ISA_V */
-#  define VPU_XCPT_REGS     (0)
-#  define VPU_XCPT_SIZE     (0)
-#  define VPU_XCPTC_SIZE    (0)
-#endif /* CONFIG_ARCH_RV_ISA_V */
-
 /* In assembly language, values have to be referenced as byte address
  * offsets.  But in C, it is more convenient to reference registers as
  * register save table offsets.
@@ -348,14 +363,6 @@
 #  define REG_FCSR          (INT_REG_SIZE*REG_FCSR_NDX)
 #endif
 
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART        (INT_REG_SIZE*REG_VSTART_NDX)
-#  define REG_VTYPE         (INT_REG_SIZE*REG_VTYPE_NDX)
-#  define REG_VL            (INT_REG_SIZE*REG_VL_NDX)
-#  define REG_VCSR          (INT_REG_SIZE*REG_VCSR_NDX)
-#  define REG_VLENB         (INT_REG_SIZE*REG_VLENB_NDX)
-#endif
-
 #else
 #  define REG_EPC           REG_EPC_NDX
 #  define REG_X1            REG_X1_NDX
@@ -425,14 +432,6 @@
 #  define REG_F30           REG_F30_NDX
 #  define REG_F31           REG_F31_NDX
 #  define REG_FCSR          REG_FCSR_NDX
-#endif
-
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  define REG_VSTART        REG_VSTART_NDX
-#  define REG_VTYPE         REG_VTYPE_NDX
-#  define REG_VL            REG_VL_NDX
-#  define REG_VCSR          REG_VCSR_NDX
-#  define REG_VLENB         REG_VLENB_NDX
 #endif
 
 #endif
@@ -525,11 +524,25 @@
 #  define REG_FS11          REG_F27
 #endif
 
+#define up_irq_is_disabled(flags) (((flags) & STATUS_IE) != 0)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+
+/* This structure represents the return state from a system call */
+
+#ifdef CONFIG_LIB_SYSCALL
+struct xcpt_syscall_s
+{
+  uintptr_t sysreturn;   /* The return PC */
+#ifndef CONFIG_BUILD_FLAT
+  uintptr_t int_ctx;     /* Interrupt context (i.e. m-/sstatus) */
+#endif
+};
+#endif
 
 /* The following structure is included in the TCB and defines the complete
  * state of the thread.
@@ -552,7 +565,7 @@ struct xcptcontext
    * another signal handler is executing will be ignored!
    */
 
-  uintreg_t *saved_regs;
+  uintptr_t *saved_regs;
 
 #ifndef CONFIG_BUILD_FLAT
   /* This is the saved address to use when returning from a user-space
@@ -560,6 +573,16 @@ struct xcptcontext
    */
 
   uintptr_t sigreturn;
+#endif
+
+#ifdef CONFIG_LIB_SYSCALL
+  /* The following array holds information needed to return from each nested
+   * system call.
+   */
+
+  uint8_t nsyscalls;
+  struct xcpt_syscall_s syscall[CONFIG_SYS_NNEST];
+
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -581,22 +604,12 @@ struct xcptcontext
 
   /* Integer register save area */
 
-  uintreg_t *regs;
+  uintptr_t *regs;
 
   /* FPU register save area */
 
 #if defined(CONFIG_ARCH_FPU) && defined(CONFIG_ARCH_LAZYFPU)
-  uintreg_t fregs[FPU_XCPT_REGS];
-#endif
-
-#ifdef CONFIG_ARCH_RV_ISA_V
-#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
-  /* There are 32 vector registers(v0 - v31) with vlenb length. */
-
-  uintreg_t vregs[VPU_XCPTC_SIZE];
-#  else
-  uintreg_t *vregs;
-#  endif
+  uintptr_t fregs[FPU_XCPT_REGS];
 #endif
 };
 
@@ -639,17 +652,16 @@ extern "C"
 #endif
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile uintreg_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
+EXTERN volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Function Prototypes
@@ -690,6 +702,16 @@ int up_cpu_index(void);
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+static inline_function uintptr_t *up_current_regs(void)
+{
+  return (uintptr_t *)g_current_regs[up_cpu_index()];
+}
+
+static inline_function void up_set_current_regs(uintptr_t *regs)
+{
+  g_current_regs[up_cpu_index()] = regs;
+}
 
 /****************************************************************************
  * Name: up_irq_save
@@ -748,13 +770,13 @@ noinstrument_function static inline void up_irq_restore(irqstate_t flags)
  *
  ****************************************************************************/
 
-noinstrument_function static inline bool up_interrupt_context(void)
+noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = CURRENT_REGS != NULL;
+  bool ret = up_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -762,6 +784,13 @@ noinstrument_function static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_EPC])
 
 #undef EXTERN
 #if defined(__cplusplus)

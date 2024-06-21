@@ -249,20 +249,10 @@ void sim_tapdev_init(int devidx, void *priv,
       close(tapdevfd);
       return;
     }
-#endif
-
+#else
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, gdevname[devidx], IFNAMSIZ);
-  ifr.ifr_mtu = CONFIG_SIM_NETDEV_MTU;
-  ret = ioctl(sockfd, SIOCSIFMTU, &ifr);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "TAPDEV: ioctl failed (can't set MTU "
-                      "for %s): %d\n", gdevname[devidx], -ret);
-      close(sockfd);
-      close(tapdevfd);
-      return;
-    }
+#endif
 
   ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
   close(sockfd);
