@@ -57,7 +57,7 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
   UNUSED(status);
 
   /* Make sure that we are in a critical section with local interrupts.
@@ -66,10 +66,7 @@ void up_exit(int status)
 
   enter_critical_section();
 
-  /* Destroy the task at the head of the ready to run list. */
-#ifdef CONFIG_ARCH_FPU
-  arm64_destory_fpu(tcb);
-#endif
+  nxsched_dumponexit();
 
   nxtask_exit();
 
@@ -77,7 +74,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task();
+  tcb = this_task_irq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
    * NOTE: the API also adjusts the global IRQ control for SMP

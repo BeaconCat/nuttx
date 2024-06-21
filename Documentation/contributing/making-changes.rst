@@ -1,7 +1,6 @@
 .. include:: /substitutions.rst
 .. _making-changes:
 
-========================
 Making Changes Using Git
 ========================
 
@@ -66,7 +65,7 @@ Here's how to do it:
        $ git push
 
 Git Workflow With an Upstream Repository
-========================================
+----------------------------------------
 
 The main NuttX git repository is called an "upstream" repository - this is because it's the main source of truth, and
 its changes flow downstream to people who've forked that repository, like us.
@@ -161,7 +160,7 @@ maybe doing that several times. Then when everything works, I get my branch read
        $ git push
 
 Submitting Your Changes to NuttX
-================================
+--------------------------------
 
   Pull requests let you tell others about changes you've pushed to a branch in a repository on GitHub. Once a pull
   request is opened, you can discuss and review the potential changes with collaborators and add follow-up commits
@@ -213,7 +212,7 @@ squash before submitting the Pull Request:
    1 through 6.
 
 How to Include the Suggestions on Your Pull Request?
-====================================================
+----------------------------------------------------
 
 If you submitted your first PR (Pull Request) and received some feedbacks
 to modify your commit, then probably you already modified it and created a
@@ -345,7 +344,7 @@ Now you can look at your PR at NuttX's github to confirm that
 this squashed commit is there.
 
 Git Resources
-=============
+-------------
 
 * `Git Cheat Sheet (by GitHub) <https://github.github.com/training-kit/downloads/github-git-cheat-sheet.pdf>`_
 * `Git Book (online) <https://git-scm.com/book/en/v2>`_
