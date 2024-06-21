@@ -151,7 +151,7 @@ int board_button_irq(int id, xcpt_t irqhandler, void *arg)
 
       /* Configure the interrupt for rising and falling edges */
 
-      esp32s3_gpioirqenable(irq, CHANGE);
+      esp32s3_gpioirqenable(irq, GPIO_INTR_ANYEDGE);
     }
   else
     {
