@@ -251,6 +251,7 @@ config ARCH_CHIP_HPM6000
 	select ARCH_RV_ISA_C
 	select ONESHOT
 	select ALARM_ARCH
+	select ARCH_HAVE_DEBUG
 	---help---
 		Hpmicro HPM6000 processor (D45 RISC-V Core with MAC extensions).
 
