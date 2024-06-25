@@ -47,7 +47,7 @@
  * SP_LOCKED and SP_UNLOCKED must constants of type spinlock_t.
  */
 
-#  include <arch/spinlock.h>
+#  include <nuttx/spinlock.h>
 #endif
 
 /****************************************************************************
@@ -428,11 +428,9 @@ typedef FAR struct pthread_spinlock_s pthread_spinlock_t;
 #  endif
 #endif /* CONFIG_PTHREAD_SPINLOCKS */
 
-#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
 /* This type describes the pthread cleanup callback (non-standard) */
 
 typedef CODE void (*pthread_cleanup_t)(FAR void *arg);
-#endif
 
 /* Forward references */
 
@@ -544,9 +542,12 @@ void pthread_testcancel(void);
  * is canceled.
  */
 
-#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#if CONFIG_TLS_NCLEANUP > 0
 void pthread_cleanup_pop(int execute);
 void pthread_cleanup_push(pthread_cleanup_t routine, FAR void *arg);
+#else
+#  define pthread_cleanup_pop(execute) ((void)(execute))
+#  define pthread_cleanup_push(routine,arg) ((void)(routine), (void)(arg))
 #endif
 
 /* A thread can await termination of another thread and retrieve the return
@@ -563,8 +564,8 @@ void pthread_yield(void);
 
 /* A thread may obtain a copy of its own thread handle. */
 
-pthread_t pthread_self(void);
-pid_t pthread_gettid_np(pthread_t thread);
+#define pthread_self()            ((pthread_t)gettid())
+#define pthread_gettid_np(thread) ((pid_t)(thread))
 
 /* Compare two thread IDs. */
 

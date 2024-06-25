@@ -47,6 +47,8 @@ if(NOT CONFIG_DISABLE_PTHREAD)
     pthread_attr_getstack.c
     pthread_attr_setschedparam.c
     pthread_attr_getschedparam.c
+    pthread_attr_setscope.c
+    pthread_attr_getscope.c
     pthread_barrierattr_init.c
     pthread_barrierattr_destroy.c
     pthread_barrierattr_getpshared.c
@@ -93,9 +95,7 @@ if(NOT CONFIG_DISABLE_PTHREAD)
     pthread_setcancelstate.c
     pthread_setcanceltype.c
     pthread_testcancel.c
-    pthread_getcpuclockid.c
-    pthread_self.c
-    pthread_gettid_np.c)
+    pthread_getcpuclockid.c)
 
   if(CONFIG_SMP)
     list(APPEND SRCS pthread_attr_getaffinity.c pthread_attr_setaffinity.c)
@@ -105,7 +105,7 @@ if(NOT CONFIG_DISABLE_PTHREAD)
     list(APPEND SRCS pthread_spinlock.c)
   endif()
 
-  if(NOT CONFIG_PTHREAD_CLEANUP_STACKSIZE EQUAL 0)
+  if(NOT CONFIG_TLS_NCLEANUP EQUAL 0)
     list(APPEND SRCS pthread_cleanup.c)
   endif()
 endif()

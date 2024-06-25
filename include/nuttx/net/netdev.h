@@ -251,6 +251,14 @@ struct netdev_ifaddr6_s
 };
 #endif
 
+#ifdef CONFIG_NETDEV_RSS
+struct netdev_rss_s
+{
+  int      cpu;  /* CPU ID */
+  uint32_t hash; /* Hash value with packet */
+};
+#endif // CONFIG_NETDEV_RSS
+
 /* This structure collects information that is specific to a specific network
  * interface driver.  If the hardware platform supports only a single
  * instance of this structure.
@@ -443,18 +451,6 @@ struct net_driver_s
    */
 
   struct netdev_statistics_s d_statistics;
-#endif
-
-#if defined(CONFIG_NET_TIMESTAMP)
-  /* Reception timestamp of packet being currently processed.
-   * If CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP is true, the timestamp is provided
-   * by hardware driver. Otherwise it is filled in by kernel when packet
-   * enters ipv4_input or ipv6_input.
-   *
-   * The timestamp is in CLOCK_REALTIME.
-   */
-
-  struct timespec d_rxtime;
 #endif
 
   /* Application callbacks:
@@ -840,6 +836,48 @@ uint16_t net_chksum(FAR uint16_t *data, uint16_t len);
 uint16_t net_chksum_iob(uint16_t sum, FAR struct iob_s *iob,
                         uint16_t offset);
 
+#ifdef CONFIG_NET_IPv4
+
+/****************************************************************************
+ * Name: ipv4_upperlayer_header_chksum
+ *
+ * Description:
+ *   Perform the checksum calculation over the IPv4, protocol headers,
+ *   IP source and destination addresses
+ *
+ * Input Parameters:
+ *   dev   - The network driver instance. The packet data is in the d_buf
+ *           of the device.
+ *   proto - The protocol being supported
+ *
+ * Returned Value:
+ *   The calculated checksum with pseudo-header and IP source and
+ *   destination addresses
+ *
+ ****************************************************************************/
+
+uint16_t ipv4_upperlayer_header_chksum(FAR struct net_driver_s *dev,
+                                       uint8_t proto);
+
+/****************************************************************************
+ * Name: ipv4_upperlayer_payload_chksum
+ *
+ * Description:
+ *   Perform the checksum calculation over the iob data payload
+ *
+ * Input Parameters:
+ *   dev   - The network driver instance. The packet data is in the d_buf
+ *           of the device.
+ *   sum   - The default checksum
+ *
+ * Returned Value:
+ *   The calculated checksum with iob data payload and default checksum
+ *
+ ****************************************************************************/
+
+uint16_t ipv4_upperlayer_payload_chksum(FAR struct net_driver_s *dev,
+                                        uint16_t sum);
+
 /****************************************************************************
  * Name: ipv4_upperlayer_chksum
  *
@@ -857,9 +895,56 @@ uint16_t net_chksum_iob(uint16_t sum, FAR struct iob_s *iob,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPv4
 uint16_t ipv4_upperlayer_chksum(FAR struct net_driver_s *dev, uint8_t proto);
 #endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+
+/****************************************************************************
+ * Name: ipv6_upperlayer_header_chksum
+ *
+ * Description:
+ *   Perform the checksum calculation over the IPv6, protocol headers,
+ *   IP source and destination addresses.
+ *
+ * Input Parameters:
+ *   dev   - The network driver instance.  The packet data is in the d_buf
+ *           of the device.
+ *   proto - The protocol being supported
+ *   iplen - The size of the IPv6 header.  This may be larger than
+ *           IPv6_HDRLEN the IPv6 header if IPv6 extension headers are
+ *           present.
+ *
+ * Returned Value:
+ *   The calculated checksum
+ *
+ ****************************************************************************/
+
+uint16_t ipv6_upperlayer_header_chksum(FAR struct net_driver_s *dev,
+                                       uint8_t proto, unsigned int iplen);
+
+/****************************************************************************
+ * Name: ipv6_upperlayer_payload_chksum
+ *
+ * Description:
+ *   Perform the checksum calculation over the iob data payload and
+ *   default checksum.
+ *
+ * Input Parameters:
+ *   dev   - The network driver instance.  The packet data is in the d_buf
+ *           of the device.
+ *   proto - The protocol being supported
+ *   iplen - The size of the IPv6 header.  This may be larger than
+ *           IPv6_HDRLEN the IPv6 header if IPv6 extension headers are
+ *           present.
+ *
+ * Returned Value:
+ *   The calculated checksum
+ *
+ ****************************************************************************/
+
+uint16_t ipv6_upperlayer_payload_chksum(FAR struct net_driver_s *dev,
+                                        unsigned int iplen, uint16_t sum);
 
 /****************************************************************************
  * Name: ipv6_upperlayer_chksum
@@ -881,7 +966,6 @@ uint16_t ipv4_upperlayer_chksum(FAR struct net_driver_s *dev, uint8_t proto);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPv6
 uint16_t ipv6_upperlayer_chksum(FAR struct net_driver_s *dev,
                                 uint8_t proto, unsigned int iplen);
 #endif /* CONFIG_NET_IPv6 */
@@ -996,21 +1080,6 @@ int netdev_lladdrsize(FAR struct net_driver_s *dev);
 
 int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
                        unsigned int timeout);
-
-/****************************************************************************
- * Name: netdev_iob_prepare_dynamic
- *
- * Description:
- *   Pre-alloc the iob for the data to be sent.
- *
- * Assumptions:
- *   The caller has locked the network.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_IOB_ALLOC
-void netdev_iob_prepare_dynamic(FAR struct net_driver_s *dev, uint16_t size);
-#endif
 
 /****************************************************************************
  * Name: netdev_iob_replace
