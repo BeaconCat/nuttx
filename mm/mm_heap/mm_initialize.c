@@ -29,9 +29,9 @@
 #include <debug.h>
 
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -305,11 +305,7 @@ mm_initialize_pool(FAR const char *name,
 
       for (i = 0; i < MEMPOOL_NPOOLS; i++)
         {
-#  if CONFIG_MM_MIN_BLKSIZE != 0
-          poolsize[i] = (i + 1) * CONFIG_MM_MIN_BLKSIZE;
-#  else
           poolsize[i] = (i + 1) * MM_MIN_CHUNK;
-#  endif
         }
 
       def.poolsize        = poolsize;
@@ -329,7 +325,7 @@ mm_initialize_pool(FAR const char *name,
 
   if (init != NULL && init->poolsize != NULL && init->npools != 0)
     {
-      heap->mm_threshold = init->threshold;
+      heap->mm_threshold = CONFIG_MM_HEAP_MEMPOOL_THRESHOLD;
       heap->mm_mpool     = mempool_multiple_init(name, init->poolsize,
                                init->npools,
                                (mempool_multiple_alloc_t)mempool_memalign,
@@ -359,16 +355,9 @@ mm_initialize_pool(FAR const char *name,
 
 void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
-  int i;
-
 #ifdef CONFIG_MM_HEAP_MEMPOOL
   mempool_multiple_deinit(heap->mm_mpool);
 #endif
-
-  for (i = 0; i < CONFIG_MM_REGIONS; i++)
-    {
-      kasan_unregister(heap->mm_heapstart[i]);
-    }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)

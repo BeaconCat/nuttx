@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-# Common x86_64 and intel64 files
+# Common x86_64 files
 
 CMN_CSRCS += x86_64_allocateheap.c x86_64_copystate.c x86_64_exit.c
 CMN_CSRCS += x86_64_getintstack.c x86_64_mdelay.c x86_64_initialize.c
@@ -31,12 +31,4 @@ endif
 
 ifeq ($(CONFIG_ARCH_X86_64_ACPI),y)
 CMN_CSRCS += x86_64_acpi.c
-endif
-
-ifeq ($(CONFIG_ARCH_USE_MMU),y)
-CMN_CSRCS += x86_64_mmu.c
-endif
-
-ifeq ($(CONFIG_ARCH_ADDRENV),y)
-CMN_CSRCS += x86_64_addrenv.c x86_64_addrenv_perms.c
 endif
