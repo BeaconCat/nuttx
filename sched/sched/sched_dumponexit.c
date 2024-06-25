@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_DUMP_ON_EXIT
+#ifdef CONFIG_SCHED_DUMP_ON_EXIT
 
 /****************************************************************************
  * Private Functions
@@ -78,8 +78,8 @@ static void dumphandler(FAR struct tcb_s *tcb, FAR void *arg)
 
 void nxsched_dumponexit(void)
 {
-  sinfo("Other tasks:\n");
+  syslog(LOG_INFO, "Other tasks:\n");
   nxsched_foreach(dumphandler, NULL);
 }
 
-#endif /* CONFIG_DUMP_ON_EXIT */
+#endif /* CONFIG_SCHED_DUMP_ON_EXIT */
