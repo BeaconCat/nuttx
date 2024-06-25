@@ -87,12 +87,23 @@
 #  define CONFIG_HAVE_CXX14 1
 #endif
 
+/* Green Hills Software definitions *****************************************/
+
+#if defined(__ghs__)
+
+#  pragma weak __gh_long_long_printf
+#  pragma weak __gh_float_printf
+
+#endif
+
+#undef offsetof
+
 /* GCC-specific definitions *************************************************/
 
 #ifdef __GNUC__
 
 /* Built-ins */
-#  if __GNUC__ >= 4
+#  if __GNUC__ >= 4 && !defined(__ghs__)
 #    define CONFIG_HAVE_BUILTIN_BSWAP16 1
 #    define CONFIG_HAVE_BUILTIN_BSWAP32 1
 #    define CONFIG_HAVE_BUILTIN_BSWAP64 1
@@ -173,7 +184,7 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
-#undef CONFIG_HAVE_WEAKFUNCTIONS
+#  undef CONFIG_HAVE_WEAKFUNCTIONS
 
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
@@ -207,8 +218,8 @@
 
 /* Branch prediction */
 
-#  define predict_true(x)  __builtin_expect(!!(x), 1)
-#  define predict_false(x) __builtin_expect(!!(x), 0)
+#  define predict_true(x) __builtin_expect(!!(x), 1)
+#  define predict_false(x) __builtin_expect((x), 0)
 
 /* Code locate */
 
@@ -254,11 +265,21 @@
 
 /* The nooptimiziation_function attribute no optimize */
 
-#  define nooptimiziation_function __attribute__((optimize(0)))
+#  if defined(__clang__)
+#    define nooptimiziation_function __attribute__((optnone))
+#  elif !defined(__ghs__)
+#    define nooptimiziation_function __attribute__((optimize("O0")))
+#  else
+#    define nooptimiziation_function
+#  endif
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
-#  define nosanitize_address __attribute__((no_sanitize_address))
+#  if !defined(__ghs__)
+#    define nosanitize_address __attribute__((no_sanitize_address))
+#  else
+#    define nosanitize_address
+#  endif
 
 /* The nosanitize_undefined attribute informs GCC don't sanitize it */
 
@@ -303,7 +324,6 @@
 #    define malloc_like1(a) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
-#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  else
 #    define fopen_like __attribute__((__malloc__))
 #    define popen_like __attribute__((__malloc__))
@@ -311,7 +331,6 @@
 #    define malloc_like1(a) __attribute__((__malloc__)) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__)) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
-#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  endif
 
 /* Some versions of GCC have a separate __syslog__ format.
@@ -328,6 +347,7 @@
 #  define syslog_like(a, b) __attribute__((__format__(__syslog__, a, b)))
 #  define scanf_like(a, b) __attribute__((__format__(__scanf__, a, b)))
 #  define strftime_like(a) __attribute__((__format__(__strftime__, a, 0)))
+#  define object_size(o, t) __builtin_object_size(o, t)
 
 /* GCC does not use storage classes to qualify addressing */
 
@@ -495,6 +515,12 @@
 #    define cmse_nonsecure_call __attribute__((cmse_nonsecure_call))
 #  endif
 
+/* GCC support expression statement, a compound statement enclosed in
+ * parentheses may appear as an expression in GNU C.
+ */
+
+#  define CONFIG_HAVE_EXPRESSION_STATEMENT 1
+
 /* SDCC-specific definitions ************************************************/
 
 #elif defined(SDCC) || defined(__SDCC)
@@ -579,13 +605,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* The reentrant attribute informs SDCC that the function
  * must be reentrant.  In this case, SDCC will store input
@@ -723,12 +749,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* REVISIT: */
 
@@ -837,12 +863,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -887,7 +913,7 @@
 
 /* Pre-processor */
 
-#  define CONFIG_CPP_HAVE_VARARGS 1 /* Supports variable argument macros */
+#  undef CONFIG_CPP_HAVE_VARARGS /* No variable argument macros */
 
 /* Intriniscs */
 
@@ -930,12 +956,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
+#  define typeof __typeof__
 
 #  define FAR
 #  define NEAR
@@ -1010,7 +1037,6 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -1078,12 +1104,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -1111,6 +1137,12 @@
 
 #ifndef CONFIG_HAVE_LONG_LONG
 #  undef CONFIG_FS_LARGEFILE
+#endif
+
+#ifdef CONFIG_DISABLE_FLOAT
+#  undef CONFIG_HAVE_FLOAT
+#  undef CONFIG_HAVE_DOUBLE
+#  undef CONFIG_HAVE_LONG_DOUBLE
 #endif
 
 /****************************************************************************
