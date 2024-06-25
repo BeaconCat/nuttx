@@ -90,10 +90,9 @@
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
                     FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   sclock_t ticks;
-  int status;
   int ret = ERROR;
 
   DEBUGASSERT(sem != NULL && abstime != NULL);
@@ -107,7 +106,8 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    * enabled while we are blocked waiting for the semaphore.
    */
 
-  flags = enter_critical_section();
+  flags = enter_critical_section_nonirq();
+  rtcb = this_task_irq();
 
   /* Try to take the semaphore without waiting. */
 
@@ -138,21 +138,13 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    * value on failure.
    */
 
-  status = clock_abstime2ticks(clockid, abstime, &ticks);
+  clock_abstime2ticks(clockid, abstime, &ticks);
 
   /* If the time has already expired return immediately. */
 
-  if (status == OK && ticks <= 0)
+  if (ticks <= 0)
     {
       ret = -ETIMEDOUT;
-      goto out;
-    }
-
-  /* Handle any time-related errors */
-
-  if (status != OK)
-    {
-      ret = -status;
       goto out;
     }
 
@@ -173,7 +165,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
   /* We can now restore interrupts and delete the watchdog */
 
 out:
-  leave_critical_section(flags);
+  leave_critical_section_nonirq(flags);
   return ret;
 }
 
