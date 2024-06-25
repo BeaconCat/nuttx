@@ -880,7 +880,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context())
         {
-          reg = (FAR uint8_t *)CURRENT_REGS;
+          reg = (FAR uint8_t *)up_current_regs();
         }
       else
         {
@@ -1532,7 +1532,7 @@ static void gdb_debugpoint_callback(int type, FAR void *addr,
         break;
       case DEBUGPOINT_STEPPOINT:
         stopreason = GDB_STOPREASON_STEPPOINT;
-        gdb_debugpoint_remove(GDB_STOPREASON_STEPPOINT, NULL, 0);
+        up_debugpoint_remove(DEBUGPOINT_STEPPOINT, NULL, 0);
         break;
       default:
         return;
@@ -1614,13 +1614,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-        type = DEBUGPOINT_WATCHPOINT_WO;
+          type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-        type = DEBUGPOINT_WATCHPOINT_RO;
+          type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-        type = DEBUGPOINT_WATCHPOINT_RW;
+          type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1628,12 +1628,12 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
 
   if (enable)
     {
-      ret = gdb_debugpoint_add(type, (FAR void *)addr, size,
-                                   gdb_debugpoint_callback, state);
+      ret = gdbstub_debugpoint_add(type, (FAR void *)addr, size,
+                                   gdbstub_debugpoint_callback, state);
     }
   else
     {
-      ret = gdb_debugpoint_remove(type, (FAR void *)addr, size);
+      ret = gdbstub_debugpoint_remove(type, (FAR void *)addr, size);
     }
 
   if (ret < 0)
@@ -1664,8 +1664,8 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
 
 static int gdb_step(FAR struct gdb_state_s *state)
 {
-  int ret = gdb_debugpoint_add(GDB_STOPREASON_STEPPOINT, NULL, 0,
-                              gdb_debugpoint_callback, state);
+  int ret = up_debugpoint_add(DEBUGPOINT_STEPPOINT, NULL, 0,
+                              gdbstub_debugpoint_callback, state);
 
   if (ret < 0)
     {
@@ -1726,7 +1726,7 @@ int gdb_debugpoint_add(int type, FAR void *addr, size_t size,
   point.size = size;
   point.callback = callback;
   point.arg = arg;
-  retrun nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
+  return nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
                           gdb_smp_debugpoint_add, &point, true);
 #else
   return up_debugpoint_add(type, addr, size, callback, arg);
@@ -1959,9 +1959,7 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
-#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
-#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;
