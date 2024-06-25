@@ -880,7 +880,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context())
         {
-          reg = (FAR uint8_t *)up_current_regs();
+          reg = (FAR uint8_t *)CURRENT_REGS;
         }
       else
         {
@@ -1614,13 +1614,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-          type = DEBUGPOINT_WATCHPOINT_WO;
+        type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-          type = DEBUGPOINT_WATCHPOINT_RO;
+        type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-          type = DEBUGPOINT_WATCHPOINT_RW;
+        type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1726,7 +1726,7 @@ int gdb_debugpoint_add(int type, FAR void *addr, size_t size,
   point.size = size;
   point.callback = callback;
   point.arg = arg;
-  return nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
+  retrun nxsched_smp_call((1 << CONFIG_SMP_NCPUS) - 1,
                           gdb_smp_debugpoint_add, &point, true);
 #else
   return up_debugpoint_add(type, addr, size, callback, arg);
@@ -1959,7 +1959,9 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
+#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;

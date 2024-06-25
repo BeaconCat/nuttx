@@ -107,6 +107,7 @@ int chdir(FAR const char *path)
    * support 'cd -' in NSH)
    */
 
+  sched_lock();
   oldpwd = getenv("PWD");
   if (!oldpwd)
     {
@@ -119,6 +120,7 @@ int chdir(FAR const char *path)
 
   ret = setenv("PWD", abspath, TRUE);
   lib_free(abspath);
+  sched_unlock();
 
   return ret;
 }
