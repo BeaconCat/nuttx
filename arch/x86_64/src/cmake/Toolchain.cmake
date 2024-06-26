@@ -64,12 +64,12 @@ if(${CONFIG_STACK_USAGE_WARNING})
   endif()
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 # Architecture flags
@@ -80,19 +80,6 @@ add_link_options(-no-pie -nostdlib)
 add_link_options(-Wl,--no-relax)
 add_compile_options(-fPIC)
 add_compile_options(-mno-red-zone)
-
-# Libcxx flags
-
-add_compile_options(
-  -U_AIX
-  -U_WIN32
-  -U__APPLE__
-  -U__FreeBSD__
-  -U__NetBSD__
-  -U__linux__
-  -U__sun__
-  -U__unix__
-  -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 
 if(CONFIG_DEBUG_LINK_MAP)
   add_link_options(-Wl,--cref -Wl,-Map=nuttx.map)
@@ -105,21 +92,14 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
-if(CONFIG_LIBCXX)
-  add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
-endif()
-
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
-else()
-  add_compile_options(-fno-stack-protector)
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
@@ -134,10 +114,6 @@ endif()
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_link_options(-Wl,--gc-sections)
   add_compile_options(-ffunction-sections -fdata-sections)
-endif()
-
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
 endif()
 
 if(CONFIG_ARCH_INTEL64_HAVE_RDRAND)
@@ -162,44 +138,4 @@ endif()
 
 if(CONFIG_ARCH_X86_64_SSE4A)
   add_compile_options(-msse4a)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX)
-  add_compile_options(-mavx)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512)
-  add_compile_options(-mavx512f)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512PF)
-  add_compile_options(-mavx512pf)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512ER)
-  add_compile_options(-mavx512er)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512CD)
-  add_compile_options(-mavx512cd)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512VL)
-  add_compile_options(-mavx512vl)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512BW)
-  add_compile_options(-mavx512bw)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512DQ)
-  add_compile_options(-mavx512dq)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512IFMA)
-  add_compile_options(-mavx512ifma)
-endif()
-
-if(CONFIG_ARCH_X86_64_AVX512VBMI)
-  add_compile_options(-mavx512vbmi)
 endif()
