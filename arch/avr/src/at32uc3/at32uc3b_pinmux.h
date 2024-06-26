@@ -1,4 +1,5 @@
 /****************************************************************************
+
  * arch/avr/src/at32uc3/at32uc3b_pinmux.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
