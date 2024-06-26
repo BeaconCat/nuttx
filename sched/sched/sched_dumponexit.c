@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_DUMP_ON_EXIT
+#ifdef CONFIG_DUMP_ON_EXIT
 
 /****************************************************************************
  * Private Functions
@@ -52,14 +52,26 @@
 static void dumphandler(FAR struct tcb_s *tcb, FAR void *arg)
 {
   FAR struct filelist *filelist;
+  int i;
+  int j;
 
-  syslog(LOG_INFO, "tcb=%p name=%s, pid:%d, priority=%d state=%d "
-         "stack_alloc_ptr: %p, adj_stack_size: %zu\n",
-         tcb, tcb->name, tcb->pid, tcb->sched_priority, tcb->task_state,
-         tcb->stack_alloc_ptr, tcb->adj_stack_size);
+  sinfo("  TCB=%p name=%s\n", tcb, tcb->name);
+  sinfo("    priority=%d state=%d\n", tcb->sched_priority, tcb->task_state);
 
   filelist = &tcb->group->tg_filelist;
-  files_dumplist(filelist);
+  for (i = 0; i < filelist->fl_rows; i++)
+    {
+      for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
+        {
+          struct inode *inode = filelist->fl_files[i][j].f_inode;
+          if (inode)
+            {
+              sinfo("      fd=%d refcount=%d\n",
+                    i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j,
+                    inode->i_crefs);
+            }
+        }
+    }
 }
 
 /****************************************************************************
@@ -78,8 +90,8 @@ static void dumphandler(FAR struct tcb_s *tcb, FAR void *arg)
 
 void nxsched_dumponexit(void)
 {
-  syslog(LOG_INFO, "Other tasks:\n");
+  sinfo("Other tasks:\n");
   nxsched_foreach(dumphandler, NULL);
 }
 
-#endif /* CONFIG_SCHED_DUMP_ON_EXIT */
+#endif /* CONFIG_DUMP_ON_EXIT */
