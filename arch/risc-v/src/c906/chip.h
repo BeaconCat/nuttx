@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <arch/thead/c9xx_csr.h>
 
 #include "c906_memorymap.h"
 
