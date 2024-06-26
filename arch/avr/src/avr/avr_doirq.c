@@ -75,8 +75,8 @@ uint8_t *avr_doirq(uint8_t irq, uint8_t *regs)
    * g_current_regs is also used to manage interrupt level context switches.
    */
 
-  savestate    = (uint8_t *)g_current_regs;   /* Cast removes volatile attribute */
-  g_current_regs = regs;
+  savestate = up_current_regs();   /* Cast removes volatile attribute */
+  up_set_current_regs(regs);
 
   /* Deliver the IRQ */
 
@@ -88,24 +88,24 @@ uint8_t *avr_doirq(uint8_t irq, uint8_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  if (regs != (uint8_t *)g_current_regs)
+  if (regs != up_current_regs())
     {
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_irq();
     }
 
-  regs = (uint8_t *)g_current_regs;   /* Cast removes volatile attribute */
+  regs = up_current_regs();   /* Cast removes volatile attribute */
 
   /* Restore the previous value of g_current_regs.  NULL would indicate that
    * we are no longer in an interrupt handler.  It will be non-NULL if we
    * are returning from a nested interrupt.
    */
 
-  g_current_regs = savestate;
+  up_set_current_regs(savestate);
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;
