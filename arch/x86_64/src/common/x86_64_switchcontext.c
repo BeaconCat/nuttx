@@ -57,15 +57,13 @@
 
 void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 {
-  int cpu;
-
   /* Update scheduler parameters */
 
   nxsched_suspend_scheduler(rtcb);
 
   /* Are we in an interrupt handler? */
 
-  if (up_interrupt_context())
+  if (g_current_regs)
     {
       /* Yes, then we have to do things differently.
        * Just copy the g_current_regs into the OLD rtcb.
@@ -108,17 +106,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
       /* Update scheduler parameters */
 
       nxsched_resume_scheduler(tcb);
-
-      /* Restore the cpu lock */
-
-      restore_critical_section(tcb, this_cpu());
-
-      /* Record the new "running" task.  g_running_tasks[] is only used by
-       * assertion logic for reporting crashes.
-       */
-
-      cpu = this_cpu();
-      g_running_tasks[cpu] = current_task(cpu);
 
       /* Then switch contexts */
 
