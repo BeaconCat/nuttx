@@ -34,10 +34,7 @@
 #include <stdlib.h>
 
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-#include <nuttx/sched.h>
-#endif
+#include <nuttx/userspace.h>
 
 /****************************************************************************
  * Public Types
