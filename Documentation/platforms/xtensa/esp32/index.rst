@@ -16,61 +16,16 @@ On dual-core SoCs, the two CPUs are typically named "PRO_CPU" and "APP_CPU"
 (for "protocol" and "application"), however for most purposes the
 two CPUs are interchangeable.
 
-ESP32 Toolchain
-===============
+Toolchain
+=========
 
-The toolchain used to build ESP32 firmware can be either downloaded or built from the sources.
-It is **highly** recommended to use (download or build) the same toolchain version that is being
-used by the NuttX CI.
+You can use the prebuilt `toolchain <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-tools.html#xtensa-esp32-elf>`__
+for Xtensa architecture and `OpenOCD <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-tools.html#openocd-esp32>`__
+for ESP32 by Espressif.
 
-Please refer to the Docker
-`container <https://github.com/apache/nuttx/tree/master/tools/ci/docker/linux/Dockerfile>`_ and
-check for the current compiler version being used. For instance:
+For flashing firmware, you will need to install ``esptool.py`` by running::
 
-.. code-block::
-
-  ###############################################################################
-  # Build image for tool required by ESP32 builds
-  ###############################################################################
-  FROM nuttx-toolchain-base AS nuttx-toolchain-esp32
-  # Download the latest ESP32 GCC toolchain prebuilt by Espressif
-  RUN mkdir -p xtensa-esp32-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
-
-  RUN mkdir -p xtensa-esp32s2-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
-
-  RUN mkdir -p xtensa-esp32s3-elf-gcc && \
-    curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s3-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-    | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xJ
-
-For ESP32, the toolchain version is based on GGC 12.2.0 (``xtensa-esp32-elf-12.2.0_20230208``)
-
-The prebuilt Toolchain (Recommended)
-------------------------------------
-
-First, create a directory to hold the toolchain:
-
-.. code-block:: console
-
-  $ mkdir -p /path/to/your/toolchain/xtensa-esp32-elf-gcc
-
-Download and extract toolchain:
-
-.. code-block:: console
-
-  $ curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
-  | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
-
-Add the toolchain to your `PATH`:
-
-.. code-block:: console
-
-  $ echo "export PATH=/path/to/your/toolchain/xtensa-esp32-elf-gcc/bin:$PATH" >> ~/.bashrc
-
-You can edit your shell's rc files if you don't use bash.
+    $ pip install esptool
 
 Building from source
 --------------------
@@ -82,6 +37,7 @@ build the toolchain with crosstool-NG on Linux are as follows
 
   $ git clone https://github.com/espressif/crosstool-NG.git
   $ cd crosstool-NG
+  $ git checkout esp-2021r1
   $ git submodule update --init
 
   $ ./bootstrap && ./configure --enable-local && make
@@ -96,8 +52,8 @@ build the toolchain with crosstool-NG on Linux are as follows
 These steps are given in the setup guide in
 `ESP-IDF documentation <https://docs.espressif.com/projects/esp-idf/en/latest/get-started/linux-setup-scratch.html>`_.
 
-Building and flashing NuttX
-===========================
+Flashing
+========
 
 Firmware for ESP32 is flashed via the USB/UART interface using the ``esptool.py`` tool.
 It's a two step process where the first converts the ELF file into a ESP32-compatible binary
@@ -107,33 +63,6 @@ flash your NuttX firmware simply by running::
     $ make flash ESPTOOL_PORT=<port>
 
 where ``<port>`` is typically ``/dev/ttyUSB0`` or similar. You can change the baudrate by passing ``ESPTOOL_BAUD``.
-
-Debugging with OpenOCD
-======================
-
-Please check `Building OpenOCD from Sources <https://docs.espressif.com/projects/esp-idf/en/release-v5.1/esp32/api-guides/jtag-debugging/index.html#jtag-debugging-building-openocd>`_
-for more information on how to build OpenOCD for ESP32.
-
-ESP32 has dedicated pins for JTAG debugging. The following pins are used for JTAG debugging:
-
-============= ===========
-ESP32 Pin     JTAG Signal
-============= ===========
-MTDO / GPIO15 TDO
-MTDI / GPIO12 TDI
-MTCK / GPIO13 TCK
-MTMS / GPIO14 TMS
-============= ===========
-
-Some boards, like :ref:`ESP32-Ethernet-Kit V1.2 <platforms/xtensa/esp32/boards/esp32-ethernet-kit/index:ESP32-Ethernet-Kit V1.2>` and
-:ref:`ESP-WROVER-KIT <platforms/xtensa/esp32/boards/esp32-wrover-kit/index:ESP-WROVER-KIT>`, have a built-in JTAG debugger.
-
-Other boards that don't have any built-in JTAG debugger can be debugged using an external JTAG debugger, like the one
-described for the :ref:`ESP32-DevKitC <platforms/xtensa/esp32/boards/esp32-devkitc/index:Debugging with OpenOCD>`.
-
-OpenOCD can then be used::
-
-  openocd -c 'set ESP_RTOS hwthread; set ESP_FLASH_SIZE 0' -f board/esp32-wrover-kit-1.8v.cfg
 
 Bootloader and partitions
 -------------------------
@@ -166,14 +95,13 @@ AES          Yes
 Bluetooth    Yes
 CAN/TWAI     Yes
 DMA          Yes
-DAC          Yes    One-shot
 eFuse        Yes
 Ethernet     Yes
 GPIO         Yes
 I2C          Yes
 I2S          Yes
 LED_PWM      Yes
-MCPWM        Yes    Capture
+MCPWM        No
 Pulse_CNT    No
 RMT          Yes
 RNG          Yes
@@ -312,7 +240,7 @@ Linker Segments
 ESP32 has 4 generic timers of 64 bits (2 from Group 0 and 2 from Group 1). They're
 accessible as character drivers, the configuration along with a guidance on how
 to run the example and the description of the application level interface
-can be found :doc:`here </components/drivers/character/timers/timer>`.
+can be found :doc:`here </components/drivers/character/timer>`.
 
 Watchdog Timers
 ===============
@@ -321,7 +249,7 @@ ESP32 has 3 WDTs. 2 MWDTS from the Timers Module and 1 RWDT from the RTC Module
 (Currently not supported yet). They're accessible as character drivers,
 The configuration along with a guidance on how to run the example and the description
 of the application level interface can be found
-:doc:`here </components/drivers/character/timers/watchdog>`.
+:doc:`here </components/drivers/character/watchdog>`.
 
 SMP
 ===
@@ -362,7 +290,7 @@ the result by running ``ifconfig`` afterwards.
 
 .. tip:: Boards usually expose a ``wifi`` defconfig which enables Wi-Fi
 
-.. tip:: Please check :doc:`wapi </applications/wireless/wapi/index>` documentation for more
+.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
    information about its commands and arguments.
 
 .. note:: The ``wapi psk`` command on Station mode sets a security threshold. That
@@ -391,7 +319,7 @@ In this case, you are creating the access point ``nuttxapp`` in your board and t
 connect to it on your smartphone you will be required to type the password ``mypasswd``
 using WPA2.
 
-.. tip:: Please check :doc:`wapi </applications/wireless/wapi/index>` documentation for more
+.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
    information about its commands and arguments.
 
 The ``dhcpd_start`` is necessary to let your board to associate an IP to your smartphone.
@@ -476,13 +404,6 @@ A QEMU-compatible ``nuttx.merged.bin`` binary image will be created. It can be r
 
  $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw
 
-QEMU Networking
----------------
-
-Networking is possible using the openeth MAC driver. Enable ``ESP32_OPENETH`` option and set the nic in QEMU:
-
- $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw -nic user,model=open_eth
-
 Secure Boot and Flash Encryption
 ================================
 
@@ -532,7 +453,7 @@ Prerequisites
 First of all, we need to install ``imgtool`` (a MCUboot utility application to manipulate binary
 images) and ``esptool`` (the ESP32 toolkit)::
 
-    $ pip install imgtool esptool==4.8.dev4
+    $ pip install imgtool esptool
 
 We also need to make sure that the python modules are added to ``PATH``::
 
@@ -573,7 +494,7 @@ Now you can design an update and confirm agent to your application. Check the `M
 `MCUboot Espressif port documentation <https://docs.mcuboot.com/readme-espressif.html>`_ for
 more information on how to apply MCUboot. Also check some `notes about the NuttX MCUboot port <https://github.com/mcu-tools/mcuboot/blob/main/docs/readme-nuttx.md>`_,
 the `MCUboot porting guide <https://github.com/mcu-tools/mcuboot/blob/main/docs/PORTING.md>`_ and some
-`examples of MCUboot applied in NuttX applications <https://github.com/apache/nuttx-apps/tree/master/examples/mcuboot>`_.
+`examples of MCUboot applied in Nuttx applications <https://github.com/apache/nuttx-apps/tree/master/examples/mcuboot>`_.
 
 After you developed an application which implements all desired functions, you need to flash it into the primary image slot
 of the device (it will automatically be in the confirmed state, you can learn more about image

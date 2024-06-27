@@ -30,7 +30,6 @@
 #include <debug.h>
 #include <assert.h>
 
-#include <sys/time.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
 #include <nuttx/mm/iob.h>
@@ -63,19 +62,6 @@ struct udp_recvfrom_s
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#ifdef CONFIG_NET_TIMESTAMP
-static void udp_store_cmsg_timestamp(FAR struct udp_recvfrom_s *pstate,
-                                     FAR struct timespec *timestamp)
-{
-  FAR struct msghdr *msg = pstate->ir_msg;
-  struct timeval tv;
-
-  TIMESPEC_TO_TIMEVAL(&tv, timestamp);
-  cmsg_append(msg, SOL_SOCKET, SO_TIMESTAMP,
-              &tv, sizeof(struct timeval));
-}
-#endif
 
 #ifdef CONFIG_NET_SOCKOPTS
 static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
@@ -192,7 +178,7 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
 #endif
 
       /* Unflatten saved connection information
-       * Layout: |datalen|ifindex|src_addr_size|src_addr|[timestamp]|data|
+       * Layout: |datalen|ifindex|src_addr_size|src_addr|data|
        */
 
       recvlen = iob_copyout((FAR uint8_t *)&datalen, iob,
@@ -215,22 +201,6 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
       recvlen = iob_copyout(srcaddr, iob, src_addr_size, offset);
       offset += src_addr_size;
       DEBUGASSERT(recvlen == src_addr_size);
-
-#ifdef CONFIG_NET_TIMESTAMP
-      /* Unpack stored timestamp if SO_TIMESTAMP socket option is enabled */
-
-      if (conn->timestamp)
-        {
-          struct timespec timestamp;
-          recvlen = iob_copyout((FAR uint8_t *)&timestamp, iob,
-                                sizeof(struct timespec), offset);
-          DEBUGASSERT(recvlen == sizeof(struct timespec));
-
-          udp_store_cmsg_timestamp(pstate, &timestamp);
-        }
-
-      offset += sizeof(struct timespec);
-#endif
 
       /* Copy to user */
 
@@ -464,15 +434,6 @@ static uint16_t udp_eventhandler(FAR struct net_driver_s *dev,
 
       else if ((flags & UDP_NEWDATA) != 0)
         {
-          /* Save packet timestamp, if requested */
-
-#ifdef CONFIG_NET_TIMESTAMP
-          if (pstate->ir_conn->timestamp)
-            {
-              udp_store_cmsg_timestamp(pstate, &dev->d_rxtime);
-            }
-#endif
-
           /* Save the sender's address in the caller's 'from' location */
 
           udp_sender(dev, pstate);
@@ -599,6 +560,59 @@ static ssize_t udp_recvfrom_result(int result, struct udp_recvfrom_s *pstate)
 }
 
 /****************************************************************************
+ * Name: udp_notify_recvcpu
+ *
+ * Description:
+ *   This function will check current cpu id with conn->rcvcpu, if
+ *   not same, then use netdev_notify_recvcpu to notify the new cpu id
+ *
+ * Input Parameters:
+ *   conn    - A reference to UDP connection structure.
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   conn is not NULL.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NETDEV_RSS
+static void udp_notify_recvcpu(FAR struct udp_conn_s *conn)
+{
+  int cpu;
+
+  if (!conn)
+    {
+      return;
+    }
+
+  cpu = up_cpu_index();
+  if (cpu != conn->rcvcpu)
+    {
+      if (conn->domain == PF_INET)
+        {
+          netdev_notify_recvcpu(conn->dev, cpu, conn->domain,
+                                &(conn->u.ipv4.laddr), conn->lport,
+                                &(conn->u.ipv4.raddr), conn->rport);
+        }
+      else
+        {
+          netdev_notify_recvcpu(conn->dev, cpu, conn->domain,
+                                &(conn->u.ipv6.laddr), conn->lport,
+                                &(conn->u.ipv6.raddr), conn->rport);
+        }
+
+      conn->rcvcpu = cpu;
+    }
+
+  return;
+}
+#else
+#  define udp_notify_recvcpu(c)
+#endif /* CONFIG_NETDEV_RSS */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -715,6 +729,8 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
           ret = -EBUSY;
         }
     }
+
+  udp_notify_recvcpu(conn);
 
   net_unlock();
   udp_recvfrom_uninitialize(&state);

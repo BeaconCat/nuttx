@@ -535,16 +535,6 @@ static ssize_t fat_read(FAR struct file *filep, FAR char *buffer,
       goto errout_with_lock;
     }
 
-  /* Check that the file position is not past the end of the file */
-
-  if (filep->f_pos > ff->ff_size)
-    {
-      /* Return EOF */
-
-      ret = 0;
-      goto errout_with_lock;
-    }
-
   /* Get the number of bytes left in the file */
 
   bytesleft = ff->ff_size - filep->f_pos;
@@ -1326,7 +1316,7 @@ static int fat_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* ioctl calls are just passed through to the contained block driver */
 
   nxmutex_unlock(&fs->fs_lock);
-  return -ENOTTY;
+  return -ENOSYS;
 }
 
 /****************************************************************************
