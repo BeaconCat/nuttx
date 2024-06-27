@@ -27,9 +27,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <debug.h>
+#include <syslog.h>
 #include <execinfo.h>
 
 #include <nuttx/mm/mm.h>
+#include <nuttx/sched.h>
 
 #include "mm_heap/mm.h"
 
@@ -78,6 +80,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
           node->seqno >= dump->seqmin && node->seqno <= dump->seqmax)
         {
           char buf[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
+
           backtrace_format(buf, sizeof(buf), node->backtrace,
                            CONFIG_MM_BACKTRACE);
 
@@ -127,9 +130,34 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 {
   struct mallinfo_task info;
 
+  info = mm_mallinfo_task(heap, dump);
+
+  if (info.aordblks == 0)
+    {
+      return;
+    }
+
   if (dump->pid >= PID_MM_ALLOC)
     {
-      syslog(LOG_INFO, "Dump all used memory node info:\n");
+      FAR struct tcb_s *tcb = nxsched_get_tcb(dump->pid);
+#if CONFIG_TASK_NAME_SIZE > 0
+      FAR const char *name = tcb ? tcb->name : "Unknown";
+#else
+      FAR const char *name = "Unknown";
+#endif
+
+      if (tcb == NULL)
+        {
+          syslog(LOG_INFO, "Memdump task name: %s", name);
+        }
+      else
+        {
+          syslog(LOG_INFO, "Memdump task name: %s,"
+                           " stack_alloc_ptr: %p,"
+                           " adj_stack_size: %zu\n",
+                           name, tcb->stack_alloc_ptr, tcb->adj_stack_size);
+        }
+
 #if CONFIG_MM_BACKTRACE < 0
       syslog(LOG_INFO, "%12s%*s\n", "Size", BACKTRACE_PTR_FMT_WIDTH,
              "Address");
@@ -149,8 +177,6 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   mempool_multiple_memdump(heap->mm_mpool, dump);
 #endif
   mm_foreach(heap, memdump_handler, (FAR void *)dump);
-
-  info = mm_mallinfo_task(heap, dump);
 
   syslog(LOG_INFO, "%12s%12s\n", "Total Blks", "Total Size");
   syslog(LOG_INFO, "%12d%12d\n", info.aordblks, info.uordblks);

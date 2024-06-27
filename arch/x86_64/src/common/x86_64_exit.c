@@ -60,6 +60,8 @@ void up_exit(int status)
 
   enter_critical_section();
 
+  sinfo("TCB=%p exiting\n", this_task_irq());
+
   nxsched_dumponexit();
 
   /* Destroy the task at the head of the ready to run list. */
@@ -70,7 +72,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task();
+  tcb = this_task_irq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
    * NOTE: the API also adjusts the global IRQ control for SMP
@@ -94,7 +96,7 @@ void up_exit(int status)
 
   /* Restore the cpu lock */
 
-  restore_critical_section();
+  restore_critical_section(tcb, this_cpu());
 
   /* Then switch contexts */
 
