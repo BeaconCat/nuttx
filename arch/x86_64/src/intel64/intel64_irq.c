@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <debug.h>
-#include <sched.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -47,13 +46,16 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define IRQ_MSI_START  IRQ32
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
 struct intel64_irq_priv_s
 {
-  uint8_t busy;
+  cpu_set_t busy;
+  bool      msi;
 };
 
 /****************************************************************************
@@ -66,15 +68,12 @@ static void up_idtentry(unsigned int index, uint64_t base, uint16_t sel,
 static inline void up_idtinit(void);
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
 static struct idt_entry_s        g_idt_entries[NR_IRQS];
 static struct intel64_irq_priv_s g_irq_priv[NR_IRQS];
+static int                       g_msi_now = IRQ_MSI_START;
 static spinlock_t                g_irq_spin;
 
 /****************************************************************************
@@ -317,8 +316,8 @@ static void up_ioapic_init(void)
 
   for (i = 0; i < maxintr; i++)
     {
-      up_ioapic_pin_set_vector(i, TRIGGER_RISING_EDGE, IRQ0 + i);
-      up_ioapic_mask_pin(i);
+      up_ioapic_pin_set_vector(i, TRIGGER_RISING_EDGE |
+                               IOAPIC_PIN_DISABLE, IRQ0 + i);
     }
 }
 #endif
@@ -433,27 +432,36 @@ static inline void up_idtinit(void)
 
 void up_irqinitialize(void)
 {
+  int cpu = this_cpu();
+
   /* Initialize the TSS */
 
-  x86_64_cpu_tss_init(0);
+  x86_64_cpu_tss_init(cpu);
 
   /* Initialize the APIC */
 
   up_apic_init();
 
+  if (cpu == 0)
+    {
 #ifndef CONFIG_ARCH_INTEL64_DISABLE_INT_INIT
-  /* Disable 8259 PIC */
+      /* Disable 8259 PIC */
 
-  up_deinit_8259();
+      up_deinit_8259();
 
-  /* Initialize the IOAPIC */
+      /* Initialize the IOAPIC */
 
-  up_ioapic_init();
+      up_ioapic_init();
 #endif
 
-  /* Initialize the IDT */
+      /* Initialize the IDT */
 
-  up_idtinit();
+      up_idtinit();
+    }
+
+  /* Program the IDT - one per all cores */
+
+  setidt(&g_idt_entries, sizeof(struct idt_entry_s) * NR_IRQS - 1);
 
   /* And finally, enable interrupts */
 
@@ -482,12 +490,17 @@ void up_disable_irq(int irq)
       ASSERT(0);
     }
 
-  if (g_irq_priv[irq].busy > 0)
+  /* Do nothing if this is MSI/MSI-X */
+
+  if (g_irq_priv[irq].msi)
     {
-      g_irq_priv[irq].busy -= 1;
+      spin_unlock_irqrestore(&g_irq_spin, flags);
+      return;
     }
 
-  if (g_irq_priv[irq].busy == 0)
+  CPU_CLR(this_cpu(), &g_irq_priv[irq].busy);
+
+  if (CPU_COUNT(&g_irq_priv[irq].busy) == 0)
     {
       /* One time disable */
 
@@ -517,11 +530,19 @@ void up_enable_irq(int irq)
 #  ifndef CONFIG_IRQCHAIN
   /* Check if IRQ is free if we don't support IRQ chains */
 
-  if (g_irq_priv[irq].busy)
+  if (CPU_ISSET(this_cpu(), &g_irq_priv[irq].busy))
     {
       ASSERT(0);
     }
 #  endif
+
+  /* Do nothing if this is MSI/MSI-X */
+
+  if (g_irq_priv[irq].msi)
+    {
+      spin_unlock_irqrestore(&g_irq_spin, flags);
+      return;
+    }
 
   if (irq > IRQ255)
     {
@@ -530,7 +551,7 @@ void up_enable_irq(int irq)
       ASSERT(0);
     }
 
-  if (g_irq_priv[irq].busy == 0)
+  if (CPU_COUNT(&g_irq_priv[irq].busy) == 0)
     {
       /* One time enable */
 
@@ -540,7 +561,7 @@ void up_enable_irq(int irq)
         }
     }
 
-  g_irq_priv[irq].busy += 1;
+  CPU_SET(this_cpu(), &g_irq_priv[irq].busy);
 
   spin_unlock_irqrestore(&g_irq_spin, flags);
 #endif
@@ -564,3 +585,98 @@ int up_prioritize_irq(int irq, int priority)
   return OK;
 }
 #endif
+
+/****************************************************************************
+ * Name: up_alloc_irq_msi
+ *
+ * Description:
+ *   Reserve vector for MSI/MSI-X
+ *
+ ****************************************************************************/
+
+int up_alloc_irq_msi(int *num)
+{
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
+  int        irq   = 0;
+  int        i     = 0;
+
+  /* Limit requested number of vectors */
+
+  if (g_msi_now + *num > IRQ255)
+    {
+      *num = IRQ255 - g_msi_now;
+    }
+
+  if (*num <= 0)
+    {
+      spin_unlock_irqrestore(&g_irq_spin, flags);
+
+      /* No IRQs available */
+
+      return -ENODEV;
+    }
+
+  irq = g_msi_now;
+  g_msi_now += *num;
+
+  /* Mark IRQs as MSI/MSI-X */
+
+  for (i = 0; i < *num; i++)
+    {
+      ASSERT(CPU_COUNT(&g_irq_priv[irq + i].busy) == 0);
+      g_irq_priv[irq + i].msi = true;
+    }
+
+  spin_unlock_irqrestore(&g_irq_spin, flags);
+
+  return irq;
+}
+
+/****************************************************************************
+ * Name: up_release_irq_msi
+ *
+ * Description:
+ *   Release MSI/MSI-X vector
+ *
+ ****************************************************************************/
+
+void up_release_irq_msi(int *irq, int num)
+{
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
+  int        i     = 0;
+
+  /* Mark IRQ as MSI/MSI-X */
+
+  for (i = 0; i < num; i++)
+    {
+      g_irq_priv[irq[i]].msi = false;
+    }
+
+  spin_unlock_irqrestore(&g_irq_spin, flags);
+}
+
+/****************************************************************************
+ * Name: up_trigger_irq
+ *
+ * Description:
+ *   Trigger IRQ interrupt.
+ *
+ ****************************************************************************/
+
+void up_trigger_irq(int irq, cpu_set_t cpuset)
+{
+  uint32_t cpu = 0;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      if (CPU_ISSET(cpu, &cpuset))
+        {
+          write_msr(MSR_X2APIC_ICR,
+                    MSR_X2APIC_ICR_FIXED |
+                    MSR_X2APIC_ICR_ASSERT |
+                    MSR_X2APIC_DESTINATION(
+                      (uint64_t)x86_64_cpu_to_loapic(cpu)) |
+                    irq);
+        }
+    }
+}

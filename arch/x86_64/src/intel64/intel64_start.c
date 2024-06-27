@@ -63,7 +63,7 @@ static void x86_64_mb2_config(void)
 {
   struct multiboot_tag *tag;
 
-  /* Check that we were actually booted by a multiboot2 bootloader */
+  /* Check that we were actually booted by a mulitboot2 bootloader */
 
   if (g_mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC)
     {
@@ -130,7 +130,7 @@ void __nxstart(void)
 {
   uint64_t *dest = NULL;
 
-  /* This is only for BSP core. */
+  /* This is only for BSP core. AP cores are handled by x86_64_ap_boot() */
 
   /* Do some checking on CPU compatibilities at the top of this function.
    * BSS cleanup can be optimized with vector instructions, so we need to
@@ -164,7 +164,7 @@ void __nxstart(void)
   acpi_init(g_acpi_rsdp);
 #endif
 
-  /* Initialize CPU data (BSP and APs) */
+  /* Initialize CPU data (BPS and APs) */
 
   x86_64_cpu_init();
 
