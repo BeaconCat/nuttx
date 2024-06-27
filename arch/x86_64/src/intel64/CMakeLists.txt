@@ -48,6 +48,14 @@ set(SRCS
     intel64_check_capability.c
     intel64_cpu.c)
 
+if(CONFIG_x86_64_UNWINDER_FRAME_POINTER)
+  list(APPEND SRCS intel64_backtrace_fp.c)
+endif()
+
+if(CONFIG_STACK_COLORATION)
+  list(APPEND SRCS intel64_checkstack.c)
+endif()
+
 if(CONFIG_MM_PGALLOC)
   list(APPEND SRCS intel64_pgalloc.c)
 endif()
@@ -74,6 +82,10 @@ endif()
 
 if(CONFIG_INTEL64_HPET)
   list(APPEND SRCS intel64_hpet.c)
+endif()
+
+if(CONFIG_ARCH_INTEL64_HPET_ALARM)
+  list(APPEND SRCS intel64_hpet_alarm.c)
 endif()
 
 if(CONFIG_INTEL64_ONESHOT)

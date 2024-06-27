@@ -78,11 +78,6 @@ void arm64_boot_el3_init(void)
   reg = 0U;               /* Reset */
   reg |= SCR_NS_BIT;      /* EL2 / EL3 non-secure */
   reg |= (SCR_RES1 |      /* RES1 */
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-          SCR_IRQ_BIT |   /* Route IRQs to EL3 */
-          SCR_FIQ_BIT |   /* Route FIQs to EL3 */
-          SCR_EA_BIT |    /* Route EAs to EL3 */
-#endif
           SCR_RW_BIT |    /* EL2 execution state is AArch64 */
           SCR_ST_BIT |    /* Do not trap EL1 accesses to timer */
           SCR_HCE_BIT |   /* Do not trap HVC */
@@ -126,6 +121,12 @@ void arm64_boot_el2_init(void)
 #endif
          SCTLR_SA_BIT);       /* Enable SP alignment check */
   write_sysreg(reg, sctlr_el2);
+
+#ifdef CONFIG_ARCH_CLUSTER_PMU
+  reg = read_sysreg(actlr_el2);
+  reg |= ACTLR_CLPMU_BIT;
+  write_sysreg(reg, actlr_el2);
+#endif
 
   reg = read_sysreg(hcr_el2);
   reg |= HCR_RW_BIT;      /* EL1 Execution state is AArch64 */
@@ -200,6 +201,5 @@ void arm64_boot_el1_init(void)
 void arm64_boot_primary_c_routine(void)
 {
   arm64_chip_boot();
-  up_perf_init(NULL);
   nx_start();
 }
