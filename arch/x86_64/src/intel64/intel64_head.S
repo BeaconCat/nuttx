@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <arch/arch.h>
+#include <arch/irq.h>
 #include <arch/multiboot2.h>
 #include <sys/types.h>
 
@@ -32,6 +33,25 @@
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
+
+/* Get XCR0 register value */
+
+#if defined(CONFIG_ARCH_X86_64_AVX512)
+#  define X86_XCR0_VAL (X86_XCR0_X87 | X86_XCR0_SSE | X86_XCR0_AVX | \
+                        X86_XCR0_OPMASK | X86_XCR0_HI256 | X86_XCR0_HI16)
+#elif defined(CONFIG_ARCH_X86_64_AVX)
+#  define X86_XCR0_VAL (X86_XCR0_X87 | X86_XCR0_SSE | X86_XCR0_AVX)
+#else
+#  define X86_XCR0_VAL (X86_XCR0_X87 | X86_XCR0_SSE)
+#endif
+
+/* Get CR4 register value */
+
+#ifdef CONFIG_ARCH_X86_64_HAVE_XSAVE
+#  define X86_CR4_FPU_VAL (X86_CR4_OSXSAVE | X86_CR4_OSXFSR | X86_CR4_XMMEXCPT)
+#else
+#  define X86_CR4_FPU_VAL (X86_CR4_OSXFSR | X86_CR4_XMMEXCPT)
+#endif
 
 /* Memory Map: _sbss is the start of the BSS region (see ld.script) _ebss is
  * the end of the BSS region (see ld.script). The idle task stack starts at
@@ -144,9 +164,6 @@ loader_gdt_ptr:
 
 	.size   __reset_entry, . - __reset_entry
 
-bsp_done:
-	.long   0
-
 #ifdef CONFIG_SMP
 /****************************************************************************
  * Name: __ap_entry
@@ -256,7 +273,7 @@ start64_init:
 	 * This creates maps the lower 1GB to 4GB~5GB
 	 */
 	lea     g_pdpt_low, %edi
-	mov     $(X86_PAGE_GLOBAL | X86_PAGE_WR | X86_PAGE_PRESENT | X86_PAGE_HUGE), %eax
+	mov     $(X86_PDPT_KERNEL_MAP), %eax
 
 	mov     $0x4,   %ecx
 	mov     %eax,   0(%edi, %ecx, X86_PAGE_ENTRY_SIZE)
@@ -319,6 +336,9 @@ start64:
 	movabs  $g_idle_topstack,    %rbx
 	mov     (%rbx),   %rsp
 
+	/* Allocate space XCPTCONTEXT */
+	leaq    -XCPTCONTEXT_SIZE(%rsp), %rsp
+
 	/* Set bsp_done flag */
 	movl     $1, bsp_done
 
@@ -352,7 +372,7 @@ ap_start:
 	.size   __pmode_entry, . - __pmode_entry
 
 g_cpu_count:
-       .long 1
+	.long 1
 
 /****************************************************************************
  * Name: __revoke_low_memory
@@ -408,11 +428,21 @@ __enable_sse_avx:
 
 	/* Enable Saving XMM context */
 	mov     %cr4,   %rax
-	or      $(X86_CR4_OSXFSR | X86_CR4_XMMEXCPT),   %rax
+	or      $X86_CR4_FPU_VAL,   %rax
 	mov     %rax,   %cr4
 
+#ifdef CONFIG_ARCH_X86_64_HAVE_XSAVE
+	/* Configure XSAVE/XRSTOR for user state*/
+	mov     $X86_XCR0_VAL, %eax
+
+	xor     %rdx,  %rdx
+	xor     %rcx,  %rcx
+	xsetbv
+
+#else
 	/* Setup MXCSR, masking all SSE precision exception */
 	ldmxcsr mxcsr_mem
+#endif
 
 	ret
 
@@ -443,6 +473,9 @@ __enable_pcid:
  ****************************************************************************/
 
 	.section ".loader.data", "ax"
+
+bsp_done:
+	.long   0
 
 	/* TSS (IST) for 64 bit long mode will be filled in up_irq. */
 	.align(16)
@@ -506,3 +539,17 @@ g_pt_low:
 	.fill   X86_NUM_PAGE_ENTRY * X86_NUM_PAGE_ENTRY, X86_PAGE_ENTRY_SIZE, 0
 	.fill   X86_NUM_PAGE_ENTRY * X86_NUM_PAGE_ENTRY, X86_PAGE_ENTRY_SIZE, 0
 	.fill   X86_NUM_PAGE_ENTRY * X86_NUM_PAGE_ENTRY, X86_PAGE_ENTRY_SIZE, 0
+
+#ifdef CONFIG_ARCH_PVHBOOT
+	/* PVH Header with pvh_start_addr = start32 */
+	.pushsection .note.nuttx, "a", @note
+	.align 4
+	.long 2f - 1f
+	.long 4f - 3f
+	.long 18
+	1:.asciz "nuttx"
+	2:.align 4
+	3:.long start32
+	4:.align 4
+	.popsection
+#endif
