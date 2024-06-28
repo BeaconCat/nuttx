@@ -231,10 +231,6 @@ void clock_initialize(void)
 
   perf_init();
 
-#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
-  cpuload_init();
-#endif
-
   sched_trace_end();
 }
 

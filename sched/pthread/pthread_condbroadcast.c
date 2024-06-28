@@ -90,7 +90,7 @@ int pthread_cond_broadcast(FAR pthread_cond_t *cond)
                * Only the highest priority waiting thread will get to execute
                */
 
-              ret = -nxsem_post(&cond->sem);
+              ret = pthread_sem_give(&cond->sem);
 
               /* Increment the semaphore count (as was done by the
                * above post).
