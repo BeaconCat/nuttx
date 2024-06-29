@@ -99,11 +99,11 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
+      g_running_tasks[this_cpu()] = this_task();
 
       /* Restore the cpu lock */
 
-      restore_critical_section(this_task_irq(), this_cpu());
+      restore_critical_section();
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -112,7 +112,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = up_current_regs();
+  regs = (uint64_t *)up_current_regs();
 
   /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
@@ -157,7 +157,7 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
       case 0:
       case 16:
         asm volatile("fnclex":::"memory");
-        nxsig_kill(this_task_irq()->pid, SIGFPE);
+        nxsig_kill(this_task()->pid, SIGFPE);
         break;
 
       default:
@@ -170,7 +170,7 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
                "with error code %" PRId64 ":\n",
                irq, regs[REG_ERRCODE]);
 
-        PANIC_WITH_REGS("panic", regs);
+        up_dump_register(regs);
 
         up_trash_cpu();
         break;
@@ -178,7 +178,7 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
 
   /* Maybe we need a context switch */
 
-  regs = up_current_regs();
+  regs = (uint64_t *)up_current_regs();
 
   /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
