@@ -33,15 +33,19 @@
  ****************************************************************************/
 
 #ifndef BITS_PER_BYTE
-# define BITS_PER_BYTE CHAR_BIT
+  #define BITS_PER_BYTE CHAR_BIT
 #endif
 
 #ifndef BITS_PER_LONG
-# define BITS_PER_LONG (sizeof(unsigned long) * BITS_PER_BYTE)
+#  define BITS_PER_LONG (sizeof(unsigned long) * BITS_PER_BYTE)
+#endif
+
+#ifndef BITS_TO_LONGS
+#  define BITS_TO_LONGS(nr) (((nr) + BITS_PER_LONG - 1) / BITS_PER_LONG)
 #endif
 
 #ifndef BITS_PER_LONG_LONG
-# define BITS_PER_LONG_LONG (sizeof(unsigned long long) * BITS_PER_BYTE)
+#  define BITS_PER_LONG_LONG (sizeof(unsigned long long) * BITS_PER_BYTE)
 #endif
 
 #define BIT_BYTE_MASK(nr)  (1ul << ((nr) % BITS_PER_BYTE))
@@ -70,6 +74,28 @@
 #define GENMASK_ULL(h, l) \
         (BUILD_BUG_ON_ZERO((l) > (h)) + __GENMASK_ULL(h, l))
 
+#define BMVAL(val, lsb, msb)      (((val) & GENMASK(msb, lsb)) >> (lsb))
+
+/* Bitmap operations */
+
+#define DECLARE_BITMAP(name, bits) \
+        unsigned long name[BITS_TO_LONGS(bits)]
+
+#define set_bit(nr, addr) \
+        (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) |= \
+        BIT_WORD_MASK(nr))
+
+#define clear_bit(nr, addr) \
+        (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) &= \
+        ~BIT_WORD_MASK(nr))
+
+#define test_bit(nr, addr) \
+        (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) & \
+        BIT_WORD_MASK(nr))
+
+#define find_first_zero_bit(addr, size) \
+         find_next_zero_bit((addr), (size), 0)
+
 /****************************************************************************
  * Type Definitions
  ****************************************************************************/
@@ -89,6 +115,11 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+#ifndef __ASSEMBLER__
+unsigned long find_next_zero_bit(FAR const unsigned long *addr,
+                                 unsigned long size,
+                                 unsigned long offset);
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus
