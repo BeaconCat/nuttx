@@ -47,7 +47,6 @@ extern "C"
  * g_default_channel.
  */
 
-#ifdef CONFIG_SYSLOG
 struct syslog_channel_s; /* Forward reference */
 EXTERN FAR struct syslog_channel_s *g_syslog_channel
                                                 [CONFIG_SYSLOG_MAX_CHANNELS];
@@ -224,7 +223,6 @@ int syslog_add_intbuffer(int ch);
 #ifdef CONFIG_SYSLOG_INTBUFFER
 int syslog_flush_intbuffer(bool force);
 #endif
-#endif /* CONFIG_SYSLOG */
 
 #undef EXTERN
 #ifdef __cplusplus
