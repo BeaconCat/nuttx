@@ -124,7 +124,9 @@ struct udp_conn_s
   int32_t  sndbufs;       /* Maximum amount of bytes queued in send */
   sem_t    sndsem;        /* Semaphore signals send completion */
 #endif
-
+#ifdef CONFIG_NETDEV_RSS
+  int      rcvcpu;        /* Last recvfrom cpuid */
+#endif
   /* Read-ahead buffering.
    *
    *   readahead - An IOB chain where the UDP/IP read-ahead data is retained.
@@ -156,10 +158,6 @@ struct udp_conn_s
    */
 
   struct udp_poll_s pollinfo[CONFIG_NET_UDP_NPOLLWAITERS];
-
-#ifdef CONFIG_NET_TIMESTAMP
-  int timestamp; /* Nonzero when SO_TIMESTAMP is enabled */
-#endif
 };
 
 /* This structure supports UDP write buffering.  It is simply a container
@@ -893,7 +891,7 @@ int udp_writebuffer_notifier_setup(worker_t worker,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP_NOTIFIER
-void udp_notifier_teardown(int key);
+void udp_notifier_teardown(FAR void *key);
 #endif
 
 /****************************************************************************

@@ -35,6 +35,10 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/mm.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
+
 #include "sched/sched.h"
 #include "group/group.h"
 #include "signal/signal.h"
@@ -174,7 +178,7 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
    * should generate SIGCHLD.
    */
 
-  if (sq_is_singular(&chgrp->tg_members))
+  if (chgrp->tg_nmembers == 1)
     {
       /* Mark that all of the threads in the task group have exited */
 
@@ -270,20 +274,11 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
 #ifdef HAVE_GROUP_MEMBERS
   DEBUGASSERT(ctcb && ctcb->group);
 
-  /* Keep things stationary throughout the following */
-
-  sched_lock();
-
   /* Send SIGCHLD to all members of the parent's task group */
 
   nxtask_sigchild(ctcb->group->tg_ppid, ctcb, status);
-  sched_unlock();
 #else
   FAR struct tcb_s *ptcb;
-
-  /* Keep things stationary throughout the following */
-
-  sched_lock();
 
   /* Get the TCB of the receiving, parent task.  We do this early to
    * handle multiple calls to nxtask_signalparent.
@@ -294,7 +289,6 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
     {
       /* The parent no longer exists... bail */
 
-      sched_unlock();
       return;
     }
 
@@ -305,7 +299,6 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
    */
 
   nxtask_sigchild(ptcb, ctcb, status);
-  sched_unlock();
 #endif
 }
 #else
@@ -360,9 +353,7 @@ static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 
       /* Is this the last thread in the group? */
 
-#ifndef CONFIG_DISABLE_PTHREAD
-      if (sq_is_singular(&group->tg_members))
-#endif
+      if (group->tg_nmembers == 1)
         {
           /* Yes.. Wakeup any tasks waiting for this task to exit */
 
@@ -432,8 +423,6 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
       return;
     }
 
-  nxsched_dumponexit();
-
   /* If the task was terminated by another task, it may be in an unknown
    * state.  Make some feeble effort to recover the state.
    */
@@ -473,6 +462,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
     {
       umm_memdump(&dump);
     }
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_exit(tcb);
 #endif
 
   /* This function can be re-entered in certain cases.  Set a flag
