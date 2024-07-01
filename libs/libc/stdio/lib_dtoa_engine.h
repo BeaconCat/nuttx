@@ -40,8 +40,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/compiler.h>
-
 #include <stdint.h>
 #include <float.h>
 
