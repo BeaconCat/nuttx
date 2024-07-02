@@ -25,7 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/sensors/gps.h>
 
@@ -44,7 +44,6 @@
 #define GPS_SATELLITE_IDX     1
 #define GPS_MAX_IDX           2
 
-#define GPS_RECV_BUFFERSIZE   2048
 #define GPS_PARSE_BUFFERSIZE  256
 
 #define GPS_KNOT_TO_KMH       1.852f
@@ -98,7 +97,7 @@ static int gps_activate(FAR struct sensor_lowerhalf_s *lower,
                         FAR struct file *filep, bool enable);
 static int gps_set_interval(FAR struct sensor_lowerhalf_s *lower,
                             FAR struct file *filep,
-                            FAR unsigned long *interval);
+                            FAR uint32_t *interval);
 static int gps_control(FAR struct sensor_lowerhalf_s *lower,
                        FAR struct file *filep, int cmd, unsigned long arg);
 
@@ -164,7 +163,7 @@ static int gps_activate(FAR struct sensor_lowerhalf_s *lower,
 
 static int gps_set_interval(FAR struct sensor_lowerhalf_s *lower,
                             FAR struct file *filep,
-                            FAR unsigned long *interval)
+                            FAR uint32_t *interval)
 {
   FAR struct gps_sensor_s *dev = (FAR struct gps_sensor_s *)lower;
   FAR struct gps_upperhalf_s *upper = dev->upper;
@@ -351,7 +350,7 @@ static int gps_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       if (upper->lower->ops->set_interval != NULL)
         {
           ret = upper->lower->ops->set_interval(upper->lower, filep,
-                               (FAR unsigned long *)(uintptr_t)arg);
+                               (FAR uint32_t *)(uintptr_t)arg);
         }
     }
   else if (upper->lower->ops->control != NULL)
@@ -685,7 +684,8 @@ int gps_register(FAR struct gps_lowerhalf_s *lower, int devno,
       goto satellite_err;
     }
 
-  ret = circbuf_init(&upper->buffer, NULL, GPS_RECV_BUFFERSIZE);
+  ret = circbuf_init(&upper->buffer, NULL,
+                     CONFIG_SENSORS_GPS_RECV_BUFFERSIZE);
   if (ret < 0)
     {
       goto circ_err;
