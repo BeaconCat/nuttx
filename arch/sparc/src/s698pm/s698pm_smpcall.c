@@ -128,3 +128,4 @@ void up_send_smp_call(cpu_set_t cpuset)
       up_send_smp_sched(cpu);
     }
 }
+
