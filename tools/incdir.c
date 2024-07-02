@@ -358,8 +358,8 @@ int main(int argc, char **argv, char **envp)
       wintool = true;
 #endif
     }
-  else if (compiler == COMPILER_SDCC || compiler == COMPILER_TASKING
-           || compiler == COMPILER_GHS)
+  else if (compiler == COMPILER_SDCC || compiler == COMPILER_TASKING ||
+           compiler == COMPILER_GHS)
     {
       cmdarg = "-I";
     }

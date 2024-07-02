@@ -29,7 +29,6 @@
 #include <debug.h>
 
 #include "fs_anonmap.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Private Functions
