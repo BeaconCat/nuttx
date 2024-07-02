@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/tls/task_tls_destruct.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +29,7 @@
 
 #include <nuttx/tls.h>
 #include <nuttx/mutex.h>
+#include <assert.h>
 
 /****************************************************************************
  * Private Data
@@ -104,6 +103,9 @@ int task_tls_alloc(tls_dtor_t dtor)
     }
 
   nxmutex_unlock(&g_tlslock);
+
+  DEBUGASSERT(ret != -EUSERS);
+
   return ret;
 }
 

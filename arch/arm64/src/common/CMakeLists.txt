@@ -63,6 +63,10 @@ endif()
 
 if(CONFIG_ARCH_HAVE_MPU)
   list(APPEND SRCS arm64_mpu.c)
+  set_source_files_properties(
+    arm64_mpu.c TARGET_DIRECTORY arch
+    PROPERTIES COMPILE_FLAGS -fno-sanitize=kernel-hwaddress
+               -fno-sanitize=kernel-address)
 endif()
 
 if(CONFIG_ARM64_PSCI)
@@ -79,16 +83,16 @@ if(CONFIG_BUILD_KERNEL)
        arm64_signal_dispatch.c)
 endif()
 
-if(CONFIG_ARCH_KERNEL_STACK)
-  list(APPEND SRCS arm64_addrenv_kstack.c)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
-  list(APPEND SRCS arm64_addrenv.c arm64_pgalloc.c arm64_addrenv_perms.c)
-  list(APPEND SRCS arm64_addrenv_utils.c arm64_addrenv_shm.c)
-  list(APPEND SRCS arm64_addrenv_pgmap.c)
+  list(APPEND SRCS arm64_addrenv.c arm64_addrenv_utils.c arm64_pgalloc.c)
   if(CONFIG_ARCH_STACK_DYNAMIC)
     list(APPEND SRCS arm64_addrenv_ustack.c)
+  endif()
+  if(CONFIG_ARCH_KERNEL_STACK)
+    list(APPEND SRCS arm64_addrenv_kstack.c)
+  endif()
+  if(CONFIG_ARCH_VMA_MAPPING)
+    list(APPEND SRCS arm64_addrenv_shm.c)
   endif()
 endif()
 
@@ -114,6 +118,10 @@ endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS arm64_hwdebug.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

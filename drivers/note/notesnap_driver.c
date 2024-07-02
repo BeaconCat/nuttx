@@ -150,7 +150,20 @@ static const struct note_driver_ops_s g_notesnap_ops =
 
 static struct notesnap_s g_notesnap =
 {
-  {&g_notesnap_ops}
+  {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+    "snap",
+    {
+      {
+        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
+#  ifdef CONFIG_SMP
+        CONFIG_SCHED_INSTRUMENTATION_CPUSET
+#  endif
+      },
+    },
+#endif
+    &g_notesnap_ops
+  }
 };
 
 static FAR const char *g_notesnap_type[] =
@@ -197,7 +210,7 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
   FAR struct notesnap_chunk_s *note;
   size_t index;
 
-  if (atomic_load(&snap->dumping))
+  if (snap->dumping)
     {
       return;
     }
@@ -383,12 +396,12 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 
       perf_convert(note->count, &time);
       lib_sprintf(stream,
-                  "snapshoot: [%u.%09u] "
+                  "snapshoot: [%" PRIu64 ".%09u] "
 #ifdef CONFIG_SMP
                   "[CPU%d] "
 #endif
                   "[%d] %-16s %#" PRIxPTR "\n",
-                  (unsigned)time.tv_sec,
+                  (uint64_t)time.tv_sec,
                   (unsigned)time.tv_nsec,
 #ifdef CONFIG_SMP
                   note->cpu,

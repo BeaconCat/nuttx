@@ -21,7 +21,6 @@
 # ##############################################################################
 
 set(SRCS
-    task_argvstr.c
     task_create.c
     task_init.c
     task_setup.c
