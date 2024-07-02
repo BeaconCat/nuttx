@@ -111,7 +111,7 @@ enum net_lltype_e
   NET_LL_IEEE802154,   /* IEEE 802.15.4 MAC */
   NET_LL_PKTRADIO,     /* Non-standard packet radio */
   NET_LL_MBIM,         /* CDC-MBIM USB host driver */
-  NET_LL_CAN,          /* CAN bus */
+  NET_LL_CAN,          /* CAN/LIN bus */
   NET_LL_CELL          /* Cellular Virtual Network Device */
 };
 
@@ -597,7 +597,8 @@ int sockfd_allocate(FAR struct socket *psock, int oflags);
  ****************************************************************************/
 
 FAR struct socket *file_socket(FAR struct file *filep);
-int sockfd_socket(int sockfd, FAR struct socket **socketp);
+int sockfd_socket(int sockfd, FAR struct file **filep,
+                  FAR struct socket **socketp);
 
 /****************************************************************************
  * Name: psock_socket
