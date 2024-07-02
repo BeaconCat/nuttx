@@ -234,25 +234,12 @@ static int nvs_flash_rd(FAR struct nvs_fs *fs, uint32_t addr,
   offset += addr & ADDR_OFFS_MASK;
 
   ret = MTD_READ(fs->mtd, offset, len, data);
-  if (ret == -EBADMSG)
+  if (ret < 0)
     {
-      /* ECC fail first time
-       * try again to avoid transient electronic interference
-       */
-
-      ret = MTD_READ(fs->mtd, offset, len, data);
-      if (ret == -EBADMSG)
-        {
-          /* ECC fail second time
-           * fill ~erasestate to trigger recovery process
-           */
-
-          memset(data, ~fs->erasestate, len);
-          ret = 0;
-        }
+      return ret;
     }
 
-  return ret < 0 ? ret : 0;
+  return OK;
 }
 
 /****************************************************************************

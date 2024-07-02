@@ -31,7 +31,6 @@
 #include <stdbool.h>
 #include <sched.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 
@@ -43,7 +42,6 @@
  * allocate in a block
  */
 
-#define NUM_SIGNAL_ACTIONS       4
 #define NUM_PENDING_ACTIONS      4
 #define NUM_SIGNALS_PENDING      4
 
