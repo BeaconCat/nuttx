@@ -29,22 +29,15 @@
 
 #include <signal.h>
 
-#if defined(CONFIG_ESP32_SPIRAM) || defined(CONFIG_ESP32S3_SPIRAM)
+#ifdef CONFIG_ESP32_SPIRAM
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ESP32S3_SPIRAM
-/* ESP32S3 MMU block size */
-
-#  define ESP_HIMEM_BLKSZ (0x10000)
-
-#else
 /* ESP32 MMU block size */
 
-#  define ESP_HIMEM_BLKSZ (0x8000)
-#endif
+#define ESP_HIMEM_BLKSZ (0x8000)
 
 /* Command:     HIMEMIOC_ALLOC_BLOCKS
  * Description: Allocate a certain number of physical RAM blocks.

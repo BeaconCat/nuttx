@@ -112,10 +112,10 @@ static int work_qcancel(FAR struct usr_wqueue_s *wqueue,
           /* Remove the work at the head of the queue */
 
           dq_remfirst(&wqueue->q);
-          nxsem_get_value(&wqueue->wake, &semcount);
+          _SEM_GETVALUE(&wqueue->wake, &semcount);
           if (semcount < 1)
             {
-              nxsem_post(&wqueue->wake);
+              _SEM_POST(&wqueue->wake);
             }
         }
 
