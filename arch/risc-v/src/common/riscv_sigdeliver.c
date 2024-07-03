@@ -54,8 +54,8 @@
 
 void riscv_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
-  uintreg_t *regs = rtcb->xcp.saved_regs;
+  struct tcb_s *rtcb = this_task_irq();
+  uintptr_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal

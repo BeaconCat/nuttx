@@ -346,9 +346,10 @@
 #define HPET0_IRQ    IRQ2
 #define HPET1_IRQ    IRQ8
 
-/* Use IRQ15 for SMP */
+/* Use IRQ15 IRQ16 for SMP */
 
 #define SMP_IPI_IRQ  IRQ15
+#define SMP_IPI_ASYNC_IRQ  IRQ16
 
 /* Common register save structure created by up_saveusercontext() and by
  * ISR/IRQ interrupt processing.
@@ -530,16 +531,16 @@ static inline void setidt(void *idt, int size)
   asm volatile ("lidt %0"::"m"(idt_ptr):"memory");
 }
 
-static inline uint64_t rdtsc(void)
+static inline uint64_t rdtscp(void)
 {
   uint32_t lo;
   uint32_t hi;
 
-  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"memory");
+  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
-static inline uint64_t _rdtsc(void)
+static inline uint64_t rdtsc(void)
 {
   uint32_t lo;
   uint32_t hi;
@@ -556,6 +557,25 @@ static inline void set_pcid(uint64_t pcid)
                      "%%rbx; mov %%rbx, %%cr3;"
                      ::"g"(pcid):"memory", "rbx", "rax");
       }
+}
+
+static inline void set_cr3(uint64_t cr3)
+{
+  asm volatile("mov %0, %%cr3" : "=rm"(cr3) : : "memory");
+}
+
+static inline uint64_t get_cr3(void)
+{
+  uint64_t cr3;
+  asm volatile("mov %%cr3, %0" : "=rm"(cr3) : : "memory");
+  return cr3;
+}
+
+static inline uint64_t get_pml4(void)
+{
+  /* Aligned to a 4-KByte boundary */
+
+  return get_cr3() & 0xfffffffffffff000;
 }
 
 static inline unsigned long read_msr(unsigned int msr)
