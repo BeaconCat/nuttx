@@ -55,7 +55,7 @@
  *   becomes non-empty.
  *
  * Input Parameters:
- *   arg - the argument provided when the timeout was configured.
+ *   pid   - the task ID of the task to wakeup
  *
  * Returned Value:
  *   None
@@ -64,9 +64,9 @@
  *
  ****************************************************************************/
 
-static void nxmq_rcvtimeout(wdparm_t arg)
+static void nxmq_rcvtimeout(wdparm_t pid)
 {
-  FAR struct tcb_s *wtcb = (FAR struct tcb_s *)(uintptr_t)arg;
+  FAR struct tcb_s *wtcb;
   irqstate_t flags;
 
   /* Disable interrupts.  This is necessary because an interrupt handler may
@@ -75,11 +75,17 @@ static void nxmq_rcvtimeout(wdparm_t arg)
 
   flags = enter_critical_section();
 
+  /* Get the TCB associated with this pid.  It is possible that task may no
+   * longer be active when this watchdog goes off.
+   */
+
+  wtcb = nxsched_get_tcb(pid);
+
   /* It is also possible that an interrupt/context switch beat us to the
    * punch and already changed the task's state.
    */
 
-  if (wtcb->task_state == TSTATE_WAIT_MQNOTEMPTY)
+  if (wtcb && wtcb->task_state == TSTATE_WAIT_MQNOTEMPTY)
     {
       /* Restart with task with a timeout error */
 
@@ -94,6 +100,141 @@ static void nxmq_rcvtimeout(wdparm_t arg)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: file_mq_timedreceive_internal
+ *
+ * Description:
+ *   This is an internal function of file_mq_timedreceive()/
+ *   file_mq_tickreceive(), please refer to the detailed description for
+ *   more information.
+ *
+ * Input Parameters:
+ *   mq      - Message Queue Descriptor
+ *   msg     - Buffer to receive the message
+ *   msglen  - Size of the buffer in bytes
+ *   prio    - If not NULL, the location to store message priority.
+ *   abstime - the absolute time to wait until a timeout is declared.
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedreceive() for the list list valid return values).
+ *
+ ****************************************************************************/
+
+static ssize_t
+file_mq_timedreceive_internal(FAR struct file *mq, FAR char *msg,
+                              size_t msglen, FAR unsigned int *prio,
+                              FAR const struct timespec *abstime,
+                              sclock_t ticks)
+{
+  FAR struct tcb_s *rtcb = this_task();
+  FAR struct mqueue_inode_s *msgq;
+  FAR struct mqueue_msg_s *mqmsg;
+  irqstate_t flags;
+  int ret;
+
+  DEBUGASSERT(up_interrupt_context() == false);
+
+  /* Verify the input parameters and, in case of an error, set
+   * errno appropriately.
+   */
+
+  ret = nxmq_verify_receive(mq, msg, msglen);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  msgq = mq->f_inode->i_private;
+
+  /* Furthermore, nxmq_wait_receive() expects to have interrupts disabled
+   * because messages can be sent from interrupt level.
+   */
+
+  flags = enter_critical_section();
+
+  /* Check if the message queue is empty.  If it is NOT empty, then we
+   * will not need to start timer.
+   */
+
+  if (list_is_empty(&msgq->msglist))
+    {
+      if (abstime != NULL)
+        {
+          if (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              /* Convert the timespec to clock ticks.
+               * We must have interrupts disabled here so that
+               * this time stays valid until the wait begins.
+               */
+
+              ret = clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
+            }
+
+          /* Handle any time-related errors */
+
+          if (ret != OK)
+            {
+              goto errout_in_critical_section;
+            }
+        }
+
+      /* If the time has already expired and the message queue is empty,
+       * return immediately.
+       */
+
+      if (ticks <= 0)
+        {
+          ret = -ETIMEDOUT;
+          goto errout_in_critical_section;
+        }
+
+      /* Start the watchdog */
+
+      wd_start(&rtcb->waitdog, ticks,
+               nxmq_rcvtimeout, nxsched_gettid());
+    }
+
+  /* Get the message from the message queue */
+
+  ret = nxmq_wait_receive(msgq, mq->f_oflags, &mqmsg);
+
+  /* Stop the watchdog timer (this is not harmful in the case where
+   * it was never started)
+   */
+
+  wd_cancel(&rtcb->waitdog);
+
+  /* Check if we got a message from the message queue.  We might
+   * not have a message if:
+   *
+   * - The message queue is empty and O_NONBLOCK is set in the mqdes
+   * - The wait was interrupted by a signal
+   * - The watchdog timeout expired
+   */
+
+  if (ret == OK)
+    {
+      DEBUGASSERT(mqmsg != NULL);
+      ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
+    }
+
+  /* We can now restore interrupts */
+
+errout_in_critical_section:
+  leave_critical_section(flags);
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: file_mq_timedreceive
@@ -132,97 +273,48 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
                              size_t msglen, FAR unsigned int *prio,
                              FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb;
-  FAR struct mqueue_inode_s *msgq;
-  FAR struct mqueue_msg_s *mqmsg;
-  irqstate_t flags;
-  int ret;
+  return file_mq_timedreceive_internal(mq, msg, msglen, prio, abstime, 0);
+}
 
-  DEBUGASSERT(up_interrupt_context() == false);
+/****************************************************************************
+ * Name: file_mq_tickreceive
+ *
+ * Description:
+ *   This function receives the oldest of the highest priority messages from
+ *   the message queue specified by "mq."  If the message queue is empty
+ *   and O_NONBLOCK was not set, file_mq_tickreceive() will block until a
+ *   message is added to the message queue (or until a timeout occurs).
+ *
+ *   file_mq_tickreceive() is an internal OS interface.  It is functionally
+ *   equivalent to mq_timedreceive() except that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedreceive() for a more complete description of
+ *  the behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message Queue Descriptor
+ *   msg     - Buffer to receive the message
+ *   msglen  - Size of the buffer in bytes
+ *   prio    - If not NULL, the location to store message priority.
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedreceive() for the list list valid return values).
+ *
+ ****************************************************************************/
 
-  /* Verify the input parameters and, in case of an error, set
-   * errno appropriately.
-   */
-
-  ret = nxmq_verify_receive(mq, msg, msglen);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  if (!abstime || abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
-    {
-      return -EINVAL;
-    }
-
-  msgq = mq->f_inode->i_private;
-
-  /* Furthermore, nxmq_wait_receive() expects to have interrupts disabled
-   * because messages can be sent from interrupt level.
-   */
-
-  flags = enter_critical_section_nonirq();
-  rtcb = this_task();
-
-  /* Check if the message queue is empty.  If it is NOT empty, then we
-   * will not need to start timer.
-   */
-
-  if (list_is_empty(&msgq->msglist))
-    {
-      sclock_t ticks;
-
-      /* Convert the timespec to clock ticks.  We must have interrupts
-       * disabled here so that this time stays valid until the wait begins.
-       */
-
-      clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
-
-      /* If the time has already expired and the message queue is empty,
-       * return immediately.
-       */
-
-      if (ticks <= 0)
-        {
-          ret = -ETIMEDOUT;
-          goto errout_in_critical_section;
-        }
-
-      /* Start the watchdog */
-
-      wd_start(&rtcb->waitdog, ticks, nxmq_rcvtimeout, (wdparm_t)rtcb);
-    }
-
-  /* Get the message from the message queue */
-
-  ret = nxmq_wait_receive(msgq, mq->f_oflags, &mqmsg);
-
-  /* Stop the watchdog timer (this is not harmful in the case where
-   * it was never started)
-   */
-
-  wd_cancel(&rtcb->waitdog);
-
-  /* Check if we got a message from the message queue.  We might
-   * not have a message if:
-   *
-   * - The message queue is empty and O_NONBLOCK is set in the mqdes
-   * - The wait was interrupted by a signal
-   * - The watchdog timeout expired
-   */
-
-  if (ret == OK)
-    {
-      DEBUGASSERT(mqmsg != NULL);
-      ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
-    }
-
-  /* We can now restore interrupts */
-
-errout_in_critical_section:
-  leave_critical_section_nonirq(flags);
-
-  return ret;
+ssize_t file_mq_tickreceive(FAR struct file *mq, FAR char *msg,
+                            size_t msglen, FAR unsigned int *prio,
+                            sclock_t ticks)
+{
+  return file_mq_timedreceive_internal(mq, msg, msglen, prio, NULL, ticks);
 }
 
 /****************************************************************************
@@ -263,7 +355,7 @@ ssize_t nxmq_timedreceive(mqd_t mqdes, FAR char *msg, size_t msglen,
                           FAR const struct timespec *abstime)
 {
   FAR struct file *filep;
-  ssize_t ret;
+  int ret;
 
   ret = fs_getfilep(mqdes, &filep);
   if (ret < 0)
@@ -271,9 +363,7 @@ ssize_t nxmq_timedreceive(mqd_t mqdes, FAR char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_timedreceive(filep, msg, msglen, prio, abstime);
-  fs_putfilep(filep);
-  return ret;
+  return file_mq_timedreceive_internal(filep, msg, msglen, prio, abstime, 0);
 }
 
 /****************************************************************************
