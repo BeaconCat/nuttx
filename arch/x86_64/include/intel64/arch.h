@@ -208,8 +208,6 @@
 #  define X86_64_CPUID_07_AVX512VL    (1 << 31)
 #define X86_64_CPUID_XSAVE            0x0d
 #define X86_64_CPUID_TSC              0x15
-#define X86_64_CPUID_EXTINFO          0x80000001
-#  define X86_64_CPUID_EXTINFO_RDTSCP (1 << 27)
 
 /* MSR Definitions */
 
@@ -468,7 +466,7 @@ begin_packed_struct struct ist_s
 
 begin_packed_struct struct tss_s
 {
-  struct ist_s ist;     /* IST  */
+  struct ist_s  ist;    /* IST  */
   void         *cpu;    /* CPU private data */
 } end_packed_struct;
 
