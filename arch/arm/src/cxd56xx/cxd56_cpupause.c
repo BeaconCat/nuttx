@@ -199,11 +199,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at CURRENT_REGS into the TCB at the head
-   * of the assigned task list for this CPU.
-   */
-
-  arm_savestate(tcb->xcp.regs);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -290,11 +286,7 @@ int up_cpu_paused_restore(void)
 
   nxsched_resume_scheduler(tcb);
 
-  /* Then switch contexts.  Any necessary address environment changes
-   * will be made when the interrupt returns.
-   */
-
-  arm_restorestate(tcb->xcp.regs);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -315,7 +307,7 @@ int up_cpu_paused_restore(void)
 
 int arm_pause_handler(int irq, void *c, void *arg)
 {
-  int cpu = up_cpu_index();
+  int cpu = this_cpu();
   int ret = OK;
 
   DPRINTF("cpu%d will be paused\n", cpu);
@@ -359,7 +351,37 @@ int arm_pause_handler(int irq, void *c, void *arg)
       leave_critical_section(flags);
     }
 
+  nxsched_process_delivered(cpu);
+
   return ret;
+}
+
+/****************************************************************************
+ * Name: up_cpu_pause_async
+ *
+ * Description:
+ *   pause task execution on the CPU
+ *   check whether there are tasks delivered to specified cpu
+ *   and try to run them.
+ *
+ * Input Parameters:
+ *   cpu - The index of the CPU to be paused.
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ * Assumptions:
+ *   Called from within a critical section;
+ *
+ ****************************************************************************/
+
+inline_function int up_cpu_pause_async(int cpu)
+{
+  /* Generate IRQ for CPU(cpu) */
+
+  putreg32(1, CXD56_CPU_P2_INT + (4 * cpu));
+
+  return OK;
 }
 
 /****************************************************************************
@@ -408,9 +430,7 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  /* Generate IRQ for CPU(cpu) */
-
-  putreg32(1, CXD56_CPU_P2_INT + (4 * cpu));
+  up_cpu_pause_async(cpu);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
