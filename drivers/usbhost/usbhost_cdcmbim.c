@@ -256,7 +256,6 @@ static void usbhost_notification_work(FAR void *arg);
 static void usbhost_notification_callback(FAR void *arg, ssize_t nbytes);
 static void usbhost_rxdata_work(FAR void *arg);
 static void usbhost_bulkin_work(FAR void *arg);
-static void usbhost_bulkin_callback(FAR void *arg, ssize_t nbytes);
 
 static void usbhost_destroy(FAR void *arg);
 
@@ -1253,7 +1252,7 @@ static int usbhost_cfgdesc(FAR struct usbhost_cdcmbim_s *priv,
 
             else if (ifdesc->classid  == USB_CLASS_CDC_DATA &&
                      ifdesc->subclass == CDC_SUBCLASS_NONE &&
-                     ifdesc->protocol == CDC_DATA_PROTO_NTB)
+                     ifdesc->protocol == CDC_DATA_PROTO_MBIMNTB)
               {
                 priv->dataif  = ifdesc->ifno;
                 found        |= USBHOST_DATAIFFOUND;
