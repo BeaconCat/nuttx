@@ -72,11 +72,6 @@ FAR void *zalloc(size_t size)
     {
       set_errno(ENOMEM);
     }
-  else
-    {
-      mm_notify_pressure(mm_heapfree(USR_HEAP),
-                         mm_heapfree_largest(USR_HEAP));
-    }
 
   return ret;
 #endif
