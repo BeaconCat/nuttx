@@ -189,7 +189,11 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
       /* Calculate TCP checksum. */
 
       tcp->tcpchksum = 0;
+
+#ifdef CONFIG_NET_TCP_CHECKSUMS
       tcp->tcpchksum = ~tcp_ipv6_chksum(dev);
+#endif
+
 #ifdef CONFIG_NET_STATISTICS
       g_netstats.ipv6.sent++;
 #endif
@@ -209,7 +213,11 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
       /* Calculate TCP checksum. */
 
       tcp->tcpchksum = 0;
+
+#ifdef CONFIG_NET_TCP_CHECKSUMS
       tcp->tcpchksum = ~tcp_ipv4_chksum(dev);
+#endif
+
 #ifdef CONFIG_NET_STATISTICS
       g_netstats.ipv4.sent++;
 #endif
@@ -484,7 +492,10 @@ void tcp_reset(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
                         conn ? conn->sconn.s_ttl : IP_TTL_DEFAULT,
                         conn ? conn->sconn.s_tos : 0);
       tcp->tcpchksum = 0;
+
+#ifdef CONFIG_NET_TCP_CHECKSUMS
       tcp->tcpchksum = ~tcp_ipv6_chksum(dev);
+#endif
     }
 #endif /* CONFIG_NET_IPv6 */
 
@@ -501,7 +512,10 @@ void tcp_reset(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
                         conn ? conn->sconn.s_tos : 0, NULL);
 
       tcp->tcpchksum = 0;
+
+#ifdef CONFIG_NET_TCP_CHECKSUMS
       tcp->tcpchksum = ~tcp_ipv4_chksum(dev);
+#endif
     }
 #endif /* CONFIG_NET_IPv4 */
 }
@@ -613,8 +627,13 @@ void tcp_synack(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
   tcp->optdata[optlen++] = tcp_mss & 0xff;
 
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
-  if (tcp->flags == TCP_SYN ||
-      ((tcp->flags == (TCP_ACK | TCP_SYN)) && (conn->flags & TCP_WSCALE)))
+  if (tcp_get_recvwindow(dev, conn) < UINT16_MAX)
+    {
+      conn->rcv_scale = 0;
+    }
+  else if (tcp->flags == TCP_SYN ||
+           ((tcp->flags == (TCP_ACK | TCP_SYN)) &&
+           (conn->flags & TCP_WSCALE)))
     {
       tcp->optdata[optlen++] = TCP_OPT_NOOP;
       tcp->optdata[optlen++] = TCP_OPT_WS;

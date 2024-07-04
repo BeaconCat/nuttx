@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/elf.h>
 
 /****************************************************************************
@@ -201,7 +200,7 @@ int up_relocateadd(const Elf32_Rela *rel, const Elf32_Sym *sym,
       break;
 
     case R_XTENSA_SLOT0_OP:
-      p = (unsigned char *)up_textheap_data_address((void *)addr);
+      p = (unsigned char *)addr;
       if (is_l32r(p))
         {
           /* Xtensa ISA:
