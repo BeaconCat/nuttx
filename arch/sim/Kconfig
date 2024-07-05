@@ -15,22 +15,18 @@ config HOST_X86_64
 	select ARCH_HAVE_STACKCHECK
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF && !SIM_M32
 	select ARCH_HAVE_MATH_H
-	select ARCH_TOOLCHAIN_GNU
 
 config HOST_X86
 	bool "x86"
 	select ARCH_HAVE_STACKCHECK
-	select ARCH_TOOLCHAIN_GNU
 
 config HOST_ARM
 	bool "arm"
 	select ARCH_HAVE_STACKCHECK
-	select ARCH_TOOLCHAIN_GNU
 
 config HOST_ARM64
 	bool "arm64"
 	select ARCH_HAVE_STACKCHECK
-	select ARCH_TOOLCHAIN_GNU
 
 endchoice # Host CPU Type
 
@@ -70,7 +66,7 @@ config SIM_CYGWIN_DECORATED
 config SIM_ASAN
 	bool "Address Sanitizer"
 	default n
-	depends on MM_CUSTOMIZE_MANAGER && FRAME_POINTER
+	depends on !MM_KASAN && MM_CUSTOMIZE_MANAGER && FRAME_POINTER
 	---help---
 		AddressSanitizer (ASan) is a fast compiler-based tool for detecting memory
 		bugs in native code.
@@ -78,7 +74,7 @@ config SIM_ASAN
 config SIM_UBSAN
 	bool "Undefined Behaviour Sanitizer"
 	default n
-	depends on FRAME_POINTER
+	depends on !MM_UBSAN && FRAME_POINTER
 	---help---
 		Compile-time instrumentation is used to detect various undefined behaviours
 		at runtime.
@@ -89,6 +85,21 @@ config SIM_UBSAN_DUMMY
 	depends on SIM_UBSAN
 	---help---
 		Keep SIM_UBSAN compile time but disable runtime actions.
+
+config SIM_GPROF
+	bool "Enable gprof"
+	depends on !SCHED_GPROF
+	default n
+	---help---
+		Enable support gprof profiling tool.
+
+config SIM_GCOV_ALL
+	bool "Enable code coverage for the entire image"
+	depends on COVERAGE
+	default n
+	---help---
+		This option activates code coverage instrumentation for the
+		entire image.
 
 choice
 	prompt "X64_64 ABI"
@@ -314,20 +325,39 @@ choice
 config SIM_SOUND_ALSA
 	bool "alsa support on sim"
 	depends on HOST_LINUX
+	depends on AUDIOUTILS_LIBMAD
 
 endchoice
 
 endif
 
+config SIM_OFFLOAD_NUM_BUFFERS
+	int "Number of offload buffers for audio processing"
+	default 2
+	---help---
+		Specifies the number of offload buffers to allocate for audio processing.
+		If Driver Specified buffer sizes is enabled (below), then the
+		low-level drivers will have the opportunity to override this
+		value.
+
+config SIM_OFFLOAD_BUFFER_NUMBYTES
+	int "Size of each offload buffer for audio processing"
+	default 32767
+	---help---
+		Specifies the allocation size for each offload buffer
+		If Driver Specified buffer sizes is enabled (below), then the
+		low-level drivers will have the opportunity to override this
+		value.
+
 config SIM_CAMERA
-	bool "Simulated video support"
+	bool "Simulated camera support"
 	depends on VIDEO
 	default y
 
 if SIM_CAMERA
 
 choice
-	prompt "Simulated video device type"
+	prompt "Simulated camera device type"
 	default SIM_CAMERA_V4L2
 
 config SIM_CAMERA_V4L2
@@ -336,8 +366,8 @@ config SIM_CAMERA_V4L2
 
 endchoice
 
-config HOST_VIDEO_DEV_PATH
-	string "Host video device path"
+config HOST_CAMERA_DEV_PATH
+	string "Host camera device path"
 	default "/dev/video0"
 
 config SIM_CAMERA_DEV_PATH
@@ -351,7 +381,10 @@ menu "Simulated v4l2m2m support"
 config SIM_VIDEO_DECODER
 	bool "Video decoder support on sim"
 	depends on VIDEO
+	depends on VIDEOUTILS_OPENH264
 	default n
+	---help---
+		v4l2m2m simlator decoder, dependent on videoutils_openh264.
 
 config SIM_VIDEO_DECODER_DEV_PATH
 	string "Video decoder device path"
@@ -361,7 +394,10 @@ config SIM_VIDEO_DECODER_DEV_PATH
 config SIM_VIDEO_ENCODER
 	bool "Video encoder support on sim"
 	depends on VIDEO
+	depends on VIDEOUTILS_LIBX264
 	default n
+	---help---
+		v4l2m2m simlator encoder, dependent on videoutils_libx264.
 
 config SIM_VIDEO_ENCODER_DEV_PATH
 	string "Video encoder device path"
@@ -415,6 +451,16 @@ config SIM_FRAMEBUFFER_COUNT
 	---help---
 		Framebuffer count.
 		Simulated frambuffer count.  Default: 2
+
+config SIM_FB_INTERVAL_LINE
+	int "The line between non-consecutive framebuffers"
+	depends on SIM_FRAMEBUFFER && SIM_FRAMEBUFFER_COUNT > 1
+	default 0
+	---help---
+		When SIM_FB_INTERVAL_LINE = 0, the framebuffers are consecutive.
+		When SIM_FB_INTERVAL_LINE > 0, the first buffer is not consecutive with
+		the second buffer, and the interval between discontinuous buffers is
+		SIM_FB_INTERVAL_LINE * stride.  Default: 0
 
 endmenu
 
@@ -793,12 +839,5 @@ config SIM_USB_PRIO
 	default 100
 
 endif
-
-config SIM_CUSTOM_DATA_SECTION
-	string "Custom data section name for Simulator"
-	default ""
-	---help---
-		Custom data section name for Simulator to allow
-		developer to define special data sections.
 
 endif # ARCH_SIM

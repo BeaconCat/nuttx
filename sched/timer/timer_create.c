@@ -182,6 +182,7 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
   ret->pt_crefs = 1;
   ret->pt_owner = tcb->pid;
   ret->pt_delay = 0;
+  ret->pt_expected = 0;
 
   /* Was a struct sigevent provided? */
 
