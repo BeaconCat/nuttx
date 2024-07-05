@@ -292,7 +292,7 @@ static int cdcecm_transmit(FAR struct cdcecm_driver_s *self)
 
   /* Increment statistics */
 
-  NETDEV_TXPACKETS(self->dev);
+  NETDEV_TXPACKETS(&self->dev);
 
   /* Send the packet: address=priv->dev.d_buf, length=priv->dev.d_len */
 
@@ -347,8 +347,8 @@ static int cdcecm_txpoll(FAR struct net_driver_s *dev)
  *
  * Description:
  *   After a packet has been received and dispatched to the network, it
- *   may return with an outgoing packet.  This function checks for that
- *   case and performs the transmission if necessary.
+ *   may return return with an outgoing packet.  This function checks for
+ *   that case and performs the transmission if necessary.
  *
  * Input Parameters:
  *   priv - Reference to the driver state structure
@@ -400,7 +400,7 @@ static void cdcecm_receive(FAR struct cdcecm_driver_s *self)
    * configuration.
    */
 
-  /* Copy the data from the hardware to self->dev.d_buf.  Set
+  /* Copy the data data from the hardware to self->dev.d_buf.  Set
    * amount of data in self->dev.d_len
    */
 
@@ -492,7 +492,7 @@ static void cdcecm_txdone(FAR struct cdcecm_driver_s *priv)
 {
   /* Check for errors and update statistics */
 
-  NETDEV_TXDONE(priv->dev);
+  NETDEV_TXDONE(&priv->dev);
 
   /* In any event, poll the network for new TX data */
 
