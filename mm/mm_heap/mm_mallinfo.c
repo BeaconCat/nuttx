@@ -97,22 +97,12 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
   if (MM_NODE_IS_ALLOC(node))
     {
       DEBUGASSERT(nodesize >= MM_SIZEOF_ALLOCNODE);
-#if CONFIG_MM_BACKTRACE < 0
-      if (task->pid == PID_MM_ALLOC)
+      if ((MM_DUMP_ASSIGN(task, node) || MM_DUMP_ALLOC(task, node) ||
+           MM_DUMP_LEAK(task, node)) && MM_DUMP_SEQNO(task, node))
         {
           info->aordblks++;
           info->uordblks += nodesize;
         }
-#else
-      if ((MM_DUMP_ASSIGN(task->pid, node->pid) ||
-           MM_DUMP_ALLOC(task->pid, node->pid) ||
-           MM_DUMP_LEAK(task->pid, node->pid)) &&
-          node->seqno >= task->seqmin && node->seqno <= task->seqmax)
-        {
-          info->aordblks++;
-          info->uordblks += nodesize;
-        }
-#endif
     }
   else if (task->pid == PID_MM_FREE)
     {
@@ -186,4 +176,41 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
   mm_foreach(heap, mallinfo_task_handler, &handle);
 
   return info;
+}
+
+/****************************************************************************
+ * Name: mm_heapfree
+ *
+ * Description:
+ *   Return the total free size (in bytes) in the heap
+ *
+ ****************************************************************************/
+
+size_t mm_heapfree(FAR struct mm_heap_s *heap)
+{
+  return heap->mm_heapsize - heap->mm_curused;
+}
+
+/****************************************************************************
+ * Name: mm_heapfree_largest
+ *
+ * Description:
+ *   Return the largest chunk of contiguous memory in the heap
+ *
+ ****************************************************************************/
+
+size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
+{
+  FAR struct mm_freenode_s *node;
+  for (node = heap->mm_nodelist[MM_NNODES - 1].blink; node;
+       node = node->blink)
+    {
+      size_t nodesize = MM_SIZEOF_NODE(node);
+      if (nodesize != 0)
+        {
+          return nodesize;
+        }
+    }
+
+  return 0;
 }
