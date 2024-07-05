@@ -89,8 +89,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * being delivered to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task(),
-            up_current_regs());
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task(), CURRENT_REGS);
 
       if (tcb == this_task())
         {
@@ -98,7 +97,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!up_current_regs())
+          if (!CURRENT_REGS)
             {
               /* In this case just deliver the signal now. */
 
@@ -115,7 +114,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * logic would fail in the strange case where we are in an
            * interrupt handler, the thread is signalling itself, but
            * a context switch to another task has occurred so that
-           * current_regs does not refer to the thread of this_task()!
+           * CURRENT_REGS does not refer to the thread of this_task()!
            */
 
           else
@@ -136,20 +135,21 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * delivered.
                */
 
-              up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
-              memcpy(up_current_regs(), tcb->xcp.saved_regs,
+              CURRENT_REGS           = (void *)((uint32_t)CURRENT_REGS -
+                                                          XCPTCONTEXT_SIZE);
+              memcpy((uint32_t *)CURRENT_REGS, tcb->xcp.saved_regs,
                      XCPTCONTEXT_SIZE);
 
-              up_current_regs()[REG_SP] = (uint32_t)(up_current_regs() +
-                                                      XCPTCONTEXT_REGS);
+              CURRENT_REGS[REG_SP]   = (uint32_t)CURRENT_REGS +
+                                                 XCPTCONTEXT_SIZE;
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              up_current_regs()[REG_LR]     = (uint32_t)arm_sigdeliver;
-              up_current_regs()[REG_CPSR]   = PSR_MODE_SVC | PSR_I_BIT;
-              up_current_regs()[REG_IRQ_EN] = 0;
+              CURRENT_REGS[REG_LR]     = (uint32_t)arm_sigdeliver;
+              CURRENT_REGS[REG_CPSR]   = PSR_MODE_SVC | PSR_I_BIT;
+              CURRENT_REGS[REG_IRQ_EN] = 0;
             }
         }
 
