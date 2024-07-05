@@ -33,7 +33,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
 
@@ -117,9 +116,7 @@ int nxsem_close(FAR sem_t *sem)
        */
 
       inode_unlock();
-#ifdef CONFIG_FS_NOTIFY
-      notify_close2(inode);
-#endif
+
       DEBUGASSERT(inode->i_peer == NULL);
       inode_free(inode);
       return OK;
