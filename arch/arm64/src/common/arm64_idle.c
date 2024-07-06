@@ -57,7 +57,6 @@ void up_idle(void)
 
   /* Sleep until an interrupt occurs to save power */
 
-  asm("dsb sy");
-  asm("wfi");
+  arch_cpu_idle();
 #endif
 }

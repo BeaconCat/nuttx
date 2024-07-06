@@ -245,7 +245,7 @@ static off_t bch_seek(FAR struct file *filep, off_t offset, int whence)
       break;
 
     case SEEK_END:
-      newpos = (off_t)bch->sectsize * bch->nsectors + offset;
+      newpos = bch->sectsize * bch->nsectors + offset;
       break;
 
     default:
@@ -420,6 +420,14 @@ static int bch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
+      case BIOC_FLUSH:
+        {
+          /* Flush any dirty pages remaining in the cache */
+
+          ret = bchlib_flushsector(bch, false);
+        }
+        break;
+
 #ifdef CONFIG_BCH_ENCRYPTION
       /* This is a request to set the encryption key? */
 
@@ -431,20 +439,9 @@ static int bch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 #endif
 
-      case BIOC_FLUSH:
-        {
-          /* Flush any dirty pages remaining in the cache */
-
-          ret = bchlib_flushsector(bch, false);
-          if (ret < 0)
-            {
-              break;
-            }
-
-          /* Go through */
-        }
-
-      /* Pass the IOCTL command on to the contained block driver. */
+      /* Otherwise, pass the IOCTL command on to the contained block
+       * driver.
+       */
 
       default:
         {
