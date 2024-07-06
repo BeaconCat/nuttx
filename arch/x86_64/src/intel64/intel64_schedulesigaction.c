@@ -74,7 +74,7 @@
 void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
   sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
-  sinfo("rtcb=%p g_current_regs=%p\n", this_task(), up_current_regs());
+  sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
 
   /* Refuse to handle nested signal actions */
 
@@ -121,9 +121,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * have been delivered.
                */
 
-              tcb->xcp.saved_rip         = up_current_regs()[REG_RIP];
-              tcb->xcp.saved_rsp         = up_current_regs()[REG_RSP];
-              tcb->xcp.saved_rflags      = up_current_regs()[REG_RFLAGS];
+              tcb->xcp.saved_rip    = up_current_regs()[REG_RIP];
+              tcb->xcp.saved_rsp    = up_current_regs()[REG_RSP];
+              tcb->xcp.saved_rflags = up_current_regs()[REG_RFLAGS];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
