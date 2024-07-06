@@ -79,10 +79,6 @@ struct elf_loadinfo_s
    * after the ELF module has been loaded.
    */
 
-#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-  FAR uintptr_t     *sectalloc;   /* All sections memory allocated when ELF file was loaded */
-#endif
-
   uintptr_t          textalloc;  /* .text memory allocated when ELF file was loaded */
   uintptr_t          dataalloc;  /* .bss/.data memory allocated when ELF file was loaded */
   size_t             textsize;   /* Size of the ELF .text memory allocation */
@@ -134,7 +130,7 @@ struct elf_loadinfo_s
 #ifdef CONFIG_ELF_COREDUMP
 struct elf_dumpinfo_s
 {
-  FAR const struct memory_region_s *regions;
+  FAR struct memory_region_s *regions;
   FAR struct lib_outstream_s *stream;
   pid_t                       pid;
 };
