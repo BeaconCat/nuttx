@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
+-include $(TOPDIR)/Make.defs
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 APPSDIR     = $(TOPDIR)$(DELIM)$(CONFIG_APPS_DIR)
@@ -81,7 +81,7 @@ CSRCS  = sim_initialize.c sim_idle.c sim_doirq.c sim_initialstate.c
 CSRCS += sim_createstack.c sim_usestack.c sim_releasestack.c sim_stackframe.c
 CSRCS += sim_exit.c sim_schedulesigaction.c sim_switchcontext.c sim_heap.c
 CSRCS += sim_uart.c sim_copyfullstate.c sim_sigdeliver.c sim_tcbinfo.c sim_cpuinfo.c
-CSRCS += sim_registerdump.c sim_saveusercontext.c sim_textheap.c
+CSRCS += sim_registerdump.c sim_saveusercontext.c sim_sectionheap.c
 CSRCS += sim_checkhostfstypes.c
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
@@ -140,8 +140,12 @@ ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
   STDLIBS += -lm
 endif
 
-ifeq ($(CONFIG_ARCH_COVERAGE),y)
+ifeq ($(CONFIG_SCHED_GCOV),y)
   STDLIBS += -lgcov
+endif
+
+ifeq ($(CONFIG_SIM_GPROF),y)
+  HOSTCFLAGS += -pg
 endif
 
 ifeq ($(CONFIG_STACK_COLORATION),y)
@@ -249,6 +253,10 @@ ifeq ($(CONFIG_SIM_LIBUSB),y)
 endif
 endif
 
+ifeq ($(CONFIG_RPMSG_VIRTIO),y)
+  CSRCS += sim_rpmsg_virtio.c
+endif
+
 ifeq ($(CONFIG_RPTUN),y)
   CSRCS += sim_rptun.c
 endif
@@ -257,8 +265,6 @@ ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
   CSRCS += sim_alsa.c
   CSRCS += sim_offload.c
   STDLIBS += -lasound
-  STDLIBS += -lmad
-  STDLIBS += -lmp3lame
 endif
 
 ifeq ($(CONFIG_SIM_CAMERA_V4L2),y)
@@ -268,15 +274,13 @@ ifeq ($(CONFIG_SIM_CAMERA_V4L2),y)
 endif
 
 ifeq ($(CONFIG_SIM_VIDEO_DECODER),y)
-  HOSTSRCS += sim_hostdecoder.c
   CSRCS += sim_decoder.c
-  STDLIBS += -lopenh264
+  CSRCS += sim_openh264dec.c
 endif
 
 ifeq ($(CONFIG_SIM_VIDEO_ENCODER),y)
-  HOSTSRCS += sim_hostencoder.c
   CSRCS += sim_encoder.c
-  STDLIBS += -lx264
+  CSRCS += sim_x264encoder.c
 endif
 
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -390,13 +394,10 @@ EXTRALD_OBJ += allsyms$(OBJEXT)
 endif
 
 define LINK_ALLSYMS_KASAN
-	$(if $(CONFIG_ALLSYMS), \
-		$(if $(CONFIG_HOST_MACOS), \
-			$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
-			$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)))
-	$(if $(CONFIG_ALLSYMS), \
-		$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c)
-		$(Q) $(call DELFILE, allsyms.tmp))
+	$(if $(CONFIG_ALLSYMS),
+	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)
+	$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c)
+	$(Q) $(call DELFILE, allsyms.tmp))
 	$(if $(CONFIG_MM_KASAN_GLOBAL),
 	$(Q) $(TOPDIR)/tools/kasan_global.py -e $(NUTTX) -o kasan_globals.tmp
 	$(Q) $(call COMPILE, kasan_globals.tmp, kasan_globals$(OBJEXT) -fno-sanitize=kernel-address, -x c)
@@ -419,7 +420,8 @@ nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(HEADOBJ) $(LINKOBJS) 
 ifneq ($(CONFIG_HOST_MACOS),y)
 	$(Q) $(OBJCOPY) --redefine-syms=nuttx-names.dat nuttx.rel
 	$(Q) $(CC) $(CFLAGS) -Wl,-verbose 2>&1 | \
-	     sed -e '/====/,/====/!d;//d' -e 's/__executable_start/_stext/g' \
+	     sed -e '/====/,/====/!d;//d' \
+	         -e '/__executable_start/s/$$/PROVIDE(_stext = .);/' \
 	         -e 's/^\(\s\+\)\(\.init_array\)/\1\2 : { }\n\1.sinit/g' \
 	         -e 's/^\(\s\+\)\(\.fini_array\)/\1\2 : { }\n\1.einit/g' \
 	         -e 's/__init_array_start/_sinit/g' -e 's/__init_array_end/_einit/g' \
@@ -430,9 +432,6 @@ ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
 	$(Q) sed -i 's/\s*\.interp\s*:\s*{\s*\*(\.interp)\s*}/  \
 	            .kasan.global : {KEEP(*(.data..LASAN0)) KEEP (*(.data.rel.local..LASAN0)) }\n  \
 	            .interp : {*(.interp)}/g' nuttx.ld
-endif
-ifneq ($(CONFIG_SIM_CUSTOM_DATA_SECTION),"")
-	$(Q) sed -i '/\.data *:/i $(subst ",, $(CONFIG_SIM_CUSTOM_DATA_SECTION))' nuttx.ld
 endif
 ifeq ($(CONFIG_ALLSYMS)$(CONFIG_MM_KASAN_GLOBAL),)
 	$(if $(CONFIG_HAVE_CXX),\
@@ -456,10 +455,6 @@ export_startup: sim_head.o $(HOSTOBJS) nuttx-names.dat
 
 # Dependencies
 
-makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HOSTSRCS:.c=.ddh)
-	$(call CATFILE, Make.dep, $^)
-	$(call DELFILE, $^)
-
 config.h: $(TOPDIR)/include/nuttx/config.h
 	@echo "CP:  $<"
 	$(Q) cp $< $@
@@ -468,7 +463,8 @@ config.h: $(TOPDIR)/include/nuttx/config.h
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board depend ; \
 	fi
-	$(Q) $(MAKE) makedepfile
+	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(ASRCS) $(CSRCS) >Make.dep
+	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(HOSTCFLAGS) -- $(HOSTSRCS) >>Make.dep
 	$(Q) touch $@
 
 depend: .depend
