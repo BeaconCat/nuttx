@@ -34,6 +34,7 @@
 #include <nuttx/timers/arch_alarm.h>
 
 #include "barriers.h"
+#include "cp15.h"
 #include "arm_gic.h"
 #include "arm_arch_timer.h"
 
