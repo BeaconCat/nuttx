@@ -412,13 +412,13 @@
                         (float)CONFIG_SAMV7_MCAN1_BITRATE)) - 1))
 #  define MCAN1_SJW    (CONFIG_SAMV7_MCAN1_FSJW - 1)
 
-#  if MCAN1_NTSEG1 > 63
+#  if MCAN1_TSEG1 > 63
 #    error Invalid MCAN1 NTSEG1
 #  endif
-#  if MCAN1_NTSEG2 > 15
+#  if MCAN1_TSEG2 > 15
 #    error Invalid MCAN1 NTSEG2
 #  endif
-#  if MCAN1_NSJW > 15
+#  if MCAN1_SJW > 15
 #    error Invalid MCAN1 NSJW
 #  endif
 
@@ -2958,10 +2958,16 @@ static int mcan_send(struct can_dev_s *dev, struct can_msg_s *msg)
    * not full and cannot become full at least until we add our packet to
    * the FIFO.
    *
+   * We can't get exclusive access to MCAN resources here because that
+   * lock the MCAN while we wait for a free buffer.  Instead, the
+   * scheduler is locked here momentarily.  See discussion in
+   * mcan_buffer_reserve() for an explanation.
+   *
    * REVISIT: This needs to be extended in order to handler case where
    * the MCAN device was opened O_NONBLOCK.
    */
 
+  sched_lock();
   mcan_buffer_reserve(priv);
 
   /* Get exclusive access to the MCAN peripheral */
@@ -2970,8 +2976,11 @@ static int mcan_send(struct can_dev_s *dev, struct can_msg_s *msg)
   if (ret < 0)
     {
       mcan_buffer_release(priv);
+      sched_unlock();
       return ret;
     }
+
+  sched_unlock();
 
   /* Get our reserved Tx FIFO/queue put index */
 
@@ -3413,7 +3422,7 @@ static void mcan_error(struct can_dev_s *dev, uint32_t status)
 #ifdef CONFIG_CAN_EXTID
       hdr.ch_extid  = 0;
 #endif
-      hdr.ch_tcf    = 0;
+      hdr.ch_unused = 0;
 
       /* And provide the error report to the upper half logic */
 
@@ -3465,9 +3474,9 @@ static void mcan_receive(struct can_dev_s *dev, uint32_t *rxbuffer,
   reginfo("R0: %08" PRIx32 "\n", regval);
 
 #ifdef CONFIG_CAN_ERRORS
-  hdr.ch_error = 0;
+  hdr.ch_error  = 0;
 #endif
-  hdr.ch_tcf   = 0;
+  hdr.ch_unused = 0;
 
   if ((regval & BUFFER_R0_RTR) != 0)
     {
