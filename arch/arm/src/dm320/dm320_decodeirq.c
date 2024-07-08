@@ -41,10 +41,8 @@
 
 uint32_t *arm_decodeirq(uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
-  up_set_current_regs(regs);
+  CURRENT_REGS = regs;
   err("ERROR: Unexpected IRQ\n");
   PANIC();
   return NULL;
@@ -73,30 +71,28 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 
           /* Current regs non-zero indicates that we are processing an
            * interrupt;
-           * current_regs is also used to manage interrupt level context
+           * CURRENT_REGS is also used to manage interrupt level context
            * switches.
            *
            * Nested interrupts are not supported.
            */
 
-          DEBUGASSERT(up_current_regs() == NULL);
-          tcb->xcp.regs = regs;
-          up_set_current_regs(regs);
+          DEBUGASSERT(CURRENT_REGS == NULL);
+          CURRENT_REGS = regs;
 
           /* Deliver the IRQ */
 
           irq_dispatch(irq, regs);
-          tcb = this_task();
 
 #ifdef CONFIG_ARCH_ADDRENV
           /* Check for a context switch.  If a context switch occurred, then
-           * current_regs will have a different value than it did on entry.
+           * CURRENT_REGS will have a different value than it did on entry.
            * If an interrupt level context switch has occurred, then
            * establish the correct address environment before returning
            * from the interrupt.
            */
 
-          if (regs != tcb->xcp.regs)
+          if (regs != CURRENT_REGS)
             {
               /* Make sure that the address environment for the previously
                * running task is closed down gracefully (data caches dump,
@@ -108,11 +104,11 @@ uint32_t *arm_decodeirq(uint32_t *regs)
             }
 #endif
 
-          /* Set current_regs to NULL to indicate that we are no longer in
+          /* Set CURRENT_REGS to NULL to indicate that we are no longer in
            * an interrupt handler.
            */
 
-          up_set_current_regs(NULL);
+          CURRENT_REGS = NULL;
         }
     }
 #endif
