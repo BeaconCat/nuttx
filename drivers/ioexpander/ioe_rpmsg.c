@@ -33,7 +33,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -402,7 +402,7 @@ static int ioe_rpmsg_option_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct ioe_rpmsg_server_s *priv = priv_;
 
   msg->header.result = IOEXP_SETOPTION(priv->ioe, msg->pin, msg->opt,
-                                       (void *)(uintptr_t)msg->val);
+                                       (FAR void *)(uintptr_t)msg->val);
 
   return rpmsg_send(ept, msg, len);
 }
@@ -602,6 +602,13 @@ static int ioe_rpmsg_server_ept_cb(FAR struct rpmsg_endpoint *ept,
   return 0;
 }
 
+static void ioe_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept)
+{
+  rpmsg_destroy_ept(ept);
+
+  kmm_free(ept);
+}
+
 static bool ioe_rpmsg_server_match(FAR struct rpmsg_device *rdev,
                                    FAR void *priv_,
                                    FAR const char *name,
@@ -613,11 +620,6 @@ static bool ioe_rpmsg_server_match(FAR struct rpmsg_device *rdev,
   snprintf(eptname, RPMSG_NAME_SIZE, IOE_RPMSG_EPT_FORMAT, priv->name);
 
   return !strcmp(name, eptname);
-}
-
-static void ioe_rpmsg_server_ept_release(FAR struct rpmsg_endpoint *ept)
-{
-  kmm_free(ept);
 }
 
 static void ioe_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
@@ -635,10 +637,9 @@ static void ioe_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
     }
 
   ept->priv = priv;
-  ept->release_cb = ioe_rpmsg_server_ept_release;
 
   rpmsg_create_ept(ept, rdev, name, RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
-                   ioe_rpmsg_server_ept_cb, rpmsg_destroy_ept);
+                   ioe_rpmsg_server_ept_cb, ioe_rpmsg_server_unbind);
 }
 
 /****************************************************************************
