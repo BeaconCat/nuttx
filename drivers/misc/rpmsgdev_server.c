@@ -370,7 +370,14 @@ static int rpmsgdev_poll_handler(FAR struct rpmsg_endpoint *ept,
     {
       /* Do not allow double setup */
 
-      DEBUGASSERT(dev->cfd == 0);
+      if (dev->cfd != 0)
+        {
+          msg->header.result = file_poll(&dev->file, &dev->fd, false);
+          if (msg->header.result < 0)
+            {
+              return rpmsg_send(ept, msg, len);
+            }
+        }
 
       dev->cfd        = msg->fds;
       dev->fd.events  = msg->events;
@@ -382,6 +389,8 @@ static int rpmsgdev_poll_handler(FAR struct rpmsg_endpoint *ept,
     }
   else
     {
+      DEBUGASSERT(dev->cfd != 0);
+
       msg->header.result = file_poll(&dev->file, &dev->fd, false);
       if (msg->header.result == OK)
         {
@@ -389,7 +398,7 @@ static int rpmsgdev_poll_handler(FAR struct rpmsg_endpoint *ept,
         }
     }
 
-  return rpmsg_send(ept, msg, len);
+  return msg->header.cookie ? rpmsg_send(ept, msg, len) : OK;
 }
 
 /****************************************************************************
