@@ -157,7 +157,7 @@ static inline void nxsched_process_scheduler(void)
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static inline void nxsched_process_wdtimer(clock_t ticks)
+static inline void nxsched_process_wdtimer(void)
 {
   irqstate_t flags;
 
@@ -171,11 +171,11 @@ static inline void nxsched_process_wdtimer(clock_t ticks)
    */
 
   flags = enter_critical_section();
-  wd_timer(ticks);
+  wd_timer();
   leave_critical_section(flags);
 }
 #else
-#  define nxsched_process_wdtimer(ticks) wd_timer(ticks)
+#  define nxsched_process_wdtimer() wd_timer()
 #endif
 
 /****************************************************************************
@@ -236,7 +236,7 @@ void nxsched_process_timer(void)
 
   /* Process watchdogs */
 
-  nxsched_process_wdtimer(clock_systime_ticks());
+  nxsched_process_wdtimer();
 
 #ifdef CONFIG_SYSTEMTICK_HOOK
   /* Call out to a user-provided function in order to perform board-specific,

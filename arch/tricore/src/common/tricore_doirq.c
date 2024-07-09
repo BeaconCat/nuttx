@@ -57,26 +57,26 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(up_current_regs() == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * g_current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  up_set_current_regs(regs);
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
   irq_dispatch(icr.B.CCPN, regs);
 
   /* Check for a context switch.  If a context switch occurred, then
-   * g_current_regs will have a different value than it did on entry.  If an
+   * CURRENT_REGS will have a different value than it did on entry.  If an
    * interrupt level context switch has occurred, then restore the floating
    * point state and the establish the correct address environment before
    * returning from the interrupt.
    */
 
-  if (regs != up_current_regs())
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -95,15 +95,15 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
       g_running_tasks[this_cpu()] = this_task();
 
-      __mtcr(CPU_PCXI, up_current_regs());
+      __mtcr(CPU_PCXI, (uintptr_t)CURRENT_REGS);
       __isync();
     }
 
-  /* Set g_current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 
   board_autoled_off(LED_INIRQ);
 #endif
