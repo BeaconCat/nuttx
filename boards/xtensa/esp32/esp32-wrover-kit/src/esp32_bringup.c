@@ -105,10 +105,6 @@
 #  include "esp32_lcd_backpack.h"
 #endif
 
-#ifdef CONFIG_SENSORS_ZEROCROSS
-#   include "esp32_zerocross.h"
-#endif
-
 #include "esp32-wrover-kit.h"
 
 /****************************************************************************
@@ -182,7 +178,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32_SPIFLASH
-  ret = board_spiflash_init();
+  ret = esp32_spiflash_init();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
@@ -386,17 +382,6 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR,
              "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_SENSORS_ZEROCROSS
-  /* Register Zero Cross Driver */
-
-  ret = board_zerocross_initialize(0);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-            "ERROR: board_zerocross_initialize() failed: %d\n", ret);
     }
 #endif
 

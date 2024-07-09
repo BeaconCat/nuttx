@@ -272,6 +272,7 @@ struct devif_callback_s
   FAR devif_callback_event_t event;
   FAR void *priv;
   uint16_t flags;
+  uint8_t free_flags;
 };
 
 /****************************************************************************
@@ -465,7 +466,7 @@ uint16_t devif_dev_event(FAR struct net_driver_s *dev, uint16_t flags);
  ****************************************************************************/
 
 int devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
-               int len, unsigned int offset);
+               int len, int offset);
 
 /****************************************************************************
  * Name: devif_iob_send
