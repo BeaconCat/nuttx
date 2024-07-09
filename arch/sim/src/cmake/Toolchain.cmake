@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/sim/cmake/Toolchain.cmake
+# arch/sim/src/cmake/Toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -30,7 +30,7 @@ endif()
 add_compile_options(-fno-common)
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(-g)
 endif()
 
 if(CONFIG_SIM_M32)
@@ -69,13 +69,12 @@ if(CONFIG_STACK_USAGE_WARNING)
   add_compile_options(-Wstack-usage=${CONFIG_STACK_USAGE_WARNING})
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_SIM_ASAN)
   add_compile_options(-fsanitize=address)
-  add_link_options(-fsanitize=address)
   add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
@@ -95,12 +94,20 @@ else()
   endif()
 endif()
 
+if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
+  add_link_options(-Wl,--gc-sections)
+  add_compile_options(-ffunction-sections -fdata-sections)
+endif()
+
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
-add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-                    $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
