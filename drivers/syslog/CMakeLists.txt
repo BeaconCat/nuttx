@@ -35,17 +35,17 @@ endif()
 
 if(CONFIG_RAMLOG)
   list(APPEND SRCS ramlog.c)
-  if(CONFIG_RAMLOG_BUFFER_SECTION)
-    target_compile_definitions(
-      drivers PRIVATE -DRAMLOG_BUFFER_SECTION="${CONFIG_RAMLOG_BUFFER_SECTION}")
-  endif()
 endif()
 
 # Include SYSLOG drivers (only one should be enabled)
 
 # System logging to a character device (or file)
 
-list(APPEND SRCS syslog_device.c)
+if(CONFIG_SYSLOG_CONSOLE
+   OR CONFIG_SYSLOG_CHAR
+   OR CONFIG_SYSLOG_FILE)
+  list(APPEND SRCS syslog_device.c)
+endif()
 
 if(CONFIG_SYSLOG_CHAR)
   list(APPEND SRCS syslog_devchannel.c)
