@@ -43,7 +43,8 @@
  * Name: ez80_sigsetup
  ****************************************************************************/
 
-static void ez80_sigsetup(FAR struct tcb_s *tcb, FAR chipreg_t *regs)
+static void ez80_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver,
+                          FAR chipreg_t *regs)
 {
   /* Save the return address and interrupt state. These will be restored by
    * the signal trampoline after the signals have been delivered.
@@ -98,59 +99,66 @@ static void ez80_sigsetup(FAR struct tcb_s *tcb, FAR chipreg_t *regs)
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(FAR struct tcb_s *tcb)
+void up_schedule_sigaction(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
   sinfo("tcb=%p sigdeliver=0x%06" PRIx32 "\n", tcb, (uint32_t)sigdeliver);
 
-  /* First, handle some special cases when the signal is being delivered
-   * to the currently executing task.
-   */
+  /* Refuse to handle nested signal actions */
 
-  if (tcb == this_task())
+  if (tcb->xcp.sigdeliver == NULL)
     {
-      /* CASE 1:  We are not in an interrupt handler and a task is
-       * signalling itself for some reason.
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is being delivered
+       * to the currently executing task.
        */
 
-      if (!IN_INTERRUPT())
+      if (tcb == this_task())
         {
-          /* In this case just deliver the signal now. */
+          /* CASE 1:  We are not in an interrupt handler and a task is
+           * signalling itself for some reason.
+           */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
-          tcb->sigdeliver = NULL;
+          if (!IN_INTERRUPT())
+            {
+              /* In this case just deliver the signal now. */
+
+              sigdeliver(tcb);
+              tcb->xcp.sigdeliver = NULL;
+            }
+
+          /* CASE 2:  We are in an interrupt handler AND the interrupted task
+           * is the same as the one that must receive the signal, then we
+           * will have to modify the return state as well as the state in
+           * the TCB.
+           */
+
+          else
+            {
+              /* Set up to vector to the trampoline with interrupts
+               * disabled.
+               */
+
+              ez80_sigsetup(tcb, sigdeliver, (chipreg_t *)IRQ_STATE());
+
+              /* And make sure that the saved context in the TCB
+               * is the same as the interrupt return context.
+               */
+
+              SAVE_IRQCONTEXT(tcb);
+            }
         }
 
-      /* CASE 2:  We are in an interrupt handler AND the interrupted task
-       * is the same as the one that must receive the signal, then we
-       * will have to modify the return state as well as the state in
-       * the TCB.
+      /* Otherwise, we are (1) signaling a task is not running from an
+       * interrupt handler or (2) we are not in an interrupt handler and the
+       * running task is signaling some non-running task.
        */
 
       else
         {
-          /* Set up to vector to the trampoline with interrupts
-           * disabled.
-           */
+          /* Set up to vector to the trampoline with interrupts disabled. */
 
-          ez80_sigsetup(tcb, (chipreg_t *)IRQ_STATE());
-
-          /* And make sure that the saved context in the TCB
-           * is the same as the interrupt return context.
-           */
-
-          SAVE_IRQCONTEXT(tcb);
+          ez80_sigsetup(tcb, sigdeliver, tcb->xcp.regs);
         }
-    }
-
-  /* Otherwise, we are (1) signaling a task is not running from an
-   * interrupt handler or (2) we are not in an interrupt handler and the
-   * running task is signaling some non-running task.
-   */
-
-  else
-    {
-      /* Set up to vector to the trampoline with interrupts disabled. */
-
-      ez80_sigsetup(tcb, tcb->xcp.regs);
     }
 }

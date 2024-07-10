@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/mqueue/mqueue.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -47,8 +49,6 @@
 #define MQ_MAX_MSGS    16
 #define MQ_PRIO_MAX    _POSIX_MQ_PRIO_MAX
 
-#define MQ_MSG_SIZE(n) (sizeof(struct mqueue_msg_s) + (n) - 1)
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -72,7 +72,7 @@ struct mqueue_msg_s
 #else
   uint16_t msglen;         /* Message data length */
 #endif
-  char mail[1];            /* Message data */
+  char mail[MQ_MAX_BYTES]; /* Message data */
 };
 
 /****************************************************************************
@@ -103,14 +103,12 @@ EXTERN struct list_node g_msgfreeirq;
  * Public Function Prototypes
  ****************************************************************************/
 
+struct tcb_s;        /* Forward reference */
 struct task_group_s; /* Forward reference */
 
 /* Functions defined in mq_initialize.c *************************************/
 
 void nxmq_initialize(void);
-
-/* mq_msgfree.c *************************************************************/
-
 void nxmq_free_msg(FAR struct mqueue_msg_s *mqmsg);
 
 /* mq_waitirq.c *************************************************************/
@@ -119,16 +117,30 @@ void nxmq_wait_irq(FAR struct tcb_s *wtcb, int errcode);
 
 /* mq_rcvinternal.c *********************************************************/
 
+#ifdef CONFIG_DEBUG_FEATURES
+int nxmq_verify_receive(FAR struct file *mq, FAR char *msg, size_t msglen);
+#else
+#  define nxmq_verify_receive(msgq, msg, msglen) OK
+#endif
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
-                      FAR struct mqueue_msg_s **rcvmsg,
-                      FAR const struct timespec *abstime);
-void nxmq_notify_receive(FAR struct mqueue_inode_s *msgq);
+                      int oflags, FAR struct mqueue_msg_s **rcvmsg);
+ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
+                        FAR struct mqueue_msg_s *mqmsg,
+                        FAR char *ubuffer, FAR unsigned int *prio);
 
 /* mq_sndinternal.c *********************************************************/
 
-int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
-                   FAR const struct timespec *abstime);
-void nxmq_notify_send(FAR struct mqueue_inode_s *msgq);
+#ifdef CONFIG_DEBUG_FEATURES
+int nxmq_verify_send(FAR struct file *mq, FAR const char *msg,
+                     size_t msglen, unsigned int prio);
+#else
+#  define nxmq_verify_send(mq, msg, msglen, prio) OK
+#endif
+FAR struct mqueue_msg_s *nxmq_alloc_msg(void);
+int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags);
+int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
+                 FAR struct mqueue_msg_s *mqmsg,
+                 FAR const char *msg, size_t msglen, unsigned int prio);
 
 /* mq_recover.c *************************************************************/
 
