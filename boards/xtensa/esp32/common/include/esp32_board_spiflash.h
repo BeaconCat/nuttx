@@ -43,7 +43,7 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_spiflash_init
+ * Name: esp32_spiflash_init
  *
  * Description:
  *   Initialize the SPI Flash and register the MTD.
@@ -57,7 +57,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int board_spiflash_init(void);
+int esp32_spiflash_init(void);
 
 #undef EXTERN
 #if defined(__cplusplus)
