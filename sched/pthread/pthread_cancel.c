@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/pthread/pthread_cancel.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +33,6 @@
 #include <errno.h>
 
 #include <nuttx/pthread.h>
-#include <nuttx/tls.h>
 
 #include "sched/sched.h"
 #include "task/task.h"
@@ -93,12 +94,14 @@ int pthread_cancel(pthread_t thread)
 
   if (tcb == this_task())
     {
-      nx_pthread_exit(PTHREAD_CANCELED);
+      pthread_exit(PTHREAD_CANCELED);
     }
 
   /* Refer to tls_get_info() */
 
-  tls_cleanup_popall(tcb->stack_alloc_ptr);
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+  pthread_cleanup_popall(tcb->stack_alloc_ptr);
+#endif
 
   /* Complete pending join operations */
 

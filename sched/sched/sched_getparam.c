@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_getparam.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -70,6 +72,7 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
 {
   FAR struct tcb_s *rtcb;
   FAR struct tcb_s *tcb;
+  irqstate_t flags;
   int ret = OK;
 
   if (param == NULL)
@@ -93,6 +96,7 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
     {
       /* Get the TCB associated with this PID */
 
+      flags = enter_critical_section();
       tcb = nxsched_get_tcb(pid);
       if (!tcb)
         {
@@ -135,6 +139,8 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
             }
 #endif
         }
+
+      leave_critical_section(flags);
     }
 
   return ret;

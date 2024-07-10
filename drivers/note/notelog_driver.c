@@ -124,17 +124,6 @@ static const struct note_driver_ops_s g_notelog_ops =
 
 struct note_driver_s g_notelog_driver =
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    "log",
-    {
-      {
-        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  endif
-      },
-    },
-#endif
   &g_notelog_ops,
 };
 
@@ -160,11 +149,21 @@ static void notelog_start(FAR struct note_driver_s *drv,
                           FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Start %s, TCB@%p, state=%d\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->task_state);
+         tcb->cpu, tcb->name, tcb, tcb->task_state);
 #else
+  syslog(LOG_INFO, "CPU%d: Start TCB@%p, state=%d\n"
+         tcb->cpu, tcb, tcb->task_state);
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Start %s, TCB@%p, state=%d\n",
-         get_task_name(tcb), tcb, tcb->task_state);
+         tcb->name, tcb, tcb->task_state);
+#else
+  syslog(LOG_INFO, "Start TCB@%p, state=%d\n",
+         tcb, tcb->task_state);
+#endif
 #endif
 }
 
@@ -172,11 +171,21 @@ static void notelog_stop(FAR struct note_driver_s *drv,
                          FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Stop %s, TCB@%p, state=%d\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->task_state);
+         tcb->cpu, tcb->name, tcb, tcb->task_state);
 #else
+  syslog(LOG_INFO, "CPU%d: Stop TCB@%p, state=%d\n",
+         tcb->cpu, tcb, tcb->task_state);
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Stop %s, TCB@%p, state=%d\n",
-         get_task_name(tcb), tcb, tcb->task_state);
+         tcb->name, tcb, tcb->task_state);
+#else
+  syslog(LOG_INFO, "Stop TCB@%p, state=%d\n",
+         tcb, tcb->task_state);
+#endif
 #endif
 }
 
@@ -185,11 +194,21 @@ static void notelog_suspend(FAR struct note_driver_s *drv,
                             FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Suspend %s, TCB@%p, state=%d\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->task_state);
+         tcb->cpu, tcb->name, tcb, tcb->task_state);
 #else
+  syslog(LOG_INFO, "CPU%d: Suspend TCB@%p, state=%d\n",
+         tcb->cpu, tcb, tcb->task_state);
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Suspend %s, TCB@%p, state=%d\n",
-         get_task_name(tcb), tcb, tcb->task_state);
+         tcb->name, tcb, tcb->task_state);
+#else
+  syslog(LOG_INFO, "Suspend TCB@%p, state=%d\n",
+         tcb, tcb->task_state);
+#endif
 #endif
 }
 
@@ -197,11 +216,21 @@ static void notelog_resume(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Resume %s, TCB@%p, state=%d\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->task_state);
+         tcb->cpu, tcb->name, tcb, tcb->task_state);
 #else
+  syslog(LOG_INFO, "CPU%d: Resume TCB@%p, state=%d\n",
+         tcb->cpu, tcb, tcb->task_state);
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Resume %s, TCB@%p, state=%d\n",
-         get_task_name(tcb), tcb, tcb->task_state);
+         tcb->name, tcb, tcb->task_state);
+#else
+  syslog(LOG_INFO, "Resume TCB@%p, state=%d\n",
+         tcb, tcb->task_state);
+#endif
 #endif
 }
 #endif
@@ -210,44 +239,74 @@ static void notelog_resume(FAR struct note_driver_s *drv,
 static void notelog_cpu_start(FAR struct note_driver_s *drv,
                               FAR struct tcb_s *tcb, int cpu)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d START\n",
-         tcb->cpu, get_task_name(tcb), tcb, cpu);
+         tcb->cpu, tcb->name, tcb, cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d START\n",
+         tcb->cpu, tcb, cpu);
+#endif
 }
 
 static void notelog_cpu_started(FAR struct note_driver_s *drv,
                                 FAR struct tcb_s *tcb)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d STARTED\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->cpu);
+         tcb->cpu, tcb->name, tcb, tcb->cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d STARTED\n",
+         tcb->cpu, tcb, tcb->cpu);
+#endif
 }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
 static void notelog_cpu_pause(FAR struct note_driver_s *drv,
                               FAR struct tcb_s *tcb, int cpu)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d PAUSE\n",
-         tcb->cpu, get_task_name(tcb), tcb, cpu);
+         tcb->cpu, tcb->name, tcb, cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d PAUSE\n",
+         tcb->cpu, tcb, cpu);
+#endif
 }
 
 static void notelog_cpu_paused(FAR struct note_driver_s *drv,
                                FAR struct tcb_s *tcb)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d PAUSED\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->cpu);
+         tcb->cpu, tcb->name, tcb, tcb->cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d PAUSED\n",
+         tcb->cpu, tcb, tcb->cpu);
+#endif
 }
 
 static void notelog_cpu_resume(FAR struct note_driver_s *drv,
                                FAR struct tcb_s *tcb, int cpu)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d RESUME\n",
-         tcb->cpu, get_task_name(tcb), tcb, cpu);
+         tcb->cpu, tcb->name, tcb, cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d RESUME\n",
+         tcb->cpu, tcb, cpu);
+#endif
 }
 
 static void notelog_cpu_resumed(FAR struct note_driver_s *drv,
                                 FAR struct tcb_s *tcb)
 {
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p CPU%d RESUMED\n",
-         tcb->cpu, get_task_name(tcb), tcb, tcb->cpu);
+         tcb->cpu, tcb->name, tcb, tcb->cpu);
+#else
+  syslog(LOG_INFO, "CPU%d: TCB@%p CPU%d RESUMED\n",
+         tcb->cpu, tcb, tcb->cpu);
+#endif
 }
 #endif
 #endif
@@ -257,11 +316,21 @@ static void notelog_premption(FAR struct note_driver_s *drv,
                               FAR struct tcb_s *tcb, bool locked)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p preemption %s\n",
-         tcb->cpu, get_task_name(tcb), tcb, locked ? "LOCKED" : "UNLOCKED");
+         tcb->cpu, tcb->name, tcb, locked ? "LOCKED" : "UNLOCKED");
 #else
+  syslog(LOG_INFO, "CPU%d: TCB@%p preemption %s\n",
+         tcb->cpu, tcb, locked ? "LOCKED" : "UNLOCKED");
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Task %s, TCB@%p preemption %s\n",
-         get_task_name(tcb), tcb, locked ? "LOCKED" : "UNLOCKED");
+         tcb->name, tcb, locked ? "LOCKED" : "UNLOCKED");
+#else
+  syslog(LOG_INFO, "TCB@%p preemption %s\n",
+         tcb, locked ? "LOCKED" : "UNLOCKED");
+#endif
 #endif
 }
 #endif
@@ -271,11 +340,21 @@ static void notelog_csection(FAR struct note_driver_s *drv,
                              FAR struct tcb_s *tcb, bool enter)
 {
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p critical section %s\n",
-         tcb->cpu, get_task_name(tcb), tcb, enter ? "ENTER" : "LEAVE");
+         tcb->cpu, tcb->name, tcb, enter ? "ENTER" : "LEAVE");
 #else
+  syslog(LOG_INFO, "CPU%d: TCB@%p critical section %s\n",
+         tcb->cpu, tcb, enter ? "ENTER" : "LEAVE");
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Task %s, TCB@%p critical section %s\n",
-         get_task_name(tcb), tcb, enter ? "ENTER" : "LEAVE");
+         tcb->name, tcb, enter ? "ENTER" : "LEAVE");
+#else
+  syslog(LOG_INFO, "TCB@%p critical section %s\n",
+         tcb, enter ? "ENTER" : "LEAVE");
+#endif
 #endif
 }
 #endif
@@ -297,11 +376,21 @@ static void note_spinlock(FAR struct note_driver_s *drv,
   FAR const char * msg = tmp[type - NOTE_SPINLOCK_LOCK];
 
 #ifdef CONFIG_SMP
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "CPU%d: Task %s TCB@%p spinlock@%p %s\n",
-         tcb->cpu, get_task_name(tcb), tcb, spinlock, msg);
+         tcb->cpu, tcb->name, tcb, spinlock, msg);
 #else
+  syslog(LOG_INFO, "CPU%d: TCB@%p spinlock@%p %s\n",
+         tcb->cpu, tcb, spinlock, msg);
+#endif
+#else
+#if CONFIG_TASK_NAME_SIZE > 0
   syslog(LOG_INFO, "Task %s TCB@%p spinlock@%p %s\n",
-         get_task_name(tcb), tcb, spinlock, msg);
+         tcb->name, tcb, spinlock, msg);
+#else
+  syslog(LOG_INFO, "TCB@%p spinlock@%p %s\n",
+         tcb, spinlock, msg);
+#endif
 #endif
 }
 #endif
