@@ -725,17 +725,6 @@ static int esp32s3_qspi_command(struct qspi_dev_s *dev,
 
   /* Initiliaze QSPI user register */
 
-#ifdef CONFIG_ESP32S3_SPI_DMA
-
-  /* Disable QSPI DMA */
-
-  regval  = getreg32(SPI_DMA_CONF_REG(id));
-  regval &= ~(SPI_DMA_TX_ENA_M | SPI_DMA_RX_ENA_M);
-  putreg32(regval, SPI_DMA_CONF_REG(id));
-
-  putreg32(0, SPI_DMA_INT_ENA_REG(id));
-#endif
-
   user_reg &= ~(SPI_USR_ADDR_M |
                 SPI_USR_MOSI_M |
                 SPI_USR_MISO_M |
@@ -764,8 +753,7 @@ static int esp32s3_qspi_command(struct qspi_dev_s *dev,
 
       user_reg |= SPI_USR_ADDR_M;
 
-      regval = cmdinfo->addr << (32 - cmdinfo->addrlen * 8);
-      putreg32(regval, SPI_ADDR_REG(id));
+      putreg32(cmdinfo->addr, SPI_ADDR_REG(id));
     }
 
   /* Set dummy */
@@ -956,8 +944,7 @@ static int esp32s3_qspi_memory(struct qspi_dev_s *dev,
   user1_reg &= ~SPI_USR_ADDR_BITLEN_M;
   user1_reg |= (meminfo->addrlen * 8 - 1) << SPI_USR_ADDR_BITLEN_S;
 
-  regval = meminfo->addr << (32 - meminfo->addrlen * 8);
-  putreg32(regval, SPI_ADDR_REG(id));
+  putreg32(meminfo->addr, SPI_ADDR_REG(id));
 
   /* Set dummy */
 
@@ -992,7 +979,7 @@ static int esp32s3_qspi_memory(struct qspi_dev_s *dev,
                         QSPI_DMA_DESC_NUM,
                         (uint8_t *)meminfo->buffer,
                         meminfo->buflen,
-                        true, priv->dma_channel);
+                        true);
       esp32s3_dma_load(priv->dma_desc, priv->dma_channel, true);
       esp32s3_dma_enable(priv->dma_channel, true);
     }
@@ -1008,7 +995,7 @@ static int esp32s3_qspi_memory(struct qspi_dev_s *dev,
                         QSPI_DMA_DESC_NUM,
                         (uint8_t *)meminfo->buffer,
                         meminfo->buflen,
-                        false, priv->dma_channel);
+                        false);
       esp32s3_dma_load(priv->dma_desc, priv->dma_channel, false);
       esp32s3_dma_enable(priv->dma_channel, false);
     }
@@ -1207,36 +1194,6 @@ void esp32s3_qspi_init_dma(struct esp32s3_qspi_priv_s *priv)
   putreg32((SPI_SLV_RX_SEG_TRANS_CLR_EN_M | SPI_SLV_TX_SEG_TRANS_CLR_EN_M),
            SPI_DMA_CONF_REG(config->id));
 }
-
-/****************************************************************************
- * Name: esp32s3_qspi_dma_deinit
- *
- * Description:
- *   Deinitialize ESP32-S3 QSPI GDMA engine.
- *
- * Input Parameters:
- *   dev - Device-specific state data
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void esp32s3_qspi_dma_deinit(struct esp32s3_qspi_priv_s *priv)
-{
-  /* Release a DMA channel from peripheral */
-
-  esp32s3_dma_release(priv->dma_channel);
-
-  /* Deinitialize DMA controller */
-
-  esp32s3_dma_deinit();
-
-  /* Disable DMA clock for the SPI peripheral */
-
-  modifyreg32(SYSTEM_PERIP_CLK_EN0_REG, priv->config->dma_clk_bit, 0);
-}
-
 #endif
 
 /****************************************************************************
@@ -1421,7 +1378,8 @@ static void esp32s3_qspi_deinit(struct esp32s3_qspi_priv_s *priv)
   const struct esp32s3_qspi_config_s *config = priv->config;
 
 #ifdef CONFIG_ESP32S3_SPI_DMA
-  esp32s3_qspi_dma_deinit(priv);
+  modifyreg32(SYSTEM_PERIP_RST_EN0_REG, 0, config->dma_rst_bit);
+  modifyreg32(SYSTEM_PERIP_CLK_EN0_REG, config->dma_clk_bit, 0);
 #endif
 
   modifyreg32(SYSTEM_PERIP_RST_EN0_REG, 0, config->rst_bit);
@@ -1573,7 +1531,7 @@ struct qspi_dev_s *esp32s3_qspibus_initialize(int port)
 
   /* Set up to receive peripheral interrupts on the current CPU */
 
-  priv->cpu = up_cpu_index();
+  priv->cpu = this_cpu();
   priv->cpuint = esp32s3_setup_irq(priv->cpu, priv->config->periph,
                                    ESP32S3_INT_PRIO_DEF,
                                    ESP32S3_CPUINT_LEVEL);
