@@ -33,6 +33,7 @@
 
 #include <arch/board/board.h>
 
+#include "chip.h"
 #include "esp32s3_ledc.h"
 
 /****************************************************************************
