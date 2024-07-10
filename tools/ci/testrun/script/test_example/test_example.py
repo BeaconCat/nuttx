@@ -16,8 +16,11 @@ def test_helloxx(p):
 
 
 def test_pipe(p):
-    ret = p.sendCommand("pipe", "redirect_reader: Returning success", timeout=60)
+    p.sendCommand("umount /tmp")
+    ret = p.sendCommand("pipe", "redirect_reader: Returning success", 60)
     assert ret == 0
+    p.sendCommand("\n")
+    p.sendCommand("mount -t tmpfs /tmp")
 
 
 def test_popen(p):
@@ -26,5 +29,5 @@ def test_popen(p):
 
 
 def test_usrsocktest(p):
-    ret = p.sendCommand("usrsocktest", "FAILED:0", timeout=60)
+    ret = p.sendCommand("usrsocktest", "FAILED:0", 60)
     assert ret == 0
