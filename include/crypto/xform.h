@@ -103,7 +103,6 @@ extern const struct enc_xform enc_xform_aes;
 extern const struct enc_xform enc_xform_aes_ctr;
 extern const struct enc_xform enc_xform_aes_gcm;
 extern const struct enc_xform enc_xform_aes_gmac;
-extern const struct enc_xform enc_xform_aes_cmac;
 extern const struct enc_xform enc_xform_aes_xts;
 extern const struct enc_xform enc_xform_aes_ofb;
 extern const struct enc_xform enc_xform_aes_cfb_8;
@@ -122,14 +121,10 @@ extern const struct auth_hash auth_hash_gmac_aes_192;
 extern const struct auth_hash auth_hash_gmac_aes_256;
 extern const struct auth_hash auth_hash_chacha20_poly1305;
 extern const struct auth_hash auth_hash_md5;
-extern const struct auth_hash auth_hash_poly1305;
-extern const struct auth_hash auth_hash_ripemd_160;
 extern const struct auth_hash auth_hash_sha1;
 extern const struct auth_hash auth_hash_sha2_224;
 extern const struct auth_hash auth_hash_sha2_256;
 extern const struct auth_hash auth_hash_sha2_384;
 extern const struct auth_hash auth_hash_sha2_512;
-extern const struct auth_hash auth_hash_crc32;
-extern const struct auth_hash auth_hash_cmac_aes_128;
 
 #endif /* __INCLUDE_CRYPTO_XFORM_H */
