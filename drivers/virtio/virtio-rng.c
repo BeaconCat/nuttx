@@ -28,7 +28,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
 
 #include "virtio-rng.h"
@@ -51,7 +50,6 @@ struct virtio_rng_priv_s
 {
   FAR struct virtio_device *vdev;
   char                      name[NAME_MAX];
-  spinlock_t                lock;
 };
 
 /****************************************************************************
@@ -108,25 +106,16 @@ static int g_virtio_rng_idx = 0;
 
 static void virtio_rng_done(FAR struct virtqueue *vq)
 {
-  FAR struct virtio_rng_priv_s *priv = vq->vq_dev->priv;
   FAR struct virtio_rng_cookie_s *cookie;
-  irqstate_t flags;
   uint32_t len;
 
   /* Get the buffer, virtqueue_get_buffer() return the cookie added in
    * virtio_rng_read().
    */
 
-  for (; ; )
+  cookie = virtqueue_get_buffer(vq, &len, NULL);
+  if (cookie != NULL)
     {
-      flags = spin_lock_irqsave(&priv->lock);
-      cookie = virtqueue_get_buffer(vq, &len, NULL);
-      spin_unlock_irqrestore(&priv->lock, flags);
-      if (cookie == NULL)
-        {
-          break;
-        }
-
       /* Assign the return length */
 
       cookie->len = len;
@@ -148,7 +137,6 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
   FAR struct virtqueue *vq = priv->vdev->vrings_info[0].vq;
   struct virtio_rng_cookie_s cookie;
   struct virtqueue_buf vb;
-  irqstate_t flags;
   int ret;
 
   /* Init the cookie */
@@ -160,31 +148,21 @@ static ssize_t virtio_rng_read(FAR struct file *filep, FAR char *buffer,
    * cookie. (virtqueue_get_buffer() will return cookie).
    */
 
+  vb.buf = buffer;
   vb.len = buflen;
-  vb.buf = virtio_zalloc_buf(priv->vdev, buflen, 16);
-  if (vb.buf == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, &vb, 0, 1, &cookie);
   if (ret < 0)
     {
-      spin_unlock_irqrestore(&priv->lock, flags);
       return ret;
     }
 
   /* Notify the other side to process the added virtqueue buffer */
 
   virtqueue_kick(vq);
-  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Wait fot completion */
 
   nxsem_wait_uninterruptible(&cookie.sem);
-  memcpy(buffer, vb.buf, cookie.len);
-  virtio_free_buf(priv->vdev, vb.buf);
   return cookie.len;
 }
 
@@ -206,7 +184,6 @@ static int virtio_rng_probe(FAR struct virtio_device *vdev)
       return -ENOMEM;
     }
 
-  spin_lock_init(&priv->lock);
   priv->vdev = vdev;
   vdev->priv = priv;
 

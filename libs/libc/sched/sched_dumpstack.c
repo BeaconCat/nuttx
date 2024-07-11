@@ -28,7 +28,7 @@
 #include <sys/types.h>
 
 #include <stdio.h>
-#include <debug.h>
+#include <syslog.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -79,19 +79,20 @@ void sched_dumpstack(pid_t tid)
                           format, DUMP_WIDTH, address[i]);
           if (i == size - 1 || ret % DUMP_LINESZ == 0)
             {
-              _alert("backtrace|%2d:%s\n", tid, line);
+              syslog(LOG_EMERG, "backtrace|%2d:%s\n", tid, line);
               ret = 0;
             }
         }
 #else
       if (skip == 0)
         {
-          _alert("backtrace:\n");
+          syslog(LOG_EMERG, "backtrace:\n");
         }
 
       for (i = 0; i < size; i++)
         {
-          _alert("[%2d] [<%p>] %pS\n", tid, address[i], address[i]);
+          syslog(LOG_EMERG, "[%2d] [<%p>] %pS\n",
+                            tid, address[i], address[i]);
         }
 #endif
     }
