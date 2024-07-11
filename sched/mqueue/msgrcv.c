@@ -43,6 +43,7 @@ static int msgrcv_wait(FAR struct msgq_s *msgq, FAR struct msgbuf_s **rcvmsg,
   FAR struct msgbuf_s *newmsg = NULL;
   FAR struct msgbuf_s *tmp;
   FAR struct tcb_s *rtcb;
+  bool switch_needed;
 
 #ifdef CONFIG_CANCELLATION_POINTS
   /* msgrcv_wait() is not a cancellation point, but it may be called
@@ -126,18 +127,21 @@ static int msgrcv_wait(FAR struct msgq_s *msgq, FAR struct msgbuf_s **rcvmsg,
 
       DEBUGASSERT(NULL != rtcb->flink);
 
-      /* Remove the tcb task from the running list. */
+      /* Remove the tcb task from the ready-to-run list. */
 
-      nxsched_remove_running(rtcb);
+      switch_needed = nxsched_remove_readytorun(rtcb, true);
 
       /* Add the task to the specified blocked task list */
 
       rtcb->task_state = TSTATE_WAIT_MQNOTEMPTY;
       nxsched_add_prioritized(rtcb, MQ_WNELIST(msgq->cmn));
 
-      /* Now, perform the context switch */
+      /* Now, perform the context switch if one is needed */
 
-      up_switch_context(this_task(), rtcb);
+      if (switch_needed)
+        {
+          up_switch_context(this_task(), rtcb);
+        }
 
       /* When we resume at this point, either (1) the message queue
        * is no longer empty, or (2) the wait has been interrupted by
