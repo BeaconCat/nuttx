@@ -39,6 +39,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <nuttx/can.h>
+#include <netpacket/can.h>
 #include <nuttx/signal.h>
 
 #include "s32k3xx_pin.h"
