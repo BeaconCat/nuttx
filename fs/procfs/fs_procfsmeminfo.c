@@ -293,9 +293,9 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
   /* The first line is the headers */
 
   linesize  = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                              "%11s%11s%11s%11s%11s%11s%7s%7s\n", "",
+                              "%11s%11s%11s%11s%11s%7s%7s%s\n",
                               "total", "used", "free", "maxused",
-                              "maxfree", "nused", "nfree");
+                              "maxfree", "nused", "nfree", " name");
 
   copysize  = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                             &offset);
@@ -318,15 +318,16 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
           info      = mm_mallinfo(entry->heap);
           linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                       "%10s:%11lu%11lu%11lu%11lu%11lu"
-                                       "%7lu%7lu\n", entry->name,
+                                       "%11lu%11lu%11lu%11lu%11lu"
+                                       "%7lu%7lu %s\n",
                                        (unsigned long)info.arena,
                                        (unsigned long)info.uordblks,
                                        (unsigned long)info.fordblks,
                                        (unsigned long)info.usmblks,
                                        (unsigned long)info.mxordblk,
                                        (unsigned long)info.aordblks,
-                                       (unsigned long)info.ordblks);
+                                       (unsigned long)info.ordblks,
+                                       entry->name);
           copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                                      buflen, &offset);
           totalsize += copysize;
@@ -336,7 +337,7 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 #ifdef CONFIG_MM_PGALLOC
   if (buflen > 0)
     {
-      struct pginfo_s pg_info;
+      struct pginfo_s pginfo;
       unsigned long total;
       unsigned long available;
       unsigned long allocated;
@@ -347,16 +348,16 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
       /* Show page allocator information */
 
-      mm_pginfo(&pg_info);
+      mm_pginfo(&pginfo);
 
-      total      = (unsigned long)pg_info.ntotal << MM_PGSHIFT;
-      available  = (unsigned long)pg_info.nfree  << MM_PGSHIFT;
+      total      = (unsigned long)pginfo.ntotal << MM_PGSHIFT;
+      available  = (unsigned long)pginfo.nfree  << MM_PGSHIFT;
       allocated  = total - available;
-      max        = (unsigned long)pg_info.mxfree << MM_PGSHIFT;
+      max        = (unsigned long)pginfo.mxfree << MM_PGSHIFT;
 
       linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                   "%10s:%11lu%11lu%11lu%11lu\n",
-                                   "Page", total, allocated, available, max);
+                                   "%11lu%11lu%11lu%11lu %s\n",
+                                   total, allocated, available, max, "Page");
 
       copysize   = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                                  &offset);
@@ -377,14 +378,14 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
       meminfo_progmem(&progmem);
 
       linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                   "%10s:%11lu%11lu%11lu%11lu%7lu%7lu\n",
-                                   "Prog",
+                                   "%11lu%11lu%11lu%11lu%7lu%7lu %s\n",
                                    (unsigned long)progmem.arena,
                                    (unsigned long)progmem.uordblks,
                                    (unsigned long)progmem.fordblks,
                                    (unsigned long)progmem.mxordblk,
                                    (unsigned long)progmem.aordblks,
-                                   (unsigned long)progmem.ordblks);
+                                   (unsigned long)progmem.ordblks
+                                   "Prog");
       copysize   = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                                  &offset);
       totalsize += copysize;
@@ -429,6 +430,9 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
                               "used: dump all allocated node\n"
                               "free: dump all free node\n"
                               "leak: dump all leaked node\n"
+#  if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
+                              "mempool: dump all mempool alloc node\n"
+#  endif
                               "The current sequence number %lu\n",
                               g_mm_seqno);
 #else
@@ -553,6 +557,17 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
         goto dump;
 #endif
         break;
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
+      case 'm':
+        dump.pid = PID_MM_MEMPOOL;
+
+#  if CONFIG_MM_BACKTRACE >= 0
+        p = (FAR char *)buffer + 7;
+        goto dump;
+#  endif
+        break;
+#endif
 
 #if CONFIG_MM_BACKTRACE >= 0
       default:
