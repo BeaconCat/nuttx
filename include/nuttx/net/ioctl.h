@@ -122,6 +122,8 @@
 #define SIOCACANSTDFILTER  _SIOC(0x0030)  /* Add hardware-level standard ID filter */
 #define SIOCDCANSTDFILTER  _SIOC(0x0031)  /* Delete hardware-level standard ID filter */
 #define SIOCCANRECOVERY    _SIOC(0x0032)  /* Recovery can, work only when bus-off state */
+#define SIOCGCANSTATE      _SIOC(0x003E)  /* Get state from a CAN/LIN controller */
+#define SIOCSCANSTATE      _SIOC(0x003F)  /* Set the LIN/CAN controller state */
 
 /* Network socket control ***************************************************/
 
@@ -144,6 +146,10 @@
 
 #define SIOCATMARK         _SIOC(0x003E)  /* Determine whether socket is at
                                            * out-of-band mark */
+
+/* RSS notify recv cpu calls ************************************************/
+
+#define SIOCNOTIFYRECVCPU  _SIOC(0x003F)  /* RSS notify recv cpu */
 
 /****************************************************************************
  * Public Type Definitions
