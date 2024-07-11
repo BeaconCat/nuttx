@@ -26,13 +26,15 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/map.h>
+
+#if defined (CONFIG_BUILD_KERNEL)
 #include <nuttx/arch.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/sched.h>
+#endif
 
 #include "shm/shmfs.h"
 #include "inode/inode.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Private Function Prototypes
@@ -182,16 +184,21 @@ static int shmfs_release(FAR struct inode *inode)
    * The inode is released after this call, hence checking if i_crefs <= 1.
    */
 
-  inode_lock();
-  if (inode->i_parent == NULL &&
-      inode->i_crefs <= 1)
+  int ret = inode_lock();
+  if (ret >= 0)
     {
-      shmfs_free_object(inode->i_private);
-      inode->i_private = NULL;
+      if (inode->i_parent == NULL &&
+          inode->i_crefs <= 1)
+        {
+          shmfs_free_object(inode->i_private);
+          inode->i_private = NULL;
+          ret = OK;
+        }
+
+      inode_unlock();
     }
 
-  inode_unlock();
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -215,31 +222,40 @@ static int shmfs_close(FAR struct file *filep)
 static int shmfs_truncate(FAR struct file *filep, off_t length)
 {
   FAR struct shmfs_object_s *object;
-  int ret = 0;
+  int ret;
 
   if (length == 0)
     {
       return -EINVAL;
     }
 
-  inode_lock();
-  object = filep->f_inode->i_private;
-  if (!object)
+  ret = inode_lock();
+  if (ret >= 0)
     {
-      filep->f_inode->i_private = shmfs_alloc_object(length);
-      if (!filep->f_inode->i_private)
+      object = filep->f_inode->i_private;
+      if (!object)
         {
-          ret = -EFAULT;
+          filep->f_inode->i_private = shmfs_alloc_object(length);
+          if (!filep->f_inode->i_private)
+            {
+              filep->f_inode->i_size = 0;
+              ret = -EFAULT;
+            }
+          else
+            {
+              filep->f_inode->i_size = length;
+            }
         }
-    }
-  else if (object->length != length)
-    {
-      /* This doesn't support resize */
+      else if (object->length != length)
+        {
+          /* This doesn't support resize */
 
-      ret = -EINVAL;
+          ret = -EINVAL;
+        }
+
+      inode_unlock();
     }
 
-  inode_unlock();
   return ret;
 }
 
@@ -250,15 +266,20 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int shmfs_unlink(FAR struct inode *inode)
 {
-  inode_lock();
-  if (inode->i_crefs <= 1)
+  int ret = inode_lock();
+
+  if (ret >= 0)
     {
-      shmfs_free_object(inode->i_private);
-      inode->i_private = NULL;
+      if (inode->i_crefs <= 1)
+        {
+          shmfs_free_object(inode->i_private);
+          inode->i_private = NULL;
+        }
+
+      inode_unlock();
     }
 
-  inode_unlock();
-  return OK;
+  return ret;
 }
 #endif
 
@@ -274,7 +295,7 @@ static int shmfs_map_object(FAR struct shmfs_object_s *object,
 #ifdef CONFIG_BUILD_KERNEL
   /* Map the physical pages of the shm object with MMU. */
 
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = nxsched_self();
   FAR struct task_group_s *group = tcb->group;
   FAR uintptr_t *pages = (FAR uintptr_t *)&object->paddr;
   uintptr_t mapaddr;
