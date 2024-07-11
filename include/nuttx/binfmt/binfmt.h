@@ -69,10 +69,6 @@ struct binary_s
 
   main_t entrypt;                      /* Entry point into a program module */
   FAR void *mapped;                    /* Memory-mapped, address space */
-#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-  FAR void **sectalloc;                /* All sections memory allocated */
-  uint16_t nsect;                      /* Number of sections */
-#endif
   FAR void *alloc[BINFMT_NALLOC];      /* Allocated address spaces */
 
 #ifdef CONFIG_BINFMT_CONSTRUCTORS
@@ -139,7 +135,7 @@ struct binfmt_s
 
   /* Coredump callback */
 
-  CODE int (*coredump)(FAR const struct memory_region_s *regions,
+  CODE int (*coredump)(FAR struct memory_region_s *regions,
                        FAR struct lib_outstream_s *stream,
                        pid_t pid);
 };
@@ -220,7 +216,7 @@ int unregister_binfmt(FAR struct binfmt_s *binfmt);
  *
  ****************************************************************************/
 
-int core_dump(FAR const struct memory_region_s *regions,
+int core_dump(FAR struct memory_region_s *regions,
               FAR struct lib_outstream_s *stream,
               pid_t pid);
 

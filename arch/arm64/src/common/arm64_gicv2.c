@@ -785,24 +785,14 @@ static int gic_validate_dist_version(void)
   if (reg == (0x2 << GIC_ICCIDR_ARCHNO_SHIFT))
     {
       sinfo("GICv2 detected\n");
-      return 0;
     }
-
-  /* Read the Peripheral ID2 Register (ICPIDR2) */
-
-  reg = getreg32(GIC_ICDPIDR(GIC_ICPIDR2)) & GICD_PIDR2_ARCH_MASK;
-
-  /* GIC Version should be 2 */
-
-  if (reg == GICD_PIDR2_ARCH_GICV2)
+  else
     {
-      sinfo("GICv2 detected\n");
-      return 0;
+      sinfo("GICv2 not detected\n");
+      return -ENODEV;
     }
 
-  sinfo("GICv2 not detected\n");
-
-  return -ENODEV;
+  return 0;
 }
 
 /****************************************************************************
@@ -921,8 +911,6 @@ static void arm_gic0_initialize(void)
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm64_pause_async_handler, NULL));
 
 #  ifdef CONFIG_SMP_CALL
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
@@ -1489,13 +1477,14 @@ void arm64_gic_secondary_init(void)
  *   cpuset - The set of CPUs to receive the SGI
  *
  * Returned Value:
- *   None
+ *   OK is always returned at present.
  *
  ****************************************************************************/
 
-void arm64_gic_raise_sgi(unsigned int sgi, uint16_t cpuset)
+int arm64_gic_raise_sgi(unsigned int sgi, uint16_t cpuset)
 {
   arm_cpu_sgi(sgi, cpuset);
+  return 0;
 }
 
 #  ifdef CONFIG_SMP_CALL
