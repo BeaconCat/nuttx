@@ -34,6 +34,8 @@
 #include <signal.h>
 #include <pthread.h>
 
+#include <nuttx/arch.h>
+
 #ifdef CONFIG_BUILD_PROTECTED
 
 /****************************************************************************

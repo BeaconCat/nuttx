@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # tools/process_config.sh
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -54,8 +56,6 @@ process_file() {
                 exit 1
             fi
         else
-            local key_config="$(echo "$line" | cut -d= -f1)="
-            sed -i "/$key_config/d" $output_file
             echo "$line" >> $output_file
         fi
     done < "$input_file"
