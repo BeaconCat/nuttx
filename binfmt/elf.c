@@ -69,11 +69,6 @@ static int elf_loadbinary(FAR struct binary_s *binp,
                           FAR const char *filename,
                           FAR const struct symtab_s *exports,
                           int nexports);
-#ifdef CONFIG_ELF_COREDUMP
-static int elf_dumpbinary(FAR struct memory_region_s *regions,
-                          FAR struct lib_outstream_s *stream,
-                          pid_t pid);
-#endif
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_DEBUG_BINFMT)
 static void elf_dumploadinfo(FAR struct elf_loadinfo_s *loadinfo);
 #endif
@@ -87,9 +82,6 @@ static struct binfmt_s g_elfbinfmt =
   NULL,             /* next */
   elf_loadbinary,   /* load */
   NULL,             /* unload */
-#ifdef CONFIG_ELF_COREDUMP
-  elf_dumpbinary,   /* coredump */
-#endif
 };
 
 /****************************************************************************
@@ -164,6 +156,14 @@ static void elf_dumploadinfo(FAR struct elf_loadinfo_s *loadinfo)
       for (i = 0; i < loadinfo->ehdr.e_shnum; i++)
         {
           FAR Elf_Shdr *shdr = &loadinfo->shdr[i];
+#  ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+          if (loadinfo->ehdr.e_type == ET_REL)
+            {
+              binfo("  sh_alloc:     %08jx\n",
+                    (uintmax_t)loadinfo->sectalloc[i]);
+            }
+#  endif
+
           binfo("Sections %d:\n", i);
           binfo("  sh_name:      %08x\n",  shdr->sh_name);
           binfo("  sh_type:      %08x\n",  shdr->sh_type);
@@ -317,6 +317,14 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->addrenv = loadinfo.addrenv;
 
 #else
+#  ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+  if (loadinfo.ehdr.e_type == ET_REL)
+    {
+      binp->sectalloc = (FAR void *)loadinfo.sectalloc;
+      binp->nsect     = loadinfo.ehdr.e_shnum;
+    }
+#  endif
+
   binp->alloc[0] = (FAR void *)loadinfo.textalloc;
   binp->alloc[1] = (FAR void *)loadinfo.dataalloc;
 #  ifdef CONFIG_BINFMT_CONSTRUCTORS
@@ -353,32 +361,6 @@ errout_with_init:
   elf_uninit(&loadinfo);
   return ret;
 }
-
-/****************************************************************************
- * Name: elf_dumpbinary
- *
- * Description:
- *   Generat the core dump stream as ELF structure.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ELF_COREDUMP
-static int elf_dumpbinary(FAR struct memory_region_s *regions,
-                          FAR struct lib_outstream_s *stream,
-                          pid_t pid)
-{
-  struct elf_dumpinfo_s dumpinfo;
-
-  dumpinfo.regions = regions;
-  dumpinfo.stream  = stream;
-  dumpinfo.pid     = pid;
-
-  return elf_coredump(&dumpinfo);
-}
-#endif
 
 /****************************************************************************
  * Public Functions
