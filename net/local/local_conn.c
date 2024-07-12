@@ -32,7 +32,6 @@
 #include <debug.h>
 #include <unistd.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 

@@ -25,8 +25,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <debug.h>
-
-#include <nuttx/arch.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/power/battery_gauge.h>
 #include <nuttx/power/battery_ioctl.h>

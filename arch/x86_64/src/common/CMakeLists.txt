@@ -23,12 +23,14 @@ set(SRCS
     x86_64_copystate.c
     x86_64_exit.c
     x86_64_getintstack.c
+    x86_64_mdelay.c
     x86_64_initialize.c
     x86_64_modifyreg8.c
     x86_64_modifyreg16.c
     x86_64_modifyreg32.c
     x86_64_nputs.c
     x86_64_switchcontext.c
+    x86_64_udelay.c
     x86_64_tcbinfo.c)
 
 if(CONFIG_ARCH_HAVE_FORK)
@@ -53,10 +55,6 @@ endif()
 
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS x86_64_addrenv.c x86_64_addrenv_perms.c)
-endif()
-
-if(NOT CONFIG_ALARM_ARCH)
-  list(APPEND SRCS x86_64_udelay.c x86_64_mdelay.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
