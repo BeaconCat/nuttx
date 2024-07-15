@@ -27,6 +27,18 @@ if(CONFIG_INPUT)
     list(APPEND SRCS touchscreen_upper.c)
   endif()
 
+  if(CONFIG_INPUT_FF)
+    list(APPEND SRCS ff_upper.c)
+  endif()
+
+  if(CONFIG_FF_DUMMY)
+    list(APPEND SRCS ff_dummy.c)
+  endif()
+
+  if(CONFIG_FF_AW86225)
+    list(APPEND SRCS aw86225.c)
+  endif()
+
   if(CONFIG_INPUT_MOUSE)
     list(APPEND SRCS mouse_upper.c)
   endif()
@@ -106,6 +118,10 @@ if(CONFIG_INPUT)
 
   if(CONFIG_INPUT_SPQ10KBD)
     list(APPEND SRCS spq10kbd.c)
+  endif()
+
+  if(CONFIG_INPUT_GOLDFISH_EVENTS)
+    list(APPEND SRCS goldfish_events.c)
   endif()
 
   target_sources(drivers PRIVATE ${SRCS})
