@@ -45,30 +45,16 @@
  *
  ****************************************************************************/
 
-void inode_release(FAR struct inode *node)
+void inode_release(FAR struct inode *inode)
 {
-  int ret;
-
-  if (node)
+  if (inode)
     {
       /* Decrement the references of the inode */
 
-      do
+      inode_lock();
+      if (inode->i_crefs)
         {
-          ret = inode_lock();
-
-          /* This only possible error is due to cancellation of the thread.
-           * We need to try again anyway in this case, otherwise the
-           * reference count would be wrong.
-           */
-
-          DEBUGASSERT(ret == OK || ret == -ECANCELED);
-        }
-      while (ret < 0);
-
-      if (node->i_crefs)
-        {
-          node->i_crefs--;
+          inode->i_crefs--;
         }
 
       /* If the subtree was previously deleted and the reference
@@ -76,7 +62,7 @@ void inode_release(FAR struct inode *node)
        * now.
        */
 
-      if (node->i_crefs <= 0 && (node->i_flags & FSNODEFLAG_DELETED) != 0)
+      if (inode->i_crefs <= 0 && (inode->i_flags & FSNODEFLAG_DELETED) != 0)
         {
           /* If the inode has been properly unlinked, then the peer pointer
            * should be NULL.
@@ -84,8 +70,8 @@ void inode_release(FAR struct inode *node)
 
           inode_unlock();
 
-          DEBUGASSERT(node->i_peer == NULL);
-          inode_free(node);
+          DEBUGASSERT(inode->i_peer == NULL);
+          inode_free(inode);
         }
       else
         {

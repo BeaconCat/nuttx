@@ -60,6 +60,8 @@ void up_exit(int status)
 
   enter_critical_section();
 
+  sinfo("TCB=%p exiting\n", this_task());
+
   /* Destroy the task at the head of the ready to run list. */
 
   nxtask_exit();
@@ -92,7 +94,7 @@ void up_exit(int status)
 
   /* Restore the cpu lock */
 
-  restore_critical_section();
+  restore_critical_section(tcb, this_cpu());
 
   /* Then switch contexts */
 
