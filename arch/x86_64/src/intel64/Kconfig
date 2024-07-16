@@ -68,10 +68,6 @@ config ARCH_INTEL64_TSC
 	---help---
 		Select to enable the use of TSC APIC timer of x86_64
 
-config ARCH_INTEL64_HPET_ALARM
-	bool "HPET timer alarm support"
-	depends on ALARM_ARCH
-
 endchoice # System Timer Source
 
 if ARCH_INTEL64_TSC_DEADLINE
@@ -111,23 +107,6 @@ config INTEL64_HPET_BASE
 	---help---
 		Configure base address for HPET. In the future, we can get this address from
 		the ACPI table if ACPI support is enabled.
-
-config INTEL64_HPET_32BIT
-	bool "HPET is 32bit"
-	default n
-	---help---
-		Configure HPET in 32-bit mode.
-
-config INTEL64_HPET_FSB
-	bool "HPET use FSB for interrupt"
-	default n
-	---help---
-		Use FSB for interrupt (works like MSI interrupts).
-
-config ARCH_INTEL64_HPET_ALARM_CHAN
-	int "HPET timer alarm channel"
-	depends on ARCH_INTEL64_HPET_ALARM
-	default 0
 
 config INTEL64_HPET_CHANNELS
 	int "HPET timer supported channels"
@@ -190,14 +169,5 @@ config ARCH_INTEL64_DISABLE_INT_INIT
 		Select to disable all initialization related to interrupt
 		controllers. This is necessary if those are already
 		initialized, i.e. Jailhouse system.
-
-config ARCH_INTEL64_DISABLE_CET
-	bool "Disable CET completely"
-	---help---
-		Intel CET (Control-flow Enforcement Technology) is a hardware
-		enhancement aimed at mitigating the Retpoline vulnerability.
-		It inserts the endbr64 instruction at the beginning of functions,
-		which may impact CPU branch prediction performance.
-
 
 endif
