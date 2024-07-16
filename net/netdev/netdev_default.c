@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/netdev/netdev_default.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -73,9 +75,9 @@ FAR struct net_driver_s *netdev_default(void)
            * device).
            */
 
+          ret = dev;
           if (dev->d_lltype != NET_LL_LOOPBACK)
             {
-              ret = dev;
               break;
             }
         }

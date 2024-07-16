@@ -147,7 +147,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 };
@@ -243,25 +243,22 @@ static inline irqstate_t up_irq_enable(void)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SMP
 int up_cpu_index(void) noinstrument_function;
+#else
+#  define up_cpu_index() 0
+#endif /* CONFIG_SMP */
 
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
 {
-#ifdef CONFIG_SMP
   return (uint32_t *)g_current_regs[up_cpu_index()];
-#else
-  return (uint32_t *)g_current_regs[0];
-#endif
 }
 
+noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-#ifdef CONFIG_SMP
   g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
 }
 
 noinstrument_function
