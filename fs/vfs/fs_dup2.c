@@ -150,7 +150,7 @@ int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
               ret = file_ioctl(filep2, FIONBIO, 0);
               if (ret < 0 && inode->u.i_ops->close)
                 {
-                  inode->u.i_ops->close(filep2);
+                  ret = inode->u.i_ops->close(filep2);
                 }
             }
         }

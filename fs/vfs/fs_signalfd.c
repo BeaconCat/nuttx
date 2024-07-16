@@ -328,7 +328,6 @@ out:
 int signalfd(int fd, FAR const sigset_t *mask, int flags)
 {
   FAR struct signalfd_priv_s *dev;
-  FAR struct file *filep = NULL;
   struct sigaction act;
   int ret = EINVAL;
   int signo;
@@ -361,6 +360,8 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
     }
   else
     {
+      FAR struct file *filep;
+
       if (fs_getfilep(fd, &filep) < 0)
         {
           ret = EBADF;
@@ -369,7 +370,6 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
 
       if (filep->f_inode->u.i_ops != &g_signalfd_fileops)
         {
-          fs_putfilep(filep);
           goto errout;
         }
 
@@ -395,11 +395,6 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
         {
           nxsig_action(signo, &act, NULL, false);
         }
-    }
-
-  if (filep != NULL)
-    {
-      fs_putfilep(filep);
     }
 
   return fd;

@@ -33,6 +33,8 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/spi/spi_transfer.h>
 
+#ifdef CONFIG_SPI_EXCHANGE
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -141,3 +143,4 @@ int spi_transfer(FAR struct spi_dev_s *spi, FAR struct spi_sequence_s *seq)
   return ret;
 }
 
+#endif /* CONFIG_SPI_EXCHANGE */
