@@ -33,6 +33,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "notify/notify.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
 
@@ -70,7 +71,6 @@ int nxsem_close(FAR sem_t *sem)
 {
   FAR struct nsem_inode_s *nsem;
   struct inode *inode;
-  int ret;
 
   DEBUGASSERT(sem);
 
@@ -82,18 +82,7 @@ int nxsem_close(FAR sem_t *sem)
 
   /* Decrement the reference count on the inode */
 
-  do
-    {
-      ret = inode_lock();
-
-      /* The only error that is expected is due to thread cancellation.
-       * At this point, we must continue to free the semaphore anyway.
-       */
-
-      DEBUGASSERT(ret == OK || ret == -ECANCELED);
-    }
-  while (ret < 0);
-
+  inode_lock();
   if (inode->i_crefs > 0)
     {
       inode->i_crefs--;
@@ -116,7 +105,9 @@ int nxsem_close(FAR sem_t *sem)
        */
 
       inode_unlock();
-
+#ifdef CONFIG_FS_NOTIFY
+      notify_close2(inode);
+#endif
       DEBUGASSERT(inode->i_peer == NULL);
       inode_free(inode);
       return OK;
