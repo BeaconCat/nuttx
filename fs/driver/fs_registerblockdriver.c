@@ -30,6 +30,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "notify/notify.h"
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 
@@ -73,12 +74,7 @@ int register_blockdriver(FAR const char *path,
    * valid data.
    */
 
-  ret = inode_lock();
-  if (ret < 0)
-    {
-      return ret;
-    }
-
+  inode_lock();
   ret = inode_reserve(path, mode, &node);
   if (ret >= 0)
     {
@@ -90,7 +86,11 @@ int register_blockdriver(FAR const char *path,
 
       node->u.i_bops  = bops;
       node->i_private = priv;
-      ret             = OK;
+      inode_unlock();
+#ifdef CONFIG_FS_NOTIFY
+      notify_create(path);
+#endif
+      return OK;
     }
 
   inode_unlock();
