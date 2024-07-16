@@ -87,12 +87,9 @@
  ****************************************************************************/
 
 	.globl		exception_common
-#ifdef __ghs__
-	.thumb2
-#else
+
 	.syntax		unified
 	.thumb
-#endif
 	.file		"arm_exception.S"
 
 /****************************************************************************
@@ -121,12 +118,9 @@
  */
 
 	.text
-#ifdef __ghs__
-	.type	exception_common, $function
-#else
+	.section    .text.exception_common
 	.thumb_func
 	.type	exception_common, function
-#endif
 exception_common:
 
 	mrs		r0, ipsr				/* R0=exception number */

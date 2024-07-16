@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
-#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -157,7 +156,7 @@
 
 #ifndef __ASSEMBLY__
 
-typedef size_t xcpt_reg_t;
+typedef unsigned long xcpt_reg_t;
 typedef xcpt_reg_t jmp_buf[XCPTCONTEXT_REGS];
 
 #endif
