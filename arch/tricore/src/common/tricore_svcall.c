@@ -57,15 +57,9 @@ void tricore_svcall(volatile void *trap)
   uintptr_t *regs;
   uint32_t cmd;
 
-  regs = (uintptr_t *)__mfcr(CPU_PCXI);
+  regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
-  /* DSYNC instruction should be executed immediately prior to the MTCR */
-
-  __dsync();
-
-  regs = tricore_csa2addr((uintptr_t)regs);
-
-  CURRENT_REGS = regs;
+  up_set_current_regs(regs);
 
   cmd = regs[REG_D8];
 
@@ -83,9 +77,9 @@ void tricore_svcall(volatile void *trap)
        *   R0 = SYS_restore_context
        *   R1 = restoreregs
        *
-       * In this case, we simply need to set CURRENT_REGS to restore
-       * register area referenced in the saved R1. context == CURRENT_REGS
-       * is the normal exception return.  By setting CURRENT_REGS =
+       * In this case, we simply need to set g_current_regs to restore
+       * register area referenced in the saved R1. context == g_current_regs
+       * is the normal exception return.  By setting g_current_regs =
        * context[R1], we force the return to the saved context referenced
        * in R1.
        */
@@ -93,14 +87,14 @@ void tricore_svcall(volatile void *trap)
       case SYS_restore_context:
         {
           tricore_reclaim_csa(regs[REG_UPCXI]);
-          CURRENT_REGS = (uintptr_t *)regs[REG_D9];
+          up_set_current_regs((uintptr_t *)regs[REG_D9]);
         }
         break;
 
       case SYS_switch_context:
         {
           *(uintptr_t **)regs[REG_D9] = (uintptr_t *)regs[REG_UPCXI];
-          CURRENT_REGS = (uintptr_t *)regs[REG_D10];
+          up_set_current_regs((uintptr_t *)regs[REG_D10]);
         }
         break;
 
@@ -111,7 +105,7 @@ void tricore_svcall(volatile void *trap)
         break;
     }
 
-  if (regs != CURRENT_REGS)
+  if (regs != up_current_regs())
     {
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
@@ -120,10 +114,10 @@ void tricore_svcall(volatile void *trap)
 
       g_running_tasks[this_cpu()] = this_task();
 
-      regs[REG_UPCXI] = (uintptr_t)CURRENT_REGS;
+      regs[REG_UPCXI] = up_current_regs();
 
       __isync();
     }
 
-  CURRENT_REGS = NULL;
+  up_set_current_regs(NULL);
 }

@@ -34,7 +34,7 @@
 #ifdef CONFIG_HAVE_LONG_DOUBLE
 long double copysignl(long double x, long double y)
 {
-  if (signbit(y))
+  if (y < 0)
     {
       return -fabsl(x);
     }

@@ -1,9 +1,8 @@
-==================
 OS Data Structures
 ==================
 
 Scalar Types
-============
+************
 
 Many of the types used to communicate with NuttX are simple scalar
 types. These types are used to provide architecture independence of the
@@ -16,7 +15,7 @@ include:
 .. c:type:: time_t
 
 Hidden Interface Structures
-===========================
+***************************
 
 Several of the types used to interface with NuttX are structures that
 are intended to be hidden from the application. From the standpoint of
@@ -34,7 +33,7 @@ specific elements within these hidden structures. These hidden
 structures will not be described further in this user's manual.
 
 Access to the ``errno`` Variable
-================================
+********************************
 
 A pointer to the thread-specific ``errno`` value is available through a
 function call:
@@ -62,7 +61,7 @@ function call:
     :return: A pointer to the thread-specific ``errno`` value.
 
 User Interface Structures
-=========================
+*************************
 
 .. c:type:: int (*main_t)(int argc, char *argv[])
 
