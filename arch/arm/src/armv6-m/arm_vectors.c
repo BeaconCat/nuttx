@@ -45,6 +45,7 @@
 
 #include "chip.h"
 #include "arm_internal.h"
+#include "ram_vectors.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -57,12 +58,26 @@
 #endif
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /* Chip-specific entrypoint */
 
 extern void __start(void);
+
+static void start(void)
+{
+  /* Zero lr to mark the end of backtrace */
+
+  asm volatile ("movs r0,  #0\n"
+                "mov lr,  r0\n");
+
+  __start();
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /* Common exception entrypoint */
 
@@ -81,7 +96,8 @@ extern void exception_common(void);
  * Note that the [ ... ] designated initialiser is a GCC extension.
  */
 
-const void * const _vectors[] locate_data(".vectors") =
+const void * const _vectors[] locate_data(".vectors")
+                              aligned_data(VECTAB_ALIGN) =
 {
   /* Initial stack */
 
@@ -89,7 +105,7 @@ const void * const _vectors[] locate_data(".vectors") =
 
   /* Reset exception handler */
 
-  __start,
+  start,
 
   /* Vectors 2 - n point directly at the generic handler */
 
