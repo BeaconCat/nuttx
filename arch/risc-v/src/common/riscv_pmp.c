@@ -134,16 +134,9 @@ static bool pmp_check_region_attrs(uintptr_t base, uintptr_t size,
 
     case PMPCFG_A_NAPOT:
       {
-        /* Special range for the whole range */
+        /* For NAPOT, both base and size must be properly aligned */
 
-        if (base == 0 && size == 0)
-          {
-            return true;
-          }
-
-        /* For NAPOT, Naturally aligned power-of-two region, >= 8 bytes */
-
-        if ((base & 0x07) != 0 || size < 8 || (size & (size - 1)) != 0)
+        if ((base & 0x07) != 0 || size < 8)
           {
             return false;
           }
@@ -187,16 +180,16 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
   switch (region)
     {
       case 0 ... 3:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG0);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg0);
 
       case 4 ... 7:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG1);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg1);
 
       case 8 ... 11:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG2);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg2);
 
       case 12 ... 15:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG3);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg3);
 
       default:
         break;
@@ -205,10 +198,10 @@ static uintptr_t pmp_read_region_cfg(uintptr_t region)
   switch (region)
     {
       case 0 ... 7:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG0);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg0);
 
       case 8 ... 15:
-        return PMP_READ_REGION_FROM_REG(region, CSR_PMPCFG2);
+        return PMP_READ_REGION_FROM_REG(region, pmpcfg2);
 
       default:
         break;
@@ -239,52 +232,52 @@ static uintptr_t pmp_read_addr(uintptr_t region)
   switch (region)
       {
         case 0:
-          return READ_CSR(CSR_PMPADDR0);
+          return READ_CSR(pmpaddr0);
 
         case 1:
-          return READ_CSR(CSR_PMPADDR1);
+          return READ_CSR(pmpaddr1);
 
         case 2:
-          return READ_CSR(CSR_PMPADDR2);
+          return READ_CSR(pmpaddr2);
 
         case 3:
-          return READ_CSR(CSR_PMPADDR3);
+          return READ_CSR(pmpaddr3);
 
         case 4:
-          return READ_CSR(CSR_PMPADDR4);
+          return READ_CSR(pmpaddr4);
 
         case 5:
-          return READ_CSR(CSR_PMPADDR5);
+          return READ_CSR(pmpaddr5);
 
         case 6:
-          return READ_CSR(CSR_PMPADDR6);
+          return READ_CSR(pmpaddr6);
 
         case 7:
-          return READ_CSR(CSR_PMPADDR7);
+          return READ_CSR(pmpaddr7);
 
         case 8:
-          return READ_CSR(CSR_PMPADDR8);
+          return READ_CSR(pmpaddr8);
 
         case 9:
-          return READ_CSR(CSR_PMPADDR9);
+          return READ_CSR(pmpaddr9);
 
         case 10:
-          return READ_CSR(CSR_PMPADDR10);
+          return READ_CSR(pmpaddr10);
 
         case 11:
-          return READ_CSR(CSR_PMPADDR11);
+          return READ_CSR(pmpaddr11);
 
         case 12:
-          return READ_CSR(CSR_PMPADDR12);
+          return READ_CSR(pmpaddr12);
 
         case 13:
-          return READ_CSR(CSR_PMPADDR13);
+          return READ_CSR(pmpaddr13);
 
         case 14:
-          return READ_CSR(CSR_PMPADDR14);
+          return READ_CSR(pmpaddr14);
 
         case 15:
-          return READ_CSR(CSR_PMPADDR15);
+          return READ_CSR(pmpaddr15);
 
         default:
           break;
@@ -447,67 +440,67 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
   switch (region)
     {
       case 0:
-        WRITE_CSR(CSR_PMPADDR0, addr);
+        WRITE_CSR(pmpaddr0, addr);
         break;
 
       case 1:
-        WRITE_CSR(CSR_PMPADDR1, addr);
+        WRITE_CSR(pmpaddr1, addr);
         break;
 
       case 2:
-        WRITE_CSR(CSR_PMPADDR2, addr);
+        WRITE_CSR(pmpaddr2, addr);
         break;
 
       case 3:
-        WRITE_CSR(CSR_PMPADDR3, addr);
+        WRITE_CSR(pmpaddr3, addr);
         break;
 
       case 4:
-        WRITE_CSR(CSR_PMPADDR4, addr);
+        WRITE_CSR(pmpaddr4, addr);
         break;
 
       case 5:
-        WRITE_CSR(CSR_PMPADDR5, addr);
+        WRITE_CSR(pmpaddr5, addr);
         break;
 
       case 6:
-        WRITE_CSR(CSR_PMPADDR6, addr);
+        WRITE_CSR(pmpaddr6, addr);
         break;
 
       case 7:
-        WRITE_CSR(CSR_PMPADDR7, addr);
+        WRITE_CSR(pmpaddr7, addr);
         break;
 
       case 8:
-        WRITE_CSR(CSR_PMPADDR8, addr);
+        WRITE_CSR(pmpaddr8, addr);
         break;
 
       case 9:
-        WRITE_CSR(CSR_PMPADDR9, addr);
+        WRITE_CSR(pmpaddr9, addr);
         break;
 
       case 10:
-        WRITE_CSR(CSR_PMPADDR10, addr);
+        WRITE_CSR(pmpaddr10, addr);
         break;
 
       case 11:
-        WRITE_CSR(CSR_PMPADDR11, addr);
+        WRITE_CSR(pmpaddr11, addr);
         break;
 
       case 12:
-        WRITE_CSR(CSR_PMPADDR12, addr);
+        WRITE_CSR(pmpaddr12, addr);
         break;
 
       case 13:
-        WRITE_CSR(CSR_PMPADDR13, addr);
+        WRITE_CSR(pmpaddr13, addr);
         break;
 
       case 14:
-        WRITE_CSR(CSR_PMPADDR14, addr);
+        WRITE_CSR(pmpaddr14, addr);
         break;
 
       case 15:
-        WRITE_CSR(CSR_PMPADDR15, addr);
+        WRITE_CSR(pmpaddr15, addr);
         break;
 
       default:
@@ -520,27 +513,27 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
   switch (region)
     {
       case 0 ... 3:
-        cfg = READ_CSR(CSR_PMPCFG0);
+        cfg = READ_CSR(pmpcfg0);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG0, cfg);
+        WRITE_CSR(pmpcfg0, cfg);
         break;
 
       case 4 ... 7:
-        cfg = READ_CSR(CSR_PMPCFG1);
+        cfg = READ_CSR(pmpcfg1);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG1, cfg);
+        WRITE_CSR(pmpcfg1, cfg);
         break;
 
       case 8 ... 11:
-        cfg = READ_CSR(CSR_PMPCFG2);
+        cfg = READ_CSR(pmpcfg2);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG2, cfg);
+        WRITE_CSR(pmpcfg2, cfg);
         break;
 
       case 12 ... 15:
-        cfg = READ_CSR(CSR_PMPCFG3);
+        cfg = READ_CSR(pmpcfg3);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG3, cfg);
+        WRITE_CSR(pmpcfg3, cfg);
         break;
 
       default:
@@ -550,15 +543,15 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
   switch (region)
     {
       case 0 ... 7:
-        cfg = READ_CSR(CSR_PMPCFG0);
+        cfg = READ_CSR(pmpcfg0);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG0, cfg);
+        WRITE_CSR(pmpcfg0, cfg);
         break;
 
       case 8 ... 15:
-        cfg = READ_CSR(CSR_PMPCFG2);
+        cfg = READ_CSR(pmpcfg2);
         PMP_MASK_SET_ONE_REGION(region, attr, cfg);
-        WRITE_CSR(CSR_PMPCFG2, cfg);
+        WRITE_CSR(pmpcfg2, cfg);
         break;
 
       default:
