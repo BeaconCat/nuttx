@@ -91,8 +91,6 @@ static inline bool arm_from_thread(uint32_t excret)
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -100,8 +98,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (arm_from_thread(regs[REG_EXC_RETURN]))
     {
-      tcb->xcp.regs = regs;
-      up_set_current_regs(regs);
+      CURRENT_REGS = regs;
     }
 
   /* Acknowledge the interrupt */
@@ -113,36 +110,38 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   irq_dispatch(irq, regs);
 
   /* If a context switch occurred while processing the interrupt then
-   * current_regs may have change value.  If we return any value different
+   * CURRENT_REGS may have change value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
 
   if (arm_from_thread(regs[REG_EXC_RETURN]))
     {
-      tcb = this_task();
+      /* Restore the cpu lock */
 
-      if (regs != tcb->xcp.regs)
+      if (regs != CURRENT_REGS)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = tcb;
-          regs = tcb->xcp.regs;
+          g_running_tasks[this_cpu()] = this_task();
+
+          restore_critical_section();
+          regs = (uint32_t *)CURRENT_REGS;
         }
 
-      /* Update the current_regs to NULL. */
+      /* Update the CURRENT_REGS to NULL. */
 
-      up_set_current_regs(NULL);
+      CURRENT_REGS = NULL;
     }
 #endif
 
   board_autoled_off(LED_INIRQ);
 
 #ifdef CONFIG_ARMV8M_TRUSTZONE_HYBRID
-  if (((1 << this_cpu()) & CONFIG_ARMV8M_TRUSTZONE_CPU_BITMASK) == 0)
+  if (((1 << up_cpu_index()) & CONFIG_ARMV8M_TRUSTZONE_CPU_BITMASK) == 0)
     {
       regs[REG_EXC_RETURN] &=
         ~(EXC_RETURN_EXC_SECURE | EXC_RETURN_SECURE_STACK);
