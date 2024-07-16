@@ -84,6 +84,13 @@
 #  define CONFIG_ARCH_INTERRUPTSTACK 0
 #endif
 
+/* If the floating point unit is present and enabled, then save the
+ * floating point registers as well as normal ARM registers.
+ */
+
+#define arm64_savestate(regs) (regs = (uint64_t *)CURRENT_REGS)
+#define arm64_restorestate(regs) (CURRENT_REGS = regs)
+
 /* This is the value used to mark the stack for subsequent stack monitoring
  * logic.
  */
@@ -262,6 +269,8 @@ EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
  * Public Function Prototypes
  ****************************************************************************/
 
+void arm64_new_task(struct tcb_s *tak_new);
+
 /* Low level initialization provided by chip logic */
 
 void arm64_chip_boot(void);
@@ -295,13 +304,18 @@ uint64_t *arm64_doirq(int irq, uint64_t *regs);
 
 /* Paging support */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm64_pginitialize(void);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm64_pginitialize()
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
-uint64_t *arm64_syscall(uint64_t *regs);
+uint64_t * arm64_syscall_switch(uint64_t *regs);
+int arm64_syscall(uint64_t *regs);
+
+/* Low level serial output **************************************************/
+
+void arm64_lowputc(char ch);
 
 #ifdef USE_SERIALDRIVER
 /****************************************************************************
