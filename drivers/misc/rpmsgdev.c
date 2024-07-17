@@ -39,7 +39,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/video/fb.h>
 #include <nuttx/mutex.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 #include <nuttx/net/ioctl.h>
 #include <nuttx/drivers/rpmsgdev.h>
 
@@ -626,8 +626,6 @@ static ssize_t rpmsgdev_ioctl_arglen(int cmd)
       case TUNSETIFF:
       case TUNGETIFF:
         return sizeof(struct ifreq);
-      case FIOC_FILEPATH:
-        return PATH_MAX;
       default:
         return -ENOTTY;
     }
@@ -1154,9 +1152,6 @@ int rpmsgdev_register(FAR const char *remotecpu, FAR const char *remotepath,
     {
       return -EINVAL;
     }
-
-  DEBUGASSERT(strlen(remotepath) + RPMSGDEV_NAME_PREFIX_LEN <=
-              RPMSG_NAME_SIZE);
 
   dev = kmm_zalloc(sizeof(*dev));
   if (dev == NULL)
