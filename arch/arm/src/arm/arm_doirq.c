@@ -58,22 +58,19 @@
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
 #else
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(up_current_regs() == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  up_set_current_regs(regs);
-  tcb->xcp.regs = regs;
+  CURRENT_REGS = regs;
 
   /* Acknowledge the interrupt */
 
@@ -82,16 +79,15 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
-  tcb = this_task();
 
   /* Check for a context switch.  If a context switch occurred, then
-   * current_regs will have a different value than it did on entry.  If an
+   * CURRENT_REGS will have a different value than it did on entry.  If an
    * interrupt level context switch has occurred, then restore the floating
    * point state and the establish the correct address environment before
    * returning from the interrupt.
    */
 
-  if (regs != tcb->xcp.regs)
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -108,16 +104,16 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = tcb;
+      g_running_tasks[this_cpu()] = this_task();
 
-      regs = tcb->xcp.regs;
+      regs = (uint32_t *)CURRENT_REGS;
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;
