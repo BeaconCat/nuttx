@@ -42,8 +42,8 @@
 #define RPMSG_PING_SEND             1
 #define RPMSG_PING_SEND_CHECK       2
 #define RPMSG_PING_SEND_NOACK       3
-#define RPMSG_PING_SEND_ACK         4
-#define RPMSG_PING_ACK              5
+#define RPMSG_PING_ACK              4
+#define RPMSG_PING_CHECK_DATA       0xee
 
 /****************************************************************************
  * Private Types
@@ -81,10 +81,9 @@ static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
       data_len = msg->len - sizeof(struct rpmsg_ping_msg_s) + 1;
       for (i = 0; i < data_len; i++)
         {
-          if (msg->data[i] != msg->data[0])
+          if (msg->data[i] != RPMSG_PING_CHECK_DATA)
             {
-              syslog(LOG_ERR, "receive data error at %zu of %zu\n",
-                     i, data_len);
+              syslog(LOG_ERR, "rptun ping remote receive data error!\n");
               break;
             }
 
@@ -94,11 +93,6 @@ static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
       msg->cmd = RPMSG_PING_ACK;
       rpmsg_send(ept, msg, len);
     }
-  else if (msg->cmd == RPMSG_PING_SEND_ACK)
-    {
-      msg->cmd = RPMSG_PING_ACK;
-      rpmsg_send(ept, msg, sizeof(*msg));
-    }
   else if (msg->cmd == RPMSG_PING_ACK)
     {
       nxsem_post(sem);
@@ -107,8 +101,8 @@ static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
   return 0;
 }
 
-static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
-                           int ack, uint32_t *buf_len, char i)
+static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept,
+                           int len, int ack, uint32_t *buf_len)
 {
   FAR struct rpmsg_ping_msg_s *msg;
   int ret;
@@ -128,25 +122,14 @@ static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
     {
       sem_t sem;
 
-      if (ack == 1)
-        {
-          msg->cmd = RPMSG_PING_SEND;
-        }
-      else if (ack == 2)
-        {
-          msg->cmd = RPMSG_PING_SEND_CHECK;
-        }
-      else
-        {
-          msg->cmd = RPMSG_PING_SEND_ACK;
-        }
-
+      msg->cmd = (ack == 1)? RPMSG_PING_SEND : RPMSG_PING_SEND_CHECK;
       msg->len    = len;
       msg->cookie = (uintptr_t)&sem;
 
       if (msg->cmd == RPMSG_PING_SEND_CHECK)
         {
-          memset(msg->data, i, len - sizeof(struct rpmsg_ping_msg_s) + 1);
+          memset(msg->data, RPMSG_PING_CHECK_DATA,
+                 len - sizeof(struct rpmsg_ping_msg_s) + 1);
         }
 
       nxsem_init(&sem, 0, 0);
@@ -166,11 +149,6 @@ static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
       ret = rpmsg_send_nocopy(ept, msg, len);
     }
 
-  if (ret < 0)
-    {
-      rpmsg_release_tx_buffer(ept, msg);
-    }
-
   return ret;
 }
 
@@ -181,9 +159,9 @@ static void rpmsg_ping_logout(FAR const char *s, clock_t value)
   perf_convert(value, &ts);
 
 #ifdef CONFIG_SYSTEM_TIME64
-  syslog(LOG_EMERG, "%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  syslog(LOG_INFO, "%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #else
-  syslog(LOG_EMERG, "%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  syslog(LOG_INFO, "%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #endif
 }
 
@@ -200,7 +178,7 @@ static void rpmsg_ping_logout_rate(uint64_t len, clock_t avg)
   rateint = ratebits / 1000000;
   ratedec = ratebits - rateint * 1000000;
 
-  syslog(LOG_EMERG, "rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
+  syslog(LOG_INFO, "rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
 }
 
 /****************************************************************************
@@ -226,7 +204,7 @@ int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
     {
       clock_t tm = perf_gettime();
 
-      send_len = rpmsg_ping_once(ept, ping->len, ping->ack, &buf_len, i);
+      send_len = rpmsg_ping_once(ept, ping->len, ping->ack, &buf_len);
       if (send_len < 0)
         {
           return send_len;
@@ -237,15 +215,10 @@ int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
       max    = MAX(max, tm);
       total += tm;
 
-      if (ping->sleep > 0)
-        {
-          nxsig_usleep(ping->sleep * USEC_PER_MSEC);
-        }
+      nxsig_usleep(ping->sleep * USEC_PER_MSEC);
     }
 
-  syslog(LOG_EMERG, "ping times: %d\n", ping->times);
-  syslog(LOG_EMERG, "buffer_len: %" PRIu32 ", send_len: %d\n",
-                    buf_len, send_len);
+  syslog(LOG_INFO, "ping times: %d\n", ping->times);
 
   rpmsg_ping_logout("avg", total / ping->times);
   rpmsg_ping_logout("min", min);

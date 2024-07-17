@@ -87,7 +87,6 @@ uint64_t up_irq_flags(void)
  *
  ****************************************************************************/
 
-__attribute__((no_sanitize_address))
 uint64_t up_irq_save(void)
 {
   union sigset_u nmask;
@@ -142,9 +141,6 @@ void up_irqinitialize(void)
   /* Register the pause handler */
 
   sim_init_ipi(SIGUSR1);
-#ifdef CONFIG_SMP_CALL
-  sim_init_func_call_ipi(SIGUSR2);
-#endif
 #endif
 }
 

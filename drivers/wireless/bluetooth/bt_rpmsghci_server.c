@@ -28,7 +28,8 @@
 #include <debug.h>
 #include <stdlib.h>
 
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/rptun/openamp.h>
 #include <nuttx/wireless/bluetooth/bt_rpmsghci.h>
 
 #include "bt_rpmsghci.h"
@@ -131,7 +132,6 @@ static int rpmsghci_send(FAR struct rpmsghci_server_s *priv,
   ret = rpmsg_send_nocopy(&priv->ept, msg, len);
   if (ret < 0)
     {
-      rpmsg_release_tx_buffer(&priv->ept, msg);
       goto errout;
     }
 

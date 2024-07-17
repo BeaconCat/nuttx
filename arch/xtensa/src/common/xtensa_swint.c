@@ -58,7 +58,7 @@ int xtensa_swint(int irq, void *context, void *arg)
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
-  DEBUGASSERT(regs != NULL && regs == up_current_regs());
+  DEBUGASSERT(regs != NULL && regs == CURRENT_REGS);
 
   cmd = regs[REG_A2];
 
@@ -105,9 +105,9 @@ int xtensa_swint(int irq, void *context, void *arg)
        *   A2 = SYS_restore_context
        *   A3 = restoreregs
        *
-       * In this case, we simply need to set current_regs to restore
-       * register area referenced in the saved A3. context == current_regs
-       * is the normal exception return.  By setting current_regs =
+       * In this case, we simply need to set CURRENT_REGS to restore
+       * register area referenced in the saved A3. context == CURRENT_REGS
+       * is the normal exception return.  By setting CURRENT_REGS =
        * context[A3], we force the return to the saved context referenced
        * in A3.
        */
@@ -115,7 +115,7 @@ int xtensa_swint(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_A3] != 0);
-          up_set_current_regs((uint32_t *)regs[REG_A3]);
+          CURRENT_REGS = (uint32_t *)regs[REG_A3];
         }
         break;
 
@@ -132,7 +132,7 @@ int xtensa_swint(int irq, void *context, void *arg)
        *
        * In this case, we do both: We save the context registers to the save
        * register area reference by the saved contents of A3 and then set
-       * current_regs to the save register area referenced by the saved
+       * CURRENT_REGS to the save register area referenced by the saved
        * contents of A4.
        */
 
@@ -140,7 +140,7 @@ int xtensa_swint(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_A3] != 0 && regs[REG_A4] != 0);
           *(uint32_t **)regs[REG_A3] = regs;
-          up_set_current_regs((uint32_t *)regs[REG_A4]);
+          CURRENT_REGS = (uint32_t *)regs[REG_A4];
         }
         break;
 
@@ -159,7 +159,7 @@ int xtensa_swint(int irq, void *context, void *arg)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          struct tcb_s *rtcb = this_task();
+          struct tcb_s *rtcb = nxsched_self();
           int index = (int)rtcb->xcp.nsyscalls - 1;
 
           /* Make sure that there is a saved syscall return address. */
@@ -298,7 +298,7 @@ int xtensa_swint(int irq, void *context, void *arg)
 #ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler:
         {
-          struct tcb_s *rtcb  = this_task();
+          struct tcb_s *rtcb  = nxsched_self();
 
           /* Remember the caller's return address */
 
@@ -337,7 +337,7 @@ int xtensa_swint(int irq, void *context, void *arg)
 #ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler_return:
         {
-          struct tcb_s *rtcb  = this_task();
+          struct tcb_s *rtcb  = nxsched_self();
 
           /* Set up to return to the kernel-mode signal dispatching logic. */
 
@@ -359,7 +359,7 @@ int xtensa_swint(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = this_task();
+          struct tcb_s *rtcb = nxsched_self();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the syscall number is within range */
@@ -418,9 +418,9 @@ int xtensa_swint(int irq, void *context, void *arg)
         break;
     }
 
-  if ((up_current_regs()[REG_PS] & PS_EXCM_MASK) != 0)
+  if ((CURRENT_REGS[REG_PS] & PS_EXCM_MASK) != 0)
     {
-      up_current_regs()[REG_PS] &= ~PS_EXCM_MASK;
+      CURRENT_REGS[REG_PS] &= ~PS_EXCM_MASK;
     }
 
   /* Report what happened.  That might difficult in the case of a context
@@ -428,10 +428,10 @@ int xtensa_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != up_current_regs())
+  if (regs != CURRENT_REGS)
     {
       svcinfo("SYSCALL Return: Context switch!\n");
-      up_dump_register(up_current_regs());
+      up_dump_register(CURRENT_REGS);
     }
   else
     {
