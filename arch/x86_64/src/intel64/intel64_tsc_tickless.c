@@ -76,12 +76,7 @@
 
 extern unsigned long g_x86_64_timer_freq;
 
-#ifndef CONFIG_SCHED_TICKLESS_ALARM
-static uint64_t g_goal_time;
-#else
 static struct timespec g_goal_time_ts;
-#endif
-
 static uint64_t g_last_stop_time;
 static uint64_t g_start_tsc;
 static uint32_t g_timer_active;
@@ -132,7 +127,7 @@ void up_alarm_expire(void);
 
 void up_timer_initialize(void)
 {
-  g_last_stop_time = g_start_tsc = rdtscp();
+  g_last_stop_time = g_start_tsc = rdtsc();
 
 #ifndef CONFIG_SCHED_TICKLESS_ALARM
   irq_attach(TMR_IRQ, (xcpt_t)up_timer_expire, NULL);
@@ -213,7 +208,7 @@ static inline void up_tmr_sync_down(void)
 
 int up_timer_gettime(struct timespec *ts)
 {
-  uint64_t diff = (rdtscp() - g_start_tsc);
+  uint64_t diff = (rdtsc() - g_start_tsc);
   up_tick2ts(diff, ts);
   return OK;
 }
@@ -261,7 +256,7 @@ int up_timer_cancel(struct timespec *ts)
     {
       if (g_timer_active)
         {
-          up_tick2ts(g_goal_time - rdtscp(), ts);
+          up_tick2ts(g_goal_time - rdtsc(), ts);
         }
       else
         {
@@ -308,15 +303,15 @@ int up_timer_start(const struct timespec *ts)
 
   up_tmr_sync_up();
 
-  up_unmask_tmr();
-
-  ticks = up_ts2tick(ts) + rdtscp();
+  ticks = up_ts2tick(ts) + rdtsc();
 
   g_timer_active = 1;
 
   write_msr(MSR_IA32_TSC_DEADLINE, ticks);
 
   g_goal_time = ticks;
+
+  up_unmask_tmr();
 
   up_tmr_sync_down();
   return OK;
@@ -341,7 +336,7 @@ void up_timer_expire(void)
   g_timer_active = 0;
 
   up_mask_tmr();
-  nxsched_timer_expiration();
+  sched_timer_expiration();
 }
 
 #else /* CONFIG_SCHED_TICKLESS_ALARM */
