@@ -22,12 +22,15 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdbool.h>
+
+#include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/pgalloc.h>
 
 #include "shm/shmfs.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Public Functions
@@ -43,15 +46,7 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
    * chunk in kernel heap
    */
 
-  size_t alloc_size = sizeof(struct shmfs_object_s) + length;
-  if (alloc_size < length)
-    {
-      /* There must have been an integer overflow */
-
-      return NULL;
-    }
-
-  object = fs_heap_zalloc(alloc_size);
+  object = kmm_zalloc(sizeof(struct shmfs_object_s) + length);
   if (object)
     {
       object->paddr = (FAR char *)(object + 1);
@@ -95,6 +90,12 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
           if (!pages[i])
             {
               break;
+            }
+          else
+            {
+              /* Clear the page memory (requirement for truncate) */
+
+              up_addrenv_page_wipe((uintptr_t)pages[i]);
             }
         }
     }
@@ -147,6 +148,6 @@ void shmfs_free_object(FAR struct shmfs_object_s *object)
        * (and the shared memory in case of FLAT build)
        */
 
-      fs_heap_free(object);
+      kmm_free(object);
     }
 }
