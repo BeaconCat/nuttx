@@ -27,6 +27,7 @@
 
 #include <nuttx/compiler.h>
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -92,6 +93,7 @@
  *     filter = T * (2*PI) * f_c
  *
  *     phase shift = -arctan(f_in/f_c)
+ *     time constant = -T / (ln(1 - filter))
  *
  *     T    - period at which the digital filter is being calculated
  *     f_in - input frequency of the filter
