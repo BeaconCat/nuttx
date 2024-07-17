@@ -217,19 +217,12 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
- * Assumptions:
- *   Have to make sure tcb keep safe during function executing, it means
- *   1. Tcb have to be self or not-running.  In SMP case, the running task
- *      PC & SP cannot be backtrace, as whose get from tcb is not the newest.
- *   2. Tcb have to keep not be freed.  In task exiting case, have to
- *      make sure the tcb get from pid and up_backtrace in one critical
- *      section procedure.
- *
  ****************************************************************************/
 
 int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
+  irqstate_t flags;
   int ret;
 
   if (size <= 0 || !buffer)
@@ -242,7 +235,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
-          void *istackbase = (void *)up_get_intstackbase(this_cpu());
+          void *istackbase = (void *)up_get_intstackbase(up_cpu_index());
 
           xtensa_window_spill();
           ret = backtrace_stack(istackbase,
@@ -257,8 +250,8 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #endif
           ret += backtrace_stack(rtcb->stack_base_ptr,
                                  rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 (void *)up_current_regs()[REG_A1],
-                                 (void *)up_current_regs()[REG_A0],
+                                 (void *)CURRENT_REGS[REG_A1],
+                                 (void *)CURRENT_REGS[REG_A0],
                                  &buffer[ret], size - ret, &skip);
         }
       else
@@ -292,11 +285,15 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     {
       /* For non-current task, only check in stack. */
 
+      flags = enter_critical_section();
+
       ret = backtrace_stack(tcb->stack_base_ptr,
                             tcb->stack_base_ptr + tcb->adj_stack_size,
                             (void *)tcb->xcp.regs[REG_A1],
                             (void *)tcb->xcp.regs[REG_A0],
                             buffer, size, &skip);
+
+      leave_critical_section(flags);
     }
 
   return ret;
