@@ -34,7 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/power/consumer.h>
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -545,6 +545,10 @@ static int regulator_rpmsg_sendrecv(FAR struct rpmsg_endpoint *ept,
         {
           ret = cookie.result;
         }
+    }
+  else
+    {
+      rpmsg_release_tx_buffer(ept, msg);
     }
 
   nxsem_destroy(&cookie.sem);

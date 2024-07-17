@@ -35,6 +35,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
 
+#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -67,6 +68,9 @@ static int pseudorename(FAR const char *oldpath, FAR struct inode *oldinode,
   struct inode_search_s newdesc;
   FAR struct inode *newinode;
   FAR char *subdir = NULL;
+#ifdef CONFIG_FS_NOTIFY
+  bool isdir = INODE_IS_PSEUDODIR(oldinode);
+#endif
   int ret;
 
   /* According to POSIX, any new inode at this path should be removed
@@ -160,6 +164,9 @@ next_subdir:
            */
 
           inode_remove(newpath);
+#ifdef CONFIG_FS_NOTIFY
+          notify_unlink(newpath);
+#endif
         }
 
       inode_release(newinode);
@@ -170,12 +177,7 @@ next_subdir:
    * of  zero.
    */
 
-  ret = inode_lock();
-  if (ret < 0)
-    {
-      goto errout;
-    }
-
+  inode_lock();
   ret = inode_reserve(newpath, 0777, &newinode);
   if (ret < 0)
     {
@@ -244,6 +246,13 @@ errout_with_lock:
 
 errout:
   RELEASE_SEARCH(&newdesc);
+#ifdef CONFIG_FS_NOTIFY
+  if (ret >= 0)
+    {
+      notify_rename(oldpath, isdir, newpath, isdir);
+    }
+#endif
+
   if (subdir != NULL)
     {
       lib_free(subdir);
@@ -270,6 +279,10 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
   FAR struct inode *newinode;
   FAR const char *newrelpath;
   FAR char *subdir = NULL;
+#ifdef CONFIG_FS_NOTIFY
+  bool newisdir = false;
+  bool oldisdir = false;
+#endif
   int ret;
 
   DEBUGASSERT(oldinode->u.i_mops);
@@ -338,13 +351,26 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
     {
       struct stat buf;
 
+#ifdef CONFIG_FS_NOTIFY
+      ret = oldinode->u.i_mops->stat(oldinode, oldpath, &buf);
+      if (ret >= 0)
+        {
+          oldisdir = S_ISDIR(buf.st_mode);
+        }
+#endif
+
 next_subdir:
       ret = oldinode->u.i_mops->stat(oldinode, newrelpath, &buf);
       if (ret >= 0)
         {
           /* Is the directory entry a directory? */
 
+#ifdef CONFIG_FS_NOTIFY
+          newisdir = S_ISDIR(buf.st_mode);
+          if (newisdir)
+#else
           if (S_ISDIR(buf.st_mode))
+#endif
             {
               FAR char *subdirname;
 
@@ -373,7 +399,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      lib_free(tmp);
+                      kmm_free(tmp);
                     }
 
                   if (ret < 0)
@@ -417,6 +443,9 @@ next_subdir:
                    */
 
                    oldinode->u.i_mops->unlink(oldinode, newrelpath);
+#ifdef CONFIG_FS_NOTIFY
+                   notify_unlink(newrelpath);
+#endif
                 }
             }
         }
@@ -437,6 +466,13 @@ errout_with_newsearch:
     {
       lib_free(subdir);
     }
+
+#ifdef CONFIG_FS_NOTIFY
+  if (ret >= 0)
+    {
+      notify_rename(oldpath, oldisdir, newpath, newisdir);
+    }
+#endif
 
   return ret;
 }
