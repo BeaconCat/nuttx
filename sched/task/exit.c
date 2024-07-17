@@ -64,11 +64,7 @@ void _exit(int status)
    * exit through a different mechanism.
    */
 
-  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
-    {
-      group_kill_children(tcb);
-    }
-
+  group_kill_children(tcb);
 #endif
 
   /* Perform common task termination logic.  This will get called again later
