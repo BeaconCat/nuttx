@@ -32,7 +32,7 @@
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/semaphore.h>
 
 /****************************************************************************
@@ -497,6 +497,10 @@ static int64_t clk_rpmsg_sendrecv(FAR struct rpmsg_endpoint *ept,
           ret = cookie.result;
         }
     }
+  else
+    {
+      rpmsg_release_tx_buffer(ept, msg);
+    }
 
   nxsem_destroy(&cookie.sem);
   return ret;
@@ -628,6 +632,11 @@ static int clk_rpmsg_enable(FAR struct clk_s *clk)
   uint32_t size;
   uint32_t len;
 
+  if (up_interrupt_context() || sched_idletask())
+    {
+      return -EPERM;
+    }
+
   ept = clk_rpmsg_get_ept(&name);
   if (!ept)
     {
@@ -659,6 +668,11 @@ static void clk_rpmsg_disable(FAR struct clk_s *clk)
   uint32_t size;
   uint32_t len;
 
+  if (up_interrupt_context() || sched_idletask())
+    {
+      return;
+    }
+
   ept = clk_rpmsg_get_ept(&name);
   if (!ept)
     {
@@ -688,6 +702,11 @@ static int clk_rpmsg_is_enabled(FAR struct clk_s *clk)
   FAR const char *name = clk->name;
   uint32_t size;
   uint32_t len;
+
+  if (up_interrupt_context() || sched_idletask())
+    {
+      return -EPERM;
+    }
 
   ept = clk_rpmsg_get_ept(&name);
   if (!ept)
