@@ -43,12 +43,17 @@
 
 int inode_addref(FAR struct inode *inode)
 {
+  int ret = OK;
+
   if (inode)
     {
-      inode_lock();
-      inode->i_crefs++;
-      inode_unlock();
+      ret = inode_lock();
+      if (ret >= 0)
+        {
+          inode->i_crefs++;
+          inode_unlock();
+        }
     }
 
-  return OK;
+  return ret;
 }
