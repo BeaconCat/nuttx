@@ -97,7 +97,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
         {
           /* Get IV off buf */
 
-          bcopy(crd->crd_iv, buf + crd->crd_inject, ivlen);
+          bcopy(buf + crd->crd_inject, crd->crd_iv, ivlen);
         }
     }
 
@@ -286,6 +286,7 @@ int swcr_authenc(FAR struct cryptop *crp)
   FAR const struct auth_hash *axf = NULL;
   FAR const struct enc_xform *exf = NULL;
   caddr_t buf = (caddr_t)crp->crp_buf;
+  caddr_t aad = (caddr_t)crp->crp_aad;
   FAR uint32_t *blkp;
   int blksz = 0;
   int ivlen = 0;
@@ -310,6 +311,7 @@ int swcr_authenc(FAR struct cryptop *crp)
         {
           case CRYPTO_AES_GCM_16:
           case CRYPTO_AES_GMAC:
+          case CRYPTO_AES_CMAC:
           case CRYPTO_CHACHA20_POLY1305:
           swe = sw;
           crde = crd;
@@ -319,6 +321,7 @@ int swcr_authenc(FAR struct cryptop *crp)
           case CRYPTO_AES_128_GMAC:
           case CRYPTO_AES_192_GMAC:
           case CRYPTO_AES_256_GMAC:
+          case CRYPTO_AES_128_CMAC:
           case CRYPTO_CHACHA20_POLY1305_MAC:
           swa = sw;
           crda = crd;
@@ -388,38 +391,41 @@ int swcr_authenc(FAR struct cryptop *crp)
 
   /* Supply MAC with AAD */
 
-  aadlen = crda->crd_len;
-  /* Section 5 of RFC 4106 specifies that AAD construction consists of
-   * {SPI, ESN, SN} whereas the real packet contains only {SPI, SN}.
-   * Unfortunately it doesn't follow a good example set in the Section
-   * 3.3.2.1 of RFC 4303 where upper part of the ESN, located in the
-   * external (to the packet) memory buffer, is processed by the hash
-   * function in the end thus allowing to retain simple programming
-   * interfaces and avoid kludges like the one below.
-   */
-
-  if (crda->crd_flags & CRD_F_ESN)
+  if (aad)
     {
-      aadlen += 4;
+      aadlen = crda->crd_len;
+      /* Section 5 of RFC 4106 specifies that AAD construction consists of
+      * {SPI, ESN, SN} whereas the real packet contains only {SPI, SN}.
+      * Unfortunately it doesn't follow a good example set in the Section
+      * 3.3.2.1 of RFC 4303 where upper part of the ESN, located in the
+      * external (to the packet) memory buffer, is processed by the hash
+      * function in the end thus allowing to retain simple programming
+      * interfaces and avoid kludges like the one below.
+      */
 
-      /* SPI */
+      if (crda->crd_flags & CRD_F_ESN)
+        {
+          aadlen += 4;
 
-      bcopy(buf + crda->crd_skip, blk, 4);
-      iskip = 4; /* loop below will start with an offset of 4 */
+          /* SPI */
 
-      /* ESN */
+          bcopy(buf + crda->crd_skip, blk, 4);
+          iskip = 4; /* loop below will start with an offset of 4 */
 
-      bcopy(crda->crd_esn, blk + 4, 4);
-      oskip = iskip + 4; /* offset output buffer blk by 8 */
-    }
+          /* ESN */
 
-  for (i = iskip; i < crda->crd_len; i += axf->hashsize)
-    {
-      len = MIN(crda->crd_len - i, axf->hashsize - oskip);
-      bcopy(buf + crda->crd_skip + i, blk + oskip, len);
-      bzero(blk + len + oskip, axf->hashsize - len - oskip);
-      axf->update(&ctx, blk, axf->hashsize);
-      oskip = 0; /* reset initial output offset */
+          bcopy(crda->crd_esn, blk + 4, 4);
+          oskip = iskip + 4; /* offset output buffer blk by 8 */
+        }
+
+      for (i = iskip; i < crda->crd_len; i += axf->hashsize)
+        {
+          len = MIN(crda->crd_len - i, axf->hashsize - oskip);
+          bcopy(buf + crda->crd_skip + i, blk + oskip, len);
+          bzero(blk + len + oskip, axf->hashsize - len - oskip);
+          axf->update(&ctx, blk, axf->hashsize);
+          oskip = 0; /* reset initial output offset */
+        }
     }
 
   if (exf->reinit)
@@ -429,67 +435,76 @@ int swcr_authenc(FAR struct cryptop *crp)
 
   /* Do encryption/decryption with MAC */
 
-  for (i = 0; i < crde->crd_len; i += blksz)
+  if (buf)
     {
-      len = MIN(crde->crd_len - i, blksz);
-      if (len < blksz)
+      for (i = 0; i < crde->crd_len; i += blksz)
         {
-          bzero(blk, blksz);
-        }
+          len = MIN(crde->crd_len - i, blksz);
+          if (len < blksz)
+            {
+              bzero(blk, blksz);
+            }
 
-      bcopy(buf + i, blk, len);
-      if (crde->crd_flags & CRD_F_ENCRYPT)
-        {
-          exf->encrypt((caddr_t)swe->sw_kschedule, blk);
-          axf->update(&ctx, blk, len);
-        }
-      else
-        {
-          axf->update(&ctx, blk, len);
-          exf->decrypt((caddr_t)swe->sw_kschedule, blk);
-        }
+          bcopy(buf + i, blk, len);
+          if (crde->crd_flags & CRD_F_ENCRYPT)
+            {
+              exf->encrypt((caddr_t)swe->sw_kschedule, blk);
+              axf->update(&ctx, blk, len);
+            }
+          else
+            {
+              axf->update(&ctx, blk, len);
+              exf->decrypt((caddr_t)swe->sw_kschedule, blk);
+            }
 
-      bcopy(blk, crp->crp_dst + i, len);
+          if (crp->crp_dst)
+            {
+              bcopy(blk, crp->crp_dst + i, len);
+            }
+        }
     }
 
   /* Do any required special finalization */
 
-  switch (crda->crd_alg)
+  if (crp->crp_mac)
     {
-      case CRYPTO_AES_128_GMAC:
-      case CRYPTO_AES_192_GMAC:
-      case CRYPTO_AES_256_GMAC:
+      switch (crda->crd_alg)
+        {
+          case CRYPTO_AES_128_GMAC:
+          case CRYPTO_AES_192_GMAC:
+          case CRYPTO_AES_256_GMAC:
 
-        /* length block */
+            /* length block */
 
-        bzero(blk, axf->hashsize);
-        blkp = (uint32_t *)blk + 1;
-        *blkp = htobe32(aadlen * 8);
-        blkp = (uint32_t *)blk + 3;
-        *blkp = htobe32(crde->crd_len * 8);
-        axf->update(&ctx, blk, axf->hashsize);
-        break;
+            bzero(blk, axf->hashsize);
+            blkp = (uint32_t *)blk + 1;
+            *blkp = htobe32(aadlen * 8);
+            blkp = (uint32_t *)blk + 3;
+            *blkp = htobe32(crde->crd_len * 8);
+            axf->update(&ctx, blk, axf->hashsize);
+            break;
 
-      case CRYPTO_CHACHA20_POLY1305_MAC:
+          case CRYPTO_CHACHA20_POLY1305_MAC:
 
-        /* length block */
+            /* length block */
 
-        bzero(blk, axf->hashsize);
-        blkp = (uint32_t *)blk;
-        *blkp = htole32(aadlen);
-        blkp = (uint32_t *)blk + 2;
-        *blkp = htole32(crde->crd_len);
-        axf->update(&ctx, blk, axf->hashsize);
-        break;
+            bzero(blk, axf->hashsize);
+            blkp = (uint32_t *)blk;
+            *blkp = htole32(aadlen);
+            blkp = (uint32_t *)blk + 2;
+            *blkp = htole32(crde->crd_len);
+            axf->update(&ctx, blk, axf->hashsize);
+            break;
+        }
+
+      /* Finalize MAC */
+
+      axf->final(aalg, &ctx);
+
+      /* Inject the authentication data */
+
+      bcopy(aalg, crp->crp_mac, axf->authsize);
     }
-
-  /* Finalize MAC */
-
-  axf->final(aalg, &ctx);
-
-  /* Inject the authentication data */
-
-  bcopy(aalg, crp->crp_mac, axf->authsize);
 
   return 0;
 }
@@ -660,6 +675,10 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             txf = &enc_xform_aes_gmac;
             (*swd)->sw_exf = txf;
             break;
+          case CRYPTO_AES_CMAC:
+            txf = &enc_xform_aes_cmac;
+            (*swd)->sw_exf = txf;
+            break;
           case CRYPTO_AES_OFB:
             txf = &enc_xform_aes_ofb;
             goto enccommon;
@@ -776,6 +795,9 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
           case CRYPTO_MD5:
             axf = &auth_hash_md5;
             goto auth3common;
+          case CRYPTO_RIPEMD160:
+            axf = &auth_hash_ripemd_160;
+            goto auth3common;
           case CRYPTO_SHA1:
             axf = &auth_hash_sha1;
             goto auth3common;
@@ -802,6 +824,18 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             axf->init((*swd)->sw_ictx);
             (*swd)->sw_axf = axf;
             bcopy((*swd)->sw_ictx, &(*swd)->sw_ctx, axf->ctxsize);
+
+            if (cri->cri_sid != -1)
+              {
+                if (swcr_sessions[cri->cri_sid] == NULL)
+                  {
+                    swcr_freesession(i);
+                    return -EINVAL;
+                  }
+
+                bcopy(&swcr_sessions[cri->cri_sid]->sw_ctx, &(*swd)->sw_ctx,
+                      axf->ctxsize);
+              }
             break;
 
           case CRYPTO_AES_128_GMAC:
@@ -814,6 +848,18 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
 
           case CRYPTO_AES_256_GMAC:
             axf = &auth_hash_gmac_aes_256;
+            goto auth4common;
+
+          case CRYPTO_AES_128_CMAC:
+            axf = &auth_hash_cmac_aes_128;
+            goto auth4common;
+
+          case CRYPTO_POLY1305:
+            axf = &auth_hash_poly1305;
+            goto auth4common;
+
+          case CRYPTO_CRC32:
+            axf = &auth_hash_crc32;
             goto auth4common;
 
           case CRYPTO_CHACHA20_POLY1305_MAC:
@@ -830,6 +876,7 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             axf->init((*swd)->sw_ictx);
             axf->setkey((*swd)->sw_ictx, (FAR uint8_t *)cri->cri_key,
                         cri->cri_klen / 8);
+            bcopy((*swd)->sw_ictx, &(*swd)->sw_ctx, axf->ctxsize);
             (*swd)->sw_axf = axf;
             break;
 
@@ -887,6 +934,7 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_AES_XTS:
           case CRYPTO_AES_GCM_16:
           case CRYPTO_AES_GMAC:
+          case CRYPTO_AES_CMAC:
           case CRYPTO_AES_OFB:
           case CRYPTO_AES_CFB_8:
           case CRYPTO_AES_CFB_128:
@@ -927,13 +975,17 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_AES_128_GMAC:
           case CRYPTO_AES_192_GMAC:
           case CRYPTO_AES_256_GMAC:
+          case CRYPTO_AES_128_CMAC:
           case CRYPTO_CHACHA20_POLY1305_MAC:
           case CRYPTO_MD5:
+          case CRYPTO_POLY1305:
+          case CRYPTO_RIPEMD160:
           case CRYPTO_SHA1:
           case CRYPTO_SHA2_224:
           case CRYPTO_SHA2_256:
           case CRYPTO_SHA2_384:
           case CRYPTO_SHA2_512:
+          case CRYPTO_CRC32:
             axf = swd->sw_axf;
 
             if (swd->sw_ictx)
@@ -1061,11 +1113,14 @@ int swcr_process(struct cryptop *crp)
             break;
 
           case CRYPTO_MD5:
+          case CRYPTO_POLY1305:
+          case CRYPTO_RIPEMD160:
           case CRYPTO_SHA1:
           case CRYPTO_SHA2_224:
           case CRYPTO_SHA2_256:
           case CRYPTO_SHA2_384:
           case CRYPTO_SHA2_512:
+          case CRYPTO_CRC32:
             if ((crp->crp_etype = swcr_hash(crp, crd, sw,
                 crp->crp_buf)) != 0)
               {
@@ -1079,6 +1134,7 @@ int swcr_process(struct cryptop *crp)
           case CRYPTO_AES_128_GMAC:
           case CRYPTO_AES_192_GMAC:
           case CRYPTO_AES_256_GMAC:
+          case CRYPTO_AES_128_CMAC:
           case CRYPTO_CHACHA20_POLY1305:
           case CRYPTO_CHACHA20_POLY1305_MAC:
             crp->crp_etype = swcr_authenc(crp);
@@ -1140,7 +1196,7 @@ int swcr_kprocess(struct cryptkop *krp)
 
   switch (krp->krp_op)
     {
-      case CRK_RSA_PCKS15_VERIFY:
+      case CRK_RSA_PKCS15_VERIFY:
         if ((krp->krp_status = swcr_rsa_verify(krp)) != 0)
           {
             goto done;
@@ -1199,16 +1255,21 @@ void swcr_init(void)
   algs[CRYPTO_CHACHA20_POLY1305] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_CHACHA20_POLY1305_MAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_MD5] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_POLY1305] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_RIPEMD160] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA1] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_224] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_256] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_384] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_512] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_CRC32] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_AES_CMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
+  algs[CRYPTO_AES_128_CMAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_ESN] = CRYPTO_ALG_FLAG_SUPPORTED;
 
   crypto_register(swcr_id, algs, swcr_newsession,
                   swcr_freesession, swcr_process);
 
-  kalgs[CRK_RSA_PCKS15_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PKCS15_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   crypto_kregister(swcr_id, kalgs, swcr_kprocess);
 }
