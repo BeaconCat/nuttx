@@ -121,10 +121,7 @@ struct regulator_desc_s
   unsigned int   boot_on;           /* true if this regulator is to be enabled
                                      * at power up/reset
                                      */
-  unsigned int   always_on;         /* true if this regulator is always on */
-  unsigned int   bypass_on;         /* true if this regulator should be ignored
-                                     * during initialization
-                                     */
+  unsigned int   always_on;
   FAR const char *supply_name;
 #ifdef CONFIG_PM
   unsigned int auto_lp;
