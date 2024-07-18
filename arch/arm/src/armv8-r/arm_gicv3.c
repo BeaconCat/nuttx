@@ -247,7 +247,7 @@ void arm_gic_irq_enable(unsigned int intid)
 
   if (GIC_IS_SPI(intid))
     {
-      arm_gic_write_irouter(up_cpu_index(), intid);
+      arm_gic_write_irouter(this_cpu(), intid);
     }
 }
 
@@ -528,15 +528,7 @@ static void gicv3_dist_init(void)
        intid += GIC_NUM_CFG_PER_REG)
     {
       idx = intid / GIC_NUM_CFG_PER_REG;
-#ifdef CONFIG_ARMV8R_GIC_SPI_EDGE
-      /* Configure all SPIs as edge-triggered by default */
-
-      putreg32(0xaaaaaaaa, ICFGR(base, idx));
-#else
-      /* Configure all SPIs as level-sensitive by default */
-
       putreg32(0, ICFGR(base, idx));
-#endif
     }
 
   /* TODO: Some arrch64 Cortex-A core maybe without security state
@@ -569,11 +561,10 @@ static void gicv3_dist_init(void)
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-
-#  ifdef CONFIG_SMP_CALL
+  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
+                         arm64_pause_async_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
                          nxsched_smp_call_handler, NULL));
-#  endif
 #endif
 }
 
@@ -799,7 +790,7 @@ static void arm_gic_init(void)
 
   cpu             = this_cpu();
   gic_rdists[cpu] = CONFIG_GICR_BASE +
-                    up_cpu_index() * CONFIG_GICR_OFFSET;
+                    this_cpu() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
@@ -814,6 +805,7 @@ static void arm_gic_init(void)
 
 #ifdef CONFIG_SMP
   up_enable_irq(GIC_SMP_CPUPAUSE);
+  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
 #endif
 }
 
@@ -841,7 +833,21 @@ void arm_gic_secondary_init(void)
   arm_gic_init();
 }
 
-#  ifdef CONFIG_SMP_CALL
+#  ifdef CONFIG_SMP
+/***************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ***************************************************************************/
+
 void up_send_smp_call(cpu_set_t cpuset)
 {
   up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
