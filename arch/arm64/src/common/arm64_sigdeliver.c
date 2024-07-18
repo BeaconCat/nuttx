@@ -54,7 +54,7 @@
 
 void arm64_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s  *rtcb = this_task();
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal
@@ -64,7 +64,9 @@ void arm64_sigdeliver(void)
 
   irqstate_t  flags;
   int16_t saved_irqcount;
-  flags = (rtcb->xcp.saved_reg[REG_SPSR] & SPSR_DAIF_MASK);
+  struct regs_context  *pctx =
+                (struct regs_context *)rtcb->xcp.saved_reg;
+  flags = (pctx->spsr & SPSR_DAIF_MASK);
 #endif
 
   sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
