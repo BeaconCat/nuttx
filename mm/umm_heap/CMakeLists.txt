@@ -1,6 +1,8 @@
 # ##############################################################################
 # mm/umm_heap/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -21,10 +23,8 @@
 # User heap allocator
 
 set(SRCS
-    umm_globals.c
     umm_initialize.c
     umm_addregion.c
-    umm_malloc_size.c
     umm_brkaddr.c
     umm_calloc.c
     umm_extend.c
@@ -35,7 +35,9 @@ set(SRCS
     umm_realloc.c
     umm_zalloc.c
     umm_heapmember.c
-    umm_memdump.c)
+    umm_globals.c
+    umm_memdump.c
+    umm_malloc_size.c)
 
 if(CONFIG_BUILD_KERNEL)
   list(APPEND SRCS umm_sbrk.c)

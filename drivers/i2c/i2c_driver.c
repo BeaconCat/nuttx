@@ -116,16 +116,16 @@ static const struct file_operations g_i2cdrvr_fops =
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int i2cdrvr_open(FAR struct file *filep)
 {
+  FAR struct inode *inode;
   FAR struct i2c_driver_s *priv;
   int ret;
 
-  /* Sanity check */
-
-  DEBUGASSERT(filep->f_inode->i_private != NULL);
-
   /* Get our private data structure */
 
-  priv = filep->f_inode->i_private;
+  inode = filep->f_inode;
+
+  priv = inode->i_private;
+  DEBUGASSERT(priv);
 
   /* Get exclusive access to the I2C driver state structure */
 
@@ -164,16 +164,16 @@ out:
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int i2cdrvr_close(FAR struct file *filep)
 {
+  FAR struct inode *inode;
   FAR struct i2c_driver_s *priv;
   int ret;
 
-  /* Sanity check */
-
-  DEBUGASSERT(filep->f_inode->i_private != NULL);
-
   /* Get our private data structure */
 
-  priv = filep->f_inode->i_private;
+  inode = filep->f_inode;
+
+  priv = inode->i_private;
+  DEBUGASSERT(priv);
 
   /* Get exclusive access to the I2C driver state structure */
 
@@ -207,7 +207,6 @@ static int i2cdrvr_close(FAR struct file *filep)
     {
       nxmutex_destroy(&priv->lock);
       kmm_free(priv);
-      filep->f_inode->i_private = NULL;
       return OK;
     }
 
@@ -243,18 +242,19 @@ static ssize_t i2cdrvr_write(FAR struct file *filep, FAR const char *buffer,
 
 static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
+  FAR struct inode *inode;
   FAR struct i2c_driver_s *priv;
   FAR struct i2c_transfer_s *transfer;
   int ret;
 
-  /* Sanity check */
-
-  DEBUGASSERT(filep->f_inode->i_private != NULL);
   i2cinfo("cmd=%x arg=%08lx\n", cmd, arg);
 
   /* Get our private data structure */
 
-  priv = filep->f_inode->i_private;
+  inode = filep->f_inode;
+
+  priv = inode->i_private;
+  DEBUGASSERT(priv);
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   /* Get exclusive access to the I2C driver state structure */
@@ -325,12 +325,9 @@ static int i2cdrvr_unlink(FAR struct inode *inode)
   FAR struct i2c_driver_s *priv;
   int ret;
 
-  /* Sanity check */
-
-  DEBUGASSERT(inode->i_private != NULL);
-
   /* Get our private data structure */
 
+  DEBUGASSERT(inode->i_private != NULL);
   priv = inode->i_private;
 
   /* Get exclusive access to the I2C driver state structure */
@@ -347,7 +344,6 @@ static int i2cdrvr_unlink(FAR struct inode *inode)
     {
       nxmutex_destroy(&priv->lock);
       kmm_free(priv);
-      inode->i_private = NULL;
       return OK;
     }
 
@@ -411,7 +407,7 @@ int i2c_register(FAR struct i2c_master_s *i2c, int bus)
 
       /* Create the character device name */
 
-      snprintf(devname, DEVNAME_FMTLEN, DEVNAME_FMT, bus);
+      snprintf(devname, sizeof(devname), DEVNAME_FMT, bus);
       ret = register_driver(devname, &g_i2cdrvr_fops, 0666, priv);
       if (ret < 0)
         {

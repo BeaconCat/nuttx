@@ -30,7 +30,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/pci/pci.h>
 #include <nuttx/spinlock.h>
 #include <arch/irq.h>
 
@@ -73,7 +72,7 @@ static void arm_gic_init_done(void)
   irqstate_t flags;
 
   flags = spin_lock_irqsave(NULL);
-  CPU_SET(this_cpu(), &g_gic_init_done);
+  CPU_SET(up_cpu_index(), &g_gic_init_done);
   spin_unlock_irqrestore(NULL, flags);
 }
 
@@ -211,17 +210,11 @@ void arm_gic0_initialize(void)
       putreg32(0x01010101, GIC_ICDIPTR(irq));  /* SPI on CPU0 */
     }
 
-#ifdef CONFIG_ARMV7A_GICv2M
-  gic_v2m_initialize();
-#endif
-
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUSTART, arm_start_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm_pause_async_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
                          nxsched_smp_call_handler, NULL));
 #endif
@@ -776,28 +769,4 @@ void up_send_smp_call(cpu_set_t cpuset)
   up_trigger_irq(GIC_SMP_CPUCALL, cpuset);
 }
 #endif
-
-/****************************************************************************
- * Name: up_get_legacy_irq
- *
- * Description:
- *   Reserve vector for legacy
- *
- ****************************************************************************/
-
-int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
-{
-#if CONFIG_ARMV7A_GICV2_LEGACY_IRQ0 >= 0
-  uint8_t slot;
-  uint8_t tmp;
-
-  UNUSED(line);
-  slot = PCI_SLOT(devfn);
-  tmp = (pin - 1 + slot) % 4;
-  return CONFIG_ARMV7A_GICV2_LEGACY_IRQ0 + tmp;
-#else
-  return -ENOTSUP;
-#endif
-}
-
 #endif /* CONFIG_ARMV7A_HAVE_GICv2 */
