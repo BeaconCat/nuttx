@@ -30,7 +30,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 #include "rpmsgmtd.h"
 
@@ -166,9 +166,8 @@ static int rpmsgmtd_bread_handler(FAR struct rpmsg_endpoint *ept,
       rsp->header.result = ret;
       rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret * msg->blocksize) +
                         sizeof(*rsp) - 1);
-      if (ret < 0)
+      if (ret <= 0)
         {
-          rpmsg_release_tx_buffer(ept, rsp);
           ferr("mtd block read failed\n");
           break;
         }
@@ -247,9 +246,8 @@ static int rpmsgmtd_read_handler(FAR struct rpmsg_endpoint *ept,
 
       rsp->header.result = ret;
       rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret) + sizeof(*rsp) - 1);
-      if (ret < 0)
+      if (ret <= 0)
         {
-          rpmsg_release_tx_buffer(ept, rsp);
           break;
         }
 
