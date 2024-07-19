@@ -28,7 +28,6 @@
 #include <errno.h>
 
 #include <nuttx/cancelpt.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
 #include "socket/socket.h"
@@ -166,7 +165,6 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 ssize_t recvmsg(int sockfd, FAR struct msghdr *msg, int flags)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
   ssize_t ret;
 
   /* recvmsg() is a cancellation point */
@@ -175,14 +173,13 @@ ssize_t recvmsg(int sockfd, FAR struct msghdr *msg, int flags)
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &filep, &psock);
+  ret = sockfd_socket(sockfd, &psock);
 
   /* Let psock_recvmsg() do all of the work */
 
   if (ret == OK)
     {
       ret = psock_recvmsg(psock, msg, flags);
-      fs_putfilep(filep);
     }
 
   if (ret < 0)
