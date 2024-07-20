@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <netpacket/can.h>
+
 #include <nuttx/net/net.h>
 #include <nuttx/net/can.h>
 
@@ -51,7 +53,7 @@
  *   'option' argument to the value pointed to by the 'value' argument for
  *   the socket specified by the 'psock' argument.
  *
- *   See <nuttx/can.h> for the a complete list of values of CAN protocol
+ *   See <netinet/can.h> for the a complete list of values of CAN protocol
  *   options.
  *
  * Input Parameters:

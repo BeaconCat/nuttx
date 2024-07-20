@@ -448,14 +448,6 @@ void up_backtrace_init_code_regions(void **regions)
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
- * Assumptions:
- *   Have to make sure tcb keep safe during function executing, it means
- *   1. Tcb have to be self or not-running.  In SMP case, the running task
- *      PC & SP cannot be backtrace, as whose get from tcb is not the newest.
- *   2. Tcb have to keep not be freed.  In task exiting case, have to
- *      make sure the tcb get from pid and up_backtrace in one critical
- *      section procedure.
- *
  ****************************************************************************/
 
 nosanitize_address
@@ -484,7 +476,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
           ret = backtrace_push((void *)(INTSTACK_SIZE +
-                               up_get_intstackbase(this_cpu())),
+                               up_get_intstackbase(up_cpu_index())),
                                &sp, (void *)up_backtrace + 16,
                                buffer, size, &skip);
 #else
@@ -495,10 +487,10 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #endif
           if (ret < size)
             {
-              sp = up_current_regs()[REG_SP];
+              sp = (void *)CURRENT_REGS[REG_SP];
               ret += backtrace_push(rtcb->stack_base_ptr +
                                     rtcb->adj_stack_size, &sp,
-                                    (void *)up_current_regs()[REG_PC],
+                                    (void *)CURRENT_REGS[REG_PC],
                                     &buffer[ret], size - ret, &skip);
             }
         }
