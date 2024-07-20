@@ -1,6 +1,7 @@
 /****************************************************************************
  * net/ipfrag/ipv6_frag.c
- * Handling incoming IPv6 fragment input
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -354,8 +355,8 @@ ipv6_fragout_buildipv6fragheader(FAR struct ipv6_fragment_extension_s *frag,
   frag->reserved = 0;
   frag->msoffset = ipoff >> 8;
   frag->lsoffset = ipoff & 0xff;
-  *(uint16_t *)&frag->id[0] = HTONL(ipid) & 0xffff;
-  *(uint16_t *)&frag->id[2] = HTONL(ipid) >> 16;
+  *(FAR uint16_t *)&frag->id[0] = HTONL(ipid) & 0xffff;
+  *(FAR uint16_t *)&frag->id[2] = HTONL(ipid) >> 16;
 }
 
 /****************************************************************************

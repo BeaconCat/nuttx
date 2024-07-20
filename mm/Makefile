@@ -1,6 +1,8 @@
 ############################################################################
 # mm/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@ include kmm_heap/Make.defs
 include mm_gran/Make.defs
 include shm/Make.defs
 include iob/Make.defs
+include circbuf/Make.defs
 include mempool/Make.defs
 include kasan/Make.defs
 include ubsan/Make.defs
@@ -91,10 +94,18 @@ endif
 
 context::
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, bin/Make.dep, $^)
+	$(call DELFILE, $^)
+
+makekdepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, kbin/Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MKDEP) --obj-path bin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >bin/Make.dep
+	$(Q) $(MAKE) makedepfile OBJPATH="bin"
 ifneq ($(CONFIG_BUILD_FLAT),y)
-	$(Q) $(MKDEP) --obj-path kbin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) $(KDEFINE) -- $(SRCS) >kbin/Make.dep
+	$(Q) $(MAKE) makekdepfile CFLAGS="$(CFLAGS) $(KDEFINE)" OBJPATH="kbin"
 endif
 	$(Q) touch $@
 
