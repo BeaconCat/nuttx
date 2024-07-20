@@ -31,8 +31,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PINMUX_USART1_RXD_0        (GPIO_PERIPH | GPIO_FUNCA | GPIO_PORTA | 5)
-#define PINMUX_USART1_TXD_0        (GPIO_PERIPH | GPIO_FUNCA | GPIO_PORTA | 6)
+#warning "Not Implemented"
 
 /****************************************************************************
  * Public Types
@@ -46,4 +45,4 @@
  * Public Functions Prototypes
  ****************************************************************************/
 
-#endif /* __ARCH_AVR_SRC_AT32UC3_AT32UC3A_PINMUX_H */
+#endif /* __ARCH_AVR_SRC_AT32UC3_AT32UC3_PINMUX_H */
