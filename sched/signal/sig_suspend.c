@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/signal/sig_suspend.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -77,9 +79,10 @@
 
 int sigsuspend(FAR const sigset_t *set)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   sigset_t saved_sigprocmask;
   irqstate_t flags;
+  bool switch_needed;
 
   /* sigsuspend() is a cancellation point */
 
@@ -91,8 +94,8 @@ int sigsuspend(FAR const sigset_t *set)
    * can only be eliminated by disabling interrupts!
    */
 
+  sched_lock();  /* Not necessary */
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -124,18 +127,21 @@ int sigsuspend(FAR const sigset_t *set)
 
       DEBUGASSERT(!is_idle_task(rtcb));
 
-      /* Remove the tcb task from the running list. */
+      /* Remove the tcb task from the ready-to-run list. */
 
-      nxsched_remove_running(rtcb);
+      switch_needed = nxsched_remove_readytorun(rtcb, true);
 
       /* Add the task to the specified blocked task list */
 
       rtcb->task_state = TSTATE_WAIT_SIG;
-      dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
+      dq_addlast((FAR dq_entry_t *)rtcb, list_waitingforsignal());
 
-      /* Now, perform the context switch */
+      /* Now, perform the context switch if one is needed */
 
-      up_switch_context(this_task(), rtcb);
+      if (switch_needed)
+        {
+          up_switch_context(this_task(), rtcb);
+        }
 
       /* We are running again, restore the original sigprocmask */
 
@@ -150,6 +156,7 @@ int sigsuspend(FAR const sigset_t *set)
       nxsig_unmask_pendingsignal();
     }
 
+  sched_unlock();
   leave_cancellation_point();
   set_errno(EINTR);
   return ERROR;

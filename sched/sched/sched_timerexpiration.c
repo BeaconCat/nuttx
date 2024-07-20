@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_timerexpiration.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -337,23 +339,34 @@ static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
   clock_update_wall_time();
 #endif
 
-  /* Check for operations specific to scheduling policy of the currently
-   * active task.
+#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
+  /* Perform CPU load measurements (before any timer-initiated context
+   * switches can occur)
    */
 
-  tmp = nxsched_process_scheduler(ticks, elapsed, noswitches);
+  nxsched_process_cpuload_ticks(elapsed);
+#endif
+
+  /* Process watchdogs */
+
+  tmp = wd_timer(ticks, noswitches);
   if (tmp > 0)
     {
       rettime = tmp;
     }
 
-  /* Process watchdogs */
+  /* Check for operations specific to scheduling policy of the currently
+   * active task.
+   */
 
-  tmp = wd_timer(ticks, noswitches);
+  tmp = nxsched_process_scheduler(ticks, elapsed, noswitches);
+
+#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
   if (tmp > 0 && (rettime == 0 || tmp < rettime))
     {
       rettime = tmp;
     }
+#endif
 
   return rettime;
 }
