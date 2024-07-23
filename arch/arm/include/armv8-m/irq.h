@@ -72,8 +72,9 @@
 #define REG_R9              (7)  /* R9 */
 #define REG_R10             (8)  /* R10 */
 #define REG_R11             (9)  /* R11 */
-#define REG_EXC_RETURN      (10) /* EXC_RETURN */
-#define SW_INT_REGS         (11)
+#define REG_CONTROL         (10) /* CONTROL */
+#define REG_EXC_RETURN      (11) /* EXC_RETURN */
+#define SW_INT_REGS         (12)
 
 #ifdef CONFIG_ARCH_FPU
 
@@ -200,12 +201,6 @@
 #define CONTROL_SPSEL       (1 << 1) /* Bit 1: Stack-pointer select */
 #define CONTROL_NPRIV       (1 << 0) /* Bit 0: Not privileged */
 
-#ifdef CONFIG_ARMV8M_USEBASEPRI
-#  define up_irq_is_disabled(flags) ((flags) == NVIC_SYSH_DISABLE_PRIORITY)
-#else
-#  define up_irq_is_disabled(flags) ((flags) != 0)
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -266,26 +261,13 @@ struct xcptcontext
 
   uint32_t *regs;
 };
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-extern volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+#endif
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
+
+#ifndef __ASSEMBLY__
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -423,7 +405,7 @@ static inline void up_irq_enable(void)
 {
   /* In this case, we are always retaining or lowering the priority value */
 
-  setbasepri(0);
+  setbasepri(NVIC_SYSH_PRIORITY_MIN);
   __asm__ __volatile__ ("\tcpsie  i\n");
 }
 
@@ -526,49 +508,6 @@ static inline void setcontrol(uint32_t control)
       : "memory");
 }
 
-/****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- ****************************************************************************/
-
-int up_cpu_index(void) noinstrument_function;
-
-noinstrument_function
-static inline_function uint32_t *up_current_regs(void)
-{
-#ifdef CONFIG_SMP
-  return (uint32_t *)g_current_regs[up_cpu_index()];
-#else
-  return (uint32_t *)g_current_regs[0];
-#endif
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-#ifdef CONFIG_SMP
-  g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
-}
-
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return getipsr() != 0;
-}
-
 static inline_function uint32_t up_getsp(void)
 {
   uint32_t sp;
@@ -582,10 +521,17 @@ static inline_function uint32_t up_getsp(void)
   return sp;
 }
 
+#endif /* __ASSEMBLY__ */
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -598,6 +544,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif /* __ASSEMBLY__ */
+#endif
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV8_M_IRQ_H */
