@@ -346,10 +346,9 @@
 #define HPET0_IRQ    IRQ2
 #define HPET1_IRQ    IRQ8
 
-/* Use IRQ15 IRQ16 for SMP */
+/* Use IRQ15 for SMP */
 
 #define SMP_IPI_IRQ  IRQ15
-#define SMP_IPI_ASYNC_IRQ  IRQ16
 
 /* Common register save structure created by up_saveusercontext() and by
  * ISR/IRQ interrupt processing.
@@ -531,16 +530,16 @@ static inline void setidt(void *idt, int size)
   asm volatile ("lidt %0"::"m"(idt_ptr):"memory");
 }
 
-static inline uint64_t rdtscp(void)
+static inline uint64_t rdtsc(void)
 {
   uint32_t lo;
   uint32_t hi;
 
-  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
+  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"memory");
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
-static inline uint64_t rdtsc(void)
+static inline uint64_t _rdtsc(void)
 {
   uint32_t lo;
   uint32_t hi;

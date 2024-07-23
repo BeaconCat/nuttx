@@ -109,7 +109,11 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
   else
     {
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+      uint8_t mflags;
+#endif
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      uint8_t type;
       int16_t nlocks;
 #endif
 
@@ -127,7 +131,11 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
       /* Give up the mutex */
 
       mutex->pid = INVALID_PROCESS_ID;
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+      mflags     = mutex->flags;
+#endif
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      type       = mutex->type;
       nlocks     = mutex->nlocks;
 #endif
       ret        = pthread_mutex_give(mutex);
@@ -155,7 +163,11 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
       if (status == OK)
         {
           mutex->pid    = mypid;
+#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
+          mutex->flags  = mflags;
+#endif
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
+          mutex->type   = type;
           mutex->nlocks = nlocks;
 #endif
         }
