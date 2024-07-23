@@ -85,8 +85,4 @@ if(CONFIG_CAPTURE)
   list(APPEND SRCS capture.c)
 endif()
 
-if(CONFIG_GOLDFISH_TIMER)
-  list(APPEND SRCS goldfish_timer.c)
-endif()
-
 target_sources(drivers PRIVATE ${SRCS})

@@ -596,24 +596,6 @@
 #  define i2sinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_I3C_ERROR
-#  define i3cerr       _err
-#else
-#  define i3cerr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_WARN
-#  define i3cwarn     _warn
-#else
-#  define i3cwarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_INFO
-#  define i3cinfo     _info
-#else
-#  define i3cinfo     _none
-#endif
-
 #ifdef CONFIG_DEBUG_PWM_ERROR
 #  define pwmerr       _err
 #else
@@ -866,6 +848,24 @@
 #  define mtrinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_STEPPER_ERROR
+#  define stperr      _err
+#else
+#  define stperr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_WARN
+#  define stpwarn     _warn
+#else
+#  define stpwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_INFO
+#  define stpinfo     _info
+#else
+#  define stpinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_VIDEO_ERROR
 #  define verr        _err
 #else
@@ -900,24 +900,6 @@
 #  define vrtinfo     _info
 #else
 #  define vrtinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_VHOST_ERROR
-#  define vhosterr     _err
-#else
-#  define vhosterr     _none
-#endif
-
-#ifdef CONFIG_DEBUG_VHOST_WARN
-#  define vhostwarn    _warn
-#else
-#  define vhostwarn    _none
-#endif
-
-#ifdef CONFIG_DEBUG_VHOST_INFO
-#  define vhostinfo    _info
-#else
-#  define vhostinfo    _none
 #endif
 
 #ifdef CONFIG_DEBUG_RESET_ERROR
@@ -974,6 +956,24 @@
 #  define pciinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_RPMSG_ERROR
+#  define rpmsgerr       _err
+#else
+#  define rpmsgerr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPMSG_WARN
+#  define rpmsgwarn     _warn
+#else
+#  define rpmsgwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPMSG_INFO
+#  define rpmsginfo     _info
+#else
+#  define rpmsginfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_CORESIGHT_ERROR
 #  define cserr       _err
 #else
@@ -990,24 +990,6 @@
 #  define csinfo     _info
 #else
 #  define csinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_ERROR
-#  define rpmsgerr     _err
-#else
-#  define rpmsgerr     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_WARN
-#  define rpmsgwarn    _warn
-#else
-#  define rpmsgwarn    _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_INFO
-#  define rpmsginfo    _info
-#else
-#  define rpmsginfo    _none
 #endif
 
 /* Buffer dumping macros do not depend on varargs */
@@ -1208,14 +1190,6 @@
 #else
 #  define i2serrdumpbuffer(m,b,n)
 #  define i2sinfodumpbuffer(m,b,n)
-#endif
-
-#ifdef CONFIG_DEBUG_I3C
-#  define i3cerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
-#else
-#  define i3cerrdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n)
 #endif
 
 #ifdef CONFIG_DEBUG_PWM
