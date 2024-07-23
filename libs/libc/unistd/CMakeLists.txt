@@ -40,6 +40,11 @@ set(SRCS
     lib_statvfs.c
     lib_sleep.c
     lib_nice.c
+    lib_usleep.c
+    lib_seteuid.c
+    lib_setegid.c
+    lib_geteuid.c
+    lib_getegid.c
     lib_setreuid.c
     lib_setregid.c
     lib_getrusage.c
@@ -57,26 +62,11 @@ set(SRCS
     lib_linkat.c
     lib_readlinkat.c
     lib_symlinkat.c
-    lib_unlinkat.c
-    lib_usleep.c
-    lib_getpgrp.c
-    lib_getpgid.c
-    lib_lockf.c
     lib_flock.c
-    lib_getpass.c)
+    lib_unlinkat.c)
 
 if(NOT CONFIG_SCHED_USER_IDENTITY)
-  list(
-    APPEND
-    SRCS
-    lib_setuid.c
-    lib_setgid.c
-    lib_getuid.c
-    lib_getgid.c
-    lib_seteuid.c
-    lib_setegid.c
-    lib_geteuid.c
-    lib_getegid.c)
+  list(APPEND SRCS lib_setuid.c lib_setgid.c lib_getuid.c lib_getgid.c)
 endif()
 
 if(NOT CONFIG_DISABLE_ENVIRON)
@@ -96,10 +86,6 @@ if(CONFIG_ARCH_HAVE_FORK)
   if(CONFIG_SCHED_WAITPID)
     list(APPEND SRCS lib_vfork.c)
   endif()
-endif()
-
-if(CONFIG_CRYPTO)
-  list(APPEND SRCS lib_crypt.c lib_crypt_r.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})
