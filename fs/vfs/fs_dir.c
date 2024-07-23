@@ -80,7 +80,7 @@ static struct inode g_dir_inode =
   NULL,
   NULL,
   NULL,
-  1,
+  ATOMIC_VAR_INIT(1),
   0,
   { &g_dir_fileops },
 };

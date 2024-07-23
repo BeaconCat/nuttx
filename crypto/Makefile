@@ -43,7 +43,6 @@ ifeq ($(CONFIG_CRYPTO_SW_AES),y)
 endif
 CRYPTO_CSRCS += blake2s.c
 CRYPTO_CSRCS += blf.c
-CRYPTO_CSRCS += bn.c
 CRYPTO_CSRCS += cast.c
 CRYPTO_CSRCS += chachapoly.c
 CRYPTO_CSRCS += ecb_enc.c
@@ -60,11 +59,12 @@ CRYPTO_CSRCS += cmac.c
 CRYPTO_CSRCS += hmac.c
 ifeq ($(CONFIG_CRYPTO_RANDOM_POOL),y)
   CRYPTO_CSRCS += idgen.c
-  CRYPTO_CSRCS += curve25519.c
 endif
 CRYPTO_CSRCS += key_wrap.c
 CRYPTO_CSRCS += siphash.c
 CRYPTO_CSRCS += hmac_buff.c
+CRYPTO_CSRCS += curve25519.c
+CRYPTO_CSRCS += bn.c
 
 # Entropy pool random number generator
 
@@ -97,9 +97,13 @@ $(COBJS): %$(OBJEXT): %.c
 $(BIN): $(OBJS)
 	$(call ARCHIVE, $@, $(OBJS))
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(CONFIG_CRYPTO),y)
-	$(Q) $(MKDEP) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile
 endif
 	$(Q) touch $@
 

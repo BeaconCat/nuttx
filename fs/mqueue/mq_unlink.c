@@ -65,9 +65,9 @@ static void mq_inode_release(FAR struct inode *inode)
           nxmq_free_msgq(msgq);
           inode->i_private = NULL;
         }
-    }
 
-  inode_release(inode);
+      inode_release(inode);
+    }
 }
 
 /****************************************************************************
@@ -137,7 +137,12 @@ int file_mq_unlink(FAR const char *mq_name)
    * functioning as a directory and the directory is not empty.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto errout_with_inode;
+    }
+
   if (inode->i_child != NULL)
     {
       ret = -ENOTEMPTY;
