@@ -97,8 +97,7 @@ struct mbstate_s
   int __fill[6];
 };
 
-typedef struct mbstate_s mbstate_s;
-#define mbstate_t mbstate_s
+typedef struct mbstate_s mbstate_t;
 
 /* FILE
  *   As described in <stdio.h>.
