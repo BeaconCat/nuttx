@@ -115,8 +115,14 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
-  struct tcb_s *rtcb = running_task();
+  struct tcb_s *rtcb = (struct tcb_s *)arch_get_current_tcb();
+  struct regs_context * p_regs;
   int ret;
+
+  if (rtcb == NULL)
+    {
+      rtcb = running_task();
+    }
 
   if (size <= 0 || !buffer)
     {
@@ -128,7 +134,7 @@ int up_backtrace(struct tcb_s *tcb,
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-          void *istackbase = (void *)up_get_intstackbase(this_cpu());
+          void *istackbase = (void *)up_get_intstackbase(up_cpu_index());
           ret = backtrace(istackbase,
                           istackbase + INTSTACK_SIZE,
                           (void *)__builtin_frame_address(0),
@@ -141,10 +147,11 @@ int up_backtrace(struct tcb_s *tcb,
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
           if (ret < size)
             {
+              p_regs = (struct regs_context *)CURRENT_REGS;
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                               (void *)up_current_regs()[REG_X29],
-                               (void *)up_current_regs()[REG_ELR],
+                               (void *)p_regs->regs[REG_X29],
+                               (void *)p_regs->elr,
                                &buffer[ret], size - ret, &skip);
             }
         }
@@ -158,10 +165,12 @@ int up_backtrace(struct tcb_s *tcb,
     }
   else
     {
+      p_regs = (struct regs_context *)tcb->xcp.regs;
+
       ret = backtrace(tcb->stack_base_ptr,
                       tcb->stack_base_ptr + tcb->adj_stack_size,
-                      (void *)tcb->xcp.regs[REG_X29],
-                      (void *)tcb->xcp.regs[REG_ELR],
+                      (void *)p_regs->regs[REG_X29],
+                      (void *)p_regs->elr,
                       buffer, size, &skip);
     }
 

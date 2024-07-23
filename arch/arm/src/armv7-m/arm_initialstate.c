@@ -111,12 +111,6 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_XPSR]    = ARMV7M_XPSR_T;
 
-  /* All tasks need set to pic address to special register */
-
-#ifdef CONFIG_BUILD_PIC
-  __asm__ ("mov %0, r9" : "=r"(xcp->regs[REG_R9]));
-#endif
-
   /* If this task is running PIC, then set the PIC base register to the
    * address of the allocated D-Space region.
    */
@@ -148,11 +142,9 @@ void up_initial_state(struct tcb_s *tcb)
    * mode before transferring control to the user task.
    */
 
-#ifdef CONFIG_BUILD_PROTECTED
-  xcp->regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
-#else
   xcp->regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-#endif
+
+  xcp->regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
 
 #ifdef CONFIG_ARCH_FPU
   xcp->regs[REG_FPSCR]   = 0; /* REVISIT: Initial FPSCR should be configurable */
@@ -171,7 +163,7 @@ void up_initial_state(struct tcb_s *tcb)
 #else /* CONFIG_SUPPRESS_INTERRUPTS */
 
 #ifdef CONFIG_ARMV7M_USEBASEPRI
-  xcp->regs[REG_BASEPRI] = 0;
+  xcp->regs[REG_BASEPRI] = NVIC_SYSH_PRIORITY_MIN;
 #endif
 
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
@@ -188,7 +180,7 @@ void up_initial_state(struct tcb_s *tcb)
 
 noinline_function void arm_initialize_stack(void)
 {
-  uint32_t stack = up_get_intstackbase(this_cpu()) + INTSTACK_SIZE;
+  uint32_t stack = up_get_intstackbase(up_cpu_index()) + INTSTACK_SIZE;
   uint32_t temp = 0;
 
   __asm__ __volatile__
