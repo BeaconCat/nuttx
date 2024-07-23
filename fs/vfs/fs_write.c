@@ -146,7 +146,6 @@ ssize_t nx_write(int fd, FAR const void *buf, size_t nbytes)
        */
 
       ret = file_write(filep, buf, nbytes);
-      fs_putfilep(filep);
     }
 
   return ret;
