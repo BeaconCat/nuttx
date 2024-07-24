@@ -31,7 +31,6 @@
 
 #include <nuttx/fs/fs.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -171,7 +170,12 @@ int nx_unlink(FAR const char *pathname)
        * return -EBUSY to indicate that the inode was not deleted now.
        */
 
-      inode_lock();
+      ret = inode_lock();
+      if (ret < 0)
+        {
+          goto errout_with_inode;
+        }
+
       ret = inode_remove(pathname);
       inode_unlock();
 
@@ -186,9 +190,6 @@ int nx_unlink(FAR const char *pathname)
 
   inode_release(inode);
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_unlink(pathname);
-#endif
   return OK;
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_DISABLE_PSEUDOFS_OPERATIONS)

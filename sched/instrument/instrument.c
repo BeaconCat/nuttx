@@ -29,7 +29,7 @@
  ****************************************************************************/
 
 #if CONFIG_SCHED_STACK_RECORD > 0
-extern struct instrument_s g_stack_monitor;
+extern struct instrument_s g_stack_record;
 #endif
 
 /****************************************************************************
@@ -53,6 +53,6 @@ extern struct instrument_s g_stack_monitor;
 void instrument_initialize(void)
 {
 #if CONFIG_SCHED_STACK_RECORD > 0
-  instrument_register(&g_stack_monitor);
+  instrument_register(&g_stack_record);
 #endif
 }

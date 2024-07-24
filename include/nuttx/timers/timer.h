@@ -33,7 +33,6 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <sys/types.h>
-#include <assert.h>
 
 #ifdef CONFIG_TIMER
 
