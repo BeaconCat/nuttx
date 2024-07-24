@@ -57,6 +57,6 @@ void up_systemreset(void)
 
   while (1)
     {
-     __asm__ volatile("hlt");
+      asm volatile("hlt");
     }
 }
