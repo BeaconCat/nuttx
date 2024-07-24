@@ -36,7 +36,6 @@
 
 #include "mmu.h"
 #include "pgalloc.h"
-#include "sched/sched.h"
 
 #ifdef CONFIG_BUILD_KERNEL
 
@@ -183,7 +182,7 @@ static int get_pgtable(arch_addrenv_t *addrenv, uintptr_t vaddr)
 
 uintptr_t pgalloc(uintptr_t brkaddr, unsigned int npages)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = nxsched_self();
   struct arch_addrenv_s *addrenv;
   uint32_t *l2table;
   irqstate_t flags;
