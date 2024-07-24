@@ -495,14 +495,6 @@ void up_dump_register(FAR void *regs);
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
- * Assumptions:
- *   Have to make sure tcb keep safe during function executing, it means
- *   1. Tcb have to be self or not-running.  In SMP case, the running task
- *      PC & SP cannot be backtrace, as whose get from tcb is not the newest.
- *   2. Tcb have to keep not be freed.  In task exiting case, have to
- *      make sure the tcb get from pid and up_backtrace in one critical
- *      section procedure.
- *
  ****************************************************************************/
 
 int up_backtrace(FAR struct tcb_s *tcb,
@@ -769,17 +761,12 @@ void up_extraheaps_init(void);
  * Name: up_textheap_memalign
  *
  * Description:
- *   Allocate memory for text with the specified alignment and sectname.
+ *   Allocate memory for text sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_textheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_textheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -807,20 +794,59 @@ bool up_textheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
+ * Name: up_textheap_data_address
+ *
+ * Description:
+ *   If an instruction bus address is specified, return the corresponding
+ *   data bus address. Otherwise, return the given address as it is.
+ *
+ *   For some platforms, up_textheap_memalign() might return memory regions
+ *   with separate instruction/data bus mappings. In that case,
+ *   up_textheap_memalign() returns the address of the instruction bus
+ *   mapping.
+ *   The instruction bus mapping might provide only limited data access.
+ *   (For example, only read-only, word-aligned access.)
+ *   You can use up_textheap_data_address() to query the corresponding data
+ *   bus mapping.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
+#if defined(CONFIG_ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS)
+FAR void *up_textheap_data_address(FAR void *p);
+#else
+#define up_textheap_data_address(p) ((FAR void *)p)
+#endif
+#endif
+
+/****************************************************************************
+ * Name: up_textheap_data_sync
+ *
+ * Description:
+ *   Ensure modifications made on the data bus addresses (the addresses
+ *   returned by up_textheap_data_address) fully visible on the corresponding
+ *   instruction bus addresses.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
+#if defined(CONFIG_ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS)
+void up_textheap_data_sync(void);
+#else
+#define up_textheap_data_sync() do {} while (0)
+#endif
+#endif
+
+/****************************************************************************
  * Name: up_dataheap_memalign
  *
  * Description:
- *   Allocate memory for data with the specified alignment and sectname.
+ *   Allocate memory for data sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_dataheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_dataheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -1408,12 +1434,31 @@ uintptr_t up_addrenv_page_vaddr(uintptr_t page);
  *   vaddr - The virtual address.
  *
  * Returned Value:
- *   True if it is; false if it's not
+ *   True if it is; false if it's not.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
 bool up_addrenv_user_vaddr(uintptr_t vaddr);
+#endif
+
+/****************************************************************************
+ * Name: up_addrenv_page_wipe
+ *
+ * Description:
+ *   Wipe a page of physical memory, first mapping it into kernel virtual
+ *   memory.
+ *
+ * Input Parameters:
+ *   page - The page physical address.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+void up_addrenv_page_wipe(uintptr_t page);
 #endif
 
 /****************************************************************************
@@ -2249,29 +2294,6 @@ int up_cpu_pause(int cpu);
 #endif
 
 /****************************************************************************
- * Name: up_cpu_pause_async
- *
- * Description:
- *   pause task execution on the CPU
- *   check whether there are tasks delivered to specified cpu
- *   and try to run them.
- *
- * Input Parameters:
- *   cpu - The index of the CPU to be paused.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section;
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-int up_cpu_pause_async(int cpu);
-#endif
-
-/****************************************************************************
  * Name: up_cpu_pausereq
  *
  * Description:
@@ -2372,7 +2394,7 @@ int up_cpu_paused_restore(void);
  *   state of the task at the head of the g_assignedtasks[cpu] list, and
  *   resume normal tasking.
  *
- *   This function is called after up_cpu_pause in order to resume operation
+ *   This function is called after up_cpu_pause in order ot resume operation
  *   of the CPU after modifying its g_assignedtasks[cpu] list.
  *
  * Input Parameters:
@@ -2511,22 +2533,6 @@ void nxsched_timer_expiration(void);
 void nxsched_alarm_expiration(FAR const struct timespec *ts);
 void nxsched_alarm_tick_expiration(clock_t ticks);
 #endif
-
-/****************************************************************************
- * Name:  nxsched_get_next_expired
- *
- * Description:
- *   Get the time remaining until the next timer expiration.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   The time remaining until the next timer expiration.
- *
- ****************************************************************************/
-
-clock_t nxsched_get_next_expired(void);
 
 /****************************************************************************
  * Name: nxsched_process_cpuload_ticks
@@ -2896,9 +2902,9 @@ void arch_sporadic_resume(FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 void up_perf_init(FAR void *arg);
-clock_t up_perf_gettime(void);
+unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
-void up_perf_convert(clock_t elapsed, FAR struct timespec *ts);
+void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
@@ -3001,78 +3007,6 @@ int up_debugpoint_add(int type, FAR void *addr, size_t size,
  ****************************************************************************/
 
 int up_debugpoint_remove(int type, FAR void *addr, size_t size);
-
-#endif
-
-#ifdef CONFIG_PCI
-
-/****************************************************************************
- * Name: up_alloc_irq_msi
- *
- * Description:
- *  Allocate interrupts for MSI/MSI-X vector.
- *
- * Input Parameters:
- *   bus - Bus that PCI device resides
- *   irq - allocated vectors array
- *   num - number of vectors to allocate
- *
- * Returned Value:
- *   >0: success, return number of allocated vectors,
- *   <0: A negative value errno
- *
- ****************************************************************************/
-
-int up_alloc_irq_msi(FAR int *num);
-
-/****************************************************************************
- * Name: up_release_irq_msi
- *
- * Description:
- *  Allocate interrupts for MSI/MSI-X vector.
- *
- * Input Parameters:
- *   bus - Bus that PCI device resides
- *   irq - vectors array to release
- *   num - number of vectors in array
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_release_irq_msi(FAR int *irq, int num);
-
-/****************************************************************************
- * Name: up_connect_irq
- *
- * Description:
- *  Connect interrupt for MSI/MSI-X.
- *
- * Input Parameters:
- *   bus - Bus that PCI device resides
- *   irq - vectors array
- *   num - number of vectors in array
- *   mar - returned value for Message Address Register
- *   mdr - returned value for Message Data Register
- *
- * Returned Value:
- *   >0: success, 0: A positive value errno
- *
- ****************************************************************************/
-
-int up_connect_irq(FAR int *irq, int num,
-                   FAR uintptr_t *mar, FAR uint32_t *mdr);
-
-/****************************************************************************
- * Name: up_get_legacy_irq
- *
- * Description:
- *   Reserve vector for legacy
- *
- ****************************************************************************/
-
-int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin);
 
 #endif
 
