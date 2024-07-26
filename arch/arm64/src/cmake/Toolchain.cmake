@@ -32,6 +32,7 @@ set(CMAKE_CXX_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
 set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}-gcc -E -P -x c)
 set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strl dunneeded)
 set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
 set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
@@ -95,10 +96,6 @@ if(CONFIG_STACK_CANARIES)
   add_compile_options(-fstack-protector-all)
 endif()
 
-if(CONFIG_ARCH_COVERAGE_ALL)
-  add_compile_options(-fprofile-generate -ftest-coverage)
-endif()
-
 if(CONFIG_MM_UBSAN_ALL)
   add_compile_options(${CONFIG_MM_UBSAN_OPTION})
 endif()
@@ -127,11 +124,8 @@ add_compile_options(
   -Wno-attributes
   -Wno-unknown-pragmas
   $<$<COMPILE_LANGUAGE:C>:-Werror>
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-endif()
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 
 if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   add_compile_options(-Wno-psabi)
@@ -162,7 +156,7 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g)
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 if(CONFIG_ARCH_TOOLCHAIN_GNU)

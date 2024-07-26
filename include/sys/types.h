@@ -192,14 +192,14 @@ typedef _wchar_t     wchar_t;
  *   An integral type capable of storing any valid value of wchar_t, or WEOF.
  */
 
-typedef int wint_t;
+typedef _wint_t wint_t;
 
 /* wctype_t
  *   A scalar type of a data object that can hold values which represent
  *   locale-specific character classification.
  */
 
-typedef int wctype_t;
+typedef _wctype_t wctype_t;
 
 #if defined(CONFIG_FS_LARGEFILE)
 /* Large file versions */
@@ -249,7 +249,7 @@ typedef uint16_t     sa_family_t;
 
 #ifdef CONFIG_SYSTEM_TIME64
 typedef uint64_t     clock_t;
-typedef uint64_t     time_t;         /* Holds time in seconds */
+typedef int64_t      time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t     clock_t;
 typedef uint32_t     time_t;         /* Holds time in seconds */
@@ -316,7 +316,7 @@ typedef CODE int (*main_t)(int argc, FAR char *argv[]);
 enum
 {
   ERROR = -1,
-  OK = 0,
+  OK = 0
 };
 
 /****************************************************************************
