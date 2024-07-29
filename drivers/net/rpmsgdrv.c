@@ -39,7 +39,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/pkt.h>
 #include <nuttx/net/rpmsg.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -214,11 +214,6 @@ static int net_rpmsg_drv_transmit(FAR struct net_driver_s *dev, bool nocopy)
 
   if (ret < 0)
     {
-      if (nocopy)
-        {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
-        }
-
       NETDEV_TXERRORS(dev);
       return ret;
     }
@@ -335,8 +330,8 @@ static int net_rpmsg_drv_sockioctl_task(int argc, FAR char *argv[])
 
   /* Restore pointers from argv */
 
-  ept = (FAR struct rpmsg_endpoint *)strtoul(argv[1], NULL, 16);
-  msg = (FAR struct net_rpmsg_ioctl_s *)strtoul(argv[2], NULL, 16);
+  ept = (FAR struct rpmsg_endpoint *)strtoul(argv[1], NULL, 0);
+  msg = (FAR struct net_rpmsg_ioctl_s *)strtoul(argv[2], NULL, 0);
 
   /* We need a temporary sock for ioctl here */
 

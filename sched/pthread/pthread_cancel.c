@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/pthread.h>
 
 #include "sched/sched.h"
 #include "task/task.h"
@@ -97,7 +97,9 @@ int pthread_cancel(pthread_t thread)
 
   /* Refer to tls_get_info() */
 
-  tls_cleanup_popall(tcb->stack_alloc_ptr);
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+  pthread_cleanup_popall(tcb->stack_alloc_ptr);
+#endif
 
   /* Complete pending join operations */
 

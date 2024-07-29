@@ -62,7 +62,7 @@ SECTIONS
     {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
+        KEEP(*(.init_array .ctors))
         _einit = ABSOLUTE(.);
     } > norflash
 
@@ -92,6 +92,22 @@ SECTIONS
 
     _eronly = LOADADDR(.data);
 
+    .ramfunc ALIGN(4):
+    {
+        _sramfuncs = ABSOLUTE(.);
+        *(.ramfunc  .ramfunc.*)
+        _eramfuncs = ABSOLUTE(.);
+    } > isram AT > norflash
+
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
+    } > isram
+
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -102,23 +118,7 @@ SECTIONS
         _ebss = ABSOLUTE(.);
     } > isram
 
-    .ramfunc ALIGN(4):
-    {
-        _sramfuncs = ABSOLUTE(.);
-        *(.ramfunc  .ramfunc.*)
-        _eramfuncs = ABSOLUTE(.);
-    } > isram AT > norflash
-
      _framfuncs = LOADADDR(.ramfunc);
-
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > isram
 
     /* Stabs debugging sections. */
 

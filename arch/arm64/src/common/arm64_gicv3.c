@@ -69,6 +69,9 @@
 #  define IGROUPR_SGI_VAL 0xFFFFFFFFU
 #endif
 
+#define PENDING_GRP1NS_INTID 1021
+#define SPURIOUS_INT         1023
+
 /***************************************************************************
  * Private Data
  ***************************************************************************/
@@ -247,6 +250,16 @@ void arm64_gic_irq_enable(unsigned int intid)
   uint32_t idx  = intid / GIC_NUM_INTR_PER_REG;
 
   putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
+
+  /* Affinity routing is enabled for Non-secure state (GICD_CTLR.ARE_NS
+   * is set to '1' when GIC distributor is initialized) ,so need to set
+   * SPI's affinity, now set it to be the PE on which it is enabled.
+   */
+
+  if (GIC_IS_SPI(intid))
+    {
+      arm64_gic_write_irouter((GET_MPIDR() & MPIDR_ID_MASK), intid);
+    }
 }
 
 void arm64_gic_irq_disable(unsigned int intid)
@@ -395,7 +408,7 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   return 0;
 }
 
-void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
+int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 {
   uint64_t pre_cluster_id = UINT64_MAX;
   uint64_t curr_cluster_id;
@@ -424,6 +437,8 @@ void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
     }
 
   arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
+
+  return 0;
 }
 
 /* Wake up GIC redistributor.
@@ -529,7 +544,6 @@ static void gicv3_cpuif_init(void)
 
 static void gicv3_dist_init(void)
 {
-  uint64_t      mpid;
   unsigned int  num_ints;
   unsigned int  intid;
   unsigned int  idx;
@@ -602,15 +616,6 @@ static void gicv3_dist_init(void)
       putreg32(0, ICFGR(base, idx));
     }
 
-  /* Configure SPI interrupt affinity routing to CPU0 */
-
-  mpid = arm64_get_mpid(0);
-
-  for (intid = GIC_SPI_INT_BASE; intid < num_ints; intid++)
-    {
-      putreg64(mpid, IROUTER(GIC_DIST_BASE, intid));
-    }
-
   /* TODO: Some arrch64 Cortex-A core maybe without security state
    * it has different GIC configure with standard arrch64 A or R core
    */
@@ -651,10 +656,11 @@ static void gicv3_dist_init(void)
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
-  DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
-                         arm64_pause_async_handler, NULL));
+
+#  ifdef CONFIG_SMP_CALL
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
                          nxsched_smp_call_handler, NULL));
+#  endif
 #endif
 }
 
@@ -783,7 +789,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -807,11 +813,33 @@ uint64_t * arm64_decodefiq(uint64_t * regs)
 
   irq = arm64_gic_get_active_fiq();
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  /* FIQ is group0 interrupt */
+
+  if (irq == PENDING_GRP1NS_INTID)
+    {
+      /* irq 1021 indicates that the irq being acked is expected at EL1/EL2.
+       * However, EL3 has no interrupts, only FIQs, see:
+       * 'Arm® Generic Interrupt Controller, Architecture Specification GIC
+       *  architecture version 3 and version 4' Arm IHI 0069G (ID011821)
+       * 'Table 4-3 Interrupt signals for two Security states when EL3 is
+       *  using AArch64 state'
+       *
+       * Thus we know there's an interrupt so let's handle it from group1.
+       */
+
+      regs = arm64_decodeirq(regs);
+      arm64_gic_eoi_fiq(irq);
+
+      return regs;
+    }
+#endif
+
   /* Ignore spurions IRQs.  ICCIAR will report 1023 if there is no pending
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -914,7 +942,7 @@ static void arm64_gic_init(void)
 
   cpu             = this_cpu();
   gic_rdists[cpu] = CONFIG_GICR_BASE +
-                    this_cpu() * CONFIG_GICR_OFFSET;
+                    up_cpu_index() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
@@ -929,8 +957,7 @@ static void arm64_gic_init(void)
 
 #ifdef CONFIG_SMP
   up_enable_irq(GIC_SMP_CPUPAUSE);
-  up_enable_irq(GIC_SMP_CPUPAUSE_ASYNC);
-#  ifdef CONFIG_SMP
+#  ifdef CONFIG_SMP_CALL
   up_enable_irq(GIC_SMP_CPUCALL);
 #  endif
 #endif
@@ -960,21 +987,7 @@ void arm64_gic_secondary_init(void)
   arm64_gic_init();
 }
 
-#  ifdef CONFIG_SMP
-/***************************************************************************
- * Name: up_send_smp_call
- *
- * Description:
- *   Send smp call to target cpu.
- *
- * Input Parameters:
- *   cpuset - The set of CPUs to receive the SGI.
- *
- * Returned Value:
- *   None.
- *
- ***************************************************************************/
-
+#  ifdef CONFIG_SMP_CALL
 void up_send_smp_call(cpu_set_t cpuset)
 {
   up_trigger_irq(GIC_SMP_CPUCALL, cpuset);

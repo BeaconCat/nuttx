@@ -38,7 +38,7 @@
  * Public Types
  ****************************************************************************/
 
-#ifdef CONFIG_COREDUMP
+#ifdef CONFIG_ELF_COREDUMP
 typedef struct elf_prpsinfo_s
 {
   char           pr_state;    /* Numeric process state */
