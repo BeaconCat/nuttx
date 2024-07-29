@@ -52,12 +52,25 @@
 #endif
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /* Chip-specific entrypoint */
 
 extern void __start(void);
+
+static void start(void)
+{
+  /* Zero lr to mark the end of backtrace */
+
+  asm volatile ("mov lr, #0\n\t");
+
+  __start();
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /* Common exception entrypoint */
 
@@ -84,7 +97,7 @@ const void * const _vectors[] locate_data(".vectors") =
 
   /* Reset exception handler */
 
-  __start,
+  start,
 
   /* Vectors 2 - n point directly at the generic handler */
 
