@@ -97,9 +97,8 @@ int netlink_notifier_setup(worker_t worker, FAR struct netlink_conn_s *conn,
  *
  ****************************************************************************/
 
-void netlink_notifier_teardown(FAR void *arg)
+void netlink_notifier_teardown(FAR struct netlink_conn_s *conn)
 {
-  FAR struct netlink_conn_s *conn = arg;
   DEBUGASSERT(conn != NULL);
 
   /* This is just a simple wrapper around work_notifier_teardown(). */
