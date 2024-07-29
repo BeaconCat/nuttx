@@ -48,7 +48,7 @@ double difftime(time_t time1, time_t time0)
 {
   return (double)time1 - (double)time0;
 }
-#elif defined(CONFIG_HAVE_FLOAT)
+#else
 float difftime(time_t time1, time_t time0)
 {
   if (time1 >= time0)
