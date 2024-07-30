@@ -28,15 +28,33 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
+
+#if defined(CONFIG_TICKET_SPINLOCK) || defined(CONFIG_RW_SPINLOCK)
+#  if !defined(__cplusplus)
+#    include <stdatomic.h>
+#    define CONFIG_HAVE_INLINE_SPINLOCK
+#  elif  defined(__has_include) && __has_include(<atomic>)
+extern "C++"
+{
+#    include <atomic>
+#    define CONFIG_HAVE_INLINE_SPINLOCK
+  using std::atomic_int;
+  using std::atomic_load;
+  using std::atomic_uint;
+  using std::atomic_ushort;
+  using std::atomic_fetch_add;
+  using std::atomic_fetch_sub;
+  using std::atomic_compare_exchange_strong;
+}
+#  endif
+#else
+#  define CONFIG_HAVE_INLINE_SPINLOCK
+#endif
 
 #include <nuttx/compiler.h>
 #include <nuttx/irq.h>
-
-#if defined(CONFIG_TICKET_SPINLOCK) || defined(CONFIG_RW_SPINLOCK)
-#  include <nuttx/atomic.h>
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -129,6 +147,18 @@ typedef union spinlock_u spinlock_t;
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+void sched_note_spinlock_lock(FAR volatile spinlock_t *spinlock);
+void sched_note_spinlock_locked(FAR volatile spinlock_t *spinlock);
+void sched_note_spinlock_abort(FAR volatile spinlock_t *spinlock);
+void sched_note_spinlock_unlock(FAR volatile spinlock_t *spinlock);
+#else
+#  define sched_note_spinlock_lock(spinlock)
+#  define sched_note_spinlock_locked(spinlock)
+#  define sched_note_spinlock_abort(spinlock)
+#  define sched_note_spinlock_unlocked(spinlock)
+#endif
+
 /****************************************************************************
  * Name: up_testset
  *
@@ -151,7 +181,7 @@ typedef union spinlock_u spinlock_t;
 
 #if defined(CONFIG_ARCH_HAVE_TESTSET)
 spinlock_t up_testset(FAR volatile spinlock_t *lock);
-#elif !defined(CONFIG_SMP)
+#else
 static inline spinlock_t up_testset(FAR volatile spinlock_t *lock)
 {
   irqstate_t flags;
@@ -190,6 +220,8 @@ static inline spinlock_t up_testset(FAR volatile spinlock_t *lock)
 /* void spin_lock_init(FAR spinlock_t *lock); */
 #define spin_lock_init(l) do { *(l) = SP_UNLOCKED; } while (0)
 
+#ifdef CONFIG_HAVE_INLINE_SPINLOCK
+
 /****************************************************************************
  * Name: spin_lock
  *
@@ -216,11 +248,10 @@ static inline spinlock_t up_testset(FAR volatile spinlock_t *lock)
 static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
 
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock_lock(lock);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -238,7 +269,7 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock_locked(lock);
 #endif
   SP_DMB();
 }
@@ -304,11 +335,10 @@ static inline_function void spin_lock_wo_note(FAR volatile spinlock_t *lock)
 static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
 
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock_lock(lock);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -338,7 +368,7 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
       /* Notify that we abort for a spinlock */
 
-      sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_ABORT);
+      sched_note_spinlock_abort(lock);
 #endif
       SP_DSB();
       return false;
@@ -347,7 +377,7 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock_locked(lock);
 #endif
   SP_DMB();
   return true;
@@ -433,7 +463,7 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we are unlocking the spinlock */
 
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_UNLOCK);
+  sched_note_spinlock_unlock(lock);
 #  endif
 
   SP_DMB();
@@ -521,7 +551,7 @@ spin_unlock_wo_note(FAR volatile spinlock_t *lock)
 
 /* void spin_initialize(FAR spinlock_t *lock, spinlock_t state); */
 
-#define spin_initialize(l,s) do { SP_DMB(); *(l) = (s); } while (0)
+#define spin_initialize(l,s) do { *(l) = (s); } while (0)
 
 /****************************************************************************
  * Name: spin_lock_irqsave
@@ -556,7 +586,7 @@ spin_unlock_wo_note(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 irqstate_t spin_lock_irqsave(FAR spinlock_t *lock);
 #else
 #  define spin_lock_irqsave(l) ((void)(l), up_irq_save())
@@ -566,7 +596,7 @@ irqstate_t spin_lock_irqsave(FAR spinlock_t *lock);
  * Name: spin_lock_irqsave_wo_note
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 irqstate_t spin_lock_irqsave_wo_note(FAR spinlock_t *lock);
 #else
 #  define spin_lock_irqsave_wo_note(l) ((void)(l), up_irq_save())
@@ -601,7 +631,7 @@ irqstate_t spin_lock_irqsave_wo_note(FAR spinlock_t *lock);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 void spin_unlock_irqrestore(FAR spinlock_t *lock, irqstate_t flags);
 #else
 #  define spin_unlock_irqrestore(l, f) up_irq_restore(f)
@@ -611,7 +641,7 @@ void spin_unlock_irqrestore(FAR spinlock_t *lock, irqstate_t flags);
  * Name: spin_unlock_irqrestore_wo_note
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 void spin_unlock_irqrestore_wo_note(FAR spinlock_t *lock, irqstate_t flags);
 #else
 #  define spin_unlock_irqrestore_wo_note(l, f) up_irq_restore(f)
@@ -893,7 +923,7 @@ static inline_function void write_unlock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 irqstate_t read_lock_irqsave(FAR rwlock_t *lock);
 #else
 #  define read_lock_irqsave(l) ((void)(l), up_irq_save())
@@ -926,7 +956,7 @@ irqstate_t read_lock_irqsave(FAR rwlock_t *lock);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 void read_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
 #else
 #  define read_unlock_irqrestore(l, f) up_irq_restore(f)
@@ -965,7 +995,7 @@ void read_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 irqstate_t write_lock_irqsave(FAR rwlock_t *lock);
 #else
 #  define write_lock_irqsave(l) ((void)(l), up_irq_save())
@@ -1000,13 +1030,14 @@ irqstate_t write_lock_irqsave(FAR rwlock_t *lock);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SPINLOCK)
 void write_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
 #else
 #  define write_unlock_irqrestore(l, f) up_irq_restore(f)
 #endif
 
 #endif /* CONFIG_RW_SPINLOCK */
+#endif /* CONFIG_HAVE_INLINE_SPINLOCK */
 
 #undef EXTERN
 #if defined(__cplusplus)

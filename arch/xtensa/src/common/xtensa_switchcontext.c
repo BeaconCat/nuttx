@@ -63,11 +63,23 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   /* Are we in an interrupt handler? */
 
-  if (up_current_regs())
+  if (CURRENT_REGS)
     {
+      /* Yes, then we have to do things differently.
+       * Just copy the CURRENT_REGS into the OLD rtcb.
+       */
+
+      xtensa_savestate(rtcb->xcp.regs);
+
       /* Update scheduler parameters */
 
       nxsched_resume_scheduler(tcb);
+
+      /* Then switch contexts.  Any necessary address environment
+       * changes will be made when the interrupt returns.
+       */
+
+      xtensa_restorestate(tcb->xcp.regs);
     }
 
   /* No, then we will need to perform the user context switch */
