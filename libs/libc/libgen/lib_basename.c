@@ -83,7 +83,7 @@ FAR char *basename(FAR char *path)
         }
       else
         {
-          return path;
+          return "/";
         }
     }
 
