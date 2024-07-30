@@ -35,7 +35,6 @@
 #  include <stdint.h>
 #  include <nuttx/pgalloc.h>
 #  include <nuttx/addrenv.h>
-#  include <nuttx/nuttx.h>
 #endif
 
 /****************************************************************************
@@ -48,37 +47,6 @@
 #endif
 
 #endif /* CONFIG_ARCH_ADDRENV */
-
-/****************************************************************************
- * Name:
- *   read_/write_/zero_ sysreg
- *
- * Description:
- *
- *   ARMv8 Architecture Registers access method
- *   All the macros need a memory clobber
- *
- ****************************************************************************/
-
-#define read_sysreg(reg)                           \
-  ({                                               \
-    uint64_t __val;                                \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)    \
-                      : "=r" (__val) :: "memory"); \
-    __val;                                         \
-  })
-
-#define write_sysreg(__val, reg)                   \
-  __asm__ volatile ("msr " STRINGIFY(reg) ", %0"   \
-                    :: "r" (__val) : "memory")
-
-#define zero_sysreg(reg)                           \
-  __asm__ volatile ("msr " STRINGIFY(reg) ", xzr"  \
-                    ::: "memory")
-
-#define modify_sysreg(v,m,a) \
-  write_sysreg((read_sysreg(a) & ~(m)) |           \
-               ((uintptr_t)(v) & (m)), a)
 
 /****************************************************************************
  * Inline functions
