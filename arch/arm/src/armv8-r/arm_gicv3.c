@@ -33,7 +33,6 @@
 
 #include "arm_internal.h"
 #include "barriers.h"
-#include "cp15.h"
 #include "arm_gic.h"
 
 /***************************************************************************
@@ -67,7 +66,7 @@
 
 /* Redistributor base addresses for each core */
 
-static unsigned long gic_rdists[CONFIG_SMP_NCPUS];
+static unsigned long g_gic_rdists[CONFIG_SMP_NCPUS];
 
 /***************************************************************************
  * Private Functions
@@ -101,7 +100,7 @@ static inline int sys_test_bit(unsigned long addr, unsigned int bit)
 
 static inline unsigned long gic_get_rdist(void)
 {
-  return gic_rdists[this_cpu()];
+  return g_gic_rdists[this_cpu()];
 }
 
 static inline uint32_t read_gicd_wait_rwp(void)
@@ -238,8 +237,6 @@ void arm_gic_irq_enable(unsigned int intid)
   uint32_t mask = BIT(intid & (GIC_NUM_INTR_PER_REG - 1));
   uint32_t idx  = intid / GIC_NUM_INTR_PER_REG;
 
-  putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
-
   /* Affinity routing is enabled for Non-secure state (GICD_CTLR.ARE_NS
    * is set to '1' when GIC distributor is initialized) ,so need to set
    * SPI's affinity, now set it to be the PE on which it is enabled.
@@ -249,6 +246,8 @@ void arm_gic_irq_enable(unsigned int intid)
     {
       arm_gic_write_irouter(this_cpu(), intid);
     }
+
+  putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
 }
 
 void arm_gic_irq_disable(unsigned int intid)
@@ -528,7 +527,15 @@ static void gicv3_dist_init(void)
        intid += GIC_NUM_CFG_PER_REG)
     {
       idx = intid / GIC_NUM_CFG_PER_REG;
+#ifdef CONFIG_ARMV8R_GIC_SPI_EDGE
+      /* Configure all SPIs as edge-triggered by default */
+
+      putreg32(0xaaaaaaaa, ICFGR(base, idx));
+#else
+      /* Configure all SPIs as level-sensitive by default */
+
       putreg32(0, ICFGR(base, idx));
+#endif
     }
 
   /* TODO: Some arrch64 Cortex-A core maybe without security state
@@ -618,7 +625,11 @@ void up_affinity_irq(int irq, cpu_set_t cpuset)
 {
   if (GIC_IS_SPI(irq))
     {
-      arm_gic_write_irouter(cpuset, irq);
+      /* Only support interrupt routing mode 0,
+       * so routing to the first cpu in cpuset.
+       */
+
+      arm_gic_write_irouter(ffs(cpuset) - 1, irq);
     }
 }
 
@@ -785,8 +796,8 @@ static void arm_gic_init(void)
   uint8_t   cpu;
   int       err;
 
-  cpu             = this_cpu();
-  gic_rdists[cpu] = CONFIG_GICR_BASE + cpu * CONFIG_GICR_OFFSET;
+  cpu               = this_cpu();
+  g_gic_rdists[cpu] = CONFIG_GICR_BASE + cpu * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
