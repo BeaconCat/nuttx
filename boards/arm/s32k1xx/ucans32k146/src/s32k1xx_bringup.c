@@ -128,7 +128,7 @@ int s32k1xx_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_I2C_DRIVER
+#ifdef CONFIG_S32K1XX_LPI2C
   /* Initialize I2C driver */
 
   ret = s32k1xx_i2cdev_initialize();
