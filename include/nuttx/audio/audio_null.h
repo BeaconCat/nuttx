@@ -99,8 +99,9 @@ extern "C"
  *   Initialize the null audio device.
  *
  * Input Parameters:
- *   playback - True: initialize for playback only
- *              False: initialize for recording only
+ *   i2c     - An I2C driver instance
+ *   i2s     - An I2S driver instance
+ *   lower   - Persistent board configuration data
  *
  * Returned Value:
  *   A new lower half audio interface for the NULL audio device is returned
@@ -110,7 +111,7 @@ extern "C"
 
 struct audio_lowerhalf_s; /* Forward reference. Defined in nuttx/audio/audio.h */
 
-FAR struct audio_lowerhalf_s *audio_null_initialize(bool playback);
+FAR struct audio_lowerhalf_s *audio_null_initialize(void);
 
 #undef EXTERN
 #ifdef __cplusplus
