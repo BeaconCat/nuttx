@@ -83,7 +83,7 @@ static int restart_handler(FAR void *cookie)
       tcb->flags = arg->saved_flags;
     }
 
-  nxsched_remove(tcb);
+  nxsched_remove_readytorun(tcb, false);
 
   leave_critical_section(flags);
 
@@ -117,7 +117,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 
   if (remove)
     {
-      nxsched_remove_not_running(tcb);
+      nxsched_remove_readytorun(tcb, false);
     }
 
   /* Deallocate anything left in the TCB's signal queues */
@@ -155,7 +155,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 
   /* Add the task to the inactive task list */
 
-  dq_addfirst((FAR dq_entry_t *)tcb, &g_inactivetasks);
+  dq_addfirst((FAR dq_entry_t *)tcb, list_inactivetasks());
   tcb->task_state = TSTATE_TASK_INACTIVE;
 }
 
