@@ -27,9 +27,7 @@
 
 #include <nuttx/config.h>
 
-#ifndef __ASSEMBLY__
-#  include <stddef.h>
-#endif
+#include <stddef.h>
 
 /****************************************************************************
  * Pre-processor Definitions
