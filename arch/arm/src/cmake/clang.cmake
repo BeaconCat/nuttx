@@ -50,7 +50,7 @@ if(TOOLCHAIN_CLANG_CONFIG)
 
   if(CLANGVER STREQUAL "14.0")
     set(TOOLCHAIN_CLANG_CONFIG ${TOOLCHAIN_CLANG_CONFIG}_nosys)
-  elseif(CLANGVER STREQUAL "17.0")
+  elseif(CLANGVER STRGREATER_EQUAL "17.0")
     set(TOOLCHAIN_CLANG_OPTION -target)
     add_compile_options(--target=arm-none-eabi)
   else()
@@ -233,4 +233,4 @@ endif()
 
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-c")
 
-set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
