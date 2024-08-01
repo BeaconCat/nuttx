@@ -83,7 +83,7 @@ int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg)
   unsigned int count;
   uint16_t port;
   int keylen;
-  int ret = OK;
+  int ret;
 
   /* Open the resolver configuration file */
 

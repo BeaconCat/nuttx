@@ -29,10 +29,9 @@ set(SRCS
     arm_svcall.c
     arm_systemreset.c
     arm_tcbinfo.c
-    arm_trigger_irq.c
     arm_vectors.c)
 
-if(CONFIG_DEBUG_FEATURES or CONFIG_ARM_COREDUMP_REGION)
+if(CONFIG_DEBUG_FEATURES)
   list(APPEND SRCS arm_dumpnvic.c)
 endif()
 
