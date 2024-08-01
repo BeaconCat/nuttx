@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm/src/common/CMakeLists.txt
+# arch/risc-v/src/common/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -25,14 +25,17 @@ list(APPEND SRCS riscv_saveusercontext.S)
 list(APPEND SRCS riscv_allocateheap.c riscv_cpuidlestack.c)
 list(APPEND SRCS riscv_cpuinfo.c riscv_createstack.c riscv_doirq.c
      riscv_exception.c)
-list(APPEND SRCS riscv_exit.c riscv_getintstack.c riscv_getnewintctx.c
-     riscv_idle.c)
+list(APPEND SRCS riscv_exit.c riscv_getintstack.c riscv_getnewintctx.c)
 list(APPEND SRCS riscv_initialize.c riscv_initialstate.c riscv_modifyreg32.c)
 list(APPEND SRCS riscv_mtimer.c riscv_nputs.c riscv_registerdump.c)
 list(APPEND SRCS riscv_releasestack.c riscv_schedulesigaction.c
      riscv_sigdeliver.c)
 list(APPEND SRCS riscv_stackframe.c riscv_tcbinfo.c riscv_swint.c)
 list(APPEND SRCS riscv_switchcontext.c riscv_usestack.c)
+
+if(NOT CONFIG_ARCH_IDLE_CUSTOM)
+  list(APPEND SRCS riscv_idle.c)
+endif()
 
 if(NOT CONFIG_ALARM_ARCH)
   if(NOT CONFIG_TIMER_ARCH)
@@ -55,7 +58,9 @@ endif()
 if(NOT CONFIG_BUILD_FLAT)
   list(APPEND SRCS riscv_task_start.c riscv_pthread_start.c
        riscv_signal_dispatch.c)
-  target_sources(arch_interface PRIVATE riscv_signal_handler.S)
+  if(CONFIG_BUILD_PROTECTED)
+    target_sources(arch_interface PRIVATE riscv_signal_handler.S)
+  endif()
 endif()
 
 if(CONFIG_SCHED_BACKTRACE)
@@ -78,6 +83,18 @@ if(CONFIG_ARCH_FPU)
   list(APPEND SRCS riscv_fpu.S riscv_fpucmp.c)
 endif()
 
+if(CONFIG_ARCH_RV_ISA_V)
+  list(APPEND SRCS riscv_vpu.S)
+endif()
+
+if(CONFIG_ARCH_RV_HAVE_APLIC)
+  list(APPEND SRCS riscv_aplic.c)
+endif()
+
+if(CONFIG_ARCH_RV_HAVE_IMSIC)
+  list(APPEND SRCS riscv_imsic.c)
+endif()
+
 if(CONFIG_RISCV_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS riscv_semihost.S riscv_hostfs.c)
 endif()
@@ -91,7 +108,7 @@ if(CONFIG_ARCH_USE_MMU)
 endif()
 
 if(CONFIG_ARCH_KERNEL_STACK)
-  list(APPEND SRCS riscv_addrenv_kstack.c riscv_ksp.c)
+  list(APPEND SRCS riscv_addrenv_kstack.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
@@ -99,8 +116,11 @@ if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS riscv_addrenv_utils.c riscv_addrenv_shm.c)
 endif()
 
-if(CONFIG_BUILD_KERNEL)
+if(CONFIG_RISCV_PERCPU_SCRATCH)
   list(APPEND SRCS riscv_percpu.c)
+endif()
+
+if(CONFIG_ARCH_USE_S_MODE)
   add_subdirectory(supervisor)
 endif()
 

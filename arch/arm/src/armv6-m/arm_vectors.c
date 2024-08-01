@@ -45,8 +45,6 @@
 
 #include "chip.h"
 #include "arm_internal.h"
-#include "ram_vectors.h"
-#include "nvic.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -83,7 +81,6 @@ static void start(void)
 /* Common exception entrypoint */
 
 extern void exception_common(void);
-extern void exception_direct(void);
 
 /****************************************************************************
  * Public data
@@ -95,11 +92,10 @@ extern void exception_direct(void);
  * As all exceptions (interrupts) are routed via exception_common, we just
  * need to fill this array with pointers to it.
  *
- * Note that the [ ... ] designated initializer is a GCC extension.
+ * Note that the [ ... ] designated initialiser is a GCC extension.
  */
 
-const void * const _vectors[] locate_data(".vectors")
-                              aligned_data(VECTAB_ALIGN) =
+const void * const _vectors[] locate_data(".vectors") =
 {
   /* Initial stack */
 
@@ -111,7 +107,5 @@ const void * const _vectors[] locate_data(".vectors")
 
   /* Vectors 2 - n point directly at the generic handler */
 
-  [2 ... NVIC_IRQ_PENDSV] = &exception_common,
-  [(NVIC_IRQ_PENDSV + 1) ... (15 + ARMV6M_PERIPHERAL_INTERRUPTS)]
-                          = &exception_direct
+  [2 ... (15 + ARMV6M_PERIPHERAL_INTERRUPTS)] = exception_common
 };

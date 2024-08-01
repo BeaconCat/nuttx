@@ -36,7 +36,6 @@ SYSCALL_LOOKUP(prctl,                      2)
   SYSCALL_LOOKUP(getppid,                  0)
 #endif
 
-SYSCALL_LOOKUP(sched_getcpu,               0)
 SYSCALL_LOOKUP(sched_getparam,             2)
 SYSCALL_LOOKUP(sched_getscheduler,         1)
 SYSCALL_LOOKUP(sched_lock,                 0)
@@ -54,6 +53,7 @@ SYSCALL_LOOKUP(nxsched_get_stackinfo,      2)
 
 #ifdef CONFIG_SMP
   SYSCALL_LOOKUP(sched_getaffinity,        3)
+  SYSCALL_LOOKUP(sched_getcpu,             0)
   SYSCALL_LOOKUP(sched_setaffinity,        3)
 #endif
 
@@ -183,9 +183,7 @@ SYSCALL_LOOKUP(clock_settime,              2)
 
 /* System logging */
 
-#ifdef CONFIG_SYSLOG
 SYSCALL_LOOKUP(nx_vsyslog,                 3)
-#endif
 
 /* The following are defined if either file or socket descriptor are
  * enabled.
