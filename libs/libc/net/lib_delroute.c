@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
@@ -55,6 +56,11 @@
 int delroute(int sockfd, FAR void *target, FAR void *netmask, socklen_t len)
 {
   struct rtentry entry;
+
+  if (len < sizeof(struct in_addr) || len > sizeof(struct sockaddr_storage))
+    {
+      return -EINVAL;
+    }
 
   /* Set up the rtentry structure */
 

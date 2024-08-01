@@ -31,7 +31,6 @@
 #include <nuttx/lib/lib.h>
 
 #include "client.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -491,7 +490,7 @@ static int v9fs_fid_create(FAR struct v9fs_client_s *client,
   int ret;
 
   len = strlen(relpath);
-  fid = fs_heap_zalloc(sizeof(struct v9fs_fid_s) + len);
+  fid = kmm_zalloc(sizeof(struct v9fs_fid_s) + len);
   if (fid == NULL)
     {
       return -ENOMEM;
@@ -509,7 +508,7 @@ static int v9fs_fid_create(FAR struct v9fs_client_s *client,
 
   /* Failed to initialize fid */
 
-  fs_heap_free(fid);
+  kmm_free(fid);
   return ret;
 }
 
@@ -532,7 +531,7 @@ static void v9fs_fid_destroy(FAR struct v9fs_client_s *client,
 
   idr_remove(client->fids, fid);
   nxmutex_unlock(&client->lock);
-  fs_heap_free(fidp);
+  kmm_free(fidp);
 }
 
 /****************************************************************************

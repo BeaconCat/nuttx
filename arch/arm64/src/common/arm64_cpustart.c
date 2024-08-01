@@ -113,7 +113,7 @@ static inline void local_delay(void)
 
 static void arm64_smp_init_top(void)
 {
-  struct tcb_s *tcb = current_task(this_cpu());
+  struct tcb_s *tcb = this_task();
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts */
@@ -134,7 +134,8 @@ static void arm64_smp_init_top(void)
 
   /* core n, idle n */
 
-  write_sysreg(tcb, tpidr_el0);
+  write_sysreg(0, tpidrro_el0);
+  UNUSED(tcb);
 
   nx_idle_trampoline();
 }
@@ -206,12 +207,6 @@ int up_cpu_start(int cpu)
   sched_note_cpu_start(this_task(), cpu);
 #endif
 
-#ifdef CONFIG_ARM64_SMP_BUSY_WAIT
-  uint32_t *address = (uint32_t *)CONFIG_ARM64_SMP_BUSY_WAIT_FLAG_ADDR;
-  *address = 1;
-  up_flush_dcache((uintptr_t)address, sizeof(address));
-#endif
-
   arm64_start_cpu(cpu);
 
   return 0;
@@ -221,12 +216,6 @@ int up_cpu_start(int cpu)
 
 void arm64_boot_secondary_c_routine(void)
 {
-  struct tcb_s *tcb = current_task(this_cpu());
-
-  /* Init idle task to percpu reg */
-
-  up_update_task(tcb);
-
 #ifdef CONFIG_ARCH_HAVE_MPU
   arm64_mpu_init(false);
 #endif
@@ -237,5 +226,10 @@ void arm64_boot_secondary_c_routine(void)
 
   arm64_gic_secondary_init();
 
+  arm64_arch_timer_secondary_init();
+
+  up_perf_init(NULL);
+
   arm64_smp_init_top();
 }
+
