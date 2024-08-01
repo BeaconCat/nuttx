@@ -85,11 +85,6 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-/* Poll support */
-
-static void    uart_poll_notify(FAR uart_dev_t *dev, unsigned int min,
-                                unsigned int max, pollevent_t eventset);
-
 /* Write support */
 
 static int     uart_putxmitchar(FAR uart_dev_t *dev, int ch,
@@ -158,67 +153,6 @@ static struct work_s g_serial_work;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: uart_is_termios_hw_change
- *
- * Description:
- *   Return true if the termios hw change
- *
- ****************************************************************************/
-
-static bool uart_is_termios_hw_change(FAR struct file *filep,
-                                      FAR const struct termios *new)
-{
-  FAR struct inode *inode = filep->f_inode;
-  FAR uart_dev_t *dev = inode->i_private;
-  struct termios old;
-  int ret;
-
-  if (new == NULL)
-    {
-      return false;
-    }
-
-  memset(&old, 0, sizeof(old));
-  ret = dev->ops->ioctl(filep, TCGETS, (unsigned long)&old);
-  if (ret >= 0)
-    {
-      if (old.c_speed != new->c_speed)
-        {
-          return true;
-        }
-
-      if ((old.c_cflag ^ new->c_cflag) & ~(HUPCL | CREAD | CLOCAL))
-        {
-          return true;
-        }
-    }
-
-  return false;
-}
-
-/****************************************************************************
- * Name: uart_poll_notify
- ****************************************************************************/
-
-static void uart_poll_notify(FAR uart_dev_t *dev, unsigned int min,
-                             unsigned int max, pollevent_t eventset)
-{
-  irqstate_t flags;
-
-  DEBUGASSERT(max > min && max - min <= CONFIG_SERIAL_NPOLLWAITERS);
-
-  flags = enter_critical_section();
-  nxsched_lock_irq();
-
-  /* Notify the fds in range dev->fds[min] - dev->fds[max] */
-
-  poll_notify(&dev->fds[min], max - min, eventset);
-
-  nxsched_unlock_irq();
-  leave_critical_section(flags);
-}
 
 /****************************************************************************
  * Name: uart_putxmitchar
@@ -804,6 +738,7 @@ static int uart_close(FAR struct file *filep)
       nxmutex_destroy(&dev->xmit.lock);
       nxmutex_destroy(&dev->recv.lock);
       nxmutex_destroy(&dev->closelock);
+      nxmutex_destroy(&dev->polllock);
       nxsem_destroy(&dev->xmitsem);
       nxsem_destroy(&dev->recvsem);
       uart_release(dev);
@@ -924,25 +859,6 @@ static ssize_t uart_read(FAR struct file *filep,
                 }
             }
 
-          if ((dev->tc_lflag & ICANON) &&
-              (ch == ASCII_BS || ch == ASCII_DEL))
-            {
-              if (recvd > 0)
-                {
-                  *buffer-- = '\0';
-                  recvd--;
-                  if (dev->tc_lflag & ECHO)
-                    {
-                      uart_putxmitchar(dev, '\b', true);
-                      uart_putxmitchar(dev, ' ', true);
-                      uart_putxmitchar(dev, '\b', true);
-                      echoed = true;
-                    }
-                }
-
-                continue;
-            }
-
           /* Specifically not handled:
            *
            * All of the local modes; echo, line editing, etc.
@@ -1001,11 +917,6 @@ static ssize_t uart_read(FAR struct file *filep,
                   echoed = true;
                 }
             }
-
-          if ((dev->tc_lflag & ICANON) && ch == '\n')
-            {
-              break;
-            }
         }
 
 #ifdef CONFIG_DEV_SERIAL_FULLBLOCKS
@@ -1032,7 +943,7 @@ static ssize_t uart_read(FAR struct file *filep,
        * to the caller?
        */
 
-      else if (recvd > 0 && !(dev->tc_lflag & ICANON))
+      else if (recvd > 0)
         {
           /* Yes.. break out of the loop and return the number of bytes
            * received up to the wait condition.
@@ -1134,38 +1045,17 @@ static ssize_t uart_read(FAR struct file *filep,
                    * thread goes to sleep.
                    */
 
-                  if (dev->tc_lflag & ICANON)
-                    {
 #ifdef CONFIG_SERIAL_TERMIOS
-                      dev->minrecv = 0;
-#endif
-                      nxmutex_unlock(&dev->recv.lock);
-                      ret = nxsem_wait(&dev->recvsem);
-                      nxmutex_lock(&dev->recv.lock);
+                  dev->minrecv = MIN(buflen - recvd, dev->minread - recvd);
+                  if (dev->timeout)
+                    {
+                      ret = nxsem_tickwait(&dev->recvsem,
+                                           DSEC2TICK(dev->timeout));
                     }
                   else
+#endif
                     {
-#ifdef CONFIG_SERIAL_TERMIOS
-                      dev->minrecv = MIN(buflen - recvd,
-                                         dev->minread - recvd);
-                      if (dev->timeout)
-                        {
-                          nxmutex_unlock(&dev->recv.lock);
-                          ret = nxsem_tickwait(&dev->recvsem,
-                                              DSEC2TICK(dev->timeout));
-                        }
-                      else
-#endif
-                        {
-                          nxmutex_unlock(&dev->recv.lock);
-                          ret = nxsem_wait(&dev->recvsem);
-                        }
-
-                      nxmutex_lock(&dev->recv.lock);
-
-#ifdef CONFIG_SERIAL_TERMIOS
-                      dev->minrecv = dev->minread;
-#endif
+                      ret = nxsem_wait(&dev->recvsem);
                     }
                 }
 
@@ -1459,20 +1349,12 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR uart_dev_t   *dev   = inode->i_private;
-  FAR struct termios *termiosp = (FAR struct termios *)(uintptr_t)arg;
-  int ret = -ENOTTY;
 
   /* Handle TTY-level IOCTLs here */
 
-  /* Let low-level driver handle the call first,
-   * but skip TCSETS if no hardware change.
-   */
+  /* Let low-level driver handle the call first */
 
-  if (dev->ops->ioctl && (cmd != TCSETS ||
-      uart_is_termios_hw_change(filep, termiosp)))
-    {
-      ret = dev->ops->ioctl(filep, cmd, arg);
-    }
+  int ret = dev->ops->ioctl ? dev->ops->ioctl(filep, cmd, arg) : -ENOTTY;
 
   /* The device ioctl() handler returns -ENOTTY when it doesn't know
    * how to handle the command. Check if we can handle it here.
@@ -1652,6 +1534,9 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           case TCGETS:
             {
+              FAR struct termios *termiosp = (FAR struct termios *)
+                                                (uintptr_t)arg;
+
               if (!termiosp)
                 {
                   ret = -EINVAL;
@@ -1674,6 +1559,9 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           case TCSETS:
             {
+              FAR struct termios *termiosp = (FAR struct termios *)
+                                                (uintptr_t)arg;
+
               if (!termiosp)
                 {
                   ret = -EINVAL;
@@ -1688,7 +1576,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 #ifdef CONFIG_SERIAL_TERMIOS
               dev->timeout = termiosp->c_cc[VTIME];
               dev->minread = termiosp->c_cc[VMIN];
-              dev->minrecv = dev->minread;
 #endif
               ret = 0;
             }
@@ -1709,9 +1596,8 @@ static int uart_poll(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR uart_dev_t   *dev   = inode->i_private;
   pollevent_t       eventset;
-  irqstate_t        flags;
   int               ndx;
-  int               ret = OK;
+  int               ret;
   int               i;
 
   /* Some sanity checking */
@@ -1723,9 +1609,17 @@ static int uart_poll(FAR struct file *filep,
     }
 #endif
 
-  flags = enter_critical_section();
-
   /* Are we setting up the poll?  Or tearing it down? */
+
+  ret = nxmutex_lock(&dev->polllock);
+  if (ret < 0)
+    {
+      /* A signal received while waiting for access to the poll data
+       * will abort the operation.
+       */
+
+      return ret;
+    }
 
   if (setup)
     {
@@ -1753,8 +1647,6 @@ static int uart_poll(FAR struct file *filep,
           ret       = -EBUSY;
           goto errout;
         }
-
-      leave_critical_section(flags);
 
       /* Should we immediately notify on any of the requested events?
        * First, check if the xmit buffer is full.
@@ -1804,7 +1696,7 @@ static int uart_poll(FAR struct file *filep,
         }
 #endif
 
-      uart_poll_notify(dev, i, i + 1, eventset);
+      poll_notify(&fds, 1, eventset);
     }
   else if (fds->priv != NULL)
     {
@@ -1824,14 +1716,10 @@ static int uart_poll(FAR struct file *filep,
 
       *slot     = NULL;
       fds->priv = NULL;
-
-      leave_critical_section(flags);
     }
 
-  return ret;
-
 errout:
-  leave_critical_section(flags);
+  nxmutex_unlock(&dev->polllock);
   return ret;
 }
 
@@ -1862,6 +1750,7 @@ static int uart_unlink(FAR struct inode *inode)
       nxmutex_destroy(&dev->xmit.lock);
       nxmutex_destroy(&dev->recv.lock);
       nxmutex_destroy(&dev->closelock);
+      nxmutex_destroy(&dev->polllock);
       nxsem_destroy(&dev->xmitsem);
       nxsem_destroy(&dev->recvsem);
       uart_release(dev);
@@ -1974,7 +1863,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
     {
       /* Enable signals and echo by default */
 
-      dev->tc_lflag |= ISIG | ECHO | ICANON;
+      dev->tc_lflag |= ISIG | ECHO;
 
       /* Enable \n -> \r\n translation for the console */
 
@@ -1996,6 +1885,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
   nxmutex_init(&dev->closelock);
   nxsem_init(&dev->xmitsem, 0, 0);
   nxsem_init(&dev->recvsem, 0, 0);
+  nxmutex_init(&dev->polllock);
 
 #ifdef CONFIG_SERIAL_TERMIOS
   dev->timeout = 0;
@@ -2007,11 +1897,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 #ifdef CONFIG_SERIAL_GDBSTUB
   if (strcmp(path, CONFIG_SERIAL_GDBSTUB_PATH) == 0)
     {
-#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
-      uart_gdbstub_register(dev, false);
-#else
-      return uart_gdbstub_register(dev, true);
-#endif
+      return uart_gdbstub_register(dev);
     }
 #endif
 
@@ -2033,7 +1919,7 @@ void uart_datareceived(FAR uart_dev_t *dev)
 {
   /* Notify all poll/select waiters that they can read from the recv buffer */
 
-  uart_poll_notify(dev, 0, CONFIG_SERIAL_NPOLLWAITERS, POLLIN);
+  poll_notify(dev->fds, CONFIG_SERIAL_NPOLLWAITERS, POLLIN);
 
   /* Is there a thread waiting for read data?  */
 
@@ -2044,10 +1930,8 @@ void uart_datareceived(FAR uart_dev_t *dev)
 
   if (dev->isconsole)
     {
-#  if CONFIG_SERIAL_PM_ACTIVITY_PRIORITY > 0
       pm_activity(CONFIG_SERIAL_PM_ACTIVITY_DOMAIN,
                   CONFIG_SERIAL_PM_ACTIVITY_PRIORITY);
-#  endif
     }
 #endif
 }
@@ -2067,7 +1951,7 @@ void uart_datasent(FAR uart_dev_t *dev)
 {
   /* Notify all poll/select waiters that they can write to xmit buffer */
 
-  uart_poll_notify(dev, 0, CONFIG_SERIAL_NPOLLWAITERS, POLLOUT);
+  poll_notify(dev->fds, CONFIG_SERIAL_NPOLLWAITERS, POLLOUT);
 
   /* Is there a thread waiting for space in xmit.buffer?  */
 
@@ -2106,7 +1990,6 @@ void uart_connected(FAR uart_dev_t *dev, bool connected)
    */
 
   flags = enter_critical_section();
-  nxsched_lock_irq();
   dev->disconnected = !connected;
   if (!connected)
     {
@@ -2127,7 +2010,6 @@ void uart_connected(FAR uart_dev_t *dev, bool connected)
       uart_wakeup(&dev->recvsem);
     }
 
-  nxsched_unlock_irq();
   leave_critical_section(flags);
 }
 #endif
@@ -2148,6 +2030,7 @@ void uart_reset_sem(FAR uart_dev_t *dev)
   nxsem_reset(&dev->recvsem,  0);
   nxmutex_reset(&dev->xmit.lock);
   nxmutex_reset(&dev->recv.lock);
+  nxmutex_reset(&dev->polllock);
 }
 
 /****************************************************************************
@@ -2184,7 +2067,7 @@ int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size)
 #ifdef CONFIG_TTY_FORCE_PANIC
       if (buf[i] == CONFIG_TTY_FORCE_PANIC_CHAR)
         {
-          PANIC_WITH_REGS("Force panic by user.", NULL);
+          PANIC();
           return 0;
         }
 #endif

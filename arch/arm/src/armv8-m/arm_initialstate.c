@@ -169,7 +169,7 @@ void up_initial_state(struct tcb_s *tcb)
 #else /* CONFIG_SUPPRESS_INTERRUPTS */
 
 #ifdef CONFIG_ARMV8M_USEBASEPRI
-  xcp->regs[REG_BASEPRI] = 0;
+  xcp->regs[REG_BASEPRI] = NVIC_SYSH_PRIORITY_MIN;
 #endif
 
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
@@ -186,7 +186,7 @@ void up_initial_state(struct tcb_s *tcb)
 
 noinline_function void arm_initialize_stack(void)
 {
-  uint32_t stacklim = up_get_intstackbase(this_cpu());
+  uint32_t stacklim = up_get_intstackbase(up_cpu_index());
   uint32_t stack = stacklim + INTSTACK_SIZE;
   uint32_t temp = 0;
 
