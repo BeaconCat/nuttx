@@ -74,17 +74,6 @@ static int nxtask_restart(pid_t pid)
   int cpu;
 #endif
 
-  /* Check if the task to restart is the calling task */
-
-  rtcb = this_task();
-  if ((pid == 0) || (pid == rtcb->pid))
-    {
-      /* Not implemented */
-
-      ret = -ENOSYS;
-      goto errout;
-    }
-
   /* We are restarting some other task than ourselves.  Make sure that the
    * task does not change its state while we are executing.  In the single
    * CPU state this could be done by disabling pre-emption.  But we will
@@ -93,6 +82,17 @@ static int nxtask_restart(pid_t pid)
    */
 
   flags = enter_critical_section();
+
+  /* Check if the task to restart is the calling task */
+
+  rtcb = this_task();
+  if ((pid == 0) || (pid == rtcb->pid))
+    {
+      /* Not implemented */
+
+      ret = -ENOSYS;
+      goto errout_with_lock;
+    }
 
   /* Find for the TCB associated with matching pid  */
 
@@ -134,12 +134,20 @@ static int nxtask_restart(pid_t pid)
    */
 
 #ifdef CONFIG_SMP
-  tasklist = TLIST_HEAD(&tcb->cmn, tcb->cmn.cpu);
+  if ((FAR struct tcb_s *)tcb == g_delivertasks[tcb->cmn.cpu])
+    {
+      g_delivertasks[tcb->cmn.cpu] = NULL;
+    }
+  else
+    {
+      tasklist = TLIST_HEAD(&tcb->cmn, tcb->cmn.cpu);
+      dq_rem((FAR dq_entry_t *)tcb, tasklist);
+    }
 #else
   tasklist = TLIST_HEAD(&tcb->cmn);
+  dq_rem((FAR dq_entry_t *)tcb, tasklist);
 #endif
 
-  dq_rem((FAR dq_entry_t *)tcb, tasklist);
   tcb->cmn.task_state = TSTATE_TASK_INVALID;
 
   /* Deallocate anything left in the TCB's signal queues */
@@ -177,7 +185,7 @@ static int nxtask_restart(pid_t pid)
 
   /* Add the task to the inactive task list */
 
-  dq_addfirst((FAR dq_entry_t *)tcb, list_inactivetasks());
+  dq_addfirst((FAR dq_entry_t *)tcb, &g_inactivetasks);
   tcb->cmn.task_state = TSTATE_TASK_INACTIVE;
 
 #ifdef CONFIG_SMP
@@ -202,7 +210,6 @@ static int nxtask_restart(pid_t pid)
 
 errout_with_lock:
   leave_critical_section(flags);
-errout:
   return ret;
 }
 

@@ -32,6 +32,8 @@
 #include <assert.h>
 #include <debug.h>
 
+#include "sched/sched.h"
+
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
 
 /****************************************************************************
@@ -64,7 +66,7 @@ static bool in_range(FAR const void *start, size_t length,
 
 int mm_map_lock(void)
 {
-  FAR struct tcb_s *tcb = nxsched_self();
+  FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
 
   if (group == NULL)
@@ -85,7 +87,7 @@ int mm_map_lock(void)
 
 void mm_map_unlock(void)
 {
-  FAR struct tcb_s *tcb = nxsched_self();
+  FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
 
   if (group == NULL)
@@ -100,7 +102,7 @@ void mm_map_unlock(void)
  * Name: mm_map_initialize
  *
  * Description:
- *   Allocates a task group specific mm_map structure. Called when the group
+ *   Allocates a task group specific mm_map stucture. Called when the group
  *   is initialized
  *
  ****************************************************************************/
@@ -117,7 +119,8 @@ void mm_map_initialize(FAR struct mm_map_s *mm, bool kernel)
   if (!kernel)
     {
       mm->mm_map_vpages = gran_initialize((FAR void *)CONFIG_ARCH_SHM_VBASE,
-                                     ARCH_SHM_SIZE, MM_PGSHIFT, MM_PGSHIFT);
+                                          ARCH_SHM_MAXPAGES << MM_PGSHIFT,
+                                          MM_PGSHIFT, MM_PGSHIFT);
       if (!mm->mm_map_vpages)
         {
           merr("gran_initialize() failed\n");
@@ -134,7 +137,7 @@ void mm_map_initialize(FAR struct mm_map_s *mm, bool kernel)
  * Name: mm_map_destroy
  *
  * Description:
- *   De-allocates a task group specific mm_map structure and the mm_map_mutex
+ *   De-allocates a task group specific mm_map stucture and the mm_map_mutex
  *
  ****************************************************************************/
 
@@ -218,19 +221,8 @@ int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry)
       return ret;
     }
 
-  /* Too many mappings? */
-
-  if (mm->map_count >= CONFIG_MM_MAP_COUNT_MAX)
-    {
-      kmm_free(new_entry);
-      nxrmutex_unlock(&mm->mm_map_mutex);
-      return -ENOMEM;
-    }
-
   mm->map_count++;
-
   sq_addfirst((sq_entry_t *)new_entry, &mm->mm_map_sq);
-
   nxrmutex_unlock(&mm->mm_map_mutex);
 
   return OK;
