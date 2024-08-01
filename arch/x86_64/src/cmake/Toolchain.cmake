@@ -25,8 +25,6 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
-set(CMAKE_PREPROCESSOR gcc -E -x c)
-
 # override the ARCHIVE command
 
 set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -66,12 +64,12 @@ if(${CONFIG_STACK_USAGE_WARNING})
   endif()
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(${CONFG_DEBUG_SYMBOLS_LEVEL})
+  add_compile_options(-g)
 endif()
 
 # Architecture flags
@@ -82,19 +80,6 @@ add_link_options(-no-pie -nostdlib)
 add_link_options(-Wl,--no-relax)
 add_compile_options(-fPIC)
 add_compile_options(-mno-red-zone)
-
-# Libcxx flags
-
-add_compile_options(
-  -U_AIX
-  -U_WIN32
-  -U__APPLE__
-  -U__FreeBSD__
-  -U__NetBSD__
-  -U__linux__
-  -U__sun__
-  -U__unix__
-  -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 
 if(CONFIG_DEBUG_LINK_MAP)
   add_link_options(-Wl,--cref -Wl,-Map=nuttx.map)
@@ -107,21 +92,14 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
-if(CONFIG_LIBCXX)
-  add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
-endif()
-
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
-else()
-  add_compile_options(-fno-stack-protector)
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
