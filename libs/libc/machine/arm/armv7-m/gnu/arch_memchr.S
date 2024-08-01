@@ -136,13 +136,14 @@
  */
 
 	.text
+	.section .text.memchr
 	.thumb_func
 	.align 4
 	.p2align 4,,15
-	.global ARCH_LIBCFUN(memchr)
-	.type ARCH_LIBCFUN(memchr),%function
+	.global memchr
+	.type memchr,%function
 
-ARCH_LIBCFUN(memchr):
+memchr:
 	.cfi_sections .debug_frame
 	.cfi_startproc
 	/* Use a simple loop if there are less than 8 bytes to search.  */
@@ -271,7 +272,7 @@ ARCH_LIBCFUN(memchr):
 	bx	lr
 
 	.cfi_endproc
-	.size	ARCH_LIBCFUN(memchr), . - ARCH_LIBCFUN(memchr)
+	.size	memchr, . - memchr
 
 #elif __ARM_ARCH_ISA_THUMB >= 2 && defined (__ARM_FEATURE_DSP)
 
@@ -294,9 +295,9 @@ ARCH_LIBCFUN(memchr):
 	.thumb_func
 	.align 2
 	.p2align 4,,15
-	.global ARCH_LIBCFUN(memchr)
-	.type ARCH_LIBCFUN(memchr),%function
-ARCH_LIBCFUN(memchr):
+	.global memchr
+	.type memchr,%function
+memchr:
 	@ r0 = start of memory to scan
 	@ r1 = character to look for
 	@ r2 = length

@@ -36,10 +36,7 @@
 #  include <nuttx/timers/oneshot.h>
 #endif
 
-#ifdef CONFIG_PCI
-#  include <nuttx/pci/pci.h>
-#endif
-
+#include "x86_64_internal.h"
 #include "qemu_intel64.h"
 
 /****************************************************************************
@@ -50,9 +47,9 @@
 #  if CONFIG_ARCH_INTEL64_HPET_ALARM_CHAN != 0
 #    error this logic requires that HPET_ALARM_CHAN is set to 0
 #  endif
-#  define ONESHOOT_TIMER 1
+#  define ONESHOT_TIMER 1
 #else
-#  define ONESHOOT_TIMER 0
+#  define ONESHOT_TIMER 0
 #endif
 
 /****************************************************************************
@@ -71,10 +68,10 @@ int qemu_bringup(void)
 
   int ret = OK;
 
-#ifdef CONFIG_PCI
-  /* Register the PCI bus drivers */
+  /* Initialize the PCI bus */
 
-  pci_register_drivers();
+#ifdef CONFIG_PCI
+  x86_64_pci_init();
 #endif
 
 #ifdef CONFIG_FS_PROCFS
@@ -88,7 +85,7 @@ int qemu_bringup(void)
 #endif
 
 #ifdef CONFIG_ONESHOT
-  os = oneshot_initialize(ONESHOOT_TIMER, 10);
+  os = oneshot_initialize(ONESHOT_TIMER, 10);
   if (os)
     {
       oneshot_register("/dev/oneshot", os);
