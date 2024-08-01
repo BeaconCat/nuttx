@@ -1,6 +1,8 @@
 /****************************************************************************
  * binfmt/binfmt_execmodule.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -84,12 +86,12 @@
 static void exec_ctors(FAR void *arg)
 {
   FAR const struct binary_s *binp = (FAR const struct binary_s *)arg;
-  binfmt_ctor_t *ctor = binp->mod.initarr;
+  binfmt_ctor_t *ctor = binp->ctors;
   int i;
 
   /* Execute each constructor */
 
-  for (i = 0; i < binp->mod.ninit; i++)
+  for (i = 0; i < binp->nctors; i++)
     {
       binfo("Calling ctor %d at %p\n", i, ctor);
 
@@ -120,9 +122,6 @@ static void exec_swap(FAR struct tcb_s *ptcb, FAR struct tcb_s *chtcb)
   int        chndx;
   pid_t      pid;
   irqstate_t flags;
-#ifdef HAVE_GROUP_MEMBERS
-  FAR pid_t  *tg_members;
-#endif
 #ifdef CONFIG_SCHED_HAVE_PARENT
 #  ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *tg_children;
@@ -162,12 +161,6 @@ static void exec_swap(FAR struct tcb_s *ptcb, FAR struct tcb_s *chtcb)
   pid = chtcb->group->tg_ppid;
   chtcb->group->tg_ppid = ptcb->group->tg_ppid;
   ptcb->group->tg_ppid = pid;
-
-#ifdef HAVE_GROUP_MEMBERS
-  tg_members = chtcb->group->tg_members;
-  chtcb->group->tg_members = ptcb->group->tg_members;
-  ptcb->group->tg_members = tg_members;
-#endif
 
 #ifdef CONFIG_SCHED_HAVE_PARENT
 #  ifdef CONFIG_SCHED_CHILD_STATUS
@@ -345,7 +338,7 @@ int exec_module(FAR struct binary_s *binp,
    * must be the first allocated address space.
    */
 
-  tcb->cmn.dspace = binp->picbase;
+  tcb->cmn.dspace = binp->alloc[0];
 
   /* Re-initialize the task's initial state to account for the new PIC base */
 

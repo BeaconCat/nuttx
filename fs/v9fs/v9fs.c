@@ -35,7 +35,6 @@
 
 #include "inode/inode.h"
 #include "client.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Type
@@ -172,7 +171,7 @@ static int v9fs_vfs_open(FAR struct file *filep, FAR const char *relpath,
 
   client = filep->f_inode->i_private;
 
-  file = fs_heap_zalloc(sizeof(struct v9fs_vfs_file_s));
+  file = kmm_zalloc(sizeof(struct v9fs_vfs_file_s));
   if (file == NULL)
     {
       return -ENOMEM;
@@ -235,7 +234,7 @@ static int v9fs_vfs_open(FAR struct file *filep, FAR const char *relpath,
 err_put:
   v9fs_fid_put(client, file->fid);
 err_free:
-  fs_heap_free(file);
+  kmm_free(file);
   return ret;
 }
 
@@ -259,7 +258,7 @@ static int v9fs_vfs_close(FAR struct file *filep)
 
   v9fs_fid_put(client, file->fid);
   nxmutex_destroy(&file->lock);
-  fs_heap_free(file);
+  kmm_free(file);
   return 0;
 }
 
@@ -435,7 +434,7 @@ static int v9fs_vfs_dup(FAR const struct file *oldp, FAR struct file *newp)
   client = oldp->f_inode->i_private;
   file = oldp->f_priv;
 
-  newfile = fs_heap_zalloc(sizeof(struct v9fs_vfs_file_s));
+  newfile = kmm_zalloc(sizeof(struct v9fs_vfs_file_s));
   if (newfile == NULL)
     {
       return -ENOMEM;
@@ -444,7 +443,7 @@ static int v9fs_vfs_dup(FAR const struct file *oldp, FAR struct file *newp)
   ret = v9fs_fid_get(client, file->fid);
   if (ret < 0)
     {
-      fs_heap_free(newfile);
+      kmm_free(newfile);
       return ret;
     }
 
@@ -532,7 +531,7 @@ static int v9fs_vfs_opendir(FAR struct inode *mountpt,
 
   client = mountpt->i_private;
 
-  fsdir = fs_heap_zalloc(sizeof(struct v9fs_vfs_dirent_s) + client->msize);
+  fsdir = kmm_zalloc(sizeof(struct v9fs_vfs_dirent_s) + client->msize);
   if (fsdir == NULL)
     {
       return -ENOMEM;
@@ -560,7 +559,7 @@ static int v9fs_vfs_opendir(FAR struct inode *mountpt,
   return 0;
 
 err:
-  fs_heap_free(fsdir);
+  kmm_free(fsdir);
   return ret;
 }
 
@@ -585,7 +584,7 @@ static int v9fs_vfs_closedir(FAR struct inode *mountpt,
 
   v9fs_fid_put(client, fsdir->fid);
   nxmutex_destroy(&fsdir->lock);
-  fs_heap_free(fsdir);
+  kmm_free(fsdir);
   return 0;
 }
 
@@ -955,7 +954,7 @@ static int v9fs_vfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
       return ret;
     }
 
-  fs_heap_free(client);
+  kmm_free(client);
   return ret;
 }
 
@@ -969,7 +968,7 @@ static int v9fs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   FAR struct v9fs_client_s *client;
   int ret;
 
-  client = fs_heap_zalloc(sizeof(struct v9fs_client_s));
+  client = kmm_zalloc(sizeof(struct v9fs_client_s));
   if (client == NULL)
     {
       return -ENOMEM;
@@ -979,7 +978,7 @@ static int v9fs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   if (ret < 0)
     {
       ferr("ERROR: Failed to initialize for client: %d\n", ret);
-      fs_heap_free(client);
+      kmm_free(client);
       return ret;
     }
 

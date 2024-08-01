@@ -89,6 +89,8 @@ label:  .asciz msg;                             \
      * This must be the very first address in the loaded image.
      * It should be loaded at any 4K-aligned address.
      */
+
+    .section .start, "ax"
     .globl __start;
 __start:
 
@@ -141,16 +143,6 @@ real_start:
 
     cmp    x1, #0
     beq    primary_core
-
-    /* Wait until cpu0 notify */
-
-#ifdef CONFIG_ARM64_SMP_BUSY_WAIT
-    ldr    x2, =CONFIG_ARM64_SMP_BUSY_WAIT_FLAG_ADDR
-1:
-    ldr    x3, [x2, #0]
-    cmp    x3, #0
-    beq    1b
-#endif
 
     /* we can now load our stack pointer value and move on */
 
@@ -247,6 +239,15 @@ switch_el:
 
     bl    arm64_boot_el3_init
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+    msr   SPSel, #1
+
+    /* Set SP_EL3 (with SPSel = 1) */
+
+    mov   sp, x24
+    b     el3_boot
+#endif
+
     /* Get next EL */
 
     adr   x0, switch_el
@@ -280,6 +281,8 @@ switch_el:
 
     msr   SPSel, #1
     msr   DAIFClr, #(DAIFCLR_ABT_BIT)
+
+el3_boot:
     isb
 
 jump_to_c_entry:

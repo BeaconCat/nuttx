@@ -30,7 +30,6 @@
 #include <nuttx/kmalloc.h>
 
 #include "partition.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -78,7 +77,7 @@ int parse_txtable_partition(FAR struct partition_state_s *state,
 
   /* Allocate memory for table of parsed and raw */
 
-  part = fs_heap_malloc(CONFIG_TXTABLE_PARTITION_MAX_NUM *
+  part = kmm_malloc(CONFIG_TXTABLE_PARTITION_MAX_NUM *
                     sizeof(struct partition_s) +
                     TXTABLE_LENGTH);
   if (part == NULL)
@@ -218,6 +217,6 @@ int parse_txtable_partition(FAR struct partition_state_s *state,
   handler(&part[j], arg);
 
 out:
-  fs_heap_free(part);
+  kmm_free(part);
   return ret;
 }
