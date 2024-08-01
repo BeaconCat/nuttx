@@ -25,7 +25,8 @@
 #include <nuttx/config.h>
 
 #include <arch/irq.h>
-#include "cp15.h"
+
+#include "arm.h"
 #include "sctlr.h"
 #include "arm_internal.h"
 

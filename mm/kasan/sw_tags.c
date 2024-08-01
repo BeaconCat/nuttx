@@ -58,6 +58,7 @@
 
 struct kasan_region_s
 {
+  FAR struct kasan_region_s *next;
   uintptr_t begin;
   uintptr_t end;
   uint8_t   shadow[1];
@@ -67,9 +68,8 @@ struct kasan_region_s
  * Private Data
  ****************************************************************************/
 
-static FAR struct kasan_region_s *g_region[CONFIG_MM_KASAN_REGIONS];
-static int g_region_count;
 static spinlock_t g_lock;
+static FAR struct kasan_region_s *g_region;
 
 /****************************************************************************
  * Private Functions
@@ -78,18 +78,18 @@ static spinlock_t g_lock;
 static inline_function FAR uint8_t *
 kasan_mem_to_shadow(FAR const void *ptr, size_t size)
 {
+  FAR struct kasan_region_s *region;
   uintptr_t addr;
-  int i;
 
   addr = (uintptr_t)kasan_reset_tag(ptr);
 
-  for (i = 0; i < g_region_count; i++)
+  for (region = g_region; region != NULL; region = region->next)
     {
-      if (addr >= g_region[i]->begin && addr < g_region[i]->end)
+      if (addr >= region->begin && addr < region->end)
         {
-          DEBUGASSERT(addr + size <= g_region[i]->end);
-          addr -= g_region[i]->begin;
-          return &g_region[i]->shadow[addr / KASAN_SHADOW_SCALE];
+          DEBUGASSERT(addr + size <= region->end);
+          addr -= region->begin;
+          return &region->shadow[addr / KASAN_SHADOW_SCALE];
         }
     }
 
@@ -106,7 +106,7 @@ kasan_is_poisoned(FAR const void *addr, size_t size)
   p = kasan_mem_to_shadow(addr, size);
   if (p == NULL)
     {
-      return kasan_global_is_poisoned(addr, size);
+      return false;
     }
 
   size = KASAN_SHADOW_SIZE(size);
@@ -179,10 +179,8 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   region->end   = region->begin + *size;
 
   flags = spin_lock_irqsave(&g_lock);
-
-  DEBUGASSERT(g_region_count <= CONFIG_MM_KASAN_REGIONS);
-  g_region[g_region_count++] = region;
-
+  region->next  = g_region;
+  g_region      = region;
   spin_unlock_irqrestore(&g_lock, flags);
 
   kasan_start();
@@ -192,19 +190,28 @@ void kasan_register(FAR void *addr, FAR size_t *size)
 
 void kasan_unregister(FAR void *addr)
 {
+  FAR struct kasan_region_s *prev = NULL;
+  FAR struct kasan_region_s *region;
   irqstate_t flags;
-  size_t i;
 
   flags = spin_lock_irqsave(&g_lock);
-  for (i = 0; i < g_region_count; i++)
+  for (region = g_region; region != NULL; region = region->next)
     {
-      if (g_region[i]->begin == (uintptr_t)addr)
+      if (region->begin == (uintptr_t)addr)
         {
-          g_region_count--;
-          memmove(&g_region[i], &g_region[i + 1],
-                  (g_region_count - i) * sizeof(g_region[0]));
+          if (region == g_region)
+            {
+              g_region = region->next;
+            }
+          else
+            {
+              prev->next = region->next;
+            }
+
           break;
         }
+
+      prev = region;
     }
 
   spin_unlock_irqrestore(&g_lock, flags);

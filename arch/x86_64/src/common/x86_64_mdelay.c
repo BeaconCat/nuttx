@@ -63,9 +63,6 @@
 
 void up_mdelay(unsigned int milliseconds)
 {
-#ifdef CONFIG_ARCH_INTEL64_HAVE_TSC
-  up_ndelay(milliseconds * NSEC_PER_MSEC);
-#else
   volatile int i;
   volatile int j;
 
@@ -75,5 +72,4 @@ void up_mdelay(unsigned int milliseconds)
         {
         }
     }
-#endif
 }
