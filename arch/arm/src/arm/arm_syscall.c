@@ -54,20 +54,17 @@
 
 uint32_t *arm_syscall(uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
   uint32_t cmd;
-  int cpu;
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(up_current_regs() == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  tcb->xcp.regs = regs;
-  up_set_current_regs(regs);
+  CURRENT_REGS = regs;
 
   /* The SYSCALL command is in R0 on entry.  Parameters follow in R1..R7 */
 
@@ -95,8 +92,8 @@ uint32_t *arm_syscall(uint32_t *regs)
            * set will determine the restored context.
            */
 
-          tcb->xcp.regs = regs[REG_R1];
-          DEBUGASSERT(up_current_regs());
+          CURRENT_REGS = (uint32_t *)regs[REG_R1];
+          DEBUGASSERT(CURRENT_REGS);
         }
         break;
 
@@ -121,7 +118,7 @@ uint32_t *arm_syscall(uint32_t *regs)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          up_set_current_regs((uint32_t *)regs[REG_R2]);
+          CURRENT_REGS = (uint32_t *)regs[REG_R2];
         }
         break;
 
@@ -134,9 +131,15 @@ uint32_t *arm_syscall(uint32_t *regs)
         break;
     }
 
-  if (regs != tcb->xcp.regs)
-    {
 #ifdef CONFIG_ARCH_ADDRENV
+  /* Check for a context switch.  If a context switch occurred, then
+   * CURRENT_REGS will have a different value than it did on entry.  If an
+   * interrupt level context switch has occurred, then establish the correct
+   * address environment before returning from the interrupt.
+   */
+
+  if (regs != CURRENT_REGS)
+    {
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
        * MMU flushed) and set up the address environment for the new
@@ -144,38 +147,33 @@ uint32_t *arm_syscall(uint32_t *regs)
        */
 
       addrenv_switch(NULL);
+    }
 #endif
 
+  /* Restore the cpu lock */
+
+  if (regs != CURRENT_REGS)
+    {
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.
        */
 
-      cpu = this_cpu();
-      tcb = current_task(cpu);
+      g_running_tasks[this_cpu()] = this_task();
 
-      /* Update scheduler parameters */
-
-      nxsched_suspend_scheduler(g_running_tasks[cpu]);
-      nxsched_resume_scheduler(tcb);
-
-      g_running_tasks[cpu] = tcb;
-
-      /* Restore the cpu lock */
-
-      restore_critical_section(tcb, cpu);
-      regs = up_current_regs();
+      restore_critical_section();
+      regs = (uint32_t *)CURRENT_REGS;
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  up_set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 
   /* Return the last value of curent_regs.  This supports context switches
    * on return from the exception.  That capability is only used with the
    * SYS_context_switch system call.
    */
 
-  return tcb->xcp.regs;
+  return regs;
 }
