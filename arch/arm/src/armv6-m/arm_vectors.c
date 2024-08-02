@@ -45,6 +45,7 @@
 
 #include "chip.h"
 #include "arm_internal.h"
+#include "ram_vectors.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -95,7 +96,8 @@ extern void exception_common(void);
  * Note that the [ ... ] designated initialiser is a GCC extension.
  */
 
-const void * const _vectors[] locate_data(".vectors") =
+const void * const _vectors[] locate_data(".vectors")
+                              aligned_data(VECTAB_ALIGN) =
 {
   /* Initial stack */
 
