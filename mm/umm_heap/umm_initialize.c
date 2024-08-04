@@ -26,7 +26,6 @@
 
 #include <assert.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
 
 #include "umm_heap/umm_heap.h"
