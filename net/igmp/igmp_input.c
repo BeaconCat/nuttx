@@ -136,7 +136,6 @@ void igmp_input(struct net_driver_s *dev)
       goto drop;
     }
 
-#ifdef CONFIG_NET_IGMP_CHECKSUMS
   /* Calculate and check the IGMP checksum */
 
   if (net_chksum((FAR uint16_t *)igmp, IGMP_HDRLEN) != 0)
@@ -145,7 +144,6 @@ void igmp_input(struct net_driver_s *dev)
       nwarn("WARNING: Checksum error\n");
       goto drop;
     }
-#endif
 
   /* Find the group (or create a new one) using the incoming IP address. */
 
