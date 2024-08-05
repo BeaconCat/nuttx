@@ -74,7 +74,12 @@ int register_blockdriver(FAR const char *path,
    * valid data.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = inode_reserve(path, mode, &node);
   if (ret >= 0)
     {
