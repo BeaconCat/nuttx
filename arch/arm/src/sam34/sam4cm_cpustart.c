@@ -91,7 +91,7 @@ static void cpu1_boot(void)
   putreg32(0, 0x48018008);
   while ((getreg32(0x4801800c) & 0x01) != 0);
 
-  cpu = this_cpu();
+  cpu = up_cpu_index();
   DPRINTF("cpu = %d\n", cpu);
 
   if (cpu == 1)

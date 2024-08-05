@@ -121,10 +121,7 @@ struct regulator_desc_s
   unsigned int   boot_on;           /* true if this regulator is to be enabled
                                      * at power up/reset
                                      */
-  unsigned int   always_on;         /* true if this regulator is always on */
-  unsigned int   bypass_on;         /* true if this regulator should be ignored
-                                     * during initialization
-                                     */
+  unsigned int   always_on;
   FAR const char *supply_name;
 #ifdef CONFIG_PM
   unsigned int auto_lp;
@@ -224,7 +221,6 @@ void regulator_unregister(FAR struct regulator_dev_s *rdev);
  *
  ****************************************************************************/
 
-struct ioexpander_dev_s;
 int regulator_gpio_init(FAR struct ioexpander_dev_s *iodev,
                         FAR const struct regulator_desc_s *desc);
 
