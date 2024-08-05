@@ -33,12 +33,6 @@
 #include "sbi_internal.h"
 
 /****************************************************************************
- * Preprocecssor definitions
- ****************************************************************************/
-
-#define NAPOT_RWX   (PMPCFG_A_NAPOT | PMPCFG_RWX_MASK)
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -68,7 +62,7 @@ void sbi_start(void)
 
   /* Read hart ID */
 
-  hartid = READ_CSR(CSR_MHARTID);
+  hartid = READ_CSR(mhartid);
 
   /* Set mscratch, mtimer */
 
@@ -77,7 +71,7 @@ void sbi_start(void)
 
   /* Setup system to enter S-mode */
 
-  reg  =  READ_CSR(CSR_MSTATUS);
+  reg  =  READ_CSR(mstatus);
   reg &= ~MSTATUS_MPPM; /* Clear MPP */
   reg &= ~MSTATUS_MPIE; /* Clear MPIE */
   reg &= ~MSTATUS_TW;   /* Do not trap WFI */
@@ -88,16 +82,16 @@ void sbi_start(void)
 
   /* Setup next context */
 
-  WRITE_CSR(CSR_MSTATUS, reg);
+  WRITE_CSR(mstatus, reg);
 
   /* Setup a temporary S-mode interrupt vector */
 
-  WRITE_CSR(CSR_STVEC, __trap_vec_tmp);
+  WRITE_CSR(stvec, __trap_vec_tmp);
 
   /* Delegate interrupts */
 
   reg = (MIP_SSIP | MIP_STIP | MIP_SEIP);
-  WRITE_CSR(CSR_MIDELEG, reg);
+  WRITE_CSR(mideleg, reg);
 
   /* Delegate exceptions (all of them) */
 
@@ -106,26 +100,21 @@ void sbi_start(void)
          (1 << RISCV_IRQ_LOADPF) |
          (1 << RISCV_IRQ_STOREPF) |
          (1 << RISCV_IRQ_ECALLU));
-  WRITE_CSR(CSR_MEDELEG, reg);
+  WRITE_CSR(medeleg, reg);
 
   /* Enable access to all counters for S- and U-mode */
 
-  WRITE_CSR(CSR_MCOUNTEREN, UINT32_C(~0));
-  WRITE_CSR(CSR_SCOUNTEREN, UINT32_C(~0));
+  WRITE_CSR(mcounteren, UINT32_C(~0));
+  WRITE_CSR(scounteren, UINT32_C(~0));
 
   /* Set program counter to __start_s */
 
-  WRITE_CSR(CSR_MEPC, __start_s);
+  WRITE_CSR(mepc, __start_s);
 
-#ifdef CONFIG_NUTTSBI_LATE_INIT
-  /* Do device specific handling */
+  /* Open everything for PMP */
 
-  sbi_late_initialize();
-#else
-  /* Open everything for PMP, may fail if no empty entry left */
-
-  DEBUGASSERT(riscv_append_pmp_region(NAPOT_RWX, 0, 0) == 0);
-#endif
+  WRITE_CSR(pmpaddr0, -1);
+  WRITE_CSR(pmpcfg0, (PMPCFG_A_NAPOT | PMPCFG_R | PMPCFG_W | PMPCFG_X));
 
   /* Then jump to the S-mode start function */
 
