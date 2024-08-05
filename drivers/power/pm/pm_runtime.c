@@ -27,9 +27,11 @@
 #include <debug.h>
 #include <assert.h>
 #include <errno.h>
+#include <sched.h>
 #include <nuttx/clock.h>
 #include <nuttx/power/pm_runtime.h>
-#include <sched/sched.h>
+
+#include "pm.h"
 
 /****************************************************************************
  * Private Function Prototypes
