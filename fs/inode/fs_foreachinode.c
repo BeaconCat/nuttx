@@ -184,9 +184,12 @@ int foreach_inode(foreach_inode_t handler, FAR void *arg)
 
   /* Start the recursion at the root inode */
 
-  inode_rlock();
-  ret = foreach_inodelevel(g_root_inode->i_child, info);
-  inode_runlock();
+  ret = inode_lock();
+  if (ret >= 0)
+    {
+      ret = foreach_inodelevel(g_root_inode->i_child, info);
+      inode_unlock();
+    }
 
   /* Free the info structure and return the result */
 
@@ -205,9 +208,12 @@ int foreach_inode(foreach_inode_t handler, FAR void *arg)
 
   /* Start the recursion at the root inode */
 
-  inode_rlock();
-  ret = foreach_inodelevel(g_root_inode->i_child, &info);
-  inode_runlock();
+  ret = inode_lock();
+  if (ret >= 0)
+    {
+      ret = foreach_inodelevel(g_root_inode->i_child, &info);
+      inode_unlock();
+    }
 
   return ret;
 
