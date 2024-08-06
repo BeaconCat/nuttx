@@ -25,8 +25,31 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/memoryregion.h>
+#include <sys/utsname.h>
 #include <unistd.h>
+
+#include <nuttx/streams.h>
+#include <nuttx/memoryregion.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define COREDUMP_MAGIC    0x434f5245
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/* Coredump information for block header */
+
+struct coredump_info_s
+{
+  uint32_t       magic;
+  struct utsname name;
+  time_t         time;
+  size_t         size;
+};
 
 /****************************************************************************
  * Public Function Prototypes
@@ -40,30 +63,28 @@
  *
  ****************************************************************************/
 
-int coredump_set_memory_region(FAR struct memory_region_s *region);
+int coredump_set_memory_region(FAR const struct memory_region_s *region);
 
 /****************************************************************************
- * Name: coredump_initialize
+ * Name: coredump_add_memory_region
  *
  * Description:
- *   Initialize the coredump facility.  Called once and only from
- *   nx_start_application.
+ *   Use coredump to dump the memory of the specified area.
  *
  ****************************************************************************/
 
-int coredump_initialize(void);
+int coredump_add_memory_region(FAR const void *ptr, size_t size);
 
 /****************************************************************************
- * Name: coredump_dump
+ * Name: coredump
  *
  * Description:
- *   Do coredump of the task specified by pid.
- *
- * Input Parameters:
- *   pid - The task/thread ID of the thread to dump
+ *   This function for generating core dump stream.
  *
  ****************************************************************************/
 
-void coredump_dump(pid_t pid);
+int coredump(FAR const struct memory_region_s *regions,
+             FAR struct lib_outstream_s *stream,
+             pid_t pid);
 
 #endif /* __INCLUDE_NUTTX_COREDUMP_H */
