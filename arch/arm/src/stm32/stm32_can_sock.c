@@ -38,8 +38,10 @@
 #include <nuttx/arch.h>
 
 #include <nuttx/wqueue.h>
+#include <nuttx/can.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
+#include <netpacket/can.h>
 
 #include "arm_internal.h"
 #include "chip.h"
