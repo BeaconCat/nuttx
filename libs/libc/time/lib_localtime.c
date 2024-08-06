@@ -60,6 +60,8 @@
 
 #include <sys/param.h>
 
+#include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/init.h>
 #include <nuttx/fs/fs.h>
@@ -396,6 +398,30 @@ static int  tzparse(FAR const char *name, FAR struct state_s *sp,
  * Private Functions
  ****************************************************************************/
 
+static inline void tz_lock(FAR rmutex_t *lock)
+{
+#ifndef __KERNEL__
+  if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
+    {
+      return;
+    }
+#endif
+
+  nxrmutex_lock(lock);
+}
+
+static inline void tz_unlock(FAR rmutex_t *lock)
+{
+#ifndef __KERNEL__
+  if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
+    {
+      return;
+    }
+#endif
+
+  nxrmutex_unlock(lock);
+}
+
 /* Initialize *S to a value based on UTOFF, ISDST, and DESIGIDX. */
 
 static void init_ttinfo(FAR struct ttinfo_s *s, int_fast32_t utoff,
@@ -661,7 +687,7 @@ static int tzload(FAR const char *name,
       goto oops;
     }
 
-  fid = _NX_OPEN(name, O_RDONLY);
+  fid = _NX_OPEN(name, O_RDONLY | O_CLOEXEC);
   if (fid < 0)
     {
       goto oops;
@@ -1912,6 +1938,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       return NULL;
     }
 
+  tz_lock(&g_lcl_lock);
   if ((sp->goback && t < sp->ats[0]) ||
       (sp->goahead && t > sp->ats[sp->timecnt - 1]))
     {
@@ -1948,6 +1975,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
       if (newt < sp->ats[0] || newt > sp->ats[sp->timecnt - 1])
         {
+          tz_unlock(&g_lcl_lock);
           return NULL; /* "cannot happen" */
         }
 
@@ -1968,12 +1996,14 @@ static FAR struct tm *localsub(FAR const time_t *timep,
 
           if (newy < INT_MIN || newy > INT_MAX)
             {
+              tz_unlock(&g_lcl_lock);
               return NULL;
             }
 
           result->tm_year = newy;
         }
 
+      tz_unlock(&g_lcl_lock);
       return result;
     }
 
@@ -2019,6 +2049,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
       result->tm_zone = tzname[result->tm_isdst];
     }
 
+  tz_unlock(&g_lcl_lock);
   return result;
 }
 
@@ -2029,14 +2060,7 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
 {
   if (!g_gmt_isset)
     {
-#ifndef __KERNEL__
-      if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
-        {
-          return NULL;
-        }
-#endif
-
-      nxrmutex_lock(&g_gmt_lock);
+      tz_lock(&g_gmt_lock);
 
       if (!g_gmt_isset)
         {
@@ -2048,7 +2072,7 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
             }
         }
 
-      nxrmutex_unlock(&g_gmt_lock);
+      tz_unlock(&g_gmt_lock);
     }
 
   tmp->tm_zone = ((FAR char *)(offset ? g_wildabbr :
@@ -2758,13 +2782,6 @@ void tzset(void)
 {
   FAR const char *name;
 
-#ifndef __KERNEL__
-  if (up_interrupt_context() || (sched_idletask() && OSINIT_IDLELOOP()))
-    {
-      return;
-    }
-#endif
-
   name = getenv("TZ");
   if (name == NULL)
     {
@@ -2781,7 +2798,7 @@ void tzset(void)
       return;
     }
 
-  nxrmutex_lock(&g_lcl_lock);
+  tz_lock(&g_lcl_lock);
 
   if (g_lcl_ptr == NULL)
     {
@@ -2802,7 +2819,7 @@ void tzset(void)
 tzname:
   settzname();
   g_lcl_isset = 1;
-  nxrmutex_unlock(&g_lcl_lock);
+  tz_unlock(&g_lcl_lock);
 }
 
 FAR struct tm *localtime(FAR const time_t *timep)
