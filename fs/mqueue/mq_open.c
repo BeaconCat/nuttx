@@ -39,7 +39,6 @@
 
 #include "inode/inode.h"
 #include "mqueue/mqueue.h"
-#include "notify/notify.h"
 
 /****************************************************************************
  * Private Functions Prototypes
@@ -285,7 +284,12 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       /* Create an inode in the pseudo-filesystem at this path */
 
-      inode_lock();
+      ret = inode_lock();
+      if (ret < 0)
+        {
+          goto errout_with_lock;
+        }
+
       ret = inode_reserve(fullpath, mode, &inode);
       inode_unlock();
 
@@ -327,9 +331,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
   RELEASE_SEARCH(&desc);
   leave_critical_section(flags);
-#ifdef CONFIG_FS_NOTIFY
-  notify_open(fullpath, oflags);
-#endif
   return OK;
 
 errout_with_inode:

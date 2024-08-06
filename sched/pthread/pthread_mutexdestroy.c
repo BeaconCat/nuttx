@@ -65,15 +65,20 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
 
   if (mutex != NULL)
     {
-      pid_t pid = mutex_get_holder(&mutex->mutex);
+      /* Make sure the semaphore is stable while we make the following
+       * checks.
+       */
+
+      sched_lock();
 
       /* Is the mutex available? */
 
-      if (pid >= 0)
+      if (mutex->pid >= 0)
         {
           /* < 0: available, >0 owned, ==0 error */
 
-          DEBUGASSERT(pid != 0);
+          DEBUGASSERT(mutex->pid != 0);
+
           /* No.. Verify that the PID still exists.  We may be destroying
            * the mutex after cancelling a pthread and the mutex may have
            * been in a bad state owned by the dead pthread.  NOTE: The
@@ -85,22 +90,28 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
            * nxsched_get_tcb() does.
            */
 
-          if (nxsched_get_tcb(pid) == NULL)
+          if (nxsched_get_tcb(mutex->pid) == NULL)
             {
               /* The thread associated with the PID no longer exists */
+
+              mutex->pid = INVALID_PROCESS_ID;
 
               /* Reset the semaphore.  If threads are were on this
                * semaphore, then this will awakened them and make
                * destruction of the semaphore impossible here.
                */
 
-              mutex_reset(&mutex->mutex);
+              status = nxsem_reset(&mutex->sem, 1);
+              if (status < 0)
+                {
+                  ret = -status;
+                }
 
               /* Check if the reset caused some other thread to lock the
                * mutex.
                */
 
-              if (mutex_is_locked(&mutex->mutex))
+              else if (mutex->pid != INVALID_PROCESS_ID)
                 {
                   /* Yes.. then we cannot destroy the mutex now. */
 
@@ -111,7 +122,7 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
 
               else
                 {
-                  status = mutex_destroy(&mutex->mutex);
+                  status = nxsem_destroy(&mutex->sem);
                   ret = (status < 0) ? -status : OK;
                 }
             }
@@ -128,9 +139,11 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
            * Perhaps this logic should all nxsem_reset() first?
            */
 
-          status = mutex_destroy(&mutex->mutex);
+          status = nxsem_destroy(&mutex->sem);
           ret = ((status < 0) ? -status : OK);
         }
+
+      sched_unlock();
     }
 
   sinfo("Returning %d\n", ret);
