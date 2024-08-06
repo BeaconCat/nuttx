@@ -1287,6 +1287,10 @@ int netdev_lower_unregister(FAR struct netdev_lowerhalf_s *dev)
   iob_free_queue(&upper->txq);
 #endif
 
+#if CONFIG_IOB_NCHAINS > 0
+  iob_free_queue(&upper->txq);
+#endif
+
   kmm_free(upper);
   dev->netdev.d_private = NULL;
 
