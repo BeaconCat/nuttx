@@ -34,6 +34,7 @@
 
 #include "inode/inode.h"
 #include "mqueue/mqueue.h"
+#include "notify/notify.h"
 
 /****************************************************************************
  * Private Functions
@@ -55,7 +56,7 @@
 
 static void mq_inode_release(FAR struct inode *inode)
 {
-  if (inode->i_crefs <= 1)
+  if (atomic_load(&inode->i_crefs) <= 1)
     {
       FAR struct mqueue_inode_s *msgq = inode->i_private;
 
@@ -64,9 +65,9 @@ static void mq_inode_release(FAR struct inode *inode)
           nxmq_free_msgq(msgq);
           inode->i_private = NULL;
         }
-
-      inode_release(inode);
     }
+
+  inode_release(inode);
 }
 
 /****************************************************************************
@@ -136,12 +137,7 @@ int file_mq_unlink(FAR const char *mq_name)
    * functioning as a directory and the directory is not empty.
    */
 
-  ret = inode_lock();
-  if (ret < 0)
-    {
-      goto errout_with_inode;
-    }
-
+  inode_lock();
   if (inode->i_child != NULL)
     {
       ret = -ENOTEMPTY;
@@ -149,8 +145,8 @@ int file_mq_unlink(FAR const char *mq_name)
     }
 
   /* Remove the old inode from the tree.  Because we hold a reference count
-   * on the inode, it will not be deleted now.  This will set the
-   * FSNODEFLAG_DELETED bit in the inode flags.
+   * on the inode, it will not be deleted now. This will put reference of
+   * inode.
    */
 
   ret = inode_remove(fullpath);
@@ -173,6 +169,9 @@ int file_mq_unlink(FAR const char *mq_name)
   inode_unlock();
   mq_inode_release(inode);
   RELEASE_SEARCH(&desc);
+#ifdef CONFIG_FS_NOTIFY
+  notify_unlink(fullpath);
+#endif
   return OK;
 
 errout_with_lock:
