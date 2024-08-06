@@ -50,8 +50,14 @@
 #undef strchrnul /* See mm/README.txt */
 FAR char *strchrnul(FAR const char *s, int c)
 {
-  FAR char *s1 = strchr(s, c);
+  if (s)
+    {
+      while (*s != '\0' && *s != c)
+        {
+          s++;
+        }
+    }
 
-  return s1 ? s1 : (FAR char *)s + strlen(s);
+  return (FAR char *)s;
 }
 #endif
