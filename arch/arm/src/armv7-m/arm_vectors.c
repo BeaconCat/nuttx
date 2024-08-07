@@ -48,30 +48,13 @@
 
 #define IDLE_STACK      (_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef ARMV7M_PERIPHERAL_INTERRUPTS
-#  error ARMV7M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
-#endif
-
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /* Chip-specific entrypoint */
 
 extern void __start(void);
-
-static void start(void)
-{
-  /* Zero lr to mark the end of backtrace */
-
-  asm volatile ("mov lr, #0\n\t");
-
-  __start();
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /* Common exception entrypoint */
 
@@ -91,7 +74,7 @@ extern void exception_common(void);
  */
 
 const void * const _vectors[] locate_data(".vectors")
-                              aligned_data(VECTAB_ALIGN) =
+  aligned_data(VECTOR_ALIGN) =
 {
   /* Initial stack */
 
@@ -99,7 +82,7 @@ const void * const _vectors[] locate_data(".vectors")
 
   /* Reset exception handler */
 
-  start,
+  __start,
 
   /* Vectors 2 - n point directly at the generic handler */
 

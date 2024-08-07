@@ -68,6 +68,21 @@ extern "C"
 
 #define RTC_CLK_CAL_FRACT  19
 
+/* Cycles for RTC Timer clock source (internal oscillator) calibrate */
+
+#define RTC_CLK_SRC_CAL_CYCLES      (10)
+
+#define RTC_CNTL_XTL_BUF_WAIT_SLP_US        (250)
+#define RTC_CNTL_PLL_BUF_WAIT_SLP_CYCLES    (1)
+#define RTC_CNTL_CK8M_WAIT_SLP_CYCLES       (4)
+#define RTC_CNTL_WAKEUP_DELAY_CYCLES        (4)
+
+#define RTC_CNTL_CK8M_DFREQ_DEFAULT 100
+#define RTC_CNTL_SCK_DCAP_DEFAULT   255
+
+#define RTC_CNTL_ULPCP_TOUCH_START_WAIT_IN_SLEEP    (0xFF)
+#define RTC_CNTL_ULPCP_TOUCH_START_WAIT_DEFAULT     (0x10)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -351,6 +366,23 @@ void esp32s3_rtc_init(void);
 uint64_t esp32s3_rtc_time_get(void);
 
 /****************************************************************************
+ * Name: esp32s3_rtc_sleep_low_init
+ *
+ * Description:
+ *   Low level initialize for rtc state machine waiting
+ *   cycles after waking up.
+ *
+ * Input Parameters:
+ *   slowclk_period - Re-calibrated slow clock period
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void esp32s3_rtc_sleep_low_init(uint32_t slowclk_period);
+
+/****************************************************************************
  * Name: esp32s3_rtc_time_us_to_slowclk
  *
  * Description:
@@ -596,6 +628,25 @@ void esp32s3_rtc_clk_cpu_freq_set_config(
 
 void esp32s3_rtc_clk_cpu_freq_get_config(
              struct esp32s3_cpu_freq_config_s *out_config);
+
+/****************************************************************************
+ * Name: esp32s3_rtc_recalib_bbpll
+ *
+ * Description:
+ *   Re-calibration BBPLL, workaround for bootloader not calibration well
+ *   issue.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ESP32S3_SYSTEM_BBPLL_RECALIB
+void esp32s3_rtc_recalib_bbpll(void);
+#endif
 
 #ifdef CONFIG_RTC_DRIVER
 
