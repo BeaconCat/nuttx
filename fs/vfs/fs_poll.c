@@ -35,21 +35,10 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
-#include <nuttx/tls.h>
 
 #include <arch/irq.h>
 
 #include "inode/inode.h"
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct pollfd_s
-{
-  FAR struct pollfd *fds;
-  nfds_t nfds;
-};
 
 /****************************************************************************
  * Private Functions
@@ -172,22 +161,6 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
 }
 
 /****************************************************************************
- * Name: poll_cleanup
- *
- * Description:
- *   Cleanup the poll operation.
- *
- ****************************************************************************/
-
-static void poll_cleanup(FAR void *arg)
-{
-  FAR struct pollfd_s *fdsinfo = (FAR struct pollfd_s *)arg;
-  int count;
-
-  poll_teardown(fdsinfo->fds, fdsinfo->nfds, &count, OK);
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -218,9 +191,7 @@ int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup)
 
   /* Let file_poll() do the rest */
 
-  ret = file_poll(filep, fds, setup);
-  fs_putfilep(filep);
-  return ret;
+  return file_poll(filep, fds, setup);
 }
 
 /****************************************************************************
@@ -343,23 +314,12 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
           /* Yes, it does... Setup the poll */
 
           ret = inode->u.i_ops->poll(filep, fds, setup);
-          if (ret < 0)
-            {
-              ferr("poll failed:%p, setup:%d, ret:%d\n",
-                   inode->u.i_ops->poll, setup, ret);
-            }
         }
-
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
                inode->u.i_mops->poll != NULL)
         {
           ret = inode->u.i_mops->poll(filep, fds, setup);
-          if (ret < 0)
-            {
-              ferr("poll failed:%p, setup:%d, ret:%d\n",
-                   inode->u.i_ops->poll, setup, ret);
-            }
         }
 #endif
 
@@ -454,22 +414,10 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
   kfds = fds;
 #endif
 
-  /* Set up the poll structure */
-
   nxsem_init(&sem, 0, 0);
   ret = poll_setup(kfds, nfds, &sem);
   if (ret >= 0)
     {
-      struct pollfd_s fdsinfo;
-
-      /* Push a cancellation point onto the stack.  This will be called if
-       * the thread is canceled.
-       */
-
-      fdsinfo.fds = kfds;
-      fdsinfo.nfds = nfds;
-      tls_cleanup_push(tls_get_info(), poll_cleanup, &fdsinfo);
-
       if (timeout == 0)
         {
           /* Poll returns immediately whether we have a poll event or not. */
@@ -478,6 +426,8 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
         }
       else if (timeout > 0)
         {
+          clock_t ticks;
+
           /* "Implementations may place limitations on the granularity of
            * timeout intervals. If the requested timeout interval requires
            * a finer granularity than the implementation supports, the
@@ -487,6 +437,16 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
            * Round timeout up to next full tick.
            */
 
+#if (MSEC_PER_TICK * USEC_PER_MSEC) != USEC_PER_TICK && \
+    defined(CONFIG_HAVE_LONG_LONG)
+          ticks = (((unsigned long long)timeout * USEC_PER_MSEC) +
+                   (USEC_PER_TICK - 1)) /
+                  USEC_PER_TICK;
+#else
+          ticks = ((unsigned int)timeout + (MSEC_PER_TICK - 1)) /
+                  MSEC_PER_TICK;
+#endif
+
           /* Either wait for either a poll event(s), for a signal to occur,
            * or for the specified timeout to elapse with no event.
            *
@@ -495,7 +455,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
            * will return immediately.
            */
 
-          ret = nxsem_tickwait(&sem, MSEC2TICK(timeout));
+          ret = nxsem_tickwait(&sem, ticks);
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -526,10 +486,6 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
         {
           ret = ret2;
         }
-
-      /* Pop the cancellation point */
-
-      tls_cleanup_pop(tls_get_info(), 0);
     }
 
   nxsem_destroy(&sem);
