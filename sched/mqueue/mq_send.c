@@ -179,9 +179,7 @@ int nxmq_send(mqd_t mqdes, FAR const char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_send(filep, msg, msglen, prio);
-  fs_putfilep(filep);
-  return ret;
+  return file_mq_send(filep, msg, msglen, prio);
 }
 
 /****************************************************************************
