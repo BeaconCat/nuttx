@@ -321,10 +321,3 @@ at runtime::
 
 .. tip:: Please refer to :ref:`ESP32 Wi-Fi Station Mode <esp32_wi-fi_sta>`
   for more information.
-
-
-README.txt
-==========
-
-.. include:: README.txt
-   :literal:
