@@ -27,30 +27,6 @@ Getting Started
    $ make
    Running with qemu
    $ qemu-system-arm -M mps3-an547 -nographic -kernel nuttx.bin
-  1.2 Pic ostest
-   $ ./tools/configure.sh mps3-an547:picostest
-   $ make -j20
-   $ genromfs -f romfs.img -d ../apps/bin/
-   $ qemu-system-arm -M mps3-an547 -m 2G -nographic \
-     -kernel nuttx.bin -gdb tcp::1127 \
-     -device loader,file=romfs.img,addr=0x60000000
-   $ nsh> /pic/hello
-   $ nsh> /pic/ostest
-
-   1.3 bootloader boot to Pic ap
-   $ ./tools/configure.sh mps3-an547:ap
-   $ make -j20
-   $ mkdir -p pic
-   $ cp boot pic/.
-   $ genromfs -f -a 128 romfs.img -d pic
-   $ make distclean -j20
-   $ ./tools/configure.sh mps3-an547:bl
-   $ make -j20
-   $ qemu-system-arm -M mps3-an547 -m 2G -nographic \
-     -kernel nuttx.bin -gdb tcp::1127 \
-     -device loader,file=romfs.img,addr=0x60000000
-   $ bl> boot /pic/boot
-   $ ap> ostest
 
 Debugging with QEMU
 ===================
