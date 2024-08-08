@@ -24,13 +24,14 @@
 
 #include <nuttx/config.h>
 
+#include <dlfcn.h>
 #include <assert.h>
 #include <debug.h>
-#include <dlfcn.h>
 #include <errno.h>
 
-#include <nuttx/lib/modlib.h>
 #include <nuttx/symtab.h>
+#include <nuttx/module.h>
+#include <nuttx/lib/modlib.h>
 
 /****************************************************************************
  * Private Functions
@@ -142,11 +143,15 @@ errout_with_lock:
 
 FAR void *dlsym(FAR void *handle, FAR const char *name)
 {
-#if defined(CONFIG_BUILD_FLAT) || defined(CONFIG_BUILD_PROTECTED)
+#if defined(CONFIG_BUILD_FLAT)
   /* In the FLAT build, a shared library is essentially the same as a kernel
    * module.
-   *
-   * The PROTECTED build is equivalent to the FLAT build EXCEPT that there
+   */
+
+  return (FAR void *)modsym(handle, name);
+
+#elif defined(CONFIG_BUILD_PROTECTED)
+  /* The PROTECTED build is equivalent to the FLAT build EXCEPT that there
    * must be two copies of the module logic:  One residing in kernel
    * space and using the kernel symbol table and one residing in user space
    * using the user space symbol table.
@@ -154,7 +159,7 @@ FAR void *dlsym(FAR void *handle, FAR const char *name)
    * dlgetsem() is essentially a clone of modsym().
    */
 
-  return (FAR void *)modlib_getsymbol(handle, name);
+  return (FAR void *)dlgetsym(handle, name);
 
 #else /* if defined(CONFIG_BUILD_KERNEL) */
   /* The KERNEL build is considerably more complex:  In order to be shared,

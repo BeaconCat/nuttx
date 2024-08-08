@@ -36,7 +36,7 @@ OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION = $(CONFIG_DEBUG_SYMBOLS_LEVEL)
+  ARCHOPTIMIZATION = -g
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
@@ -50,11 +50,13 @@ ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
 
 CFLAGS := $(ARCHCFLAGS) $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
-   $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
+   $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) $(ARCHWARNINGSXX)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
 
-LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
-CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
+LDMODULEFLAGS = -r -e module_initialize
+LDMODULEFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+
+CMODULEFLAGS = $(CFLAGS) -mlong-calls # --target1-abs
 
 ASMEXT = .asm

@@ -91,7 +91,7 @@ void __start(void)
 
   __asm__ __volatile__ ("\tmsr msp, %0\n" :: "r" (g_idle_topstack));
 
-  if (this_cpu() != 0)
+  if (up_cpu_index() != 0)
     {
       while (1)
         {
