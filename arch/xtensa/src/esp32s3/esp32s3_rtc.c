@@ -33,7 +33,6 @@
 
 #include "esp32s3_clockconfig.h"
 #include "esp32s3_rt_timer.h"
-#include "esp32s3_reset_reasons.h"
 
 #include "hardware/esp32s3_bb.h"
 #include "hardware/esp32s3_nrx.h"
@@ -45,14 +44,14 @@
 #include "hardware/esp32s3_apb_ctrl.h"
 #include "hardware/regi2c_dig_reg.h"
 #include "hardware/regi2c_ctrl.h"
+#include "hardware/esp32s3_spi_mem_reg.h"
+#include "hardware/esp32s3_extmem.h"
 #include "hardware/esp32s3_syscon.h"
 #include "hardware/regi2c_bbpll.h"
 #include "hardware/regi2c_lp_bias.h"
 
 #include "xtensa.h"
-#include "esp_attr.h"
-#include "soc/extmem_reg.h"
-#include "soc/spi_mem_reg.h"
+#include "xtensa_attr.h"
 
 #include "esp32s3_rtc.h"
 
@@ -119,24 +118,18 @@
 
 #define RTC_DISABLE_ROM_LOG ((1 << 0) | (1 << 16))
 
-/* Set sleep_init default param */
+/* set sleep_init default param. */
 
-#define RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_DEFAULT  (5)
-#define RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_NODROP   (0)
-#define RTC_CNTL_DBG_ATTEN_DEEPSLEEP_DEFAULT   (14)
-#define RTC_CNTL_DBG_ATTEN_DEEPSLEEP_ULTRA_LOW (15)
-#define RTC_CNTL_DBG_ATTEN_DEEPSLEEP_NODROP    (0)
-#define RTC_CNTL_BIASSLP_SLEEP_DEFAULT         (1)
-#define RTC_CNTL_BIASSLP_SLEEP_ON              (0)
-#define RTC_CNTL_PD_CUR_SLEEP_DEFAULT          (1)
-#define RTC_CNTL_PD_CUR_SLEEP_ON               (0)
-#define RTC_CNTL_DG_VDD_DRV_B_SLP_DEFAULT      (0xf)
-
-#define RTC_CNTL_DBG_ATTEN_MONITOR_DEFAULT     (0)
-#define RTC_CNTL_BIASSLP_MONITOR_DEFAULT       (1)
-#define RTC_CNTL_BIASSLP_MONITOR_ON            (0)
-#define RTC_CNTL_PD_CUR_MONITOR_DEFAULT        (1)
-#define RTC_CNTL_PD_CUR_MONITOR_ON             (0)
+#define RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_DEFAULT  5
+#define RTC_CNTL_DBG_ATTEN_DEEPSLEEP_DEFAULT   15
+#define RTC_CNTL_DBG_ATTEN_MONITOR_DEFAULT     0
+#define RTC_CNTL_BIASSLP_MONITOR_DEFAULT       0
+#define RTC_CNTL_BIASSLP_SLEEP_ON              0
+#define RTC_CNTL_BIASSLP_SLEEP_DEFAULT         1
+#define RTC_CNTL_PD_CUR_MONITOR_DEFAULT        1
+#define RTC_CNTL_PD_CUR_SLEEP_ON               0
+#define RTC_CNTL_PD_CUR_SLEEP_DEFAULT          1
+#define RTC_CNTL_DG_VDD_DRV_B_SLP_DEFAULT      0xf
 
 /* Approximate mapping of voltages to RTC_CNTL_DBIAS_WAK, RTC_CNTL_DBIAS_SLP,
  * RTC_CNTL_DIG_DBIAS_WAK, RTC_CNTL_DIG_DBIAS_SLP values.
@@ -171,15 +164,22 @@
   .wifi_pd_en = ((sleep_flags) & RTC_SLEEP_PD_WIFI) ? 1 : 0, \
   .bt_pd_en = ((sleep_flags) & RTC_SLEEP_PD_BT) ? 1 : 0, \
   .cpu_pd_en = ((sleep_flags) & RTC_SLEEP_PD_CPU) ? 1 : 0, \
-  .int_8m_pd_en = ((sleep_flags) & RTC_SLEEP_PD_INT_8M) ? 1 : 0, \
+  .int_8m_pd_en = is_dslp(sleep_flags) ? 1 : ((sleep_flags) & RTC_SLEEP_PD_INT_8M) ? 1 : 0, \
   .dig_peri_pd_en = ((sleep_flags) & RTC_SLEEP_PD_DIG_PERIPH) ? 1 : 0, \
   .deep_slp = ((sleep_flags) & RTC_SLEEP_PD_DIG) ? 1 : 0, \
   .wdt_flashboot_mod_en = 0, \
+  .dig_dbias_wak = RTC_CNTL_DBIAS_1V10, \
+  .dig_dbias_slp = is_dslp(sleep_flags)                   ? RTC_CNTL_DBIAS_SLP  \
+                   : !((sleep_flags) & RTC_SLEEP_PD_INT_8M) ? RTC_CNTL_DBIAS_1V10 \
+                   : RTC_CNTL_DBIAS_SLP, \
+  .rtc_dbias_wak = RTC_CNTL_DBIAS_1V10, \
+  .rtc_dbias_slp = is_dslp(sleep_flags)                   ? RTC_CNTL_DBIAS_SLP  \
+                   : !((sleep_flags) & RTC_SLEEP_PD_INT_8M) ? RTC_CNTL_DBIAS_1V10 \
+                   : RTC_CNTL_DBIAS_SLP, \
   .vddsdio_pd_en = ((sleep_flags) & RTC_SLEEP_PD_VDDSDIO) ? 1 : 0, \
-  .xtal_fpu = ((sleep_flags) & RTC_SLEEP_PD_XTAL) ? 0 : 1, \
+  .xtal_fpu = is_dslp(sleep_flags) ? 0 : ((sleep_flags) & RTC_SLEEP_PD_XTAL) ? 0 : 1, \
   .deep_slp_reject = 1, \
-  .light_slp_reject = 1, \
-  .rtc_dbias_slp = RTC_CNTL_DBIAS_1V10, \
+  .light_slp_reject = 1 \
 }
 
 #define X32K_CONFIG_DEFAULT() { \
@@ -220,7 +220,7 @@
   .xtal_fpu = 0, \
   .bbpll_fpu = 0, \
   .cpu_waiti_clk_gate = 1, \
-  .cali_ocode = 0 \
+  .cali_ocode = 0\
 }
 
 /* The magic data for the struct esp32s3_rtc_backup_s that is in RTC slow
@@ -276,16 +276,12 @@ struct esp32s3_rtc_sleep_config_s
   uint32_t dig_peri_pd_en : 1;         /* power down digital peripherals */
   uint32_t deep_slp : 1;               /* power down digital domain */
   uint32_t wdt_flashboot_mod_en : 1;   /* enable WDT flashboot mode */
+  uint32_t dig_dbias_wak : 5;          /* set bias for digital domain, in active mode */
   uint32_t dig_dbias_slp : 5;          /* set bias for digital domain, in sleep mode */
+  uint32_t rtc_dbias_wak : 5;          /* set bias for RTC domain, in active mode */
   uint32_t rtc_dbias_slp : 5;          /* set bias for RTC domain, in sleep mode */
-  uint32_t bias_sleep_monitor : 1;     /* circuit control parameter, in monitor mode */
-  uint32_t dbg_atten_slp : 4;          /* voltage parameter, in sleep mode */
-  uint32_t bias_sleep_slp : 1;         /* circuit control parameter, in sleep mode */
-  uint32_t pd_cur_monitor : 1;         /* circuit control parameter, in monitor mode */
-  uint32_t pd_cur_slp : 1;             /* circuit control parameter, in sleep mode */
   uint32_t vddsdio_pd_en : 1;          /* power down VDDSDIO regulator */
   uint32_t xtal_fpu : 1;               /* keep main XTAL powered up in sleep */
-  uint32_t rtc_regulator_fpu  : 1;     /* keep rtc regulator powered up in sleep */
   uint32_t deep_slp_reject : 1;
   uint32_t light_slp_reject : 1;
 };
@@ -353,8 +349,6 @@ static RTC_DATA_ATTR struct esp32s3_rtc_backup_s rtc_saved_data;
 
 static struct esp32s3_rtc_backup_s *g_rtc_save;
 static bool g_rt_timer_enabled = false;
-static uint32_t g_dig_dbias_pvt_non_240m = 27;
-static uint32_t g_rtc_dbias_pvt_non_240m = 27;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -409,14 +403,6 @@ volatile bool g_rtc_enabled = false;
 
 extern void ets_update_cpu_frequency(uint32_t ticks_per_us);
 
-/* Pauses execution for us microseconds */
-
-extern void esp_rom_delay_us(uint32_t us);
-
-/* Get the reset reason for CPU. */
-
-extern soc_reset_reason_t esp_rom_get_reset_reason(int cpu_no);
-
 /****************************************************************************
  * Name: esp32s3_rtc_sleep_pu
  *
@@ -424,7 +410,7 @@ extern soc_reset_reason_t esp_rom_get_reset_reason(int cpu_no);
  *   Configure whether certain peripherals are powered up in deep sleep.
  *
  * Input Parameters:
- *   cfg - Power down flags as rtc_sleep_pu_config_t structure
+ *   cfg - power down flags as rtc_sleep_pu_config_t structure
  *
  * Returned Value:
  *   None
@@ -506,7 +492,7 @@ static void IRAM_ATTR esp32s3_rtc_clk_fast_freq_set(
  *   These are the routines to work with such a representation.
  *
  * Input Parameters:
- *   val - Register value
+ *   val   - register value
  *
  * Returned Value:
  *   true:  Valid register value.
@@ -527,8 +513,8 @@ static inline bool esp32s3_clk_val_is_valid(uint32_t val)
  *   Clock calibration function used by rtc_clk_cal and rtc_clk_cal_ratio
  *
  * Input Parameters:
- *   cal_clk        - Which clock to calibrate
- *   slowclk_cycles - Number of slow clock cycles to count.
+ *   cal_clk        - which clock to calibrate
+ *   slowclk_cycles - number of slow clock cycles to count.
  *
  * Returned Value:
  *   Number of XTAL clock cycles within the given number of slow clock
@@ -600,7 +586,7 @@ static uint32_t IRAM_ATTR esp32s3_rtc_clk_cal_internal(
 
   if (cal_clk == RTC_CAL_32K_XTAL || slow_freq == RTC_SLOW_FREQ_32K_XTAL)
     {
-      expected_freq = 32768; /* Standard 32k XTAL */
+      expected_freq = 32768; /* standard 32k XTAL */
     }
   else if (cal_clk == RTC_CAL_8MD256 || slow_freq == RTC_SLOW_FREQ_8MD256)
     {
@@ -674,8 +660,8 @@ static void esp32s3_wait_dig_dbias_valid(uint64_t rtc_cycles)
  *   Switch to XTAL frequency, does not disable the PLL
  *
  * Input Parameters:
- *   freq - XTAL frequency
- *   div  - REF_TICK divider
+ *   freq -  XTAL frequency
+ *   div  -  REF_TICK divider
  *
  * Returned Value:
  *   none
@@ -686,7 +672,7 @@ void IRAM_ATTR esp32s3_rtc_update_to_xtal(int freq, int div)
 {
   ets_update_cpu_frequency(freq);
 
-  /* Set digital voltage for different cpu freq from xtal */
+  /* set digital voltage for different cpu freq from xtal */
 
   if (freq <= 2)
     {
@@ -750,7 +736,7 @@ static void IRAM_ATTR esp32s3_rtc_clk_slow_freq_set(
  *   Enable 32 kHz XTAL oscillator
  *
  * Input Parameters:
- *   enable - True to enable, false to disable
+ *   enable   - boolean Enable/Disable
  *
  * Returned Value:
  *   None
@@ -791,8 +777,8 @@ static void IRAM_ATTR esp32s3_rtc_clk_32k_enable(bool enable)
  *   Enable or disable 8 MHz internal oscillator
  *
  * Input Parameters:
- *   clk_8m_en - True to enable 8MHz generator, false to disable
- *   d256_en   - True to enable /256 divider, false to disable
+ *   clk_8m_en - true to enable 8MHz generator, false to disable
+ *   d256_en   - true to enable /256 divider, false to disable
  *
  * Returned Value:
  *   None
@@ -1235,8 +1221,8 @@ enum esp32s3_rtc_slow_freq_e IRAM_ATTR esp32s3_rtc_get_slow_clk(void)
  *   Measure RTC slow clock's period, based on main XTAL frequency
  *
  * Input Parameters:
- *   cal_clk        - Clock to be measured
- *   slowclk_cycles - Number of slow clock cycles to average
+ *   cal_clk        - clock to be measured
+ *   slowclk_cycles - number of slow clock cycles to average
  *
  * Returned Value:
  *   Average slow clock period in microseconds, Q13.19 fixed point format
@@ -1262,6 +1248,9 @@ uint32_t IRAM_ATTR esp32s3_rtc_clk_cal(enum esp32s3_rtc_cal_sel_e cal_clk,
 
   return period;
 }
+
+enum esp32s3_rtc_xtal_freq_e rtc_get_xtal(void)
+                __attribute__((alias("esp32s3_rtc_clk_xtal_freq_get")));
 
 /****************************************************************************
  * Name: esp32s3_rtc_clk_xtal_freq_get
@@ -1295,7 +1284,7 @@ enum esp32s3_rtc_xtal_freq_e IRAM_ATTR esp32s3_rtc_clk_xtal_freq_get(void)
  * Name: esp32s3_rtc_clk_bbpll_disable
  *
  * Description:
- *   Disable BBPLL.
+ *   disable BBPLL.
  *
  * Input Parameters:
  *   None
@@ -1453,21 +1442,8 @@ static void IRAM_ATTR esp32s3_rtc_bbpll_configure(
   REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DR3, dr3);
   REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_DCUR, i2c_bbpll_dcur);
   REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_VCO_DBIAS, dbias);
-
-  /* Wait calibration done */
-
-  while (!(getreg32(I2C_MST_ANA_CONF0_REG) & I2C_MST_BBPLL_CAL_DONE));
-
-  /* Delay 10us after calibration done to fix bbpll calibration may
-   * stop early.
-   */
-
-  esp_rom_delay_us(10);
-
-  /* BBPLL calibration stop */
-
-  modifyreg32(I2C_MST_ANA_CONF0_REG, I2C_MST_BBPLL_STOP_FORCE_LOW,
-              I2C_MST_BBPLL_STOP_FORCE_HIGH);
+  REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DHREF_SEL, 2);
+  REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DLREF_SEL, 1);
 }
 
 /****************************************************************************
@@ -1489,11 +1465,11 @@ void esp32s3_rtc_clk_set(void)
   enum esp32s3_rtc_fast_freq_e fast_freq = RTC_FAST_FREQ_8M;
   enum esp32s3_slow_clk_sel_e slow_clk = SLOW_CLK_150K;
 
-#if defined(CONFIG_ESP32S3_RTC_CLK_EXT_XTAL)
+#if defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS)
   slow_clk = SLOW_CLK_32K_XTAL;
-#elif defined(CONFIG_ESP32S3_RTC_CLK_EXT_OSC)
+#elif defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_OSC)
   slow_clk = SLOW_CLK_32K_EXT_OSC;
-#elif defined(CONFIG_ESP32S3_RTC_CLK_INT_8MD256)
+#elif defined(CONFIG_ESP32_RTC_CLK_SRC_INT_8MD256)
   slow_clk = SLOW_CLK_8MD256;
 #endif
 
@@ -1518,27 +1494,17 @@ void esp32s3_rtc_clk_set(void)
 void IRAM_ATTR esp32s3_rtc_init(void)
 {
   struct esp32s3_rtc_priv_s cfg = RTC_CONFIG_DEFAULT();
-  soc_reset_reason_t rst_reas = esp_rom_get_reset_reason(0);
-
-  /* When power on, we need to set `cali_ocode` to 1, to do a OCode
-   * calibration, which will calibrate the rtc reference voltage to a
-   * tested value
-   */
-
-  if (rst_reas == RESET_REASON_CHIP_POWER_ON)
-    {
-      cfg.cali_ocode = 1;
-    }
 
   REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_XPD_RTC_REG, 0);
   REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_XPD_DIG_REG, 0);
 
   modifyreg32(RTC_CNTL_RTC_ANA_CONF_REG, RTC_CNTL_PVTMON_PU, 0);
 
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER1_REG, RTC_CNTL_PLL_BUF_WAIT,
-                cfg.pll_wait);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER1_REG, RTC_CNTL_CK8M_WAIT,
-                cfg.ck8m_wait);
+  modifyreg32(RTC_CNTL_RTC_TIMER1_REG, 0,
+              cfg.pll_wait ? RTC_CNTL_PLL_BUF_WAIT : 0);
+
+  modifyreg32(RTC_CNTL_RTC_TIMER1_REG, 0,
+              cfg.ck8m_wait ? RTC_CNTL_CK8M_WAIT : 0);
 
   /* Moved from rtc sleep to rtc init to save sleep function running time */
 
@@ -1557,21 +1523,6 @@ void IRAM_ATTR esp32s3_rtc_init(void)
   REG_SET_FIELD(RTC_CNTL_RTC_TIMER3_REG, RTC_CNTL_BT_POWERUP_TIMER, 1);
   REG_SET_FIELD(RTC_CNTL_RTC_TIMER3_REG, RTC_CNTL_BT_WAIT_TIMER, 1);
 
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER6_REG, RTC_CNTL_CPU_TOP_POWERUP_TIMER, 1);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER6_REG, RTC_CNTL_CPU_TOP_WAIT_TIMER, 1);
-
-  /* Set rtc peri timer */
-
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER4_REG, RTC_CNTL_RTC_POWERUP_TIMER, 1);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER4_REG, RTC_CNTL_RTC_WAIT_TIMER, 1);
-
-  /* Set digital wrap timer */
-
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER4_REG, RTC_CNTL_DG_WRAP_POWERUP_TIMER, 1);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER4_REG, RTC_CNTL_DG_WRAP_WAIT_TIMER, 1);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER6_REG, RTC_CNTL_DG_PERI_POWERUP_TIMER, 1);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER6_REG, RTC_CNTL_DG_PERI_WAIT_TIMER, 1);
-
   /* Reset RTC bias to default value (needed if waking up from deep sleep) */
 
   REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG_SLEEP,
@@ -1579,10 +1530,6 @@ void IRAM_ATTR esp32s3_rtc_init(void)
   REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG,
                     RTC_CNTL_DBIAS_1V10);
 
-  /* Set the wait time to the default value. */
-
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER2_REG, RTC_CNTL_ULPCP_TOUCH_START_WAIT,
-                RTC_CNTL_ULPCP_TOUCH_START_WAIT_DEFAULT);
   if (cfg.cali_ocode)
     {
       /* TODO: Use calibration from efuse if configured */
@@ -1590,10 +1537,6 @@ void IRAM_ATTR esp32s3_rtc_init(void)
       esp32s3_rtc_calibrate_ocode();
     }
 
-  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG,
-                    g_rtc_dbias_pvt_non_240m);
-  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_DIG_DREG,
-                    g_dig_dbias_pvt_non_240m);
   if (cfg.clkctl_init)
     {
       /* clear CMMU clock force on */
@@ -1743,13 +1686,6 @@ void IRAM_ATTR esp32s3_rtc_init(void)
       modifyreg32(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_FORCE_UNHOLD |
                   RTC_CNTL_DG_PAD_FORCE_NOISO, 0);
     }
-
-  /* force power down wifi and bt power domain */
-
-  modifyreg32(RTC_CNTL_DIG_ISO_REG, 0, RTC_CNTL_WIFI_FORCE_ISO);
-  modifyreg32(RTC_CNTL_DIG_PWC_REG, 0, RTC_CNTL_WIFI_FORCE_PD);
-  putreg32(0, RTC_CNTL_INT_ENA_RTC_REG);
-  putreg32(UINT32_MAX, RTC_CNTL_INT_CLR_RTC_REG);
 }
 
 /****************************************************************************
@@ -1859,7 +1795,7 @@ uint32_t IRAM_ATTR esp32s3_clk_slowclk_cal_get(void)
  *   Set target value of RTC counter for RTC_TIMER_TRIG_EN wakeup source.
  *
  * Input Parameters:
- *   t - Value of RTC counter at which wakeup from sleep will happen.
+ *   t - value of RTC counter at which wakeup from sleep will happen.
  *
  * Returned Value:
  *   None
@@ -1870,10 +1806,6 @@ void IRAM_ATTR esp32s3_rtc_sleep_set_wakeup_time(uint64_t t)
 {
   putreg32(t & UINT32_MAX, RTC_CNTL_RTC_SLP_TIMER0_REG);
   putreg32((uint32_t)(t >> 32), RTC_CNTL_RTC_SLP_TIMER1_REG);
-  modifyreg32(RTC_CNTL_INT_CLR_RTC_REG, 0,
-              RTC_CNTL_RTC_MAIN_TIMER_INT_CLR_M);
-  modifyreg32(RTC_CNTL_RTC_SLP_TIMER1_REG, 0,
-              RTC_CNTL_RTC_MAIN_TIMER_ALARM_EN_M);
 }
 
 /****************************************************************************
@@ -2047,126 +1979,6 @@ int IRAM_ATTR esp_rtc_clk_get_cpu_freq(void)
 void IRAM_ATTR esp32s3_rtc_sleep_init(uint32_t flags)
 {
   struct esp32s3_rtc_sleep_config_s cfg = RTC_SLEEP_CONFIG_DEFAULT(flags);
-  if (flags & RTC_SLEEP_PD_DIG)
-    {
-      DEBUGASSERT(flags & RTC_SLEEP_PD_XTAL);
-      cfg.dig_dbias_slp = 0;
-
-      /* RTC voltage from high to low */
-
-      if ((flags & RTC_SLEEP_USE_ADC_TESEN_MONITOR) ||
-          (!(flags & RTC_SLEEP_PD_INT_8M)))
-        {
-          /* RTC voltage in sleep mode >= 0.9v if 8MD256 select as RTC
-           * slow clock src, only need dbg_atten_slp set to 0
-           * Support all features:
-           * - 8MD256 as RTC slow clock src
-           * - ADC/Temperature sensor in monitor mode (ULP)
-           *   (also need pd_cur_monitor = 0)
-           * - RTC IO as input
-           * - RTC Memory at high temperature
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.rtc_regulator_fpu = 1;
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_DEEPSLEEP_NODROP;
-        }
-      else if (flags & RTC_SLEEP_NO_ULTRA_LOW)
-        {
-          /* RTC voltage in sleep mode >= 0.7v (default mode):
-           * Support follow features:
-           * - RTC IO as input
-           * - RTC Memory at high temperature
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.rtc_regulator_fpu = 1;
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_DEEPSLEEP_DEFAULT;
-        }
-      else
-        {
-          /* RTC regulator not opened and rtc voltage is about 0.66v
-           * (ultra low power).
-           * Support follow features:
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.rtc_regulator_fpu = 0;
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_DEEPSLEEP_ULTRA_LOW;
-        }
-    }
-  else
-    {
-      cfg.rtc_regulator_fpu = 1;
-
-      /* Voltage from high to low */
-
-      if ((flags & RTC_SLEEP_DIG_USE_8M) || !(flags & RTC_SLEEP_PD_XTAL))
-        {
-          /* digital voltage not less than 1.1v, rtc voltage is about 1.1v
-           * Support all features:
-           * - XTAL
-           * - RC 8M used by digital system
-           * - 8MD256 as RTC slow clock src (only need dbg_atten_slp to 0)
-           * - ADC/Temperature sensor in monitor mode (ULP)
-           *   (also need pd_cur_monitor = 0)
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_NODROP;
-          cfg.dig_dbias_slp = RTC_CNTL_DBIAS_1V10;
-        }
-      else if (!(flags & RTC_SLEEP_PD_INT_8M))
-        {
-          /* dbg_atten_slp need to set to 0.
-           * digital voltage is about 0.67v, rtc voltage is about 1.1v
-           * Support features:
-           * - 8MD256 as RTC slow clock src
-           * - ADC/Temperature sensor in monitor mode (ULP)
-           *   (also need pd_cur_monitor = 0)
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_NODROP;
-          cfg.dig_dbias_slp = 0;
-        }
-      else
-        {
-          /* digital voltage not less than 0.6v, rtc voltage is about 0.95v
-           * Support features:
-           * - ADC/Temperature sensor in monitor mode (ULP)
-           *   (also need pd_cur_monitor = 0)
-           * - ULP
-           * - Touch sensor
-           */
-
-          cfg.dbg_atten_slp = RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_DEFAULT;
-          cfg.dig_dbias_slp = RTC_CNTL_DBIAS_SLP;
-        }
-    }
-
-  if (!(flags & RTC_SLEEP_PD_XTAL))
-    {
-      cfg.bias_sleep_monitor = RTC_CNTL_BIASSLP_MONITOR_ON;
-      cfg.pd_cur_monitor = RTC_CNTL_PD_CUR_MONITOR_ON;
-      cfg.bias_sleep_slp = RTC_CNTL_BIASSLP_SLEEP_ON;
-      cfg.pd_cur_slp = RTC_CNTL_PD_CUR_SLEEP_ON;
-    }
-  else
-    {
-      cfg.bias_sleep_monitor = RTC_CNTL_BIASSLP_MONITOR_DEFAULT;
-      cfg.pd_cur_monitor = (flags & RTC_SLEEP_USE_ADC_TESEN_MONITOR) ?
-                                    RTC_CNTL_PD_CUR_MONITOR_ON :
-                                    RTC_CNTL_PD_CUR_MONITOR_DEFAULT;
-
-      cfg.bias_sleep_slp = RTC_CNTL_BIASSLP_SLEEP_DEFAULT;
-      cfg.pd_cur_slp = RTC_CNTL_PD_CUR_SLEEP_DEFAULT;
-    }
 
   /* Starts here */
 
@@ -2205,7 +2017,7 @@ void IRAM_ATTR esp32s3_rtc_sleep_init(uint32_t flags)
     {
       modifyreg32(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_CPU_TOP_FORCE_NOISO |
                   RTC_CNTL_CPU_TOP_FORCE_ISO, 0);
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_CPU_TOP_FORCE_PU,
+      modifyreg32(RTC_CNTL_RTC_PWC_REG, RTC_CNTL_CPU_TOP_FORCE_PU,
                   RTC_CNTL_CPU_TOP_PD_EN);
     }
   else
@@ -2217,94 +2029,103 @@ void IRAM_ATTR esp32s3_rtc_sleep_init(uint32_t flags)
     {
       modifyreg32(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PERI_FORCE_NOISO |
                   RTC_CNTL_DG_PERI_FORCE_ISO, 0);
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_DG_PERI_FORCE_PU,
+      modifyreg32(RTC_CNTL_RTC_PWC_REG, RTC_CNTL_DG_PERI_FORCE_PU,
                   RTC_CNTL_DG_PERI_PD_EN);
     }
   else
     {
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_DG_PERI_PD_EN, 0);
+      modifyreg32(RTC_CNTL_RTC_PWC_REG, RTC_CNTL_DG_PERI_PD_EN, 0);
     }
 
   if (cfg.rtc_peri_pd_en)
     {
-      modifyreg32(RTC_CNTL_RTC_PWC_REG, RTC_CNTL_RTC_FORCE_NOISO |
-                  RTC_CNTL_RTC_FORCE_ISO | RTC_CNTL_RTC_FORCE_PU,
-                  RTC_CNTL_RTC_PD_EN);
+      modifyreg32(RTC_CNTL_RTC_PWC_REG, 0, RTC_CNTL_RTC_PD_EN);
     }
   else
     {
       modifyreg32(RTC_CNTL_RTC_PWC_REG, RTC_CNTL_RTC_PD_EN, 0);
     }
 
-  DEBUGASSERT(!cfg.pd_cur_monitor || cfg.bias_sleep_monitor);
-  DEBUGASSERT(!cfg.pd_cur_slp || cfg.bias_sleep_slp);
-  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG_SLEEP,
-                    cfg.rtc_dbias_slp);
-  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_DIG_DREG_SLEEP,
-                    cfg.dig_dbias_slp);
-
-  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_DBG_ATTEN_DEEP_SLP,
-                cfg.dbg_atten_slp);
-  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_BIAS_SLEEP_DEEP_SLP,
-                cfg.bias_sleep_slp);
-  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_PD_CUR_DEEP_SLP,
-                cfg.pd_cur_slp);
   REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_DBG_ATTEN_MONITOR,
                 RTC_CNTL_DBG_ATTEN_MONITOR_DEFAULT);
   REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_BIAS_SLEEP_MONITOR,
-                cfg.bias_sleep_monitor);
+                RTC_CNTL_BIASSLP_MONITOR_DEFAULT);
+  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_BIAS_SLEEP_DEEP_SLP,
+                (!cfg.deep_slp && cfg.xtal_fpu) ?
+                RTC_CNTL_BIASSLP_SLEEP_ON :
+                RTC_CNTL_BIASSLP_SLEEP_DEFAULT);
   REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_PD_CUR_MONITOR,
-                cfg.pd_cur_monitor);
+                RTC_CNTL_PD_CUR_MONITOR_DEFAULT);
+  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_PD_CUR_DEEP_SLP,
+            (!cfg.deep_slp && cfg.xtal_fpu) ? RTC_CNTL_PD_CUR_SLEEP_ON :
+                                              RTC_CNTL_PD_CUR_SLEEP_DEFAULT);
 
   if (cfg.deep_slp)
     {
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, 0, RTC_CNTL_DG_WRAP_PD_EN);
+      modifyreg32(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_PAD_FORCE_ISO |
+                  RTC_CNTL_DG_PAD_FORCE_NOISO, 0);
+
+      /* Shut down parts of RTC which may have been left
+       * enabled by the wireless drivers.
+       */
+
       modifyreg32(RTC_CNTL_RTC_ANA_CONF_REG, RTC_CNTL_CKGEN_I2C_PU |
                   RTC_CNTL_PLL_I2C_PU | RTC_CNTL_RFRX_PBUS_PU |
                   RTC_CNTL_TXRF_I2C_PU, 0);
     }
   else
     {
-      REG_SET_FIELD(RTC_CNTL_RTC_REGULATOR_DRV_CTRL_REG,
-                    RTC_CNTL_DG_VDD_DRV_B_SLP,
-                    RTC_CNTL_DG_VDD_DRV_B_SLP_DEFAULT);
       modifyreg32(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_DG_WRAP_PD_EN, 0);
+      REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG,
+                    RTC_CNTL_DBG_ATTEN_DEEP_SLP, 0);
     }
 
-  /* Mem force pu */
+  REG_SET_FIELD(RTC_CNTL_RTC_OPTIONS0_REG, RTC_CNTL_XTL_FORCE_PU,
+                cfg.xtal_fpu);
 
-  modifyreg32(RTC_CNTL_DIG_PWC_REG, 0, RTC_CNTL_LSLP_MEM_FORCE_PU);
-  modifyreg32(RTC_CNTL_RTC_PWC_REG, 0, RTC_CNTL_RTC_FASTMEM_FORCE_LPU |
-              RTC_CNTL_RTC_SLOWMEM_FORCE_LPU);
-  REG_SET_FIELD(RTC_CNTL_RTC_REG, RTC_CNTL_RTC_REGULATOR_FORCE_PU,
-                cfg.rtc_regulator_fpu);
-  if (!cfg.int_8m_pd_en)
+  if (REG_GET_FIELD(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL) ==
+                                                      RTC_SLOW_FREQ_8MD256)
     {
-      REG_SET_BIT(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_CK8M_FORCE_PU);
+      modifyreg32(RTC_CNTL_RTC_CLK_CONF_REG, 0, RTC_CNTL_CK8M_FORCE_PU);
     }
   else
     {
-      REG_CLR_BIT(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_CK8M_FORCE_PU);
+      modifyreg32(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_CK8M_FORCE_PU, 0);
     }
 
-  /* Enable VDDSDIO control by state machine */
+  /* Keep the RTC8M_CLK on in light_sleep mode if the
+   * ledc low-speed channel is clocked by RTC8M_CLK.
+   */
 
-  REG_CLR_BIT(RTC_CNTL_RTC_SDIO_CONF_REG, RTC_CNTL_SDIO_FORCE);
+  if (!cfg.deep_slp && GET_PERI_REG_MASK(RTC_CNTL_RTC_CLK_CONF_REG,
+                                         RTC_CNTL_DIG_CLK8M_EN_M))
+    {
+      REG_CLR_BIT(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_CK8M_FORCE_PD);
+      REG_SET_BIT(RTC_CNTL_RTC_CLK_CONF_REG, RTC_CNTL_CK8M_FORCE_PU);
+    }
+
+  /* enable VDDSDIO control by state machine */
+
+  modifyreg32(RTC_CNTL_RTC_SDIO_CONF_REG, RTC_CNTL_SDIO_FORCE, 0);
   REG_SET_FIELD(RTC_CNTL_RTC_SDIO_CONF_REG, RTC_CNTL_SDIO_REG_PD_EN,
                 cfg.vddsdio_pd_en);
+
+  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG_SLEEP,
+                    cfg.rtc_dbias_slp);
+  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_RTC_DREG,
+                    cfg.rtc_dbias_wak);
+  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_DIG_DREG_SLEEP,
+                    cfg.dig_dbias_slp);
+  REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_EXT_DIG_DREG,
+                    cfg.dig_dbias_wak);
+
   REG_SET_FIELD(RTC_CNTL_RTC_SLP_REJECT_CONF_REG,
                 RTC_CNTL_DEEP_SLP_REJECT_EN, cfg.deep_slp_reject);
   REG_SET_FIELD(RTC_CNTL_RTC_SLP_REJECT_CONF_REG,
                 RTC_CNTL_LIGHT_SLP_REJECT_EN, cfg.light_slp_reject);
 
-  /* Set wait cycle for touch or COCPU after deep sleep and light sleep. */
-
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER2_REG,
-                RTC_CNTL_ULPCP_TOUCH_START_WAIT,
-                RTC_CNTL_ULPCP_TOUCH_START_WAIT_IN_SLEEP);
-
-  REG_SET_FIELD(RTC_CNTL_RTC_OPTIONS0_REG,
-                RTC_CNTL_XTL_FORCE_PU, cfg.xtal_fpu);
+  REG_SET_FIELD(RTC_CNTL_RTC_OPTIONS0_REG, RTC_CNTL_XTL_FORCE_PU,
+                cfg.xtal_fpu);
   REG_SET_FIELD(RTC_CNTL_RTC_CLK_CONF_REG,
                 RTC_CNTL_XTAL_GLOBAL_FORCE_NOGATING, cfg.xtal_fpu);
 }
@@ -2316,8 +2137,8 @@ void IRAM_ATTR esp32s3_rtc_sleep_init(uint32_t flags)
  *   Enter force sleep mode.
  *
  * Input Parameters:
- *   wakeup_opt - Bit mask wake up reasons to enable
- *   reject_opt - Bit mask of sleep reject reasons.
+ *   wakeup_opt - bit mask wake up reasons to enable
+ *   reject_opt - bit mask of sleep reject reasons.
  *
  * Returned Value:
  *   non-zero if sleep was rejected by hardware
@@ -2330,11 +2151,7 @@ int IRAM_ATTR esp32s3_rtc_sleep_start(uint32_t wakeup_opt,
   int reject;
   REG_SET_FIELD(RTC_CNTL_RTC_WAKEUP_STATE_REG,
                 RTC_CNTL_RTC_WAKEUP_ENA, wakeup_opt);
-  REG_SET_FIELD(RTC_CNTL_RTC_SLP_REJECT_CONF_REG,
-                RTC_CNTL_RTC_SLEEP_REJECT_ENA, reject_opt);
-
-  modifyreg32(RTC_CNTL_INT_CLR_RTC_REG, 0,
-              RTC_CNTL_SLP_REJECT_INT_CLR | RTC_CNTL_SLP_WAKEUP_INT_CLR);
+  putreg32((uint32_t)reject_opt, RTC_CNTL_RTC_SLP_REJECT_CONF_REG);
 
   /* Start entry into sleep mode */
 
@@ -2351,11 +2168,10 @@ int IRAM_ATTR esp32s3_rtc_sleep_start(uint32_t wakeup_opt,
   modifyreg32(RTC_CNTL_INT_CLR_RTC_REG, 0,
               RTC_CNTL_SLP_REJECT_INT_CLR | RTC_CNTL_SLP_WAKEUP_INT_CLR);
 
-  /* Recover default wait cycle for touch or COCPU after wakeup. */
+  /* restore DBG_ATTEN to the default value */
 
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER2_REG, RTC_CNTL_ULPCP_TOUCH_START_WAIT,
-                RTC_CNTL_ULPCP_TOUCH_START_WAIT_DEFAULT);
-
+  REG_SET_FIELD(RTC_CNTL_RTC_BIAS_CONF_REG, RTC_CNTL_DBG_ATTEN_DEEP_SLP,
+                RTC_CNTL_DBG_ATTEN_LIGHTSLEEP_DEFAULT);
   return reject;
 }
 
@@ -2536,30 +2352,10 @@ uint64_t esp32s3_rtc_get_time_us(void)
 }
 
 /****************************************************************************
- * Name: esp32s3_rtc_bbpll_enable
- *
- * Description:
- *   Power up BBPLL circuit.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void IRAM_ATTR esp32s3_rtc_bbpll_enable(void)
-{
-  modifyreg32(RTC_CNTL_RTC_OPTIONS0_REG, RTC_CNTL_BB_I2C_FORCE_PD |
-              RTC_CNTL_BBPLL_FORCE_PD | RTC_CNTL_BBPLL_I2C_FORCE_PD, 0);
-}
-
-/****************************************************************************
  * Name: esp32_rtc_bbpll_disable
  *
  * Description:
- *   Power down BBPLL circuit.
+ *   disable BBPLL.
  *
  * Input Parameters:
  *   None
@@ -2576,41 +2372,13 @@ void IRAM_ATTR esp32s3_rtc_bbpll_disable(void)
 }
 
 /****************************************************************************
- * Name: esp32c3_rtc_sleep_low_init
- *
- * Description:
- *   Low level initialize for rtc state machine waiting
- *   cycles after waking up.
- *
- * Input Parameters:
- *   slowclk_period - Re-calibrated slow clock period
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void IRAM_ATTR esp32s3_rtc_sleep_low_init(uint32_t slowclk_period)
-{
-  /* Set 5 PWC state machine times to fit in main state machine time */
-
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER1_REG, RTC_CNTL_PLL_BUF_WAIT,
-                RTC_CNTL_PLL_BUF_WAIT_SLP_CYCLES);
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER1_REG, RTC_CNTL_XTL_BUF_WAIT,
-                esp32s3_rtc_time_us_to_slowclk(
-                RTC_CNTL_XTL_BUF_WAIT_SLP_US, slowclk_period));
-  REG_SET_FIELD(RTC_CNTL_RTC_TIMER1_REG, RTC_CNTL_CK8M_WAIT,
-                RTC_CNTL_CK8M_WAIT_SLP_CYCLES);
-}
-
-/****************************************************************************
  * Name: esp32s3_rtc_set_boot_time
  *
  * Description:
  *   Set time to RTC register to replace the original boot time.
  *
  * Input Parameters:
- *   time_us - Set time in microseconds.
+ *   time_us - set time in microseconds.
  *
  * Returned Value:
  *   None
@@ -2633,7 +2401,7 @@ void IRAM_ATTR esp32s3_rtc_set_boot_time(uint64_t time_us)
  *   None
  *
  * Returned Value:
- *   time_us - Get time in microseconds.
+ *   time_us - get time in microseconds.
  *
  ****************************************************************************/
 
@@ -2642,34 +2410,6 @@ uint64_t IRAM_ATTR esp32s3_rtc_get_boot_time(void)
   return ((uint64_t)getreg32(RTC_BOOT_TIME_LOW_REG))
         + (((uint64_t)getreg32(RTC_BOOT_TIME_HIGH_REG)) << 32);
 }
-
-/****************************************************************************
- * Name: esp32s3_rtc_recalib_bbpll
- *
- * Description:
- *   Re-calibration BBPLL, workaround for bootloader not calibration well
- *   issue.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ESP32S3_SYSTEM_BBPLL_RECALIB
-void IRAM_ATTR esp32s3_rtc_recalib_bbpll(void)
-{
-  struct esp32s3_cpu_freq_config_s freq_config;
-  esp32s3_rtc_clk_cpu_freq_get_config(&freq_config);
-  esp32s3_rtc_cpu_freq_set_xtal();
-  esp32s3_rtc_bbpll_disable();
-  esp32s3_rtc_bbpll_enable();
-  esp32s3_rtc_bbpll_configure(esp32s3_rtc_clk_xtal_freq_get(), 480);
-  esp32s3_rtc_clk_cpu_freq_set_config(&freq_config);
-}
-#endif
 
 /****************************************************************************
  * Name: up_rtc_time
@@ -2738,7 +2478,7 @@ time_t up_rtc_time(void)
  *   able to set their time based on a standard timespec.
  *
  * Input Parameters:
- *   ts - The time to use
+ *   ts - the time to use
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno on failure

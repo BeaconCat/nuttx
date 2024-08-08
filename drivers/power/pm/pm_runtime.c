@@ -27,9 +27,12 @@
 #include <debug.h>
 #include <assert.h>
 #include <errno.h>
+#include <sched.h>
 #include <nuttx/clock.h>
+#include <nuttx/arch.h>
 #include <nuttx/power/pm_runtime.h>
-#include <sched/sched.h>
+
+#include "pm.h"
 
 /****************************************************************************
  * Private Function Prototypes
@@ -154,7 +157,7 @@ static int rpm_changestate(FAR struct pm_runtime_s *rpm, rpm_state_e state)
 
   default:
     break;
-  }
+    }
 
   return ret;
 }
