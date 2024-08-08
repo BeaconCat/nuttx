@@ -36,7 +36,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/semaphore.h>
 #include <time.h>
 #include <inttypes.h>
@@ -94,7 +94,7 @@
                                              */
 
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            14              /* Fourteen common commands */
+#define TSC_NCMDS            14              /* Thirteen common commands */
 
 /* Backward compatible IOCTL */
 
