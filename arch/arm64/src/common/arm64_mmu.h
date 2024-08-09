@@ -139,12 +139,6 @@
 #define TCR_TG0_16K                 (2ULL << 14)
 #define TCR_EPD1_DISABLE            (1ULL << 23)
 
-#define TCR_AS_SHIFT                36U
-#define TCR_ASID_8                  (0ULL << TCR_AS_SHIFT)
-#define TCR_ASID_16                 (1ULL << TCR_AS_SHIFT)
-#define TCR_TBI0                    (1ULL << 37)
-#define TCR_TBI1                    (1ULL << 38)
-
 #define TCR_PS_BITS_4GB             0x0ULL
 #define TCR_PS_BITS_64GB            0x1ULL
 #define TCR_PS_BITS_1TB             0x2ULL
@@ -172,13 +166,6 @@
 #define CCSIDR_EL1_WAYS_MASK         BIT_MASK(10)
 #define CCSIDR_EL1_SETS_SHIFT        13
 #define CCSIDR_EL1_SETS_MASK         BIT_MASK(15)
-
-/* csselr_el1 */
-
-#define CSSELR_EL1_IND_SHIFT         0
-#define CSSELR_EL1_IND_MASK          BIT_MASK(1)
-#define CSSELR_EL1_LEVEL_SHIFT       1
-#define CSSELR_EL1_LEVEL_MASK        BIT_MASK(3)
 
 /* Convenience macros to represent the ARMv8-A-specific
  * configuration for memory access permission and
