@@ -27,6 +27,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <stdint.h>
 
 #include <nuttx/serial/serial.h>
 
