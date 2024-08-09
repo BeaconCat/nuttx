@@ -35,9 +35,8 @@ function(nuttx_add_library_internal target)
 
   # add main include directories
   target_include_directories(
-    ${target} SYSTEM
-    PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include
-            ${CMAKE_BINARY_DIR}/include_arch)
+    ${target} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/include
+                             ${CMAKE_BINARY_DIR}/include)
 
   # Set global compile options & definitions We use the "nuttx" target to hold
   # these properties so that libraries added after this property is set can read
@@ -51,9 +50,6 @@ function(nuttx_add_library_internal target)
   target_include_directories(
     ${target}
     PRIVATE $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_INCLUDE_DIRECTORIES>>)
-
-  # Set install config for all library
-  install(TARGETS ${target})
 endfunction()
 
 # Auxiliary libraries
@@ -79,7 +75,7 @@ endfunction()
 function(nuttx_add_user_library target)
   # declare target
   add_library(${target} OBJECT ${ARGN})
-
+  add_dependencies(${target} apps_context)
   nuttx_add_library_internal(${target} ${ARGN})
 
   # link to final libapps
@@ -104,6 +100,9 @@ function(nuttx_add_system_library target)
 
   # add to list of libraries to link to final nuttx binary
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+
+  # install to library dir
+  install(TARGETS ${target} DESTINATION lib)
 endfunction()
 
 # Kernel Libraries
@@ -180,8 +179,13 @@ define_property(
 #
 function(nuttx_add_library target)
   add_library(${target} ${ARGN})
-
+  add_dependencies(${target} apps_context)
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+
+  get_target_property(target_type ${target} TYPE)
+  if(${target_type} STREQUAL "STATIC_LIBRARY")
+    install(TARGETS ${target} ARCHIVE DESTINATION ${CMAKE_BINARY_DIR}/staging)
+  endif()
 
   nuttx_add_library_internal(${target})
 endfunction()
@@ -193,9 +197,7 @@ endfunction()
 # Add extra library to extra attribute
 #
 function(nuttx_add_extra_library)
-  foreach(target ${ARGN})
-    set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
-  endforeach()
+  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${ARGN})
 endfunction()
 
 # Import static library
@@ -214,7 +216,7 @@ endfunction()
 # Usually used with Nuttx to include an external system that already supports
 # CMake compilation
 function(nuttx_add_external_library target)
-  cmake_parse_arguments(ARGS "" MODE "" ${ARGN})
+  cmake_parse_arguments(ARGS MODE "" "" ${ARGN})
   if(NOT ARGS_MODE)
     set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
   elseif("${ARGS_MODE}" STREQUAL "APPS")
