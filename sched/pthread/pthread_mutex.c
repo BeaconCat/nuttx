@@ -158,6 +158,13 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
         {
           ret = EOWNERDEAD;
         }
+#ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      else if (mutex_is_hold(&mutex->mutex) &&
+               mutex->type != PTHREAD_MUTEX_RECURSIVE)
+        {
+          ret = EDEADLK;
+        }
+#endif
       else
         {
           /* Take semaphore underlying the mutex.  pthread_sem_take
@@ -228,6 +235,13 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
         {
           ret = EOWNERDEAD;
         }
+#ifdef CONFIG_PTHREAD_MUTEX_TYPES
+      else if (mutex_is_hold(&mutex->mutex) &&
+               mutex->type != PTHREAD_MUTEX_RECURSIVE)
+        {
+          ret = EBUSY;
+        }
+#endif
       else
         {
           /* Try to take the semaphore underlying the mutex */
