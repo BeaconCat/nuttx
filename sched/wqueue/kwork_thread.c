@@ -37,7 +37,6 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/sched.h>
 
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
@@ -83,8 +82,6 @@ struct hp_wqueue_s g_hpwork =
 {
   {NULL, NULL},
   SEM_INITIALIZER(0),
-  SEM_INITIALIZER(0),
-  CONFIG_SCHED_HPNTHREADS,
 };
 
 #endif /* CONFIG_SCHED_HPWORK */
@@ -96,8 +93,6 @@ struct lp_wqueue_s g_lpwork =
 {
   {NULL, NULL},
   SEM_INITIALIZER(0),
-  SEM_INITIALIZER(0),
-  CONFIG_SCHED_LPNTHREADS,
 };
 
 #endif /* CONFIG_SCHED_LPWORK */
@@ -141,15 +136,15 @@ static int work_thread(int argc, FAR char *argv[])
   /* Get the handle from argv */
 
   wqueue  = (FAR struct kwork_wqueue_s *)
-            ((uintptr_t)strtoul(argv[1], NULL, 16));
+            ((uintptr_t)strtoul(argv[1], NULL, 0));
   kworker = (FAR struct kworker_s *)
-            ((uintptr_t)strtoul(argv[2], NULL, 16));
+            ((uintptr_t)strtoul(argv[2], NULL, 0));
 
   flags = enter_critical_section();
 
   /* Loop forever */
 
-  while (!wqueue->exit)
+  for (; ; )
     {
       /* And check each entry in the work queue.  Since we have disabled
        * interrupts we know:  (1) we will not be suspended unless we do
@@ -214,8 +209,7 @@ static int work_thread(int argc, FAR char *argv[])
 
   leave_critical_section(flags);
 
-  nxsem_post(&wqueue->exsem);
-  return OK;
+  return OK; /* To keep some compilers happy */
 }
 
 /****************************************************************************
@@ -229,6 +223,7 @@ static int work_thread(int argc, FAR char *argv[])
  *   name       - Name of the new task
  *   priority   - Priority of the new task
  *   stack_size - size (in bytes) of the stack needed
+ *   nthread    - Number of work thread should be created
  *   wqueue     - Work queue instance
  *
  * Returned Value:
@@ -237,7 +232,7 @@ static int work_thread(int argc, FAR char *argv[])
  ****************************************************************************/
 
 static int work_thread_create(FAR const char *name, int priority,
-                              int stack_size,
+                              int stack_size, int nthread,
                               FAR struct kwork_wqueue_s *wqueue)
 {
   FAR char *argv[3];
@@ -247,12 +242,12 @@ static int work_thread_create(FAR const char *name, int priority,
   int pid;
 
   /* Don't permit any of the threads to run until we have fully initialized
-   * all of them.
+   * g_hpwork and g_lpwork.
    */
 
   sched_lock();
 
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+  for (wndx = 0; wndx < nthread; wndx++)
     {
       nxsem_init(&wqueue->worker[wndx].wait, 0, 0);
 
@@ -285,170 +280,69 @@ static int work_thread_create(FAR const char *name, int priority,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: work_queue_create
+ * Name: work_foreach
  *
  * Description:
- *   Create a new work queue. The work queue is identified by its work
- *   queue ID, which is used to queue works to the work queue and to
- *   perform other operations on the work queue.
- *   This function will create a work thread pool with nthreads threads.
- *   The work queue ID is returned on success.
+ *   Enumerate over each work thread and provide the tid of each task to a
+ *   user callback functions.
  *
  * Input Parameters:
- *   name       - Name of the new task
- *   priority   - Priority of the new task
- *   stack_size - size (in bytes) of the stack needed
- *   nthreads    - Number of work thread should be created
+ *   qid     - The work queue ID
+ *   handler - The function to be called with the pid of each task
+ *   arg     - The function callback
  *
  * Returned Value:
- *   The work queue handle returned on success.  Otherwise, NULL
+ *   None
  *
  ****************************************************************************/
 
-FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
-                                             int priority,
-                                             int stack_size, int nthreads)
+void work_foreach(int qid, work_foreach_t handler, FAR void *arg)
 {
   FAR struct kwork_wqueue_s *wqueue;
-  int ret;
-
-  if (nthreads < 1)
-    {
-      return NULL;
-    }
-
-  /* Allocate a new work queue */
-
-  wqueue = kmm_zalloc(sizeof(struct kwork_wqueue_s) +
-                      nthreads * sizeof(struct kworker_s));
-  if (wqueue == NULL)
-    {
-      return NULL;
-    }
-
-  /* Initialize the work queue structure */
-
-  dq_init(&wqueue->q);
-  nxsem_init(&wqueue->sem, 0, 0);
-  nxsem_init(&wqueue->exsem, 0, 0);
-  wqueue->nthreads = nthreads;
-
-  /* Create the work queue thread pool */
-
-  ret = work_thread_create(name, priority, stack_size, wqueue);
-  if (ret < 0)
-    {
-      kmm_free(wqueue);
-      return NULL;
-    }
-
-  return wqueue;
-}
-
-/****************************************************************************
- * Name: work_queue_free
- *
- * Description:
- *   Destroy a work queue. The work queue is identified by its work queue ID.
- *   All worker threads will be destroyed and the work queue will be freed.
- *   The work queue ID is invalid after this function returns.
- *
- * Input Parameters:
- *  qid - The work queue ID
- *
- * Returned Value:
- *   Zero on success, a negated errno value on failure.
- *
- ****************************************************************************/
-
-int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
-{
+  int nthread;
   int wndx;
 
-  if (wqueue == NULL)
+#ifdef CONFIG_SCHED_HPWORK
+  if (qid == HPWORK)
     {
-      return -EINVAL;
+      wqueue  = (FAR struct kwork_wqueue_s *)&g_hpwork;
+      nthread = CONFIG_SCHED_HPNTHREADS;
+    }
+  else
+#endif
+#ifdef CONFIG_SCHED_LPWORK
+  if (qid == LPWORK)
+    {
+      wqueue  = (FAR struct kwork_wqueue_s *)&g_lpwork;
+      nthread = CONFIG_SCHED_LPNTHREADS;
+    }
+  else
+#endif
+    {
+      return;
     }
 
-  /* Mark the work queue as exiting */
-
-  wqueue->exit = true;
-
-  /* Queue a exit work for all threads */
-
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+  for (wndx = 0; wndx < nthread; wndx++)
     {
-      nxsem_post(&wqueue->sem);
+      handler(wqueue->worker[wndx].pid, arg);
     }
-
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
-    {
-      nxsem_wait_uninterruptible(&wqueue->exsem);
-    }
-
-  nxsem_destroy(&wqueue->sem);
-  nxsem_destroy(&wqueue->exsem);
-  kmm_free(wqueue);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: work_queue_priority_wq
- *
- * Description: Get priority of the wqueue. We believe that all worker
- *   threads have the same priority.
- *
- * Input Parameters:
- *  wqueue - The work queue handle
- *
- * Returned Value:
- *   SCHED_PRIORITY_MIN ~ SCHED_PRIORITY_MAX  on success,
- *   a negated errno value on failure.
- *
- ****************************************************************************/
-
-int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
-{
-  FAR struct tcb_s *tcb;
-
-  if (wqueue == NULL)
-    {
-      return -EINVAL;
-    }
-
-  /* Find for the TCB associated with matching PID */
-
-  tcb = nxsched_get_tcb(wqueue->worker[0].pid);
-  if (!tcb)
-    {
-      return -ESRCH;
-    }
-
-  return tcb->sched_priority;
-}
-
-int work_queue_priority(int qid)
-{
-  return work_queue_priority_wq(work_qid2wq(qid));
 }
 
 /****************************************************************************
  * Name: work_start_highpri
  *
  * Description:
- *   Start the high-priority, kernel-mode work queue.
+ *   Start the high-priority, kernel-mode worker thread(s)
  *
  * Input Parameters:
  *   None
  *
  * Returned Value:
- *   Return zero (OK) on success.  A negated errno value is returned on
- *   errno value is returned on failure.
+ *   A negated errno value is returned on failure.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_HPWORK
+#if defined(CONFIG_SCHED_HPWORK)
 int work_start_highpri(void)
 {
   /* Start the high-priority, kernel mode worker thread(s) */
@@ -457,6 +351,7 @@ int work_start_highpri(void)
 
   return work_thread_create(HPWORKNAME, CONFIG_SCHED_HPWORKPRIORITY,
                             CONFIG_SCHED_HPWORKSTACKSIZE,
+                            CONFIG_SCHED_HPNTHREADS,
                             (FAR struct kwork_wqueue_s *)&g_hpwork);
 }
 #endif /* CONFIG_SCHED_HPWORK */
@@ -471,12 +366,11 @@ int work_start_highpri(void)
  *   None
  *
  * Returned Value:
- *   Return zero (OK) on success.  A negated errno value is returned on
- *   errno value is returned on failure.
+ *   A negated errno value is returned on failure.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_LPWORK
+#if defined(CONFIG_SCHED_LPWORK)
 int work_start_lowpri(void)
 {
   /* Start the low-priority, kernel mode worker thread(s) */
@@ -485,6 +379,7 @@ int work_start_lowpri(void)
 
   return work_thread_create(LPWORKNAME, CONFIG_SCHED_LPWORKPRIORITY,
                             CONFIG_SCHED_LPWORKSTACKSIZE,
+                            CONFIG_SCHED_LPNTHREADS,
                             (FAR struct kwork_wqueue_s *)&g_lpwork);
 }
 #endif /* CONFIG_SCHED_LPWORK */

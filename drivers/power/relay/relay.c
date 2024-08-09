@@ -116,7 +116,7 @@ static int relay_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            ret = -ENOTTY;
+            ret = -ENOTSUP;
           }
         break;
     }

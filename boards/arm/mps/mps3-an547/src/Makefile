@@ -20,6 +20,6 @@
 
 include $(TOPDIR)/Make.defs
 
-CSRCS = mps3_bringup.c mps3_reset.c
+CSRCS = mps3_bringup.c
 
 include $(TOPDIR)/boards/Board.mk
