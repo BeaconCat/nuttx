@@ -59,10 +59,6 @@ if(CONFIG_USBDEV)
     list(APPEND SRCS cdcecm.c)
   endif()
 
-  if(CONFIG_NET_CDCNCM)
-    list(APPEND SRCS cdcncm.c)
-  endif()
-
   if(CONFIG_USBDEV_FS)
     list(APPEND SRCS usbdev_fs.c)
   endif()
