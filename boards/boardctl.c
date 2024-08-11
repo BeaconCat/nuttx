@@ -30,8 +30,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/board.h>
-#include <nuttx/cache.h>
 #include <nuttx/lib/modlib.h>
 #include <nuttx/binfmt/symtab.h>
 #include <nuttx/drivers/ramdisk.h>
@@ -51,6 +51,10 @@
 #  include <nuttx/usb/pl2303.h>
 #  include <nuttx/usb/usbmsc.h>
 #  include <nuttx/usb/composite.h>
+#endif
+
+#ifdef CONFIG_BOARDCTL_TESTSET
+#  include <nuttx/spinlock.h>
 #endif
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_BUILTIN)
@@ -340,7 +344,7 @@ static inline int boardctl_pmctrl(FAR struct boardioc_pm_ctrl_s *ctrl)
 
 int boardctl(unsigned int cmd, uintptr_t arg)
 {
-  int ret = OK;
+  int ret;
 
   switch (cmd)
     {
@@ -394,7 +398,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_POWEROFF:
         {
           reboot_notifier_call_chain(SYS_POWER_OFF, (FAR void *)arg);
-          up_flush_dcache_all();
           ret = board_power_off((int)arg);
         }
         break;
@@ -411,7 +414,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_RESET:
         {
           reboot_notifier_call_chain(SYS_RESTART, (FAR void *)arg);
-          up_flush_dcache_all();
           ret = board_reset((int)arg);
         }
         break;
@@ -584,6 +586,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
          DEBUGASSERT(symdesc != NULL);
          exec_setsymtab(symdesc->symtab, symdesc->nsymbols);
+         ret = OK;
         }
         break;
 #endif
@@ -605,6 +608,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
          DEBUGASSERT(symdesc != NULL);
          modlib_setsymtab(symdesc->symtab, symdesc->nsymbols);
+         ret = OK;
         }
         break;
 #endif
@@ -639,6 +643,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
          DEBUGASSERT(builtin != NULL);
          builtin_setlist(builtin->builtins, builtin->count);
 #endif
+         ret = OK;
         }
         break;
 #endif
@@ -784,65 +789,27 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
 #endif /* CONFIG_NXTERM */
 
-#ifdef CONFIG_BOARDCTL_SPINLOCK
-      /* CMD:           BOARDIOC_SPINLOCK
-       * DESCRIPTION:   Access spinlock specific operation
-       * ARG:           A pointer to a write-able boardioc_spinlock_s
-       *                object.
-       * CONFIGURATION: CONFIG_BOARDCTL_SPINLOCK
-       * DEPENDENCIES:  spinlock specific logic
+#ifdef CONFIG_BOARDCTL_TESTSET
+      /* CMD:           BOARDIOC_TESTSET
+       * DESCRIPTION:   Access architecture-specific up_testset() operation
+       * ARG:           A pointer to a write-able spinlock object.  On
+       *                success the  preceding spinlock state is returned:
+       *                0=unlocked, 1=locked.
+       * CONFIGURATION: CONFIG_BOARDCTL_TESTSET
+       * DEPENDENCIES:  Architecture-specific logic provides up_testset()
        */
 
-      case BOARDIOC_SPINLOCK:
+      case BOARDIOC_TESTSET:
         {
-          FAR struct boardioc_spinlock_s *spinlock =
-            (FAR struct boardioc_spinlock_s *)arg;
-          FAR volatile spinlock_t *lock = spinlock->lock;
-          FAR irqstate_t *flags = spinlock->flags;
+          volatile FAR spinlock_t *lock = (volatile FAR spinlock_t *)arg;
 
-          if (spinlock->action == BOARDIOC_SPINLOCK_LOCK)
+          if (lock == NULL)
             {
-              if (flags != NULL)
-                {
-                  *flags = up_irq_save();
-                }
-
-              if (lock != NULL)
-                {
-                  spin_lock(lock);
-                }
-            }
-          else if (spinlock->action == BOARDIOC_SPINLOCK_TRYLOCK)
-            {
-              if (flags != NULL)
-                {
-                  *flags = up_irq_save();
-                }
-
-              if (!spin_trylock(lock))
-                {
-                  ret = -EBUSY;
-                  if (flags != NULL)
-                    {
-                      up_irq_restore(*flags);
-                    }
-                }
-            }
-          else if (spinlock->action == BOARDIOC_SPINLOCK_UNLOCK)
-            {
-              if (flags != NULL)
-                {
-                  up_irq_restore(*flags);
-                }
-
-              if (lock != NULL)
-                {
-                  spin_unlock(lock);
-                }
+              ret = -EINVAL;
             }
           else
             {
-              ret = -EINVAL;
+              ret = up_testset(lock) == SP_LOCKED ? 1 : 0;
             }
         }
         break;
@@ -869,18 +836,21 @@ int boardctl(unsigned int cmd, uintptr_t arg)
         break;
 #endif
 
-#ifdef CONFIG_BOARDCTL_START_CPU
-      /* CMD:           BOARDIOC_START_CPU
-       * DESCRIPTION:   Start specified slave core by master core
-       * ARG:           Integer value for cpu core id.
-       * CONFIGURATION: CONFIG_BOARDCTL_START_CPU
-       * DEPENDENCIES:  Board logic must provide the
-       *                board_start_cpu() interface.
+#ifdef CONFIG_BOARDCTL_IRQ_AFFINITY
+      /* CMD:           BOARDIOC_IRQ_AFFINITY
+       * DESCRIPTION:   Set an IRQ affinity by software.
+       * ARG:           Integer array:
+                        member 0 is the interrupt number
+                        member 1 is the CPU index
+       * CONFIGURATION: CONFIG_BOARDCTL_IRQ_AFFINITY
+       * DEPENDENCIES:  Bound Multi-Processing (CONFIG_BMP)
        */
 
-      case BOARDIOC_START_CPU:
+      case BOARDIOC_IRQ_AFFINITY:
         {
-          ret = board_start_cpu((int)arg);
+          FAR unsigned int *affinity = (FAR unsigned int *)arg;
+          up_affinity_irq(affinity[0], affinity[1]);
+          ret = OK;
         }
         break;
 #endif

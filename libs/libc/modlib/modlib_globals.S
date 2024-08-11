@@ -16,11 +16,7 @@
 	.type	SYMBOL(\ep), "object"
 	.endm
 	.macro SIZE ep
-#  if defined(__ghs__)
-	.size	SYMBOL(ep), . - SYMBOL(ep)
-#  else
 	.size	SYMBOL(\ep), . - SYMBOL(\ep)
-#  endif
 	.endm
 #else
 #  define SYMBOL(s) _##s
@@ -33,7 +29,7 @@
 	.endm
 #endif
 
-#if defined(__SIZEOF_POINTER__ ) && __SIZEOF_POINTER__ == 8
+#if __SIZEOF_POINTER__ == 8
 	.macro globalEntry index, ep
 	.quad	.l\index
 	.quad	\ep

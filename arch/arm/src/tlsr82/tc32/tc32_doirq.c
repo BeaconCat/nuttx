@@ -35,8 +35,6 @@
 
 #include <arch/board/board.h>
 
-#include "sched/sched.h"
-
 #include "arm_internal.h"
 
 #include "hardware/tlsr82_irq.h"
@@ -59,8 +57,6 @@
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -68,21 +64,19 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Nested interrupts are not supported in this implementation.  If you
    * want to implement nested interrupts, you would have to (1) change the
-   * way that current_regs is handled and (2) the design associated with
+   * way that CURRENT_REGS is handled and (2) the design associated with
    * CONFIG_ARCH_INTERRUPTSTACK.
    */
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  if (up_current_regs() == NULL)
+  if (CURRENT_REGS == NULL)
     {
-      up_set_current_regs(regs);
+      CURRENT_REGS = regs;
       regs         = NULL;
     }
-
-  tcb->xcp.regs = regs;
 
   /* Acknowledge the interrupt */
 
@@ -90,25 +84,27 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Deliver the IRQ */
 
-  irq_dispatch(irq, up_current_regs());
-  tcb = this_task();
+  irq_dispatch(irq, (uint32_t *)CURRENT_REGS);
 
   /* If a context switch occurred while processing the interrupt then
-   * current_regs may have change value.  If we return any value different
+   * CURRENT_REGS may have change value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
 
   if (regs == NULL)
     {
-      if (regs != tcb->xcp.regs)
+      /* Restore the cpu lock */
+
+      if (regs != CURRENT_REGS)
         {
-          regs = tcb->xcp.regs;
+          restore_critical_section();
+          regs = (uint32_t *)CURRENT_REGS;
         }
 
-      /* Update the current_regs to NULL. */
+      /* Update the CURRENT_REGS to NULL. */
 
-      up_set_current_regs(NULL);
+      CURRENT_REGS = NULL;
     }
 #endif
 

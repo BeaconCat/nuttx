@@ -283,9 +283,6 @@ struct tcp_conn_s
 #ifdef CONFIG_NET_SOLINGER
   sclock_t ltimeout;      /* Linger timeout expiration */
 #endif
-#ifdef CONFIG_NETDEV_RSS
-  int      rcvcpu;        /* Currect cpu id */
-#endif
   /* If the TCP socket is bound to a local address, then this is
    * a reference to the device that routes traffic on the corresponding
    * network.
@@ -440,13 +437,6 @@ struct tcp_backlog_s
   sq_queue_t bl_pending;          /* Implements a singly-linked list of pending connections */
 };
 #endif
-
-struct tcp_callback_s
-{
-  FAR struct tcp_conn_s *tc_conn;
-  FAR struct devif_callback_s *tc_cb;
-  FAR sem_t *tc_sem;
-};
 
 /****************************************************************************
  * Public Data
@@ -1397,19 +1387,6 @@ uint16_t tcp_datahandler(FAR struct net_driver_s *dev,
  *   Called from network socket logic.  The network may or may not be locked.
  *
  ****************************************************************************/
-
-/****************************************************************************
- * Name: tcp_callback_cleanup
- *
- * Description:
- *   Cleanup data and cb when thread is canceled.
- *
- * Input Parameters:
- *   arg - A pointer with conn and callback struct.
- *
- ****************************************************************************/
-
-void tcp_callback_cleanup(FAR void *arg);
 
 #ifdef CONFIG_NET_TCPBACKLOG
 int tcp_backlogcreate(FAR struct tcp_conn_s *conn, int nblg);
