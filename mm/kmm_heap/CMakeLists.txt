@@ -35,8 +35,7 @@ if(CONFIG_MM_KERNEL_HEAP)
       kmm_memalign.c
       kmm_realloc.c
       kmm_zalloc.c
-      kmm_heapmember.c
-      kmm_memdump.c)
+      kmm_heapmember.c)
 
   if(CONFIG_DEBUG_MM)
     list(APPEND SRCS kmm_checkcorruption.c)
