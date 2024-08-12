@@ -34,7 +34,6 @@
 #include <nuttx/semaphore.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
@@ -102,7 +101,12 @@ int nxsem_unlink(FAR const char *name)
    * functioning as a directory and the directory is not empty.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto errout_with_inode;
+    }
+
   if (inode->i_child != NULL)
     {
       ret = -ENOTEMPTY;
@@ -110,8 +114,8 @@ int nxsem_unlink(FAR const char *name)
     }
 
   /* Remove the old inode from the tree.  Because we hold a reference count
-   * on the inode, it will not be deleted now. This will put reference of
-   * inode.
+   * on the inode, it will not be deleted now.  This will set the
+   * FSNODEFLAG_DELETED bit in the inode flags.
    */
 
   ret = inode_remove(fullpath);
@@ -134,9 +138,6 @@ int nxsem_unlink(FAR const char *name)
   inode_unlock();
   ret = nxsem_close(&inode->u.i_nsem->ns_sem);
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_unlink(fullpath);
-#endif
   return ret;
 
 errout_with_lock:
