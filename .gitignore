@@ -1,7 +1,5 @@
 *.a
 *.adb
-*.dba
-*.dbo
 *.asm
 *.bin
 *.d
@@ -14,7 +12,6 @@
 *.hex
 *.i
 *.ihx
-*.inf
 *.lib
 *.lod
 *.lst
@@ -31,6 +28,7 @@
 *.ddc
 *.dds
 *.su
+*.pyc
 *~
 .depend
 /.config
@@ -48,6 +46,7 @@
 /nuttx
 /nuttx-*
 /nuttx.*
+/nuttx_user*
 /staging
 /tags
 /TAGS
@@ -60,7 +59,11 @@ uImage
 .context\ *
 # $(TOPDIR)/Makefile.[unix|win]::$(DIRLINKS_EXTERNAL_DIRS)
 .dirlinks
+.fakelnk
 .vscode
 .DS_Store
 tools/gdb/__pycache__
 /build
+.ccls-cache
+compile_commands.json
+imx9-sdimage.img

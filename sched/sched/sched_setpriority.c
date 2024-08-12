@@ -68,11 +68,11 @@ static FAR struct tcb_s *nxsched_nexttcb(FAR struct tcb_s *tcb)
    * then use the 'nxttcb' which will probably be the IDLE thread.
    */
 
-  if (!nxsched_islocked_tcb(this_task()))
+  if (!nxsched_islocked_global())
     {
       /* Search for the highest priority task that can run on tcb->cpu. */
 
-      for (rtrtcb = (FAR struct tcb_s *)g_readytorun.head;
+      for (rtrtcb = (FAR struct tcb_s *)list_readytorun()->head;
            rtrtcb != NULL && !CPU_ISSET(tcb->cpu, &rtrtcb->affinity);
            rtrtcb = rtrtcb->flink);
 
@@ -150,9 +150,11 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           do
             {
-              nxsched_remove_not_running(nxttcb);
+              bool check = nxsched_remove_readytorun(nxttcb, false);
+              DEBUGASSERT(check == false);
+              UNUSED(check);
 
-              nxsched_add_prioritized(nxttcb, &g_pendingtasks);
+              nxsched_add_prioritized(nxttcb, list_pendingtasks());
               nxttcb->task_state = TSTATE_TASK_PENDING;
 
 #ifdef CONFIG_SMP
@@ -210,13 +212,83 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 {
   FAR struct tcb_s *rtcb;
 
-  rtcb = this_task();
+#ifdef CONFIG_SMP
+  int cpu;
 
-  /* A context switch will occur. */
+  /* CASE 2a. The task is ready-to-run (but not running) but not assigned to
+   * a CPU. An increase in priority could cause a context switch may be
+   * caused by the re-prioritization.  The task is not assigned and may run
+   * on any CPU.
+   */
 
-  if (nxsched_reprioritize_rtr(tcb, sched_priority))
+  if (tcb->task_state == TSTATE_TASK_READYTORUN)
     {
-      up_switch_context(this_task(), rtcb);
+      cpu = nxsched_select_cpu(tcb->affinity);
+    }
+
+  /* CASE 2b.  The task is ready to run, and assigned to a CPU.  An increase
+   * in priority could cause this task to become running but the task can
+   * only run on its assigned CPU.
+   */
+
+  else
+    {
+      cpu = tcb->cpu;
+    }
+
+  /* The running task is the task at the head of the g_assignedtasks[]
+   * associated with the selected CPU.
+   */
+
+  rtcb = current_task(cpu);
+
+#else
+  /* CASE 2. The task is ready-to-run (but not running) and a context switch
+   * may be caused by the re-prioritization.
+   */
+
+  rtcb = this_task();
+#endif
+
+  /* A context switch will occur if the new priority of the ready-to-run
+   * task is (strictly) greater than the current running task
+   */
+
+  if (sched_priority > rtcb->sched_priority)
+    {
+      /* A context switch will occur. */
+
+      if (nxsched_reprioritize_rtr(tcb, sched_priority))
+        {
+          up_switch_context(this_task(), rtcb);
+        }
+    }
+
+  /* Otherwise, we can just change priority and re-schedule (since it have
+   * no other effect).
+   */
+
+  else
+    {
+      /* Remove the TCB from the ready-to-run task list that it resides in.
+       * It should not be at the head of the list.
+       */
+
+      bool check = nxsched_remove_readytorun(tcb, false);
+      DEBUGASSERT(check == false);
+      UNUSED(check);
+
+      /* Change the task priority */
+
+      tcb->sched_priority = (uint8_t)sched_priority;
+
+      /* Put it back into the correct ready-to-run task list.  It must not
+       * end up at the head of the list.
+       */
+
+      check = nxsched_add_readytorun(tcb);
+      DEBUGASSERT(check == false);
+      UNUSED(check);
     }
 }
 
@@ -240,7 +312,7 @@ static inline void nxsched_blocked_setpriority(FAR struct tcb_s *tcb,
                                                int sched_priority)
 {
   FAR dq_queue_t *tasklist;
-  tstate_t task_state = (tstate_t)tcb->task_state;
+  tstate_t task_state = tcb->task_state;
 
   /* CASE 3a. The task resides in a prioritized list. */
 
