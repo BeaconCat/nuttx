@@ -27,7 +27,6 @@
 
 #include <stdint.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 
