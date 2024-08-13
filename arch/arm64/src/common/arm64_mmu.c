@@ -145,6 +145,12 @@
 #define TCR_PS_BITS             TCR_PS_BITS_4GB
 #endif
 
+#ifdef CONFIG_MM_KASAN_SW_TAGS
+#define TCR_KASAN_SW_FLAGS (TCR_TBI0 | TCR_TBI1 | TCR_ASID_8)
+#else
+#define TCR_KASAN_SW_FLAGS 0
+#endif
+
 /***************************************************************************
  * Private Data
  ***************************************************************************/
@@ -225,7 +231,8 @@ static uint64_t get_tcr(int el)
    * inner shareable
    */
 
-  tcr |= TCR_TG0_4K | TCR_SHARED_INNER | TCR_ORGN_WBWA | TCR_IRGN_WBWA;
+  tcr |= TCR_TG0_4K | TCR_SHARED_INNER | TCR_ORGN_WBWA |
+         TCR_IRGN_WBWA | TCR_KASAN_SW_FLAGS;
 
   return tcr;
 }
@@ -523,40 +530,6 @@ static void setup_page_tables(void)
     }
 }
 
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-static void enable_mmu_el3(unsigned int flags)
-{
-  uint64_t value;
-  UNUSED(flags);
-
-  /* Set MAIR, TCR and TBBR registers */
-
-  write_sysreg(MEMORY_ATTRIBUTES, mair_el3);
-  write_sysreg(get_tcr(3), tcr_el3);
-  write_sysreg((uint64_t)base_xlat_table, ttbr0_el3);
-
-  /* Ensure these changes are seen before MMU is enabled */
-
-  ARM64_DSB();
-  ARM64_ISB();
-
-  /* Enable the MMU and data cache */
-
-  value = read_sysreg(sctlr_el3);
-  write_sysreg((value | SCTLR_M_BIT
-#ifndef CONFIG_ARM64_DCACHE_DISABLE
-               | SCTLR_C_BIT
-#endif
-               ), sctlr_el3);
-
-  /* Ensure the MMU enable takes effect immediately */
-
-  ARM64_ISB();
-#ifdef CONFIG_MMU_DEBUG
-  sinfo("MMU enabled with dcache\n");
-#endif
-}
-#else
 static void enable_mmu_el1(unsigned int flags)
 {
   uint64_t value;
@@ -566,11 +539,10 @@ static void enable_mmu_el1(unsigned int flags)
 
   write_sysreg(MEMORY_ATTRIBUTES, mair_el1);
   write_sysreg(get_tcr(1), tcr_el1);
-  write_sysreg((uint64_t)base_xlat_table, ttbr0_el1);
+  write_sysreg(((uint64_t)base_xlat_table), ttbr0_el1);
 
   /* Ensure these changes are seen before MMU is enabled */
 
-  ARM64_DSB();
   ARM64_ISB();
 
   /* Enable the MMU and data cache */
@@ -589,7 +561,6 @@ static void enable_mmu_el1(unsigned int flags)
   sinfo("MMU enabled with dcache\n");
 #endif
 }
-#endif
 
 /***************************************************************************
  * Public Functions
@@ -623,30 +594,19 @@ int arm64_mmu_set_memregion(const struct arm_mmu_region *region)
 int arm64_mmu_init(bool is_primary_core)
 {
   uint64_t val;
-  uint64_t el;
   unsigned flags = 0;
 
-  /* Current MMU code supports EL1 and EL3 */
+  /* Current MMU code supports only EL1 */
 
-  __asm__ volatile ("mrs %0, CurrentEL" : "=r" (el));
+  __asm__ volatile ("mrs %0, CurrentEL" : "=r" (val));
 
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-  __MMU_ASSERT(GET_EL(el) == MODE_EL3,
-               "Exception level not EL3, MMU not enabled!\n");
-
-  /* Ensure that MMU is already not enabled */
-
-  __asm__ volatile ("mrs %0, sctlr_el3" : "=r" (val));
-  __MMU_ASSERT((val & SCTLR_M_BIT) == 0, "MMU is already enabled\n");
-#else
-  __MMU_ASSERT(GET_EL(el) == MODE_EL1,
+  __MMU_ASSERT(GET_EL(val) == MODE_EL1,
                "Exception level not EL1, MMU not enabled!\n");
 
   /* Ensure that MMU is already not enabled */
 
   __asm__ volatile ("mrs %0, sctlr_el1" : "=r" (val));
   __MMU_ASSERT((val & SCTLR_M_BIT) == 0, "MMU is already enabled\n");
-#endif
 
 #ifdef CONFIG_MMU_DEBUG
   sinfo("xlat tables:\n");
@@ -663,13 +623,9 @@ int arm64_mmu_init(bool is_primary_core)
       setup_page_tables();
     }
 
-  /* Currently EL1 and EL3 are supported */
+  /* currently only EL1 is supported */
 
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-  enable_mmu_el3(flags);
-#else
   enable_mmu_el1(flags);
-#endif
 
   return 0;
 }
