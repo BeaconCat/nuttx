@@ -77,15 +77,6 @@
 
 #define SYS_switch_context        (2)
 
-#ifdef CONFIG_LIB_SYSCALL
-/* SYS call 3:
- *
- * void riscv_syscall_return(void);
- */
-
-#define SYS_syscall_return        (3)
-#endif /* CONFIG_LIB_SYSCALL */
-
 #ifndef CONFIG_BUILD_FLAT
 /* SYS call 4:
  *
@@ -148,7 +139,8 @@ extern "C"
 
 long smh_call(unsigned int nbr, void *parm);
 
-#if defined(CONFIG_ARCH_USE_S_MODE) && defined(__KERNEL__)
+#if defined(__KERNEL__)
+
 uintptr_t sys_call0(unsigned int nbr);
 uintptr_t sys_call1(unsigned int nbr, uintptr_t parm1);
 uintptr_t sys_call2(unsigned int nbr, uintptr_t parm1, uintptr_t parm2);
