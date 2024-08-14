@@ -37,6 +37,7 @@
 #include <nuttx/list.h>
 
 #include "lock.h"
+#include "sched/sched.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -95,7 +96,7 @@ static mutex_t g_protect_lock = NXMUTEX_INITIALIZER;
 
 static int file_lock_get_path(FAR struct file *filep, FAR char *path)
 {
-  FAR struct tcb_s *tcb = nxsched_self();
+  FAR struct tcb_s *tcb = this_task();
 
   /* We only apply file lock on mount points (f_inode won't be NULL). */
 
@@ -290,6 +291,16 @@ file_lock_find_bucket(FAR const char *filepath)
     }
 
   return NULL;
+}
+
+/****************************************************************************
+ * Name: file_lock_free_entry
+ ****************************************************************************/
+
+static void file_lock_free_entry(FAR ENTRY *entry)
+{
+  lib_free(entry->key);
+  kmm_free(entry->data);
 }
 
 /****************************************************************************
@@ -610,7 +621,7 @@ out:
 
 out_free:
   lib_put_pathbuffer(path);
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -756,7 +767,7 @@ void file_closelk(FAR struct file *filep)
   bool deleted = false;
   int ret;
 
-  if (!filep->locked)
+  if (filep->locked == false)
     {
       return;
     }
@@ -774,7 +785,7 @@ void file_closelk(FAR struct file *filep)
        * it.
        */
 
-      goto out_free;
+      goto out;
     }
 
   nxmutex_lock(&g_protect_lock);
@@ -783,6 +794,7 @@ void file_closelk(FAR struct file *filep)
     {
       /* There is no bucket here, so we don't need to free it. */
 
+      nxmutex_unlock(&g_protect_lock);
       goto out;
     }
 
@@ -806,9 +818,8 @@ void file_closelk(FAR struct file *filep)
       file_lock_delete_bucket(bucket, path);
     }
 
-out:
   nxmutex_unlock(&g_protect_lock);
-out_free:
+out:
   lib_put_pathbuffer(path);
 }
 
@@ -824,5 +835,6 @@ void file_initlk(void)
 {
   /* Initialize file lock context hash table */
 
+  g_file_lock_table.free_entry = file_lock_free_entry;
   hcreate_r(CONFIG_FS_LOCK_BUCKET_SIZE, &g_file_lock_table);
 }
