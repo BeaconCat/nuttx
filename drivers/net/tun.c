@@ -129,7 +129,6 @@ struct tun_device_s
   sem_t             write_wait_sem;
   size_t            read_d_len;
   size_t            write_d_len;
-  uint8_t           ref_cnt;
 
   /* These packet buffer arrays required 16-bit alignment.  That alignment
    * is assured only by the preceding wide data types.
@@ -189,7 +188,6 @@ static void tun_dev_uninit(FAR struct tun_device_s *priv);
 
 /* File interface */
 
-static int tun_open(FAR struct file *filep);
 static int tun_close(FAR struct file *filep);
 static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen);
@@ -212,7 +210,7 @@ static struct tun_device_s g_tun_devices[CONFIG_TUN_NINTERFACES];
 
 static const struct file_operations g_tun_file_ops =
 {
-  tun_open,     /* open */
+  NULL,         /* open */
   tun_close,    /* close */
   tun_read,     /* read */
   tun_write,    /* write */
@@ -783,7 +781,9 @@ static int tun_txavail(FAR struct net_driver_s *dev)
 
   flags = enter_critical_section(); /* No interrupts */
 
-  /* Schedule to perform the TX poll on the worker thread. */
+  /* Schedule to perform the TX poll on the worker thread when priv->bifup
+   * is true.
+   */
 
   if (priv->bifup && work_available(&priv->work))
     {
@@ -906,7 +906,6 @@ static int tun_dev_init(FAR struct tun_device_s *priv,
       return ret;
     }
 
-  priv->ref_cnt = 1;
   filep->f_priv = priv; /* Set link to TUN device */
   return ret;
 }
@@ -933,40 +932,6 @@ static void tun_dev_uninit(FAR struct tun_device_s *priv)
 }
 
 /****************************************************************************
- * Name: tun_open
- ****************************************************************************/
-
-static int tun_open(FAR struct file *filep)
-{
-  FAR struct tun_device_s *priv = filep->f_priv;
-  uint8_t tmp;
-  int ret;
-
-  if (priv == NULL)
-    {
-      return OK;
-    }
-
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  tmp = priv->ref_cnt + 1;
-  if (tmp == 0)
-    {
-      nxmutex_unlock(&priv->lock);
-      return -EMFILE;
-    }
-
-  priv->ref_cnt = tmp;
-  nxmutex_unlock(&priv->lock);
-
-  return OK;
-}
-
-/****************************************************************************
  * Name: tun_close
  ****************************************************************************/
 
@@ -982,17 +947,6 @@ static int tun_close(FAR struct file *filep)
     {
       return OK;
     }
-
-  nxmutex_lock(&priv->lock);
-  if (priv->ref_cnt > 1)
-    {
-      priv->ref_cnt--;
-      nxmutex_unlock(&priv->lock);
-      return OK;
-    }
-
-  priv->ref_cnt = 0;
-  nxmutex_unlock(&priv->lock);
 
   intf = priv - g_tun_devices;
   ret  = nxmutex_lock(&tun->lock);
@@ -1015,9 +969,8 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                          size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
-  ssize_t nwritten = 0;
   uint8_t llhdrlen;
-  int ret;
+  ssize_t ret;
 
   if (priv == NULL || buflen > CONFIG_NET_TUN_PKTSIZE)
     {
@@ -1035,7 +988,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
       ret = nxmutex_lock(&priv->lock);
       if (ret < 0)
         {
-          return nwritten == 0 ? (ssize_t)ret : nwritten;
+          return ret;
         }
 
       /* Check if there are free space to write */
@@ -1048,7 +1001,6 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           priv->dev.d_buf = NULL;
           if (ret < 0)
             {
-              nwritten = (nwritten == 0) ? ret : nwritten;
               net_unlock();
               break;
             }
@@ -1057,7 +1009,6 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                               buflen, -llhdrlen, false);
           if (ret < 0)
             {
-              nwritten = (nwritten == 0) ? ret : nwritten;
               net_unlock();
               break;
             }
@@ -1067,7 +1018,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           tun_net_receive(priv);
           net_unlock();
 
-          nwritten = buflen;
+          ret = buflen;
           break;
         }
 
@@ -1075,7 +1026,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
 
       if ((filep->f_oflags & O_NONBLOCK) != 0)
         {
-          nwritten = -EAGAIN;
+          ret = -EAGAIN;
           break;
         }
 
@@ -1085,7 +1036,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   nxmutex_unlock(&priv->lock);
-  return nwritten;
+  return ret;
 }
 
 /****************************************************************************
@@ -1096,9 +1047,8 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
-  ssize_t nread = 0;
   uint8_t llhdrlen;
-  int ret;
+  ssize_t ret;
 
   if (priv == NULL)
     {
@@ -1116,7 +1066,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
       ret = nxmutex_lock(&priv->lock);
       if (ret < 0)
         {
-          return nread == 0 ? (ssize_t)ret : nread;
+          return ret;
         }
 
       /* Check if there are data to read in write buffer */
@@ -1125,13 +1075,13 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
         {
           if (buflen < priv->write_d_len)
             {
-              nread = -EINVAL;
+              ret = -EINVAL;
               break;
             }
 
           iob_copyout((FAR uint8_t *)buffer, priv->write_buf,
                       priv->write_d_len, -llhdrlen);
-          nread = priv->write_d_len;
+          ret = priv->write_d_len;
 
           iob_free_chain(priv->write_buf);
           priv->write_buf   = NULL;
@@ -1148,13 +1098,13 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
         {
           if (buflen < priv->read_d_len)
             {
-              nread = -EINVAL;
+              ret = -EINVAL;
               break;
             }
 
           iob_copyout((FAR uint8_t *)buffer, priv->read_buf,
                       priv->read_d_len, -llhdrlen);
-          nread = priv->read_d_len;
+          ret = priv->read_d_len;
 
           iob_free_chain(priv->read_buf);
           priv->read_buf   = NULL;
@@ -1170,7 +1120,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
 
       if ((filep->f_oflags & O_NONBLOCK) != 0)
         {
-          nread = -EAGAIN;
+          ret = -EAGAIN;
           break;
         }
 
@@ -1180,7 +1130,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
     }
 
   nxmutex_unlock(&priv->lock);
-  return nread;
+  return ret;
 }
 
 /****************************************************************************
@@ -1315,24 +1265,6 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
 
       strlcpy(ifr->ifr_name, priv->dev.d_ifname, IFNAMSIZ);
-
-      return OK;
-    }
-  else if (cmd == TUNSETCARRIER)
-    {
-      if (priv == NULL || arg == 0)
-        {
-          return -EINVAL;
-        }
-
-      if (*(FAR int *)((uintptr_t)arg))
-        {
-          netdev_carrier_on(&priv->dev);
-        }
-      else
-        {
-          netdev_carrier_off(&priv->dev);
-        }
 
       return OK;
     }
