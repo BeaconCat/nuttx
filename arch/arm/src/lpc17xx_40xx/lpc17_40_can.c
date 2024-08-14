@@ -76,7 +76,6 @@
 #endif
 
 #if defined(SOCKET_CAN)
-#  include <nuttx/can.h>
 #  include <nuttx/net/netdev.h>
 #  include <nuttx/net/can.h>
 #  include <nuttx/wqueue.h>
@@ -1357,7 +1356,7 @@ static void can_interrupt(struct lpc17_40_can_s *dev)
 #ifdef CONFIG_CAN_EXTID
       hdr.ch_extid  = ((rfs & CAN_RFS_FF) != 0);
 #else
-      hdr.ch_unused = 0;
+      hdr.ch_tcf    = 0;
 
       if ((rfs & CAN_RFS_FF) != 0)
         {

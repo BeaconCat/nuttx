@@ -62,6 +62,7 @@ struct virtio_input_priv
   struct virtio_input_event     evt[VIRTIO_INPUT_EVT_NUM];
   size_t                        evtnum;         /* Input event number */
   struct work_s                 work;           /* Supports the interrupt handling "bottom half" */
+  spinlock_t                    lock;           /* Lock */
   virtio_send_event_handler     eventhandler;
 
   union
@@ -165,12 +166,20 @@ virtio_input_send_mouse_event(FAR struct virtio_input_priv *priv,
               {
                 priv->mousesample.buttons |= MOUSE_BUTTON_1;
               }
+            else
+              {
+                priv->mousesample.buttons &= ~MOUSE_BUTTON_1;
+              }
             break;
 
           case BTN_RIGHT:
             if (event->value)
               {
                 priv->mousesample.buttons |= MOUSE_BUTTON_2;
+              }
+            else
+              {
+                priv->mousesample.buttons &= ~MOUSE_BUTTON_2;
               }
             break;
 
@@ -179,13 +188,18 @@ virtio_input_send_mouse_event(FAR struct virtio_input_priv *priv,
               {
                 priv->mousesample.buttons |= MOUSE_BUTTON_3;
               }
+            else
+              {
+                priv->mousesample.buttons &= ~MOUSE_BUTTON_3;
+              }
             break;
         }
     }
   else if (event->type == EV_SYN && event->code == SYN_REPORT)
     {
       mouse_event(priv->mouselower.priv, &priv->mousesample);
-      memset(&priv->mousesample, 0, sizeof(priv->mousesample));
+      priv->mousesample.x = 0;
+      priv->mousesample.y = 0;
     }
 }
 
@@ -240,19 +254,19 @@ static void virtio_input_worker(FAR void *arg)
   uint32_t len;
 
   while ((evt = (FAR struct virtio_input_event *)
-         virtqueue_get_buffer(vq, &len, NULL)) != NULL)
+         virtqueue_get_buffer_lock(vq, &len, NULL, &priv->lock)) != NULL)
     {
-      vrtinfo("virtio_input_worker (type,code,value) - (%d,%d,%d).\n",
+      vrtinfo("virtio_input_worker (type,code,value)-(%d,%d,%" PRIu32 ").\n",
               evt->type, evt->code, evt->value);
 
       priv->eventhandler(priv, evt);
 
       vb.buf = evt;
       vb.len = len;
-      virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
+      virtqueue_add_buffer_lock(vq, &vb, 0, 1, vb.buf, &priv->lock);
     }
 
-  virtqueue_kick(vq);
+  virtqueue_kick_lock(vq, &priv->lock);
 }
 
 /****************************************************************************
@@ -287,10 +301,10 @@ static void virtio_input_fill_event(FAR struct virtio_input_priv *priv)
     {
       vb.buf = &priv->evt[i];
       vb.len = sizeof(struct virtio_input_event);
-      virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
+      virtqueue_add_buffer_lock(vq, &vb, 0, 1, vb.buf, &priv->lock);
     }
 
-    virtqueue_kick(vq);
+  virtqueue_kick_lock(vq, &priv->lock);
 }
 
 /****************************************************************************
@@ -319,7 +333,7 @@ static void virtio_input_register(FAR struct virtio_input_priv *priv)
   if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_ABS))
     {
       priv->touchlower.maxpoint = 1;
-      snprintf(priv->name, NAME_MAX, "/dev/virtinput%d",
+      snprintf(priv->name, NAME_MAX, "/dev/input%d",
                g_virtio_touch_idx++);
       touch_register(&(priv->touchlower),
                      priv->name,
@@ -328,7 +342,7 @@ static void virtio_input_register(FAR struct virtio_input_priv *priv)
     }
   else if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_REL))
     {
-      snprintf(priv->name, NAME_MAX, "/dev/virtmouse%d",
+      snprintf(priv->name, NAME_MAX, "/dev/mouse%d",
                g_virtio_mouse_idx++);
       mouse_register(&(priv->mouselower),
                      priv->name,
@@ -337,7 +351,7 @@ static void virtio_input_register(FAR struct virtio_input_priv *priv)
     }
   else if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_KEY))
     {
-      snprintf(priv->name, NAME_MAX, "/dev/virtkbd%d",
+      snprintf(priv->name, NAME_MAX, "/dev/kbd%d",
                g_virtio_keyboard_idx++);
       keyboard_register(&(priv->keyboardlower),
                         priv->name,
@@ -364,6 +378,7 @@ static int virtio_input_probe(FAR struct virtio_device *vdev)
       return -ENOMEM;
     }
 
+  spin_lock_init(&priv->lock);
   priv->vdev = vdev;
   vdev->priv = priv;
 

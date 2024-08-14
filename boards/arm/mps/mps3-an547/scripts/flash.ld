@@ -18,6 +18,8 @@
  *
  ****************************************************************************/
 
+#include "nuttx/config.h"
+
 MEMORY
 {
   flash (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
@@ -33,7 +35,9 @@ SECTIONS
 {
     .text : {
         _stext = ABSOLUTE(.);
+#ifndef CONFIG_BUILD_PIC /* We need change vectors use pic */
         *(.vectors)
+#endif
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
@@ -41,7 +45,6 @@ SECTIONS
         *(.gnu.linkonce.t.*)
         *(.glue_7)
         *(.glue_7t)
-        *(.got)
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
         _etext = ABSOLUTE(.);
@@ -50,7 +53,7 @@ SECTIONS
     .init_section : ALIGN(4) {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array .ctors))
+        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
         _einit = ABSOLUTE(.);
     } > flash
 
@@ -92,6 +95,11 @@ SECTIONS
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > sram1 AT > flash
+
+    .got :
+      {
+        *(.got*)
+      } > sram1
 
     .bss : ALIGN(4) {
         _sbss = ABSOLUTE(.);
