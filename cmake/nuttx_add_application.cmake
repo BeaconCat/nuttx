@@ -155,7 +155,7 @@ function(nuttx_add_application)
 
     # loadable build requires applying ELF flags to all applications
 
-    if(CONFIG_BUILD_LOADABLE)
+    if(CONFIG_MODULES)
       target_compile_options(
         ${TARGET}
         PRIVATE
@@ -215,13 +215,6 @@ function(nuttx_add_application)
     # interface include and libraries
     foreach(dep ${DEPENDS})
       nuttx_add_dependencies(TARGET ${TARGET} DEPENDS ${dep})
-      if(TARGET ${dep})
-        get_target_property(dep_type ${dep} TYPE)
-        if(${dep_type} STREQUAL "STATIC_LIBRARY")
-          target_link_libraries(${TARGET} PRIVATE ${dep})
-        endif()
-      endif()
-
     endforeach()
   endif()
 endfunction()
