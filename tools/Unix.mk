@@ -411,7 +411,7 @@ DIRLINKS_FILE += $(DIRLINKS_EXTERNAL_DEP)
 # The symlink subfolders need to be removed before the parent symlinks
 
 .PHONY: clean_dirlinks
-clean_dirlinks:
+clean_dirlinks: tools/incdir$(HOSTEXEEXT)
 	$(Q) $(call DELFILE, $(DIRLINKS_FILE))
 	$(Q) $(call DELFILE, .dirlinks)
 	$(Q) $(DIRUNLINK) drivers/platform
@@ -631,10 +631,7 @@ pass2dep: context tools/mkdeps$(HOSTEXEEXT) tools/cnvwindeps$(HOSTEXEEXT)
 KCONFIG_ENV  = APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR)
 KCONFIG_ENV += APPSBINDIR=${CONFIG_APPS_DIR} BINDIR=${TOPDIR}
 
-LOADABLE = $(shell grep "=m$$" $(TOPDIR)/.config)
-ifeq ($(CONFIG_BUILD_LOADABLE)$(LOADABLE),)
-  KCONFIG_LIB = $(shell command -v menuconfig 2> /dev/null)
-endif
+KCONFIG_LIB = $(shell command -v menuconfig 2> /dev/null)
 
 # Prefer "kconfiglib" if host OS supports it
 
@@ -650,21 +647,19 @@ define kconfig_tweak_disable
 	kconfig-tweak --file $1 -u $2
 endef
 else
-  KCONFIG_WARNING       = if [ -s kwarning ]; \
-                            then rm kwarning; \
-                              exit 1; \
-                            else \
-                              rm kwarning; \
-                          fi
-  MODULE_WARNING        = "warning: the 'modules' option is not supported"
-  PURGE_MODULE_WARNING  = 2> >(grep -v ${MODULE_WARNING} | tee kwarning) | cat && ${KCONFIG_WARNING}
-  KCONFIG_OLDCONFIG     = oldconfig ${PURGE_MODULE_WARNING}
-  KCONFIG_OLDDEFCONFIG  = olddefconfig ${PURGE_MODULE_WARNING}
-  KCONFIG_MENUCONFIG    = menuconfig $(subst | cat,,${PURGE_MODULE_WARNING})
-  KCONFIG_NCONFIG       = guiconfig ${PURGE_MODULE_WARNING}
+  KCONFIG_WARNING  = 2> >(tee kwarning) | cat && if [ -s kwarning ]; \
+                                                  then rm kwarning; \
+                                                  exit 1; \
+                                                 else \
+                                                  rm kwarning; \
+                                                 fi
+  KCONFIG_OLDCONFIG     = oldconfig ${KCONFIG_WARNING}
+  KCONFIG_OLDDEFCONFIG  = olddefconfig ${KCONFIG_WARNING}
+  KCONFIG_MENUCONFIG    = menuconfig $(subst | cat,,${KCONFIG_WARNING})
+  KCONFIG_NCONFIG       = guiconfig ${KCONFIG_WARNING}
   KCONFIG_QCONFIG       = ${KCONFIG_NCONFIG}
   KCONFIG_GCONFIG       = ${KCONFIG_NCONFIG}
-  KCONFIG_SAVEDEFCONFIG = savedefconfig --out defconfig.tmp ${PURGE_MODULE_WARNING}
+  KCONFIG_SAVEDEFCONFIG = savedefconfig --out defconfig.tmp ${KCONFIG_WARNING}
 define kconfig_tweak_disable
 	$(Q) sed -i'.orig' '/$2/d' $1
 	$(Q) rm -f $1.orig
@@ -740,8 +735,7 @@ savedefconfig: apps_preconfig
 # that the archiver is 'ar'
 
 export: $(NUTTXLIBS)
-	$(Q) ZIG="${ZIG}" ZIGFLAGS="${ZIGFLAGS}" MAKE="${MAKE}" \
-		$(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
+	$(Q) MAKE="${MAKE}" $(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
 
 # General housekeeping targets:  dependencies, cleaning, etc.
 #
@@ -808,7 +802,7 @@ endif
 # apps_distclean: Perform the distclean operation only in the user application
 #                 directory.
 
-apps_preconfig: .dirlinks
+apps_preconfig: tools/incdir$(HOSTEXEEXT) .dirlinks
 ifneq ($(APPDIR),)
 	$(Q) $(MAKE) -C $(APPDIR) preconfig
 endif
