@@ -35,7 +35,7 @@
 
 /* The currently enabled set of syslog priorities */
 
-uint8_t g_syslog_mask = CONFIG_SYSLOG_DEFAULT_MASK;
+uint8_t g_syslog_mask = LOG_ALL;
 
 /****************************************************************************
  * Public Functions
