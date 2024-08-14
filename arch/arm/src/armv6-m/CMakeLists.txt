@@ -29,7 +29,6 @@ set(SRCS
     arm_svcall.c
     arm_systemreset.c
     arm_tcbinfo.c
-    arm_trigger_irq.c
     arm_vectors.c)
 
 if(CONFIG_DEBUG_FEATURES)
