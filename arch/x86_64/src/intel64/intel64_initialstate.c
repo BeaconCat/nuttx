@@ -68,23 +68,17 @@ void up_initial_state(struct tcb_s *tcb)
     {
       char *stack_ptr = (char *)(g_idle_topstack[0] -
                                  CONFIG_IDLETHREAD_STACKSIZE);
+      tcb->stack_alloc_ptr = stack_ptr;
+      tcb->stack_base_ptr  = stack_ptr;
+      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
 #ifdef CONFIG_STACK_COLORATION
-      char *stack_end = (char *)up_getsp();
-
       /* If stack debug is enabled, then fill the stack with a
        * recognizable value that we can use later to test for high
        * water marks.
        */
 
-      while (stack_ptr < stack_end)
-        {
-          *--stack_end = 0xaa;
-        }
+      x86_64_stack_color(tcb->stack_alloc_ptr, 0);
 #endif /* CONFIG_STACK_COLORATION */
-
-      tcb->stack_alloc_ptr = stack_ptr;
-      tcb->stack_base_ptr  = stack_ptr;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
     }
 
   /* Initialize the initial exception register context structure */
@@ -112,10 +106,10 @@ void up_initial_state(struct tcb_s *tcb)
 #else
   /* Initialize XSAVE region with a valid state */
 
-  asm volatile("xsave %0"
-               : "=m" (*xcp->regs)
-               : "a" (XSAVE_STATE_COMPONENTS), "d" (0)
-               : "memory");
+  __asm__ volatile("xsave %0"
+                   : "=m" (*xcp->regs)
+                   : "a" (XSAVE_STATE_COMPONENTS), "d" (0)
+                   : "memory");
 #endif
 
   /* Save the initial stack pointer... the value of the stackpointer before
@@ -123,7 +117,7 @@ void up_initial_state(struct tcb_s *tcb)
    */
 
   xcp->regs[REG_RSP]    = (uint64_t)xcp->regs - 8;
-  xcp->regs[REG_RBP]    = (uint64_t)xcp->regs - 8;
+  xcp->regs[REG_RBP]    = 0;
 
   /* Save the task entry point */
 
