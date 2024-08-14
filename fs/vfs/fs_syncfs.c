@@ -36,7 +36,7 @@
  * Name: file_syncfs
  *
  * Description:
- *   Equivalent to the standard syncsf() function except that is accepts a
+ *   Equivalent to the standard syncfs() function except that is accepts a
  *   struct file instance instead of a fd descriptor and it does not set
  *   the errno variable
  *
@@ -85,8 +85,8 @@ int syncfs(int fd)
   ret = fs_getfilep(fd, &filep);
   if (ret == OK)
     {
+      DEBUGASSERT(filep != NULL);
       ret = file_syncfs(filep);
-      fs_putfilep(filep);
     }
 
   leave_cancellation_point();
