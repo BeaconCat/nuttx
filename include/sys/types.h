@@ -249,7 +249,7 @@ typedef uint16_t     sa_family_t;
 
 #ifdef CONFIG_SYSTEM_TIME64
 typedef uint64_t     clock_t;
-typedef int64_t      time_t;         /* Holds time in seconds */
+typedef uint64_t     time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t     clock_t;
 typedef uint32_t     time_t;         /* Holds time in seconds */
@@ -316,7 +316,7 @@ typedef CODE int (*main_t)(int argc, FAR char *argv[]);
 enum
 {
   ERROR = -1,
-  OK = 0
+  OK = 0,
 };
 
 /****************************************************************************
