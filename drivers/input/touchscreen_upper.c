@@ -38,7 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 
 /****************************************************************************
  * Private Types
@@ -365,10 +365,6 @@ errout:
   nxmutex_unlock(&openpriv->lock);
   return ret;
 }
-
-/****************************************************************************
- * Name: touch_event_notify
- ****************************************************************************/
 
 static void touch_event_notify(FAR struct touch_openpriv_s  *openpriv,
                                FAR const struct touch_sample_s *sample)
