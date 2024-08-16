@@ -235,6 +235,21 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv)
 }
 
 /****************************************************************************
+ * Name: ramlog_flush
+ ****************************************************************************/
+
+static void ramlog_bufferflush(FAR struct ramlog_dev_s *priv)
+{
+  FAR struct ramlog_user_s *upriv;
+
+  priv->rl_header->rl_head = 0;
+  list_for_every_entry(&priv->rl_list, upriv, struct ramlog_user_s, rl_node)
+    {
+      upriv->rl_tail = 0;
+    }
+}
+
+/****************************************************************************
  * Name: ramlog_copybuf
  ****************************************************************************/
 
@@ -337,6 +352,13 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
   if (len > 0)
     {
+      /* Lock the scheduler do NOT switch out */
+
+      if (!up_interrupt_context())
+        {
+          sched_lock();
+        }
+
 #ifndef CONFIG_RAMLOG_NONBLOCKING
       /* Are there threads waiting for read data? */
 
@@ -345,6 +367,13 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
       /* Notify all poll/select waiters that they can read from the FIFO */
 
       ramlog_pollnotify(priv);
+
+      /* Unlock the scheduler */
+
+      if (!up_interrupt_context())
+        {
+          sched_unlock();
+        }
     }
 
   /* We always have to return the number of bytes requested and NOT the
@@ -510,7 +539,7 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
   irqstate_t flags;
   int ret = 0;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   switch (cmd)
     {
@@ -521,14 +550,14 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
         upriv->rl_threashold = (uint32_t)arg;
         break;
       case BIOC_FLUSH:
-        priv->rl_header->rl_head = 0;
+        ramlog_bufferflush(priv);
         break;
       default:
         ret = -ENOTTY;
         break;
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
   return ret;
 }
 
@@ -615,11 +644,11 @@ static int ramlog_file_open(FAR struct file *filep)
   nxsem_init(&upriv->rl_waitsem, 0, 0);
 #endif
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   list_add_tail(&priv->rl_list, &upriv->rl_node);
   upriv->rl_tail = header->rl_head > priv->rl_bufsize ?
                    header->rl_head - priv->rl_bufsize : 0;
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 
   filep->f_priv = upriv;
   return 0;
@@ -636,9 +665,9 @@ static int ramlog_file_close(FAR struct file *filep)
 
   /* Get exclusive access to the rl_tail index */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   list_delete(&upriv->rl_node);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 
 #ifndef CONFIG_RAMLOG_NONBLOCKING
   nxsem_destroy(&upriv->rl_waitsem);

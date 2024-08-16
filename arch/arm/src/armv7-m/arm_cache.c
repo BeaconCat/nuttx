@@ -496,12 +496,12 @@ void up_enable_dcache(void)
   uint32_t sets;
   uint32_t ways;
 
-  /* If dcache is already enabled, disable it first. */
+  /* If dcache is already enabled, return. */
 
   ccr = getreg32(NVIC_CFGCON);
   if ((ccr & NVIC_CFGCON_DC) != 0)
     {
-      up_disable_dcache();
+      return;
     }
 
   /* Get the characteristics of the D-Cache */
@@ -814,10 +814,12 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 
   ssize  = (1 << sshift);
 
+#ifndef CONFIG_SMP
   if ((end - start) >= ssize * (sets + 1) * (ways + 1))
     {
       return up_clean_dcache_all();
     }
+#endif
 
   start &= ~(ssize - 1);
   ARM_DSB();
@@ -967,10 +969,12 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 
   ssize  = (1 << sshift);
 
+#ifndef CONFIG_SMP
   if ((end - start) >= ssize * (sets + 1) * (ways + 1))
     {
       return up_flush_dcache_all();
     }
+#endif
 
   start &= ~(ssize - 1);
   ARM_DSB();
