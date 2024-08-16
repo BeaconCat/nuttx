@@ -84,8 +84,10 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
                                           int psize, int num)
 {
   uint32_t regval;
+  uint32_t statecpu0;
 #ifdef CONFIG_SMP
   int cpu_to_stop = 0;
+  uint32_t statecpu1;
   bool smp_start = OSINIT_OS_READY();
 #endif
   unsigned int i;
@@ -178,14 +180,14 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
 
   if (smp_start)
     {
-      cpu_to_stop = up_cpu_index() == 1 ? 0 : 1;
+      cpu_to_stop = this_cpu() == 1 ? 0 : 1;
       up_cpu_pause(cpu_to_stop);
     }
 
-  spi_disable_cache(1);
+  spi_disable_cache(1, &statecpu1);
 #endif
 
-  spi_disable_cache(0);
+  spi_disable_cache(0, &statecpu0);
 
   /* mmu change */
 
@@ -199,21 +201,21 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
   if (cpu_no == 0)
     {
       regval  = getreg32(DPORT_PRO_CACHE_CTRL1_REG);
-      regval &= ~DPORT_PRO_CMMU_SRAM_PAGE_MODE_M;
-      regval |= mask_s << DPORT_PRO_CMMU_SRAM_PAGE_MODE_S;
+      regval &= ~DPORT_PRO_CMMU_SRAM_PAGE_MODE;
+      regval |= mask_s;
       putreg32(regval, DPORT_PRO_CACHE_CTRL1_REG);
     }
   else
     {
       regval  = getreg32(DPORT_APP_CACHE_CTRL1_REG);
-      regval &= ~DPORT_APP_CMMU_SRAM_PAGE_MODE_M;
-      regval |= mask_s << DPORT_APP_CMMU_SRAM_PAGE_MODE_S;
+      regval &= ~DPORT_APP_CMMU_SRAM_PAGE_MODE;
+      regval |= mask_s;
       putreg32(regval, DPORT_APP_CACHE_CTRL1_REG);
     }
 
-  spi_enable_cache(0);
+  spi_enable_cache(0, statecpu0);
 #ifdef CONFIG_SMP
-  spi_enable_cache(1);
+  spi_enable_cache(1, statecpu1);
 
   if (smp_start)
     {
