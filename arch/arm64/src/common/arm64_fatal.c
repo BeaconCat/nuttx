@@ -541,18 +541,13 @@ static int arm64_exception_handler(uint64_t *regs)
 
 void arm64_fatal_handler(uint64_t *regs)
 {
-  struct tcb_s *tcb = this_task();
   int ret;
 
   /* Nested exception are not supported */
 
-  DEBUGASSERT(!up_interrupt_context());
+  DEBUGASSERT(up_current_regs() == NULL);
 
-  tcb->xcp.regs = regs;
-
-  /* Set irq flag */
-
-  write_sysreg((uintptr_t)tcb | 1, tpidr_el1);
+  up_set_current_regs((uint64_t *)regs);
 
   ret = arm64_exception_handler(regs);
 
@@ -563,9 +558,11 @@ void arm64_fatal_handler(uint64_t *regs)
       PANIC_WITH_REGS("panic", regs);
     }
 
-  /* Clear irq flag */
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
+   * Exception handler.
+   */
 
-  write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+  up_set_current_regs(NULL);
 }
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)
