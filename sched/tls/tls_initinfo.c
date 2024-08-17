@@ -65,8 +65,7 @@ int tls_init_info(FAR struct tcb_s *tcb)
 
   /* Derive tl_size w/o arch knowledge */
 
-  info->tl_size =
-        (FAR char *)tcb->stack_base_ptr - (FAR char *)tcb->stack_alloc_ptr;
+  info->tl_size = tcb->stack_base_ptr - tcb->stack_alloc_ptr;
 
   /* Attach per-task info in group to TLS */
 

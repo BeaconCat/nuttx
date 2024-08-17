@@ -22,9 +22,15 @@
 
 if(CONFIG_GRAN)
 
-  set(SRCS mm_graninit.c mm_granrelease.c mm_graninfo.c mm_grancritical.c)
-  list(APPEND SRCS mm_grantable.c mm_granfree.c mm_granalloc.c)
-  list(APPEND SRCS mm_granreserve.c)
+  set(SRCS
+      mm_graninit.c
+      mm_granrelease.c
+      mm_granreserve.c
+      mm_granalloc.c
+      mm_granmark.c
+      mm_granfree.c
+      mm_graninfo.c
+      mm_grancritical.c)
 
   # A page allocator based on the granule allocator
 
