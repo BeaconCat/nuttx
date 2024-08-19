@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/net.h>
 

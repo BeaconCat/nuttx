@@ -559,25 +559,6 @@
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Name: cp15_dcache_is_enabled
- *
- * Description:
- *   Check if L1 D Cache is enabled
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   true if L1 D Cache is enabled, false otherwise
- *
- ****************************************************************************/
-
-static inline int cp15_dcache_is_enabled(void)
-{
-  return (CP15_GET(SCTLR) & SCTLR_C) != 0;
-}
-
-/****************************************************************************
  * Name: cp15_enable_dcache
  *
  * Description:
@@ -1117,10 +1098,10 @@ void cp15_flush_dcache(uintptr_t start, uintptr_t end);
 void cp15_flush_dcache_all(void);
 
 /****************************************************************************
- * Name: cp15_icache_size
+ * Name: cp15_cache_size
  *
  * Description:
- *   Get cp15 icache size in byte
+ *   Get cp15 cache size in byte
  *
  * Input Parameters:
  *   None
@@ -1130,55 +1111,23 @@ void cp15_flush_dcache_all(void);
  *
  ****************************************************************************/
 
-uint32_t cp15_icache_size(void);
+uint32_t cp15_cache_size(void);
 
 /****************************************************************************
- * Name: cp15_dcache_size
+ * Name: cp15_cache_linesize
  *
  * Description:
- *   Get cp15 dcache size in byte
+ *   Get cp15 cache linesize in byte
  *
  * Input Parameters:
  *   None
  *
  * Returned Value:
- *   Cache size in byte
+ *   Cache linesize in byte
  *
  ****************************************************************************/
 
-uint32_t cp15_dcache_size(void);
-
-/****************************************************************************
- * Name: cp15_icache_linesize
- *
- * Description:
- *   Get cp15 icache linesize in byte
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   ICache linesize in byte
- *
- ****************************************************************************/
-
-uint32_t cp15_icache_linesize(void);
-
-/****************************************************************************
- * Name: cp15_dcache_linesize
- *
- * Description:
- *   Get cp15 dcache linesize in byte
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   DCache linesize in byte
- *
- ****************************************************************************/
-
-uint32_t cp15_dcache_linesize(void);
+uint32_t cp15_cache_linesize(void);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -35,7 +35,6 @@
 #include <nuttx/lib/lib.h>
 #include <nuttx/fs/fs.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -141,9 +140,17 @@ int symlink(FAR const char *path1, FAR const char *path2)
        * count of zero.
        */
 
-      inode_lock();
+      ret = inode_lock();
+      if (ret < 0)
+        {
+          lib_free(newpath2);
+          errcode = -ret;
+          goto errout_with_search;
+        }
+
       ret = inode_reserve(path2, 0777, &inode);
       inode_unlock();
+
       if (ret < 0)
         {
           lib_free(newpath2);
@@ -160,9 +167,6 @@ int symlink(FAR const char *path1, FAR const char *path2)
   /* Symbolic link successfully created */
 
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_create(path2);
-#endif
   return OK;
 
 errout_with_inode:
