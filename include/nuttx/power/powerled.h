@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/power/powerled.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -158,7 +156,7 @@ struct powerled_ops_s
   /* Set powerled parameters */
 
   CODE int (*params_set)(FAR struct powerled_dev_s *dev,
-                         FAR struct powerled_params_s *param);
+                         struct powerled_params_s *param);
 
   /* Set powerled operation mode */
 

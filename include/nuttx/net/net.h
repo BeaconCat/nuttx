@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/net/net.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -402,7 +400,7 @@ void net_unlock(void);
  *
  ****************************************************************************/
 
-int net_sem_timedwait(FAR sem_t *sem, unsigned int timeout);
+int net_sem_timedwait(sem_t *sem, unsigned int timeout);
 
 /****************************************************************************
  * Name: net_mutex_timedlock
@@ -426,7 +424,7 @@ int net_sem_timedwait(FAR sem_t *sem, unsigned int timeout);
  *
  ****************************************************************************/
 
-int net_mutex_timedlock(FAR mutex_t *mutex, unsigned int timeout);
+int net_mutex_timedlock(mutex_t *mutex, unsigned int timeout);
 
 /****************************************************************************
  * Name: net_sem_wait
@@ -448,7 +446,7 @@ int net_mutex_timedlock(FAR mutex_t *mutex, unsigned int timeout);
  *
  ****************************************************************************/
 
-int net_sem_wait(FAR sem_t *sem);
+int net_sem_wait(sem_t *sem);
 
 /****************************************************************************
  * Name: net_mutex_lock
@@ -470,7 +468,7 @@ int net_sem_wait(FAR sem_t *sem);
  *
  ****************************************************************************/
 
-int net_mutex_lock(FAR mutex_t *mutex);
+int net_mutex_lock(mutex_t *mutex);
 
 /****************************************************************************
  * Name: net_sem_timedwait_uninterruptible
@@ -489,7 +487,7 @@ int net_mutex_lock(FAR mutex_t *mutex);
  *
  ****************************************************************************/
 
-int net_sem_timedwait_uninterruptible(FAR sem_t *sem, unsigned int timeout);
+int net_sem_timedwait_uninterruptible(sem_t *sem, unsigned int timeout);
 
 /****************************************************************************
  * Name: net_sem_wait_uninterruptible
@@ -507,7 +505,7 @@ int net_sem_timedwait_uninterruptible(FAR sem_t *sem, unsigned int timeout);
  *
  ****************************************************************************/
 
-int net_sem_wait_uninterruptible(FAR sem_t *sem);
+int net_sem_wait_uninterruptible(sem_t *sem);
 
 #ifdef CONFIG_MM_IOB
 
@@ -958,7 +956,7 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *
  ****************************************************************************/
 
-ssize_t psock_send(FAR struct socket *psock, FAR const void *buf, size_t len,
+ssize_t psock_send(FAR struct socket *psock, const void *buf, size_t len,
                    int flags);
 
 /****************************************************************************

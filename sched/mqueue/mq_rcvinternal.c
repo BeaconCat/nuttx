@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/mqueue/mq_rcvinternal.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -126,8 +124,7 @@ static void nxmq_rcvtimeout(wdparm_t arg)
 
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
                       FAR struct mqueue_msg_s **rcvmsg,
-                      FAR const struct timespec *abstime,
-                      sclock_t ticks)
+                      FAR const struct timespec *abstime)
 {
   FAR struct mqueue_msg_s *newmsg;
   FAR struct tcb_s *rtcb = this_task();
@@ -152,11 +149,6 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
       wd_start_realtime(&rtcb->waitdog, abstime,
                         nxmq_rcvtimeout, (wdparm_t)rtcb);
     }
-  else if (ticks >= 0)
-    {
-      wd_start(&rtcb->waitdog, ticks,
-               nxmq_rcvtimeout, (wdparm_t)rtcb);
-    }
 
   /* Get the message from the head of the queue */
 
@@ -174,7 +166,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_self(rtcb);
+      nxsched_remove_running(rtcb);
 
       /* Add the task to the specified blocked task list */
 
@@ -197,7 +189,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
         }
     }
 
-  if (abstime || ticks >= 0)
+  if (abstime)
     {
       wd_cancel(&rtcb->waitdog);
     }

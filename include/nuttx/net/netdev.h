@@ -1,10 +1,16 @@
 /****************************************************************************
  * include/nuttx/net/netdev.h
+ * Defines architecture-specific device driver interfaces to the NuttX
+ * network.
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2007, 2009, 2011-2018 Gregory Nutt. All rights reserved.
- * SPDX-FileCopyrightText: 2001-2003, Adam Dunkels. All rights reserved.
- * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2007, 2009, 2011-2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *
+ * Derived largely from portions of uIP with has a similar BSD-styple
+ * license:
+ *
+ *   Copyright (c) 2001-2003, Adam Dunkels.
+ *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -492,18 +498,6 @@ struct net_driver_s
   struct netdev_statistics_s d_statistics;
 #endif
 
-#if defined(CONFIG_NET_TIMESTAMP)
-  /* Reception timestamp of packet being currently processed.
-   * If CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP is true, the timestamp is provided
-   * by hardware driver. Otherwise it is filled in by kernel when packet
-   * enters ipv4_input or ipv6_input.
-   *
-   * The timestamp is in CLOCK_REALTIME.
-   */
-
-  struct timespec d_rxtime;
-#endif
-
   /* Application callbacks:
    *
    * Network device event handlers are retained in a 'list' and are called
@@ -530,16 +524,16 @@ struct net_driver_s
 
   /* Driver callbacks */
 
-  CODE int (*d_ifup)(FAR struct net_driver_s *dev);
-  CODE int (*d_ifdown)(FAR struct net_driver_s *dev);
-  CODE int (*d_txavail)(FAR struct net_driver_s *dev);
+  int (*d_ifup)(FAR struct net_driver_s *dev);
+  int (*d_ifdown)(FAR struct net_driver_s *dev);
+  int (*d_txavail)(FAR struct net_driver_s *dev);
 #ifdef CONFIG_NET_MCASTGROUP
-  CODE int (*d_addmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
-  CODE int (*d_rmmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
+  int (*d_addmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
+  int (*d_rmmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
 #endif
 #ifdef CONFIG_NETDEV_IOCTL
-  CODE int (*d_ioctl)(FAR struct net_driver_s *dev, int cmd,
-                      unsigned long arg);
+  int (*d_ioctl)(FAR struct net_driver_s *dev, int cmd,
+                 unsigned long arg);
 #endif
 
   /* Drivers may attached device-specific, private information */

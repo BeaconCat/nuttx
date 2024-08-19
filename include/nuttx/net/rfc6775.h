@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/net/rfc6775.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Definitions for 6LoWPAN Neighbor Discovery
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

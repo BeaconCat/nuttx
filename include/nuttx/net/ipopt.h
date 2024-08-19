@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/net/ipopt.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Defines values for the IPv4 header options
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

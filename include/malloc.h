@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/malloc.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -35,6 +33,8 @@
 
 /* Special PID to query the info about alloc, free and mempool */
 
+#define PID_MM_ORPHAN  ((pid_t)-6)
+#define PID_MM_BIGGEST ((pid_t)-5)
 #define PID_MM_FREE    ((pid_t)-4)
 #define PID_MM_ALLOC   ((pid_t)-3)
 #define PID_MM_LEAK    ((pid_t)-2)

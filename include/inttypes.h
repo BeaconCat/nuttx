@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/inttypes.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -350,13 +348,7 @@
  *   function.
  */
 
-struct imaxdiv_s
-{
-  intmax_t quot;
-  intmax_t rem;
-};
-
-typedef struct imaxdiv_s imaxdiv_t;
+typedef void *imaxdiv_t; /* Dummy type since imaxdiv is not yet supported */
 
 /****************************************************************************
  * Public Function Prototypes

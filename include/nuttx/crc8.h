@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/crc8.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -105,6 +103,18 @@ uint8_t crc8ccitt(FAR const uint8_t *src, size_t len);
  ****************************************************************************/
 
 uint8_t crc8ccittpart(FAR const uint8_t *src, size_t len, uint8_t crc8val);
+
+/****************************************************************************
+ * Name: crc8rohcpart
+ ****************************************************************************/
+
+uint8_t crc8rohcpart(FAR const uint8_t *src, size_t len, uint8_t crc8val);
+
+/****************************************************************************
+ * Name: crc8rohc
+ ****************************************************************************/
+
+uint8_t crc8rohc(FAR const uint8_t *src, size_t len);
 
 #undef EXTERN
 #ifdef __cplusplus

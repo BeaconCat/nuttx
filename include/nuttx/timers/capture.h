@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/timers/capture.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -82,7 +80,7 @@ struct cap_ops_s
   /* Get the result pwm capture edges value */
 
   CODE int (*getedges)(FAR struct cap_lowerhalf_s *lower,
-                       FAR uint32_t *edges);
+                      FAR uint32_t *edges);
 };
 
 /* This structure provides the publicly visible representation of the

@@ -67,7 +67,20 @@ static const struct note_driver_ops_s g_noterpmsg_ops =
 
 struct noterpmsg_driver_s g_noterpmsg_driver =
 {
-  {&g_noterpmsg_ops},
+  {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+    "rpmsg",
+    {
+      {
+        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
+#  ifdef CONFIG_SMP
+        CONFIG_SCHED_INSTRUMENTATION_CPUSET
+#  endif
+      },
+    },
+#endif
+    &g_noterpmsg_ops
+  },
 };
 
 /****************************************************************************
@@ -151,7 +164,11 @@ static bool noterpmsg_transfer(FAR struct noterpmsg_driver_s *drv,
       memcpy(buffer, drv->buffer + drv->tail, space);
       memcpy(buffer + space, drv->buffer, len - space);
 
-      rpmsg_send_nocopy(&drv->ept, buffer, len);
+      if (rpmsg_send_nocopy(&drv->ept, buffer, len) < 0)
+        {
+          rpmsg_release_tx_buffer(&drv->ept, buffer);
+        }
+
       drv->tail = noterpmsg_next(drv, drv->tail, len);
     }
 }

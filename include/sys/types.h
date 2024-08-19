@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/sys/types.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -251,7 +249,7 @@ typedef uint16_t     sa_family_t;
 
 #ifdef CONFIG_SYSTEM_TIME64
 typedef uint64_t     clock_t;
-typedef uint64_t     time_t;         /* Holds time in seconds */
+typedef int64_t      time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t     clock_t;
 typedef uint32_t     time_t;         /* Holds time in seconds */

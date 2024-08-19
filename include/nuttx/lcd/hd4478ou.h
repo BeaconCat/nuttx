@@ -1,7 +1,8 @@
 /****************************************************************************
  * include/nuttx/lcd/hd4478ou.h
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Definitions for the Hitachi HD44780U LCD controller (as used in the
+ * LCD1602).
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

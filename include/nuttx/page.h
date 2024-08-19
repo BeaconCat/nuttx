@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/page.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * This file defines interfaces used to support NuttX On-Demand Paging.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -34,7 +33,7 @@
 #  include <nuttx/sched.h>
 #endif
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -456,5 +455,5 @@ int up_fillpage(FAR struct tcb_s *tcb, FAR void *vpage,
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 #endif /* __INCLUDE_NUTTX_PAGE_H */

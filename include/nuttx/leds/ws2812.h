@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/leds/ws2812.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -96,7 +94,7 @@ struct ws2812_dev_s
                         FAR char        *data,
                         size_t           len);
 
-  FAR void              *private;    /* Private data for opened device */
+  void                  *private;    /* Private data for opened device */
   uint32_t               clock;
   mutex_t                lock;
   int                    port;

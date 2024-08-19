@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/video/rgbcolors.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * User-friendly RGB color definitions
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

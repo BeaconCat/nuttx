@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/sys/syscall.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * This file contains the system call numbers.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

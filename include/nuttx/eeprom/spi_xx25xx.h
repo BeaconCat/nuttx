@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/eeprom/spi_xx25xx.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,9 +25,7 @@
  * Public Types
  ****************************************************************************/
 
-/* DO NOT CHANGE ORDER, IT MATCHES CODE IN drivers/eeprom/spieeprom.c and
- * drivers/mtd/at25ee.c
- */
+/* DO NOT CHANGE ORDER, IT MATCHES CODE IN drivers/eeprom/spieeprom.c */
 
 enum eeprom_25xx_e
 {

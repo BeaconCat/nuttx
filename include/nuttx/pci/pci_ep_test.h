@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/pci/pci_ep_test.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,19 +31,6 @@
  * Public Types
  ****************************************************************************/
 
-#ifdef CONFIG_PCI_EPF_TEST
-
-/****************************************************************************
- * Name: pci_register_epf_test_device
- *
- * Description:
- *  Init a epf device test
- *
- ****************************************************************************/
-
-int pci_register_epf_test_device(FAR const char *epc_name);
-#endif
-
 #define PCITEST_BAR                 _PCIIOC(0x1)
 #define PCITEST_LEGACY_IRQ          _PCIIOC(0x2)
 #define PCITEST_MSI                 _PCIIOC(0x3)
@@ -70,5 +55,18 @@ struct pci_ep_test_param_s
   unsigned int size;
   unsigned int flags;
 };
+
+#ifdef CONFIG_PCI_EPF_TEST
+
+/****************************************************************************
+ * Name: pci_register_epf_test_device
+ *
+ * Description:
+ *  Init a epf device test
+ *
+ ****************************************************************************/
+
+int pci_register_epf_test_device(FAR const char *epc_name);
+#endif
 
 #endif /* __INCLUDE_NUTTX_PCI_EP_TEST_H */

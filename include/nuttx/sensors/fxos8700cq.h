@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/sensors/fxos8700cq.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * FXOS8700CQ Driver declaration
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

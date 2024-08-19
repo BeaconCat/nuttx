@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/sensors/hyt271.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Character driver for HYT271 Digital Humidity and Temperature Module.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

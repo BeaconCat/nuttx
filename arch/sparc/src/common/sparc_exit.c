@@ -54,7 +54,9 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
+
+  sinfo("TCB=%p exiting\n", this_task());
 
   /* Update scheduler parameters */
 
@@ -70,9 +72,9 @@ void up_exit(int status)
 
   tcb = this_task();
 
-  /* Reset scheduler parameters */
+  /* Scheduler parameters will update inside syscall */
 
-  nxsched_resume_scheduler(tcb);
+  g_running_tasks[this_cpu()] = NULL;
 
   /* Then switch contexts */
 

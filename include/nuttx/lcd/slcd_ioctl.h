@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/lcd/slcd_ioctl.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * IOCTL commands for segment LCDs
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

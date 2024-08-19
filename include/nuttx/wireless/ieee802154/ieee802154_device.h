@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/wireless/ieee802154/ieee802154_device.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * IEEE802.15.4 character driver
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

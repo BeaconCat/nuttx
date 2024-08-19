@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/wireless/ieee80211/bcmf_board.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -109,8 +107,7 @@ void bcmf_board_reset(int minor, bool reset);
  *
  ****************************************************************************/
 
-void bcmf_board_setup_oob_irq(int minor, CODE int (*func)(FAR void *),
-                              FAR void *arg);
+void bcmf_board_setup_oob_irq(int minor, int (*func)(void *), void *arg);
 
 /****************************************************************************
  * Name: bcmf_board_etheraddr

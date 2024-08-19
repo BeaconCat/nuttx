@@ -1,7 +1,9 @@
 /****************************************************************************
  * include/nuttx/lcd/mio283qt2.h
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Interface definition for the
+ * MI0283QT-2 LCD from Multi-Inno Technology Co., Ltd.
+ * This LCD is based on the Himax HX8347-D LCD controller.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

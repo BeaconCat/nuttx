@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/sensors/sensor.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -430,7 +428,7 @@ struct sensor_ops_s
                              FAR struct file *filep,
                              unsigned long arg);
 
-  /**************************************************************************
+/****************************************************************************
    * Name: calibrate
    *
    * This operation can trigger the calibration operation, and if the

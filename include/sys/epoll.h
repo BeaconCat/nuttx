@@ -1,9 +1,8 @@
 /****************************************************************************
  * include/sys/epoll.h
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2015 Anton D. Kachalov. All rights reserved.
- * SPDX-FileContributor: Anton D. Kachalov <mouse@mayc.ru>
+ *   Copyright (C) 2015 Anton D. Kachalov. All rights reserved.
+ *   Author: Anton D. Kachalov <mouse@mayc.ru>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/pci/pci_ecam.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -47,7 +45,6 @@
  *
  * Returned Value:
  *   Return 0 if success, nageative if failed
- *
  ****************************************************************************/
 
 int pci_ecam_register(FAR const struct pci_resource_s *cfg,

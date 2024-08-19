@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/pthread.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Non-standard, NuttX-specific pthread-related declarations.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

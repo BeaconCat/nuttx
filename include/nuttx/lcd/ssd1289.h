@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/lcd/ssd1289.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Definitions for the Solomon Systech SSD1289 LCD controller
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
