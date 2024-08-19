@@ -54,13 +54,9 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
 
-  /* Make sure that we are in a critical section with local interrupts.
-   * The IRQ state will be restored when the next task is started.
-   */
-
-  (void)enter_critical_section();
+  sinfo("TCB=%p exiting\n", this_task());
 
   /* Update scheduler parameters */
 
@@ -76,9 +72,9 @@ void up_exit(int status)
 
   tcb = this_task();
 
-  /* Reset scheduler parameters */
+  /* Scheduler parameters will update inside syscall */
 
-  nxsched_resume_scheduler(tcb);
+  g_running_tasks[this_cpu()] = NULL;
 
   /* Then switch contexts */
 

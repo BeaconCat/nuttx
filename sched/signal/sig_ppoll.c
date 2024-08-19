@@ -68,7 +68,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
           FAR const struct timespec *timeout_ts,
           FAR const sigset_t *sigmask)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   sigset_t saved_sigprocmask;
   irqstate_t flags;
   int ret = ERROR;
@@ -80,6 +80,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
    */
 
   flags = enter_critical_section();
+  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -115,8 +116,8 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
 
       if (timeout_ts)
         {
-          timeout = timeout_ts->tv_sec * 1000 +
-                    timeout_ts->tv_nsec / 1000000;
+          timeout = timeout_ts->tv_sec * MSEC_PER_SEC +
+                    NSEC2MSEC(timeout_ts->tv_nsec);
         }
 
       ret = poll(fds, nfds, timeout);
@@ -124,7 +125,6 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
       /* We are running again, restore the original sigprocmask */
 
       rtcb->sigprocmask = saved_sigprocmask;
-      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was received
        * while the task was suspended but (b) restoring the original
@@ -132,6 +132,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
        */
 
       nxsig_unmask_pendingsignal();
+      leave_critical_section(flags);
     }
 
   return ret;
