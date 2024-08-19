@@ -193,6 +193,7 @@ void nxsig_deliver(FAR struct tcb_s *stcb)
       /* Remove the signal structure from the sigpostedq */
 
       sq_rem((FAR sq_entry_t *)sigq, &(stcb->sigpostedq));
+      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was
        * received while the signal handling executed but (b) restoring the
@@ -200,7 +201,6 @@ void nxsig_deliver(FAR struct tcb_s *stcb)
        */
 
       nxsig_unmask_pendingsignal();
-      leave_critical_section(flags);
 
       /* Then deallocate the signal structure */
 

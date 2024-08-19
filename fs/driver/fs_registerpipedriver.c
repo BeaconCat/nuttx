@@ -30,7 +30,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 #ifdef CONFIG_PIPES
 
@@ -72,7 +71,12 @@ int register_pipedriver(FAR const char *path,
    * will have a momentarily bad structure.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = inode_reserve(path, mode, &node);
   if (ret >= 0)
     {
@@ -84,11 +88,7 @@ int register_pipedriver(FAR const char *path,
 
       node->u.i_ops   = fops;
       node->i_private = priv;
-      inode_unlock();
-#ifdef CONFIG_FS_NOTIFY
-      notify_create(path);
-#endif
-      return OK;
+      ret             = OK;
     }
 
   inode_unlock();

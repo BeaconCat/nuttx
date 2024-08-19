@@ -69,8 +69,9 @@
 
 int nxsem_wait(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
+  bool switch_needed;
   int ret;
 
   /* This API should not be called from interrupt handlers & idleloop */
@@ -83,8 +84,7 @@ int nxsem_wait(FAR sem_t *sem)
    * handler.
    */
 
-  flags = enter_critical_section_nonirq();
-  rtcb = this_task();
+  flags = enter_critical_section();
 
   /* Make sure we were supplied with a valid semaphore. */
 
@@ -93,22 +93,6 @@ int nxsem_wait(FAR sem_t *sem)
   if (sem->semcount > 0)
     {
       /* It is, let the task take the semaphore. */
-
-#ifdef CONFIG_PRIORITY_PROTECT
-      if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_PROTECT)
-        {
-          if (rtcb->sched_priority <= sem->ceiling)
-            {
-              sem->saved = rtcb->sched_priority;
-              rtcb->sched_priority = sem->ceiling;
-            }
-          else
-            {
-              leave_critical_section_nonirq(flags);
-              return -EINVAL;
-            }
-        }
-#endif
 
       sem->semcount--;
       nxsem_add_holder(sem);
@@ -175,18 +159,21 @@ int nxsem_wait(FAR sem_t *sem)
 
       DEBUGASSERT(!is_idle_task(rtcb));
 
-      /* Remove the tcb task from the running list. */
+      /* Remove the tcb task from the ready-to-run list. */
 
-      nxsched_remove_running(rtcb);
+      switch_needed = nxsched_remove_readytorun(rtcb, true);
 
       /* Add the task to the specified blocked task list */
 
       rtcb->task_state = TSTATE_WAIT_SEM;
       nxsched_add_prioritized(rtcb, SEM_WAITLIST(sem));
 
-      /* Now, perform the context switch */
+      /* Now, perform the context switch if one is needed */
 
-      up_switch_context(this_task(), rtcb);
+      if (switch_needed)
+        {
+          up_switch_context(this_task(), rtcb);
+        }
 
       /* When we resume at this point, either (1) the semaphore has been
        * assigned to this thread of execution, or (2) the semaphore wait
@@ -228,7 +215,7 @@ int nxsem_wait(FAR sem_t *sem)
 #endif
     }
 
-  leave_critical_section_nonirq(flags);
+  leave_critical_section(flags);
   return ret;
 }
 
