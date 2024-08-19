@@ -104,6 +104,12 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_XPSR]    = ARMV6M_XPSR_T;
 
+  /* All tasks need set to pic address to special register */
+
+#ifdef CONFIG_BUILD_PIC
+  __asm__ ("mov %0, r9" : "=r"(xcp->regs[REG_R9]));
+#endif
+
   /* If this task is running PIC, then set the PIC base register to the
    * address of the allocated D-Space region.
    */
@@ -157,7 +163,7 @@ void up_initial_state(struct tcb_s *tcb)
 
 noinline_function void arm_initialize_stack(void)
 {
-  uint32_t stack = up_get_intstackbase(up_cpu_index()) + INTSTACK_SIZE;
+  uint32_t stack = up_get_intstackbase(this_cpu()) + INTSTACK_SIZE;
   uint32_t tempa = 0;
   uint32_t tempb = 2;
 
