@@ -76,7 +76,11 @@
 #include "stm32_bmp180.h"
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_RTC_DS1307
+#include "stm32_ds1307.h"
+#endif
+
+#ifdef CONFIG_SENSORS_MS56XX
 #include "stm32_ms5611.h"
 #endif
 
@@ -217,7 +221,7 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
   /* Initialize the MS5611 pressure sensor. */
 
   ret = board_ms5611_initialize(0, 1);
@@ -454,7 +458,7 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_RTC_DS1307
-  ret = stm32_ds1307_init();
+  ret = board_ds1307_initialize(1);
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize DS1307 RTC driver: %d\n", ret);

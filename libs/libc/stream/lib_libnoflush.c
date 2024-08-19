@@ -22,7 +22,17 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <stdbool.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
+
+#include "libc.h"
 
 /****************************************************************************
  * Public Functions
