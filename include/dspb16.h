@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/dspb16.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,7 +27,6 @@
 
 #include <nuttx/compiler.h>
 
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -95,7 +92,6 @@
  *     filter = T * (2*PI) * f_c
  *
  *     phase shift = -arctan(f_in/f_c)
- *     time constant = -T / (ln(1 - filter))
  *
  *     T    - period at which the digital filter is being calculated
  *     f_in - input frequency of the filter

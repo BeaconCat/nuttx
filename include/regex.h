@@ -1,9 +1,9 @@
 /****************************************************************************
  * include/regex.h
  *
- * SPDX-License-Identifier: BSD-2-Clause
- * SPDX-FileCopyrightText: 2001-2009 Ville Laurikari <vl@iki.fi>
+ * regex.h - TRE POSIX compatible regex compilation functions.
  *
+ *  Copyright (c) 2001-2009 Ville Laurikari <vl@iki.fi>
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without

@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/mm/kmap.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,7 +38,7 @@
 void kmm_map_initialize(void);
 
 /****************************************************************************
- * Name: kmm_map
+ * Name: kmm_map_pages
  *
  * Description:
  *   Map pages into kernel virtual memory.

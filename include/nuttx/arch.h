@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/arch.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -103,6 +101,7 @@
  * Public Types
  ****************************************************************************/
 
+typedef CODE void (*sig_deliver_t)(FAR struct tcb_s *tcb);
 typedef CODE void (*phy_enable_t)(bool enable);
 typedef CODE void (*initializer_t)(void);
 typedef CODE void (*debug_callback_t)(int type, FAR void *addr, size_t size,
@@ -810,50 +809,6 @@ bool up_textheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
- * Name: up_textheap_data_address
- *
- * Description:
- *   If an instruction bus address is specified, return the corresponding
- *   data bus address. Otherwise, return the given address as it is.
- *
- *   For some platforms, up_textheap_memalign() might return memory regions
- *   with separate instruction/data bus mappings. In that case,
- *   up_textheap_memalign() returns the address of the instruction bus
- *   mapping.
- *   The instruction bus mapping might provide only limited data access.
- *   (For example, only read-only, word-aligned access.)
- *   You can use up_textheap_data_address() to query the corresponding data
- *   bus mapping.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-#if defined(CONFIG_ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS)
-FAR void *up_textheap_data_address(FAR void *p);
-#else
-#define up_textheap_data_address(p) ((FAR void *)p)
-#endif
-#endif
-
-/****************************************************************************
- * Name: up_textheap_data_sync
- *
- * Description:
- *   Ensure modifications made on the data bus addresses (the addresses
- *   returned by up_textheap_data_address) fully visible on the corresponding
- *   instruction bus addresses.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-#if defined(CONFIG_ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS)
-void up_textheap_data_sync(void);
-#else
-#define up_textheap_data_sync() do {} while (0)
-#endif
-#endif
-
-/****************************************************************************
  * Name: up_dataheap_memalign
  *
  * Description:
@@ -898,19 +853,13 @@ bool up_dataheap_heapmember(FAR void *p);
  * Name: up_copy_section
  *
  * Description:
- *   This function copies a section from a general temporary buffer (src) to
- *   a specific address (dest). This is typically used in architectures that
- *   require specific handling of memory sections.
- *
- * Input Parameters:
- *   dest - A pointer to the destination where the data needs to be copied.
- *   src  - A pointer to the source from where the data needs to be copied.
- *   n    - The number of bytes to be copied from src to dest.
+ *   Copy section from general temporary buffer(src) to special addr(dest).
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
+
 #if defined(CONFIG_ARCH_USE_COPY_SECTION)
 int up_copy_section(FAR void *dest, FAR const void *src, size_t n);
 #endif
@@ -929,6 +878,43 @@ int up_copy_section(FAR void *dest, FAR const void *src, size_t n);
 #ifndef CONFIG_PIC
 #  define up_setpicbase(picbase)
 #  define up_getpicbase(ppicbase)
+#endif
+
+/****************************************************************************
+ * Percpu support
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_update_task
+ *
+ * Description:
+ *   We can utilize percpu storage to hold information about the
+ *   current running task. If we intend to implement this feature, we would
+ *   need to define two macros that help us manage this percpu information
+ *   effectively.
+ *
+ *   up_this_task: This macro is designed to read the contents of the percpu
+ *                 register to retrieve information about the current
+ *                 running task.This allows us to quickly access
+ *                 task-specific data without having to disable interrupts,
+ *                 access global variables and obtain the current cpu index.
+ *
+ *   up_update_task: This macro is responsible for updating the contents of
+ *                   the percpu register.It is typically called during
+ *                   initialization or when a context switch occurs to ensure
+ *                   that the percpu register reflects the information of the
+ *                   newly running task.
+ *
+ * Input Parameters:
+ *   current tcb
+ *
+ * Returned Value:
+ *   current tcb
+ *
+ ****************************************************************************/
+
+#ifndef up_update_task
+#  define up_update_task(t)
 #endif
 
 /****************************************************************************
@@ -1284,6 +1270,25 @@ int up_addrenv_mprot(FAR arch_addrenv_t *addrenv, uintptr_t addr,
 #endif
 
 /****************************************************************************
+ * Name: up_addrenv_ustackswitch
+ *
+ * Description:
+ *   This function may be called to config the mpu for each thread after
+ *   each context switch.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread that requires the stack address environment.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_STACK_PROTECT)
+int up_addrenv_ustackswitch(FAR struct tcb_s *tcb);
+#endif
+
+/****************************************************************************
  * Name: up_addrenv_ustackalloc
  *
  * Description:
@@ -1461,31 +1466,12 @@ uintptr_t up_addrenv_page_vaddr(uintptr_t page);
  *   vaddr - The virtual address.
  *
  * Returned Value:
- *   True if it is; false if it's not.
+ *   True if it is; false if it's not
  *
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
 bool up_addrenv_user_vaddr(uintptr_t vaddr);
-#endif
-
-/****************************************************************************
- * Name: up_addrenv_page_wipe
- *
- * Description:
- *   Wipe a page of physical memory, first mapping it into kernel virtual
- *   memory.
- *
- * Input Parameters:
- *   page - The page physical address.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_ADDRENV
-void up_addrenv_page_wipe(uintptr_t page);
 #endif
 
 /****************************************************************************
@@ -2363,6 +2349,7 @@ char up_romgetc(FAR const char *ptr);
 
 void up_mdelay(unsigned int milliseconds);
 void up_udelay(useconds_t microseconds);
+void up_ndelay(unsigned long nanoseconds);
 
 /****************************************************************************
  * These are standard interfaces that are exported by the OS for use by the
@@ -2818,9 +2805,9 @@ void arch_sporadic_resume(FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 void up_perf_init(FAR void *arg);
-unsigned long up_perf_gettime(void);
+clock_t up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
-void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
+void up_perf_convert(clock_t elapsed, FAR struct timespec *ts);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
@@ -2926,8 +2913,6 @@ int up_debugpoint_remove(int type, FAR void *addr, size_t size);
 
 #endif
 
-#ifdef CONFIG_PCI
-
 /****************************************************************************
  * Name: up_alloc_irq_msi
  *
@@ -2965,6 +2950,8 @@ int up_alloc_irq_msi(uint8_t busno, uint32_t devfn, FAR int *irq, int num);
  ****************************************************************************/
 
 void up_release_irq_msi(FAR int *irq, int num);
+
+#ifdef CONFIG_PCI
 
 /****************************************************************************
  * Name: up_connect_irq

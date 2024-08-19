@@ -1,9 +1,11 @@
 /****************************************************************************
  * include/nuttx/net/tun.h
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2015 Max Nekludov. All rights reserved.
- * SPDX-FileContributor: Max Nekludov <macscomp@gmail.com>
+ *   Copyright (C) 2015 Max Nekludov. All rights reserved.
+ *   Author : Max Nekludov <macscomp@gmail.com>
+ *
+ * Includes some definitions that a compatible with the LGPL GNU C Library
+ * header file of the same name.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

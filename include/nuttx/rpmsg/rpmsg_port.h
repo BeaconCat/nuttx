@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/rpmsg/rpmsg_port.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -56,7 +54,7 @@ struct rpmsg_port_config_s
   FAR void       *rxbuf;
 };
 
-#ifdef CONFIG_RPMSG_PORT_SPI
+#if defined(CONFIG_RPMSG_PORT_SPI) || defined(CONFIG_RPMSG_PORT_SPI_SLAVE)
 
 /* There are two gpios used for communication between two chips. At the SPI
  * master side, mreq is an output gpio pin which is used to notify the
@@ -79,6 +77,30 @@ struct rpmsg_port_spi_config_s
   uint8_t         sreq_pin;
   int             mreq_invert;
   int             sreq_invert; /* Pin options described in ioexpander.h */
+
+  int             mode;        /* Mode of enum spi_mode_e */
+  int             nbits;
+  uint32_t        devid;       /* Device ID of enum spi_devtype_e */
+  uint32_t        freq;        /* SPI frequency (Hz) */
+};
+
+#endif
+
+#if defined(CONFIG_RPMSG_PORT_DBGSPI) || defined(CONFIG_RPMSG_PORT_DBGSPI_SLAVE)
+
+struct rpmsg_port_dbgspi_config_s
+{
+  /* GPIO configurations of pins used for communication between two chips. */
+
+  uint8_t         mrdy_pin;
+  uint8_t         sreq_pin;
+  int             mrdy_invert;
+  int             sreq_invert; /* Pin options described in ioexpander.h */
+
+  uint8_t         mpwr_pin;
+  uint8_t         spwr_pin;
+  int             mpwr_invert;
+  int             spwr_invert; /* Pin options described in ioexpander.h */
 
   int             mode;        /* Mode of enum spi_mode_e */
   int             nbits;
@@ -151,7 +173,59 @@ int
 rpmsg_port_spi_slave_initialize(FAR const struct rpmsg_port_config_s *cfg,
   FAR const struct rpmsg_port_spi_config_s *spicfg,
   FAR struct spi_slave_ctrlr_s *spictrlr, FAR struct ioexpander_dev_s *ioe);
+#endif
 
+#ifdef CONFIG_RPMSG_PORT_DBGSPI
+
+/****************************************************************************
+ * Name: rpmsg_port_dbgspi_initialize
+ *
+ * Description:
+ *   Initialize a rpmsg_port_dbgspi device to communicate between two chips.
+ *
+ * Input Parameters:
+ *   cfg     - Configuration of buffers needed for communication.
+ *   spicfg  - SPI device's configuration.
+ *   spi     - SPI device used for transfer data between two chips.
+ *   ioe     - ioexpander used to config gpios.
+ *
+ * Returned Value:
+ *   Zero on success or an negative value on failure.
+ *
+ ****************************************************************************/
+
+int rpmsg_port_dbgspi_initialize(FAR const struct rpmsg_port_config_s *cfg,
+  FAR const struct rpmsg_port_dbgspi_config_s *spicfg,
+  FAR struct spi_dev_s *spi, FAR struct ioexpander_dev_s *ioe);
+#endif
+
+#ifdef CONFIG_RPMSG_PORT_DBGSPI_SLAVE
+
+/****************************************************************************
+ * Name: rpmsg_port_dbgspi_slave_initialize
+ *
+ * Description:
+ *   Initialize a rpmsg_port_dbgspi_slave device to communicate between two
+ *   chips.
+ *
+ * Input Parameters:
+ *   cfg      - Configuration of buffers needed for communication.
+ *   spicfg   - SPI device's configuration.
+ *   spictrlr - SPI slave controller used for transfer data between two
+ *              chips.
+ *   rioe     - ioexpander of gpios for transferring.
+ *   pioe     - ioexpander of gpios for handshaking.
+ *
+ * Returned Value:
+ *   Zero on success or an negative value on failure.
+ *
+ ****************************************************************************/
+
+int
+rpmsg_port_dbgspi_slave_initialize(FAR const struct rpmsg_port_config_s *cfg,
+  FAR const struct rpmsg_port_dbgspi_config_s *spicfg,
+  FAR struct spi_slave_ctrlr_s *spictrlr, FAR struct ioexpander_dev_s *rioe,
+  FAR struct ioexpander_dev_s *pioe);
 #endif
 
 #ifdef CONFIG_RPMSG_PORT_UART

@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/elf.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,6 +27,7 @@
 
 #include <elf.h>
 #include <arch/elf.h>
+#include <stdbool.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -40,7 +39,7 @@
  * Public Types
  ****************************************************************************/
 
-#ifdef CONFIG_ELF_COREDUMP
+#ifdef CONFIG_COREDUMP
 typedef struct elf_prpsinfo_s
 {
   char           pr_state;    /* Numeric process state */

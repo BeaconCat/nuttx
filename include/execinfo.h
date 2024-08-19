@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/execinfo.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -48,6 +46,25 @@
 #define backtrace(b, s) sched_backtrace(_SCHED_GETTID(), b, s, 0)
 #define dump_stack()    sched_dumpstack(_SCHED_GETTID())
 
+/* Format a backtrace into a buffer for dumping. */
+
+#define backtrace_format(buf, buflen, backtrace, depth)              \
+do                                                                   \
+  {                                                                  \
+    FAR const char *format = "%0*p ";                                \
+    int i;                                                           \
+                                                                     \
+    DEBUGASSERT(buflen >= BACKTRACE_BUFFER_SIZE(depth));             \
+    buf[0] = '\0';                                                   \
+    for (i = 0; i < depth && backtrace[i]; i++)                      \
+      {                                                              \
+        snprintf(buf + i * BACKTRACE_PTR_FMT_WIDTH,                  \
+                 buflen - i * BACKTRACE_PTR_FMT_WIDTH,               \
+                 format, BACKTRACE_PTR_FMT_WIDTH - 1, backtrace[i]); \
+      }                                                              \
+  }                                                                  \
+while(0)
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -63,8 +80,18 @@ extern "C"
 
 FAR char **backtrace_symbols(FAR void *const *buffer, int size);
 void backtrace_symbols_fd(FAR void *const *buffer, int size, int fd);
-int backtrace_format(FAR char *buffer, int size,
-                     FAR void *backtrace[], int depth);
+
+#  if CONFIG_LIBC_BACKTRACE_BUFFSIZE > 0
+int backtrace_record(int skip);
+int backtrace_remove(int index);
+FAR void **backtrace_get(int index, FAR int *size);
+void backtrace_dump(void);
+#  else
+#    define backtrace_record(skip) (-ENOSYS)
+#    define backtrace_remove(index) (-ENOSYS)
+#    define backtrace_get(index, size) (*(size)=0)
+#    define backtrace_dump()
+#  endif
 
 #undef EXTERN
 #if defined(__cplusplus)

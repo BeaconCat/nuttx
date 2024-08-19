@@ -1,8 +1,7 @@
 /****************************************************************************
  * include/crypto/key_wrap.h
- *
- * SPDX-License-Identifier: ISC
- * SPDX-FileCopyrightText: 2008 Damien Bergamini <damien.bergamini@free.fr>
+ *$OpenBSD: key_wrap.h,v 1.3 2017/05/02 17:07:06 mikeb Exp $
+ * Copyright (c) 2008 Damien Bergamini <damien.bergamini@free.fr>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above

@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/serial/uart_16550.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Serial driver for 16550 UART
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -40,8 +39,8 @@
 /* CONFIGURATION ************************************************************/
 
 #undef HAVE_16550_UART_DMA
-#if defined(CONFIG_16550_UART0_DMA) || defined(CONFIG_16550_UART1_DMA) || \
-    defined(CONFIG_16550_UART2_DMA) || defined(CONFIG_16550_UART3_DMA)
+#if defined(CONFIG_16550_UART0_DMA) || defined(CONFIG_16550_UART1_DMA)  \
+  || defined(CONFIG_16550_UART2_DMA) || defined(CONFIG_16550_UART3_DMA)
 #  define HAVE_16550_UART_DMA 1
 #endif
 
@@ -316,10 +315,6 @@ typedef uint32_t uart_addrwidth_t;
 typedef uint64_t uart_addrwidth_t;
 #endif
 
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
 /* UART 16550 ops */
 
 struct u16550_s;
@@ -371,12 +366,15 @@ struct u16550_s
   uint8_t                parity;    /* 0=none, 1=odd, 2=even */
   uint8_t                bits;      /* Number of bits (7 or 8) */
   bool                   stopbits2; /* true: Configure with 2 stop bits instead of 1 */
-#if defined(CONFIG_SERIAL_IFLOWCONTROL) || defined(CONFIG_SERIAL_OFLOWCONTROL)
+#  if defined(CONFIG_SERIAL_IFLOWCONTROL) || defined(CONFIG_SERIAL_OFLOWCONTROL)
   bool                   flow;      /* flow control (RTS/CTS) enabled */
+#  endif
 #endif
-#endif
-  uart_datawidth_t       rxtrigger; /* RX trigger level */
 };
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions Definitions
@@ -449,7 +447,8 @@ void u16550_putc(FAR struct u16550_s *priv, int ch);
  ****************************************************************************/
 
 #ifndef CONFIG_SERIAL_UART_ARCH_MMIO
-uart_datawidth_t uart_getreg(FAR struct u16550_s *priv, unsigned int offset);
+uart_datawidth_t uart_getreg(FAR struct u16550_s *priv,
+                             unsigned int offset);
 void uart_putreg(FAR struct u16550_s *priv,
                  unsigned int offset,
                  uart_datawidth_t value);

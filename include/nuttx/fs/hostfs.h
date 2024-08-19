@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/fs/hostfs.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -137,7 +135,7 @@ typedef int          nuttx_fsid_t[2];
 /* These must match the definition in include/time.h */
 
 #  ifdef CONFIG_SYSTEM_TIME64
-typedef uint64_t     nuttx_time_t;
+typedef int64_t      nuttx_time_t;
 #  else
 typedef uint32_t     nuttx_time_t;
 #  endif

@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/rpmsg/rpmsg_virtio.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +31,7 @@
 
 #include <nuttx/rpmsg/rpmsg.h>
 #include <openamp/rpmsg_virtio.h>
+#include <openamp/remoteproc.h>
 
 /****************************************************************************
  * Pre-processor Definitions

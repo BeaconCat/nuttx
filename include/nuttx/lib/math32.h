@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/lib/math32.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -59,9 +57,16 @@
 #define FLS2(n)  ((n) & 0x2        ?  1 + FLS1 ((n) >>  1) : FLS1 (n))
 #define FLS1(n)  ((n) & 0x1        ?  1 : 0)
 
-/* Checks if an integer is power of two at compile time */
+/** IS_POWER_OF_2() - check if a value is a power of two
+ * @n: the value to check
+ *
+ * Determine whether some value is a power of two, where zero is
+ * *not* considered a power of two.
+ * Return: true if @n is a power of 2, otherwise false.
+ */
 
-#define IS_POWER_OF_2(n)           ((n) > 0 && ((n) & (n - 1)) == 0)
+#define IS_POWER_OF_2(n) \
+  ((n) != 0 && (((n) & ((n) - 1)) == 0))
 
 /* Returns round up and round down value of log2(n). Note: it can be used at
  * compile time.
@@ -114,6 +119,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
+#define is_power_of_2(n) IS_POWER_OF_2(n)
 #define flsx(n) ((sizeof(n) <= sizeof(long)) ? flsl(n) : flsll(n))
 
 /****************************************************************************
@@ -130,7 +136,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#define log2ceil(n) (IS_POWER_OF_2(n) ? (flsx(n) - 1) : flsx(n))
+#define log2ceil(n) (is_power_of_2(n) ? (flsx(n) - 1) : flsx(n))
 
 /****************************************************************************
  * Name: log2floor
@@ -328,12 +334,12 @@ extern "C"
       })
 
 #  define div_const(n, base) \
-    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const(n, base) : ((n) / (base)))
+    ((sizeof(n) == sizeof(uint64_t)) ? div64_const(n, base) : ((n) / (base)))
 #  define div_const_roundup(n, base) \
-    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1, base) : \
+    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1, base) : \
      (((n) + (base) - 1) / (base)))
 #  define div_const_roundnearest(n, base) \
-    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2), base) : \
+    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2), base) : \
      (((n) + ((base) / 2)) / (base)))
 #else
 #  define div_const(n, base) ((n) / (base))

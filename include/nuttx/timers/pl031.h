@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/timers/pl031.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -20,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_TIMERS_PL031_H
-#define __INCLUDE_NUTTX_TIMERS_PL031_H
+#ifndef __INCLUDE_NUTTX_TIMER_PL031_H
+#define __INCLUDE_NUTTX_TIMER_PL031_H
 
 /****************************************************************************
  * Public Function Prototypes
@@ -37,4 +35,4 @@
 
 FAR struct rtc_lowerhalf_s *pl031_initialize(uintptr_t base, int irq);
 
-#endif  /* __INCLUDE_NUTTX_TIMERS_PL031_H */
+#endif  //__INCLUDE_NUTTX_TIMER_PL031_H

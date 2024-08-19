@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/power/battery_ioctl.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * NuttX Battery IOCTLs definition
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -150,6 +149,7 @@ enum batio_operate_e
   BATIO_OPRTN_VBUS_STATE,
   BATIO_OPRTN_CAPACITY,
   BATIO_OPRTN_CHARGER_STATE,
+  BATIO_OPRTN_HEALTH,
   BATIO_OPRTN_END
 };
 

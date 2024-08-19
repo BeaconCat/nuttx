@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/task/task_restart.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -83,7 +81,7 @@ static int restart_handler(FAR void *cookie)
       tcb->flags = arg->saved_flags;
     }
 
-  nxsched_remove_readytorun(tcb, false);
+  nxsched_remove(tcb);
 
   leave_critical_section(flags);
 
@@ -117,7 +115,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 
   if (remove)
     {
-      nxsched_remove_readytorun(tcb, false);
+      nxsched_remove_not_running(tcb);
     }
 
   /* Deallocate anything left in the TCB's signal queues */
@@ -155,7 +153,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 
   /* Add the task to the inactive task list */
 
-  dq_addfirst((FAR dq_entry_t *)tcb, list_inactivetasks());
+  dq_addfirst((FAR dq_entry_t *)tcb, &g_inactivetasks);
   tcb->task_state = TSTATE_TASK_INACTIVE;
 }
 

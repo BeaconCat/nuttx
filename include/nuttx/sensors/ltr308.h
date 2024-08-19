@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/sensors/ltr308.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Character driver for the LTR-308ALS-01 Lite-On ambient light sensor.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

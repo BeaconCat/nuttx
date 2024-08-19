@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/timers/pwm.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -120,25 +118,12 @@
 
 /* These are helper definitions for setting PWM channel output polarity to
  * logical low or high level. The pulsed output should start with this
- * logical value.
- * The output polarity of the PWM's disabled channel does not depend on this
- * value, refer to DCPOL instead.
+ * logical value and should return to it when the output is disabled.
  */
 
 #define PWM_CPOL_NDEF             0   /* Not defined, default value by arch driver should be used */
 #define PWM_CPOL_LOW              1   /* Logical zero */
 #define PWM_CPOL_HIGH             2   /* Logical one */
-
-/* PWM disabled channel polarity ********************************************/
-
-/* The output of the PWM disabled channel may depend on the platform
- * dependant peripheral. These helper definitions can be used for setting
- * the disabled channel's output state.
- */
-
-#define PWM_DCPOL_NDEF           0   /* Not defined, the default output state is arch dependant */ 
-#define PWM_DCPOL_LOW            1   /* Logical zero */
-#define PWM_DCPOL_HIGH           2   /* Logical one  */
 
 /****************************************************************************
  * Public Types
@@ -161,7 +146,6 @@ struct pwm_chan_s
   ub16_t dead_time_b;
 #endif
   uint8_t cpol;
-  uint8_t dcpol;
   int8_t channel;
 };
 #endif
@@ -190,7 +174,6 @@ struct pwm_info_s
                                  * generate an indefinite number of pulses */
 #  endif
   uint8_t cpol;                 /* Channel polarity */
-  uint8_t dcpol;                /* Disabled channel polarity */
 #endif /* CONFIG_PWM_MULTICHAN */
 
   FAR void           *arg;      /* User provided argument to be used in the

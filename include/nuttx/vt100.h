@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/vt100.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * VT100 Escape Sequences
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

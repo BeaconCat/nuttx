@@ -1,8 +1,7 @@
 /****************************************************************************
  * include/nuttx/mtd/nand.h
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2012, Atmel Corporation
+ *   Copyright (c) 2012, Atmel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,7 +98,7 @@ extern "C"
  *
  * Returned Value:
  *   A non-NULL MTD driver instance is returned on success.  NULL is
- *   returned on any failure.
+ *   returned on any failaure.
  *
  ****************************************************************************/
 

@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/power/bq769x0.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Lower half driver for 769x0 battery monitor
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

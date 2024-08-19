@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/sched/sched_addreadytorun.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -29,8 +27,9 @@
 #include <stdbool.h>
 #include <assert.h>
 
+#include <nuttx/queue.h>
+
 #include "irq/irq.h"
-#include "sched/queue.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -83,14 +82,14 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * g_pendingtasks task list for now.
        */
 
-      nxsched_add_prioritized(btcb, list_pendingtasks());
+      nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
       ret = false;
     }
 
   /* Otherwise, add the new task to the ready-to-run task list */
 
-  else if (nxsched_add_prioritized(btcb, list_readytorun()))
+  else if (nxsched_add_prioritized(btcb, &g_readytorun))
     {
       /* The new btcb was added at the head of the ready-to-run list.  It
        * is now the new active task!
@@ -100,6 +99,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
       btcb->task_state = TSTATE_TASK_RUNNING;
       btcb->flink->task_state = TSTATE_TASK_READYTORUN;
+      up_update_task(btcb);
       ret = true;
     }
   else
@@ -200,7 +200,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * now.
        */
 
-      nxsched_add_prioritized(btcb, list_pendingtasks());
+      nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
       doswitch         = false;
     }
@@ -214,7 +214,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * Add the task to the ready-to-run (but not running) task list
        */
 
-      nxsched_add_prioritized(btcb, list_readytorun());
+      nxsched_add_prioritized(btcb, &g_readytorun);
 
       btcb->task_state = TSTATE_TASK_READYTORUN;
       doswitch         = false;
@@ -243,14 +243,11 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
                   g_delivertasks[cpu] = btcb;
                   btcb->cpu = cpu;
                   btcb->task_state = TSTATE_TASK_ASSIGNED;
-                  nxsched_add_prioritized(rtcb, &g_readytorun);
-                  rtcb->task_state = TSTATE_TASK_READYTORUN;
+                  btcb = rtcb;
                 }
-              else
-                {
-                  nxsched_add_prioritized(btcb, &g_readytorun);
-                  btcb->task_state = TSTATE_TASK_READYTORUN;
-                }
+
+              nxsched_add_prioritized(btcb, &g_readytorun);
+              btcb->task_state = TSTATE_TASK_READYTORUN;
             }
 
           return false;
@@ -261,14 +258,15 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
       /* Change "head" from TSTATE_TASK_RUNNING to TSTATE_TASK_ASSIGNED */
 
       headtcb = (FAR struct tcb_s *)tasklist->head;
-      DEBUGASSERT(headtcb->task_state = TSTATE_TASK_RUNNING);
+      DEBUGASSERT(headtcb->task_state == TSTATE_TASK_RUNNING);
       headtcb->task_state = TSTATE_TASK_ASSIGNED;
 
       /* Add btcb to the head of the g_assignedtasks
        * task list and mark it as running
        */
 
-      dq_addfirst_nonempty((FAR dq_entry_t *)btcb, tasklist);
+      dq_addfirst_notempty((FAR dq_entry_t *)btcb, tasklist);
+      up_update_task(btcb);
 
       DEBUGASSERT(task_state == TSTATE_TASK_RUNNING);
       btcb->cpu        = cpu;

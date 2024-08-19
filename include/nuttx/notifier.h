@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/notifier.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +28,7 @@
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
 #include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 
 #include <debug.h>
 #include <errno.h>
@@ -178,9 +177,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_register(nh->head, (nb), false); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 
@@ -189,9 +188,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_register(nh->head, (nb), true); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 
@@ -200,9 +199,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_unregister(nh->head, (nb)); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 

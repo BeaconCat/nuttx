@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/crypto/tea.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Tiny Encryption Algorithm
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/ctype.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,23 +32,6 @@
 
 #include <nuttx/compiler.h>
 #include <langinfo.h>
-
-#ifndef _MSC_VER
-
-/* GNU libstdc++ is expecting ctype.h to define a few macros for
- * locale related functions like C++ streams.
- */
-
-#define _U  01
-#define _L  02
-#define _N  04
-#define _S  010
-#define _P  020
-#define _C  040
-#define _X  0100
-#define _B  0200
-
-#endif
 
 /****************************************************************************
  * Inline Functions

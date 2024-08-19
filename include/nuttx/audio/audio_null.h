@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/audio/audio_null.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * A do-nothinig audio device driver to simplify testing of audio decoders.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

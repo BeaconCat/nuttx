@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/mm/mempool.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,6 +30,7 @@
 #include <nuttx/list.h>
 #include <nuttx/queue.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>

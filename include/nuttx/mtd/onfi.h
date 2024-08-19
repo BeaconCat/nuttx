@@ -1,8 +1,7 @@
 /****************************************************************************
  * include/nuttx/mtd/onfi.h
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2010, Atmel Corporation
+ *   Copyright (c) 2010, Atmel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

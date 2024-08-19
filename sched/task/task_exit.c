@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/task/task_exit.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,12 +22,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include  <nuttx/config.h>
 
-#include <sched.h>
-#include <debug.h>
+#include  <sched.h>
 
-#include "sched/sched.h"
+#include  "sched/sched.h"
 
 #ifdef CONFIG_SMP
 #  include "irq/irq.h"
@@ -91,9 +88,6 @@ int nxtask_exit(void)
   dtcb = this_task();
 #endif
 
-  sinfo("%s pid=%d,TCB=%p\n", get_task_name(dtcb),
-        dtcb->pid, dtcb);
-
   /* Update scheduler parameters */
 
   nxsched_suspend_scheduler(dtcb);
@@ -106,7 +100,7 @@ int nxtask_exit(void)
    * ready-to-run with state == TSTATE_TASK_RUNNING
    */
 
-  nxsched_remove_self(dtcb);
+  nxsched_remove_running(dtcb);
 
   /* Get the new task at the head of the ready to run list */
 

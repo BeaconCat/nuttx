@@ -1,7 +1,7 @@
 /****************************************************************************
  * include/nuttx/lcd/ssd1680.h
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Driver for Solomon Systech SSD1680 e-paper controller
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

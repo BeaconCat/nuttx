@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/nuttx/instrument.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -41,8 +39,8 @@ typedef CODE void (instrument_fun_t)(FAR void *this_fn,
 struct instrument_s
 {
   sq_entry_t entry;
-  FAR instrument_fun_t *enter;
-  FAR instrument_fun_t *leave;
+  instrument_fun_t *enter;
+  instrument_fun_t *leave;
   FAR void *arg;
 };
 

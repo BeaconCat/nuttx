@@ -1,8 +1,6 @@
 /****************************************************************************
  * include/sys/statfs.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -84,7 +82,8 @@
 #define _XIAFS_SUPER_MAGIC    0x012fd16d
 #define SPIFFS_SUPER_MAGIC    0x20090315
 #define LITTLEFS_SUPER_MAGIC  0x0a732923
-#define MNEMOFS_SUPER_MAGIC   0x704b8e4d
+#define FATFS_SUPER_MAGIC     0xebe8e9
+#define YAFFS_SUPER_MAGIC     0x5941ff53
 
 /* NuttX specific file-systems */
 

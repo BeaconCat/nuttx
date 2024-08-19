@@ -1,7 +1,6 @@
 /****************************************************************************
  * include/nuttx/net/ipv6ext.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * IPv6 Extension Header Definitions
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
