@@ -27,6 +27,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "notify/notify.h"
 
 /****************************************************************************
  * Public Functions
@@ -54,12 +55,11 @@ int unregister_driver(FAR const char *path)
 
   /* If unlink failed, only remove inode. */
 
-  ret = inode_lock();
-  if (ret >= 0)
-    {
-      ret = inode_remove(path);
-      inode_unlock();
-    }
-
+  inode_lock();
+  ret = inode_remove(path);
+  inode_unlock();
+#ifdef CONFIG_FS_NOTIFY
+  notify_unlink(path);
+#endif
   return ret;
 }

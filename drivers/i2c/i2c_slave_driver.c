@@ -381,7 +381,6 @@ static int i2c_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct i2c_slave_driver_s *priv;
   int ret = OK;
-  int i;
 
   DEBUGASSERT(filep->f_inode->i_private != NULL);
 
@@ -395,6 +394,7 @@ static int i2c_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
   if (setup)
     {
       pollevent_t eventset = 0;
+      int i;
 
       for (i = 0; i < CONFIG_I2C_SLAVE_NPOLLWAITERS; i++)
         {
@@ -426,7 +426,7 @@ static int i2c_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
   else if (fds->priv != NULL)
     {
-      struct pollfd **slot = fds->priv;
+      FAR struct pollfd **slot = fds->priv;
       *slot     = NULL;
       fds->priv = NULL;
     }
@@ -502,7 +502,7 @@ static int i2c_slave_callback(FAR void *arg, i2c_slave_complete_t status,
       priv->read_index = 0;
       priv->read_length = length;
 
-      while (nxsem_get_value(&priv->wait, &semcount) >= 0 && semcount <= 1)
+      while (nxsem_get_value(&priv->wait, &semcount) >= 0 && semcount <= 0)
         {
           nxsem_post(&priv->wait);
         }

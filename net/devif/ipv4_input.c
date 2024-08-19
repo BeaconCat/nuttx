@@ -381,6 +381,7 @@ static int ipv4_in(FAR struct net_driver_s *dev)
     }
 #endif
 
+#ifdef CONFIG_NET_IPV4_CHECKSUMS
   if (ipv4_chksum(IPv4BUF) != 0xffff)
     {
       /* Compute and check the IP header checksum. */
@@ -392,6 +393,7 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       nwarn("WARNING: Bad IP checksum\n");
       goto drop;
     }
+#endif
 
 #ifdef CONFIG_NET_IPFILTER
   if (ipv4_filter_in(dev) != IPFILTER_TARGET_ACCEPT)
@@ -499,12 +501,6 @@ int ipv4_input(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
-
-  /* Store reception timestamp if enabled and not provided by hardware. */
-
-#if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
-  clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
-#endif
 
   if (dev->d_iob != NULL)
     {
