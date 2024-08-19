@@ -151,9 +151,9 @@ int local_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 
           /* Return the address family */
 
-          if (addr != NULL && conn->lc_peer != NULL)
+          if (addr != NULL)
             {
-              ret = local_getaddr(conn->lc_peer, addr, addrlen);
+              ret = local_getaddr(conn, addr, addrlen);
             }
 
           if (ret == OK && nonblock)
