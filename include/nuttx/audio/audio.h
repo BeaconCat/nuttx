@@ -160,7 +160,6 @@
 #define AUDIO_FMT_MSBC              0x0e
 #define AUDIO_FMT_CVSD              0x0f
 #define AUDIO_FMT_AMR               0x10
-#define AUDIO_FMT_OPUS              0x11
 
 /* Audio Sub-Format Types ***************************************************/
 
@@ -183,8 +182,6 @@
 #define AUDIO_SUBFMT_MIDI_0         0x10
 #define AUDIO_SUBFMT_MIDI_1         0x11
 #define AUDIO_SUBFMT_MIDI_2         0x12
-#define AUDIO_SUBFMT_AMRNB          0x13
-#define AUDIO_SUBFMT_AMRWB          0x14
 
 /* Audio Hardware-Format Types **********************************************/
 
@@ -215,27 +212,26 @@
 
 #define AUDIO_SAMP_RATE_8K          0x0001
 #define AUDIO_SAMP_RATE_11K         0x0002
-#define AUDIO_SAMP_RATE_12K         0x0004
-#define AUDIO_SAMP_RATE_16K         0x0008
-#define AUDIO_SAMP_RATE_22K         0x0010
-#define AUDIO_SAMP_RATE_24K         0x0020
-#define AUDIO_SAMP_RATE_32K         0x0040
-#define AUDIO_SAMP_RATE_44K         0x0080
-#define AUDIO_SAMP_RATE_48K         0x0100
-#define AUDIO_SAMP_RATE_88K         0x0200
-#define AUDIO_SAMP_RATE_96K         0x0400
-#define AUDIO_SAMP_RATE_128K        0x0800
-#define AUDIO_SAMP_RATE_160K        0x1000
-#define AUDIO_SAMP_RATE_172K        0x2000
-#define AUDIO_SAMP_RATE_192K        0x4000
-#define AUDIO_SAMP_RATE_DEF_ALL    (AUDIO_SAMP_RATE_8K   | AUDIO_SAMP_RATE_11K | \
-                                    AUDIO_SAMP_RATE_12K  | AUDIO_SAMP_RATE_16K | \
-                                    AUDIO_SAMP_RATE_22K  | AUDIO_SAMP_RATE_24K | \
-                                    AUDIO_SAMP_RATE_32K  | AUDIO_SAMP_RATE_44K | \
-                                    AUDIO_SAMP_RATE_48K  | AUDIO_SAMP_RATE_88K | \
-                                    AUDIO_SAMP_RATE_96K  | AUDIO_SAMP_RATE_128K | \
-                                    AUDIO_SAMP_RATE_160K | AUDIO_SAMP_RATE_172K | \
-                                    AUDIO_SAMP_RATE_192K)
+#define AUDIO_SAMP_RATE_16K         0x0004
+#define AUDIO_SAMP_RATE_22K         0x0008
+#define AUDIO_SAMP_RATE_24K         0x0010
+#define AUDIO_SAMP_RATE_32K         0x0020
+#define AUDIO_SAMP_RATE_44K         0x0040
+#define AUDIO_SAMP_RATE_48K         0x0080
+#define AUDIO_SAMP_RATE_88K         0x0100
+#define AUDIO_SAMP_RATE_96K         0x0200
+#define AUDIO_SAMP_RATE_128K        0x0400
+#define AUDIO_SAMP_RATE_160K        0x0800
+#define AUDIO_SAMP_RATE_172K        0x1000
+#define AUDIO_SAMP_RATE_192K        0x2000
+#define AUDIO_SAMP_RATE_DEF_ALL    (AUDIO_SAMP_RATE_8K   | AUDIO_SAMP_RATE_11K  | \
+                                    AUDIO_SAMP_RATE_16K  | AUDIO_SAMP_RATE_22K  | \
+                                    AUDIO_SAMP_RATE_24K  | AUDIO_SAMP_RATE_32K  | \
+                                    AUDIO_SAMP_RATE_44K  | AUDIO_SAMP_RATE_48K  | \
+                                    AUDIO_SAMP_RATE_88K  | AUDIO_SAMP_RATE_96K  | \
+                                    AUDIO_SAMP_RATE_128K | AUDIO_SAMP_RATE_160K | \
+                                    AUDIO_SAMP_RATE_172K | AUDIO_SAMP_RATE_192K )
+
 /* Audio Sub-sampling Ratios  ***********************************************/
 
 #define AUDIO_SUBSAMPLE_NONE        0
@@ -328,7 +324,6 @@
 #define AUDIO_CALLBACK_IOERR        0x02
 #define AUDIO_CALLBACK_COMPLETE     0x03
 #define AUDIO_CALLBACK_MESSAGE      0x04
-#define AUDIO_CALLBACK_UNDERRUN     0x05
 
 /* Audio Pipeline Buffer (AP Buffer) flags **********************************/
 
@@ -359,7 +354,6 @@
 #define AUDIO_MSG_COMMAND          10
 #define AUDIO_MSG_SLIENCE          11
 #define AUDIO_MSG_UNDERRUN         12
-#define AUDIO_MSG_IOERR            13
 #define AUDIO_MSG_USER             64
 
 /* Audio Pipeline Buffer flags */
@@ -434,10 +428,10 @@ struct audio_caps_desc_s
 
 struct audio_info_s
 {
-  uint32_t samplerate;   /* Sample Rate of the audio data */
-  uint8_t  channels;     /* Number of channels (1, 2, 5, 7) */
-  uint8_t  format;       /* Audio data format */
-  uint8_t  subformat;    /* Audio subformat
+  uint8_t samplerate;   /* Sample Rate of the audio data */
+  uint8_t channels;     /* Number of channels (1, 2, 5, 7) */
+  uint8_t format;       /* Audio data format */
+  uint8_t subformat;    /* Audio subformat
                          * (maybe should be combined with format?
                          */
 };
@@ -466,7 +460,6 @@ struct ap_buffer_s
   apb_samp_t            nmaxbytes;  /* The maximum number of bytes */
   apb_samp_t            nbytes;     /* The number of bytes used */
   apb_samp_t            curbyte;    /* Next byte to be processed */
-  apb_samp_t            nsamples;   /* The number of samples in the buffer */
   mutex_t               lock;       /* Reference locking mutex */
   uint16_t              flags;      /* Buffer flags */
   uint16_t              crefs;      /* Number of reference counts */
