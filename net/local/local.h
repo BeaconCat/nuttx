@@ -153,7 +153,7 @@ struct local_conn_s
    * socket events.
    */
 
-  FAR struct pollfd *lc_event_fds[LOCAL_NPOLLWAITERS];
+  struct pollfd *lc_event_fds[LOCAL_NPOLLWAITERS];
   struct pollfd lc_inout_fds[2*LOCAL_NPOLLWAITERS];
 
   /* Union of fields unique to SOCK_STREAM client, server, and connected
@@ -613,8 +613,7 @@ int local_release_halfduplex(FAR struct local_conn_s *conn);
  *
  ****************************************************************************/
 
-int local_open_client_rx(FAR struct local_conn_s *client,
-                         FAR struct local_conn_s *server, bool nonblock);
+int local_open_client_rx(FAR struct local_conn_s *client, bool nonblock);
 
 /****************************************************************************
  * Name: local_open_client_tx
@@ -624,8 +623,7 @@ int local_open_client_rx(FAR struct local_conn_s *client,
  *
  ****************************************************************************/
 
-int local_open_client_tx(FAR struct local_conn_s *client,
-                         FAR struct local_conn_s *server, bool nonblock);
+int local_open_client_tx(FAR struct local_conn_s *client, bool nonblock);
 
 /****************************************************************************
  * Name: local_open_server_rx

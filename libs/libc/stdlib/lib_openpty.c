@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/stdlib/lib_openpty.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -80,7 +78,7 @@ int posix_openpt(int oflag)
       char devname[16];
       int fd;
 
-      snprintf(devname, sizeof(devname), "/dev/pty%d", minor);
+      snprintf(devname, 16, "/dev/pty%d", minor);
       fd = open(devname, oflag);
       if (fd < 0)
         {

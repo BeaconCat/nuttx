@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/wqueue/work_usrthread.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -193,7 +191,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
     {
       /* Wait indefinitely until work_queue has new items */
 
-      nxsem_wait(&wqueue->wake);
+      _SEM_WAIT(&wqueue->wake);
     }
   else
     {
@@ -210,7 +208,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
       clock_ticks2time(&delay, next);
       clock_timespec_add(&now, &delay, &rqtp);
 
-      nxsem_timedwait(&wqueue->wake, &rqtp);
+      _SEM_TIMEDWAIT(&wqueue->wake, &rqtp);
     }
 }
 

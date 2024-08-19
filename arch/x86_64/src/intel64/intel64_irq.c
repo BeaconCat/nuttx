@@ -76,7 +76,7 @@ static inline void up_idtinit(void);
 static struct idt_entry_s        g_idt_entries[NR_IRQS];
 static struct intel64_irq_priv_s g_irq_priv[NR_IRQS];
 static int                       g_msi_now = IRQ_MSI_START;
-static spinlock_t                g_irq_spinlock;
+static spinlock_t                g_irq_spin;
 
 /****************************************************************************
  * Private Functions
@@ -440,7 +440,7 @@ static inline void up_idtinit(void)
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 3
 static inline void x86_64_color_intstack(void)
 {
-  x86_64_stack_color((void *)up_get_intstackbase(up_cpu_index()),
+  x86_64_stack_color((void *)up_get_intstackbase(this_cpu()),
                      IRQ_STACK_SIZE);
 }
 #else
@@ -510,7 +510,7 @@ void up_irqinitialize(void)
 void up_disable_irq(int irq)
 {
 #ifndef CONFIG_ARCH_INTEL64_DISABLE_INT_INIT
-  irqstate_t flags = spin_lock_irqsave(&g_irq_spinlock);
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
 
   if (irq > IRQ255)
     {
@@ -523,7 +523,7 @@ void up_disable_irq(int irq)
 
   if (g_irq_priv[irq].msi)
     {
-      spin_unlock_irqrestore(&g_irq_spinlock, flags);
+      spin_unlock_irqrestore(&g_irq_spin, flags);
       return;
     }
 
@@ -539,7 +539,7 @@ void up_disable_irq(int irq)
         }
     }
 
-  spin_unlock_irqrestore(&g_irq_spinlock, flags);
+  spin_unlock_irqrestore(&g_irq_spin, flags);
 #endif
 }
 
@@ -554,7 +554,7 @@ void up_disable_irq(int irq)
 void up_enable_irq(int irq)
 {
 #ifndef CONFIG_ARCH_INTEL64_DISABLE_INT_INIT
-  irqstate_t flags = spin_lock_irqsave(&g_irq_spinlock);
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
 
 #  ifndef CONFIG_IRQCHAIN
   /* Check if IRQ is free if we don't support IRQ chains */
@@ -569,7 +569,7 @@ void up_enable_irq(int irq)
 
   if (g_irq_priv[irq].msi)
     {
-      spin_unlock_irqrestore(&g_irq_spinlock, flags);
+      spin_unlock_irqrestore(&g_irq_spin, flags);
       return;
     }
 
@@ -592,7 +592,7 @@ void up_enable_irq(int irq)
 
   CPU_SET(this_cpu(), &g_irq_priv[irq].busy);
 
-  spin_unlock_irqrestore(&g_irq_spinlock, flags);
+  spin_unlock_irqrestore(&g_irq_spin, flags);
 #endif
 }
 
@@ -614,32 +614,6 @@ int up_prioritize_irq(int irq, int priority)
   return OK;
 }
 #endif
-
-/****************************************************************************
- * Name: up_trigger_irq
- *
- * Description:
- *   Trigger IRQ interrupt.
- *
- ****************************************************************************/
-
-void up_trigger_irq(int irq, cpu_set_t cpuset)
-{
-  uint32_t cpu;
-
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
-    {
-      if (CPU_ISSET(cpu, &cpuset))
-        {
-          write_msr(MSR_X2APIC_ICR,
-                    MSR_X2APIC_ICR_FIXED |
-                    MSR_X2APIC_ICR_ASSERT |
-                    MSR_X2APIC_DESTINATION(
-                      (uint64_t)x86_64_cpu_to_loapic(cpu)) |
-                    irq);
-        }
-    }
-}
 
 /****************************************************************************
  * Name: up_get_legacy_irq
@@ -666,7 +640,7 @@ int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 
 int up_alloc_irq_msi(uint8_t busno, uint32_t devfn, int *pirq, int num)
 {
-  irqstate_t flags = spin_lock_irqsave(&g_irq_spinlock);
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
   int        irq   = 0;
   int        i     = 0;
 
@@ -679,7 +653,7 @@ int up_alloc_irq_msi(uint8_t busno, uint32_t devfn, int *pirq, int num)
 
   if (num <= 0)
     {
-      spin_unlock_irqrestore(&g_irq_spinlock, flags);
+      spin_unlock_irqrestore(&g_irq_spin, flags);
 
       /* No IRQs available */
 
@@ -698,7 +672,7 @@ int up_alloc_irq_msi(uint8_t busno, uint32_t devfn, int *pirq, int num)
       pirq[i] = irq + i;
     }
 
-  spin_unlock_irqrestore(&g_irq_spinlock, flags);
+  spin_unlock_irqrestore(&g_irq_spin, flags);
 
   return num;
 }
@@ -713,7 +687,7 @@ int up_alloc_irq_msi(uint8_t busno, uint32_t devfn, int *pirq, int num)
 
 void up_release_irq_msi(int *irq, int num)
 {
-  irqstate_t flags = spin_lock_irqsave(&g_irq_spinlock);
+  irqstate_t flags = spin_lock_irqsave(&g_irq_spin);
   int        i     = 0;
 
   /* Mark IRQ as MSI/MSI-X */
@@ -723,7 +697,7 @@ void up_release_irq_msi(int *irq, int num)
       g_irq_priv[irq[i]].msi = false;
     }
 
-  spin_unlock_irqrestore(&g_irq_spinlock, flags);
+  spin_unlock_irqrestore(&g_irq_spin, flags);
 }
 
 /****************************************************************************
@@ -750,4 +724,30 @@ int up_connect_irq(const int *irq, int num, uintptr_t *mar, uint32_t *mdr)
     }
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: up_trigger_irq
+ *
+ * Description:
+ *   Trigger IRQ interrupt.
+ *
+ ****************************************************************************/
+
+void up_trigger_irq(int irq, cpu_set_t cpuset)
+{
+  uint32_t cpu = 0;
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      if (CPU_ISSET(cpu, &cpuset))
+        {
+          write_msr(MSR_X2APIC_ICR,
+                    MSR_X2APIC_ICR_FIXED |
+                    MSR_X2APIC_ICR_ASSERT |
+                    MSR_X2APIC_DESTINATION(
+                      (uint64_t)x86_64_cpu_to_loapic(cpu)) |
+                    irq);
+        }
+    }
 }
