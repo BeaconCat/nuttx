@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/paging/pg_miss.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,7 +35,7 @@
 #include <nuttx/page.h>
 #include <nuttx/signal.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -106,8 +108,9 @@
  *
  ****************************************************************************/
 
-void pg_miss(FAR struct tcb_s *ftcb)
+void pg_miss(void)
 {
+  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
 
   /* Sanity checking
@@ -136,12 +139,12 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   /* Remove the tcb task from the running list. */
 
-  nxsched_remove_running(ftcb);
+  nxsched_remove_self(ftcb);
 
   /* Add the task to the specified blocked task list */
 
   ftcb->task_state = TSTATE_WAIT_PAGEFILL;
-  nxsched_add_prioritized(ftcb, &g_waitingforfill);
+  nxsched_add_prioritized(ftcb, list_waitingforfill());
 
   /* Now, perform the context switch */
 
@@ -178,4 +181,4 @@ void pg_miss(FAR struct tcb_s *ftcb)
     }
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */

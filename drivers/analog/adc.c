@@ -40,7 +40,6 @@
 #include <nuttx/analog/adc.h>
 #include <nuttx/analog/ioctl.h>
 #include <nuttx/random.h>
-#include <nuttx/kmalloc.h>
 
 #include <nuttx/irq.h>
 
@@ -61,7 +60,7 @@ static int     adc_receive_batch(FAR struct adc_dev_s *dev,
                                  FAR const uint32_t *data,
                                  size_t count);
 static void    adc_notify(FAR struct adc_dev_s *dev);
-static int     adc_poll(FAR struct file *filep, struct pollfd *fds,
+static int     adc_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
 static int     adc_reset_fifo(FAR struct adc_dev_s *dev);
 static int     adc_samples_on_read(FAR struct adc_dev_s *dev);
@@ -313,13 +312,13 @@ static ssize_t adc_read(FAR struct file *filep, FAR char *buffer,
           size_t count;
           size_t used;
 
-          used = (fifo->af_tail - fifo->af_head + fifo->af_fifosize)
-                  % fifo->af_fifosize;
+          used = (fifo->af_tail - fifo->af_head + CONFIG_ADC_FIFOSIZE)
+                  % CONFIG_ADC_FIFOSIZE;
           count = MIN(used, buflen / msglen);
 
           /* Check if flipping is required and memcopy */
 
-          first = MIN(fifo->af_fifosize - fifo->af_head, count);
+          first = MIN(CONFIG_ADC_FIFOSIZE - fifo->af_head, count);
           second = count - first;
           memcpy(buffer, &fifo->af_data[fifo->af_head], first * 4);
 
@@ -328,7 +327,7 @@ static ssize_t adc_read(FAR struct file *filep, FAR char *buffer,
               memcpy(&buffer[4 * first], &fifo->af_data[0], second * 4);
             }
 
-          fifo->af_head = (fifo->af_head + count) % fifo->af_fifosize;
+          fifo->af_head = (fifo->af_head + count) % CONFIG_ADC_FIFOSIZE;
           nread = count * msglen;
         }
       else
@@ -395,7 +394,7 @@ static ssize_t adc_read(FAR struct file *filep, FAR char *buffer,
 
               /* Increment the head of the circular message buffer */
 
-              if (++fifo->af_head >= fifo->af_fifosize)
+              if (++fifo->af_head >= CONFIG_ADC_FIFOSIZE)
                 {
                   fifo->af_head = 0;
                 }
@@ -485,7 +484,7 @@ static int adc_receive(FAR struct adc_dev_s *dev, uint8_t ch, int32_t data)
    */
 
   nexttail = fifo->af_tail + 1;
-  if (nexttail >= fifo->af_fifosize)
+  if (nexttail >= CONFIG_ADC_FIFOSIZE)
     {
       nexttail = 0;
     }
@@ -529,17 +528,17 @@ static int adc_receive_batch(FAR struct adc_dev_s *dev,
    * enqueue read data.
    */
 
-  used = (fifo->af_tail - fifo->af_head + fifo->af_fifosize)
-          % fifo->af_fifosize;
+  used = (fifo->af_tail - fifo->af_head + CONFIG_ADC_FIFOSIZE)
+          % CONFIG_ADC_FIFOSIZE;
 
-  if (used + count >= fifo->af_fifosize)
+  if (used + count >= CONFIG_ADC_FIFOSIZE)
     {
       return -ENOMEM;
     }
 
   /* Check if flipping is required and memcopy */
 
-  first = MIN(count, fifo->af_fifosize - fifo->af_tail);
+  first = MIN(count, CONFIG_ADC_FIFOSIZE - fifo->af_tail);
   second = count - first;
 
   memcpy(&fifo->af_data[fifo->af_tail], data,
@@ -561,7 +560,7 @@ static int adc_receive_batch(FAR struct adc_dev_s *dev,
         }
     }
 
-  fifo->af_tail = (fifo->af_tail + count) % fifo->af_fifosize;
+  fifo->af_tail = (fifo->af_tail + count) % CONFIG_ADC_FIFOSIZE;
 
   adc_notify(dev);
 
@@ -596,7 +595,8 @@ static void adc_notify(FAR struct adc_dev_s *dev)
  * Name: adc_poll
  ****************************************************************************/
 
-static int adc_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
+static int adc_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                    bool setup)
 {
   FAR struct inode     *inode = filep->f_inode;
   FAR struct adc_dev_s *dev   = inode->i_private;
@@ -656,7 +656,7 @@ static int adc_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
     {
       /* This is a request to tear down the poll. */
 
-      struct pollfd **slot = (struct pollfd **)fds->priv;
+      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
 
       /* Remove all memory of the poll setup */
 
@@ -711,7 +711,7 @@ static int adc_samples_on_read(FAR struct adc_dev_s *dev)
     {
       /* Increment return value by the size of FIFO */
 
-      ret += fifo->af_fifosize;
+      ret += CONFIG_ADC_FIFOSIZE;
     }
 
   return ret;
@@ -728,8 +728,6 @@ static int adc_samples_on_read(FAR struct adc_dev_s *dev)
 int adc_register(FAR const char *path, FAR struct adc_dev_s *dev)
 {
   FAR struct adc_fifo_s *fifo = &dev->ad_recv;
-  bool          alloc_channel = false;
-  bool             alloc_data = false;
   int ret;
 
   DEBUGASSERT(path != NULL && dev != NULL);
@@ -758,64 +756,18 @@ int adc_register(FAR const char *path, FAR struct adc_dev_s *dev)
   DEBUGASSERT(dev->ad_ops->ao_reset != NULL);
   dev->ad_ops->ao_reset(dev);
 
-  /* Malloc for af_channale and af_data */
-
-  if (fifo->af_fifosize == 0)
-    {
-      fifo->af_fifosize = CONFIG_ADC_FIFOSIZE;
-    }
-
-  if (fifo->af_channel == NULL)
-    {
-      fifo->af_channel = kmm_malloc(fifo->af_fifosize);
-      if (fifo->af_channel == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      alloc_channel = true;
-    }
-
-  if (fifo->af_data == NULL)
-    {
-      fifo->af_data = kmm_malloc(fifo->af_fifosize *
-                                 sizeof(*(fifo->af_data)));
-      if (fifo->af_data == NULL)
-        {
-          if (alloc_channel)
-            {
-              kmm_free(fifo->af_channel);
-            }
-
-          return -ENOMEM;
-        }
-
-      alloc_data = true;
-    }
-
   /* Register the ADC character driver */
 
   ret = register_driver(path, &g_adc_fops, 0444, dev);
   if (ret < 0)
     {
-      if (alloc_channel)
-        {
-           kmm_free(fifo->af_channel);
-        }
-
-      if (alloc_data)
-        {
-           kmm_free(fifo->af_data);
-        }
-
       nxsem_destroy(&dev->ad_recv.af_sem);
       nxmutex_destroy(&dev->ad_closelock);
-      return ret;
     }
 
   /* Initialize the af_channale */
 
-  memset(&fifo->af_channel[0], 0, fifo->af_fifosize);
+  memset(&fifo->af_channel[0], 0, CONFIG_ADC_FIFOSIZE);
 
   return ret;
 }

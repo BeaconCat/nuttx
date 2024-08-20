@@ -1,6 +1,7 @@
 /****************************************************************************
  * net/arp/arp_table.c
- * Implementation of the ARP Address Resolution Protocol.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright (C) 2007-2009, 2011, 2014, 2018 Gregory Nutt. All rights
  *     reserved.
@@ -89,13 +90,6 @@ struct arp_table_info_s
 /* The table of known address mappings */
 
 static struct arp_entry_s g_arptable[CONFIG_NET_ARPTAB_SIZE];
-
-static const struct ether_addr g_zero_ethaddr =
-{
-  {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-  }
-};
 
 /****************************************************************************
  * Private Functions
@@ -314,11 +308,6 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
         }
     }
 
-  if (ethaddr == NULL)
-    {
-      ethaddr = g_zero_ethaddr.ether_addr_octet;
-    }
-
   /* When overwite old entry, notify old entry RTM_DELNEIGH */
 
 #ifdef CONFIG_NETLINK_ROUTE
@@ -418,16 +407,6 @@ int arp_find(in_addr_t ipaddr, FAR uint8_t *ethaddr,
   tabptr = arp_lookup(ipaddr, dev);
   if (tabptr != NULL)
     {
-      /* Addresses that have failed to be searched will return a special
-       * error code so that the upper layer can return faster.
-       */
-
-      if (memcmp(&tabptr->at_ethaddr, &g_zero_ethaddr,
-                 sizeof(tabptr->at_ethaddr)) == 0)
-        {
-          return -ENETUNREACH;
-        }
-
       /* Yes.. return the Ethernet MAC address if the caller has provided a
        * non-NULL address in 'ethaddr'.
        */
@@ -437,8 +416,8 @@ int arp_find(in_addr_t ipaddr, FAR uint8_t *ethaddr,
           memcpy(ethaddr, &tabptr->at_ethaddr, ETHER_ADDR_LEN);
         }
 
-      /* Return success meaning that a valid Ethernet MAC address mapping
-       * is available for the IP address.
+      /* Return success in any case meaning that a valid Ethernet MAC
+       * address mapping is available for the IP address.
        */
 
       return OK;

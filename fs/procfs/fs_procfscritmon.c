@@ -42,9 +42,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
-#include <nuttx/sched.h>
-
-#include "fs_heap.h"
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
      defined(CONFIG_SCHED_CRITMONITOR)
@@ -143,7 +140,7 @@ static int critmon_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate a container to hold the file attributes */
 
-  attr = fs_heap_zalloc(sizeof(struct critmon_file_s));
+  attr = kmm_zalloc(sizeof(struct critmon_file_s));
   if (!attr)
     {
       ferr("ERROR: Failed to allocate file attributes\n");
@@ -171,7 +168,7 @@ static int critmon_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  fs_heap_free(attr);
+  kmm_free(attr);
   filep->f_priv = NULL;
   return OK;
 }
@@ -351,7 +348,7 @@ static int critmon_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newattr = fs_heap_malloc(sizeof(struct critmon_file_s));
+  newattr = kmm_malloc(sizeof(struct critmon_file_s));
   if (!newattr)
     {
       ferr("ERROR: Failed to allocate file attributes\n");
