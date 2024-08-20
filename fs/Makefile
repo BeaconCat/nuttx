@@ -20,7 +20,7 @@
 
 include $(TOPDIR)/Make.defs
 
-CSRCS = fs_initialize.c fs_heap.c
+CSRCS = fs_initialize.c
 
 include inode/Make.defs
 include vfs/Make.defs
@@ -56,10 +56,8 @@ include userfs/Make.defs
 include hostfs/Make.defs
 include littlefs/Make.defs
 include rpmsgfs/Make.defs
-include fatfs/Make.defs
 include zipfs/Make.defs
-include yaffs/Make.defs
-include notify/Make.defs
+include mnemofs/Make.defs
 include v9fs/Make.defs
 endif
 
@@ -88,8 +86,12 @@ $(BIN): $(OBJS)
 
 context::
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile
 	$(Q) touch $@
 
 depend: .depend
