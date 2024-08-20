@@ -796,7 +796,7 @@ static int start_capture(FAR struct capture_mng_s *cmng,
   convert_to_imgsensorinterval(interval, &si);
 
   IMGDATA_SET_BUF(cmng->imgdata,
-     nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
+    nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
   IMGDATA_START_CAPTURE(cmng->imgdata,
      nr_fmt, df, &di, complete_capture, cmng);
   IMGSENSOR_START_CAPTURE(cmng->imgsensor,
@@ -1295,7 +1295,9 @@ static int validate_frame_setting(FAR capture_mng_t *cmng,
 
 static size_t get_bufsize(FAR video_format_t *vf)
 {
-  size_t ret = vf->width * vf->height;
+  uint32_t width  = vf->width;
+  uint32_t height = vf->height;
+  size_t ret = width * height;
 
   switch (vf->pixelformat)
     {
@@ -1940,7 +1942,7 @@ static int complete_capture(uint8_t err_code,
   FAR capture_type_inf_t *type_inf;
   FAR vbuf_container_t *container = NULL;
   enum v4l2_buf_type buf_type;
-  irqstate_t           flags;
+  irqstate_t flags;
   imgdata_format_t df[MAX_CAPTURE_FMT];
   video_format_t c_fmt[MAX_CAPTURE_FMT];
 
