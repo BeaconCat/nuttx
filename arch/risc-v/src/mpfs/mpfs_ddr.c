@@ -48,7 +48,6 @@
 #include "hardware/mpfs_sysreg.h"
 #include "hardware/mpfs_ddr.h"
 #include "hardware/mpfs_sgmii.h"
-#include "hardware/mpfs_mpucfg.h"
 
 /****************************************************************************
  * Pre-processor Definitions
