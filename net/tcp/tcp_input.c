@@ -722,7 +722,6 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
 
   tcpiplen = iplen + TCP_HDRLEN;
 
-#ifdef CONFIG_NET_TCP_CHECKSUMS
   /* Start of TCP input header processing code. */
 
   if (tcp_chksum(dev) != 0xffff)
@@ -736,7 +735,6 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
       nwarn("WARNING: Bad TCP checksum\n");
       goto drop;
     }
-#endif
 
   /* Demultiplex this segment. First check any active connections. */
 
@@ -1180,15 +1178,18 @@ found:
                   return;
                 }
             }
-          else if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
+          else
             {
 #ifdef CONFIG_NET_TCP_OUT_OF_ORDER
               /* Queue out-of-order segments. */
 
               tcp_input_ofosegs(dev, conn, iplen);
 #endif
-              tcp_send(dev, conn, TCP_ACK, tcpiplen);
-              return;
+              if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
+                {
+                  tcp_send(dev, conn, TCP_ACK, tcpiplen);
+                  return;
+                }
             }
         }
     }
@@ -1618,12 +1619,6 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
-
-            /* In the TCP_FIN_WAIT_1, we need call tcp_close_eventhandler to
-             * release nofosegs, that we received in this state.
-             */
-
-            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
@@ -1657,12 +1652,6 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
-
-            /* In the TCP_FIN_WAIT_2, we need call tcp_close_eventhandler to
-             * release nofosegs, that we received in this state.
-             */
-
-            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
