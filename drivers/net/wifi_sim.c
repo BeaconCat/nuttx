@@ -1040,7 +1040,7 @@ static int wifidriver_get_sensitivity(FAR struct wifi_sim_s *wifidev,
               pwrq->u.sens.value = -wifidev->connected_ap->RSSI;
             }
 
-          ninfo("get rssi is %" PRId32 "\n", pwrq->u.sens.value);
+          ninfo("get rssi is %"PRId32 "\n", pwrq->u.sens.value);
         }
         break;
 
@@ -1119,7 +1119,7 @@ static int wifidriver_get_freq(FAR struct wifi_sim_s *wifidev,
 int wifidriver_set_txpower(FAR struct wifi_sim_s *wifidev,
                            FAR struct iwreq *pwrq)
 {
-  int ret;
+  int ret = OK;
 
   switch (wifidev->mode)
     {
