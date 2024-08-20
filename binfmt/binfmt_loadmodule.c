@@ -1,6 +1,8 @@
 /****************************************************************************
  * binfmt/binfmt_loadmodule.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -194,7 +196,7 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
 
                   /* Free the allocated fullpath */
 
-                  kmm_free(fullpath);
+                  lib_free(fullpath);
 
                   /* Break out of the loop with ret == OK on success */
 

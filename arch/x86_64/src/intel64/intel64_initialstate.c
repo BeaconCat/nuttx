@@ -30,10 +30,6 @@
 #include <nuttx/arch.h>
 #include <arch/arch.h>
 
-#ifdef CONFIG_SCHED_THREAD_LOCAL
-#  include <nuttx/tls.h>
-#endif
-
 #include "x86_64_internal.h"
 #include "sched/sched.h"
 
@@ -72,17 +68,23 @@ void up_initial_state(struct tcb_s *tcb)
     {
       char *stack_ptr = (char *)(g_idle_topstack[0] -
                                  CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->stack_alloc_ptr = stack_ptr;
-      tcb->stack_base_ptr  = stack_ptr;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
 #ifdef CONFIG_STACK_COLORATION
+      char *stack_end = (char *)up_getsp();
+
       /* If stack debug is enabled, then fill the stack with a
        * recognizable value that we can use later to test for high
        * water marks.
        */
 
-      x86_64_stack_color(tcb->stack_alloc_ptr, 0);
+      while (stack_ptr < stack_end)
+        {
+          *--stack_end = 0xaa;
+        }
 #endif /* CONFIG_STACK_COLORATION */
+
+      tcb->stack_alloc_ptr = stack_ptr;
+      tcb->stack_base_ptr  = stack_ptr;
+      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
     }
 
   /* Initialize the initial exception register context structure */
@@ -136,25 +138,12 @@ void up_initial_state(struct tcb_s *tcb)
   xcp->regs[REG_SS]     = up_getss();
   xcp->regs[REG_ES]     = up_getes();
 
-/* FS used by for TLS
- * used by some libc for TLS and segment reference
- */
+  /* Aux GS and FS are set to be 0 */
 
-#ifdef CONFIG_SCHED_THREAD_LOCAL
-  xcp->regs[REG_FS]     = (uintptr_t)tcb->stack_alloc_ptr
-                          + sizeof(struct tls_info_s)
-                          + (_END_TBSS - _START_TDATA);
-
-  *(uint64_t *)(xcp->regs[REG_FS]) = xcp->regs[REG_FS];
-
-  write_fsbase(xcp->regs[REG_FS]);
-#else
-  xcp->regs[REG_FS]     = 0;
-#endif
-
-  /* GS used for CPU private data */
+  /* used by some libc for TLS and segment reference */
 
   xcp->regs[REG_GS]     = 0;
+  xcp->regs[REG_FS]     = 0;
 
   /* Set supervisor- or user-mode, depending on how NuttX is configured and
    * what kind of thread is being started.  Disable FIQs in any event

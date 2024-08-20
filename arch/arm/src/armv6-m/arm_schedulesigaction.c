@@ -78,63 +78,103 @@
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(struct tcb_s *tcb)
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  sinfo("tcb=%p\n", tcb);
-  DEBUGASSERT(tcb != NULL);
+  sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
+  DEBUGASSERT(tcb != NULL && sigdeliver != NULL);
 
-  /* First, handle some special cases when the signal is being delivered
-   * to the currently executing task.
-   */
+  /* Refuse to handle nested signal actions */
 
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        this_task()->xcp.regs);
-
-  if (tcb == this_task() && !up_interrupt_context())
+  if (tcb->xcp.sigdeliver == NULL)
     {
-      /* In this case just deliver the signal now.
-       * REVISIT:  Signal handle will run in a critical section!
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is being delivered
+       * to the currently executing task.
        */
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
-      tcb->sigdeliver = NULL;
-    }
-  else
-    {
-      /* Save the return PC, CPSR and either the BASEPRI or PRIMASK
-       * registers (and perhaps also the LR).  These will be restored
-       * by the signal trampoline after the signal has been delivered.
-       */
+      sinfo("rtcb=%p current_regs=%p\n", this_task(),
+            this_task()->xcp.regs);
 
-      /* Save the current register context location */
+      if (tcb == this_task() && !up_interrupt_context())
+        {
+          /* In this case just deliver the signal now.
+           * REVISIT:  Signal handle will run in a critical section!
+           */
 
-      tcb->xcp.saved_regs           = tcb->xcp.regs;
+          sigdeliver(tcb);
+          tcb->xcp.sigdeliver = NULL;
+        }
+      else
+        {
+          /* CASE 2:  The task that needs to receive the signal is running.
+           * This could happen if the task is running on another CPU OR if
+           * we are in an interrupt handler and the task is running on this
+           * CPU.  In the former case, we will have to PAUSE the other CPU
+           * first.  But in either case, we will have to modify the return
+           * state as well as the state in the TCB.
+           */
 
-      /* Duplicate the register context.  These will be
-       * restored by the signal trampoline after the signal has been
-       * delivered.
-       */
+          /* If we signaling a task running on the other CPU, we have
+           * to PAUSE the other CPU.
+           */
 
-      tcb->xcp.regs                 = (void *)
-                                      ((uint32_t)tcb->xcp.regs -
-                                                  XCPTCONTEXT_SIZE);
-      memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
+#ifdef CONFIG_SMP
+          int cpu = tcb->cpu;
+          int me  = this_cpu();
 
-      tcb->xcp.regs[REG_SP]         = (uint32_t)tcb->xcp.regs +
-                                                XCPTCONTEXT_SIZE;
+          if (cpu != me)
+            {
+              /* Pause the CPU */
 
-      /* Then set up to vector to the trampoline with interrupts
-       * disabled.  We must already be in privileged thread mode to be
-       * here.
-       */
-
-      tcb->xcp.regs[REG_PC]         = (uint32_t)arm_sigdeliver;
-      tcb->xcp.regs[REG_PRIMASK]    = 1;
-      tcb->xcp.regs[REG_XPSR]       = ARMV6M_XPSR_T;
-#ifdef CONFIG_BUILD_PROTECTED
-      tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;
-      tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-      tcb->xcp.regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+              up_cpu_pause(cpu);
+            }
 #endif
+
+          /* Save the return PC, CPSR and either the BASEPRI or PRIMASK
+           * registers (and perhaps also the LR).  These will be restored
+           * by the signal trampoline after the signal has been delivered.
+           */
+
+          /* Save the current register context location */
+
+          tcb->xcp.saved_regs           = tcb->xcp.regs;
+
+          /* Duplicate the register context.  These will be
+           * restored by the signal trampoline after the signal has been
+           * delivered.
+           */
+
+          tcb->xcp.regs                 = (void *)
+                                          ((uint32_t)tcb->xcp.regs -
+                                                     XCPTCONTEXT_SIZE);
+          memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
+
+          tcb->xcp.regs[REG_SP]         = (uint32_t)tcb->xcp.regs +
+                                                    XCPTCONTEXT_SIZE;
+
+          /* Then set up to vector to the trampoline with interrupts
+           * disabled.  We must already be in privileged thread mode to be
+           * here.
+           */
+
+          tcb->xcp.regs[REG_PC]         = (uint32_t)arm_sigdeliver;
+          tcb->xcp.regs[REG_PRIMASK]    = 1;
+          tcb->xcp.regs[REG_XPSR]       = ARMV6M_XPSR_T;
+#ifdef CONFIG_BUILD_PROTECTED
+          tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;
+          tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          tcb->xcp.regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+#endif
+
+#ifdef CONFIG_SMP
+          /* RESUME the other CPU if it was PAUSED */
+
+          if (cpu != me)
+            {
+              up_cpu_resume(cpu);
+            }
+#endif
+        }
     }
 }

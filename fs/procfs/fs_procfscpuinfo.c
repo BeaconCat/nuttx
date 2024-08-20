@@ -36,8 +36,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#include "fs_heap.h"
-
 #if defined(CONFIG_ARCH_HAVE_CPUINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CPUINFO)
 
 /****************************************************************************
@@ -107,7 +105,7 @@ static int cpuinfo_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate a container to hold the file attributes */
 
-  procfile = fs_heap_zalloc(sizeof(struct cpuinfo_file_s));
+  procfile = kmm_zalloc(sizeof(struct cpuinfo_file_s));
   if (procfile == NULL)
     {
       ferr("ERROR: Failed to allocate file attributes\n");
@@ -135,7 +133,7 @@ static int cpuinfo_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  fs_heap_free(procfile);
+  kmm_free(procfile);
   filep->f_priv = NULL;
   return OK;
 }
@@ -159,6 +157,10 @@ static ssize_t cpuinfo_read(FAR struct file *filep, FAR char *buffer,
   if (copylen > 0)
     {
       filep->f_pos += copylen;
+    }
+  else
+    {
+      copylen = 0;
     }
 
   return copylen;
@@ -186,7 +188,7 @@ static int cpuinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newattr = fs_heap_malloc(sizeof(struct cpuinfo_file_s));
+  newattr = kmm_malloc(sizeof(struct cpuinfo_file_s));
   if (newattr == NULL)
     {
       ferr("ERROR: Failed to allocate file attributes\n");

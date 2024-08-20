@@ -1,6 +1,8 @@
 # ##############################################################################
 # sched/pthread/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -38,6 +40,7 @@ if(NOT CONFIG_DISABLE_PTHREAD)
       pthread_condclockwait.c
       pthread_sigmask.c
       pthread_cancel.c
+      pthread_sem.c
       pthread_completejoin.c
       pthread_findjoininfo.c
       pthread_release.c
