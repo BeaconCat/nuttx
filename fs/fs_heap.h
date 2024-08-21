@@ -33,7 +33,7 @@
  * Public Function Prototypes
  ****************************************************************************/
 
-#if defined(CONFIG_FS_HEAPSIZE) && CONFIG_FS_HEAPSIZE > 0
+#if CONFIG_FS_HEAPSIZE > 0
 void      fs_heap_initialize(void);
 FAR void *fs_heap_zalloc(size_t size);
 size_t    fs_heap_malloc_size(FAR void *mem);

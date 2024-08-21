@@ -1,7 +1,5 @@
 # ##############################################################################
-# cmake/nuttx_export_header.cmake
-#
-# SPDX-License-Identifier: Apache-2.0
+# cmake/nuttx_export_headers.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for

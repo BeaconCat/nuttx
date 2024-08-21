@@ -26,36 +26,29 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
 
 #include <nuttx/wireless/lte/lte_ioctl.h>
 
 #include "altcom_lwm2m_hdlr.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define NO_MEMBER (-1)
-
-/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
 static int32_t read_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                 FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t write_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                  FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t exec_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                 FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t start_ov_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                     FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t stop_ov_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                    FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t fwupdate_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                    FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 static int32_t server_op_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                     FAR void **cb_args, size_t arglen);
+                          FAR void **cb_args, size_t arglen);
 
 /****************************************************************************
  * Private Types
@@ -78,12 +71,12 @@ struct lwm2mstub_instance_s
 
 struct lwm2mstub_ovcondition_s
 {
-  uint8_t valid_mask;
-  unsigned int min_period;
-  unsigned int max_period;
-  double gt_cond;
-  double lt_cond;
-  double step_val;
+    uint8_t valid_mask;
+    unsigned int min_period;
+    unsigned int max_period;
+    double gt_cond;
+    double lt_cond;
+    double step_val;
 };
 
 /****************************************************************************
@@ -143,10 +136,9 @@ static FAR uint8_t *skip_until(FAR uint8_t *stream, FAR char *delim)
  * name: strcpy_until
  ****************************************************************************/
 
-static FAR char strcpy_until(FAR char *dst, int n, FAR char **src,
-                             FAR char *delim)
+static FAR char strcpy_until(char *dst, int n, char **src, char *delim)
 {
-  FAR char *tmp = *src;
+  char *tmp = *src;
 
   if (dst)
     {
@@ -179,29 +171,28 @@ static FAR char strcpy_until(FAR char *dst, int n, FAR char **src,
  * name: parse_instance
  ****************************************************************************/
 
-static FAR uint8_t *parse_instance(FAR uint8_t *pktbuf, FAR int *seq_no,
-                                   FAR int *srv_id,
-                                   FAR struct lwm2mstub_instance_s *inst)
+static FAR uint8_t *parse_instance(uint8_t *pktbuf, int *seq_no, int *srv_id,
+                           struct lwm2mstub_instance_s *inst)
 {
-  *seq_no = atoi((FAR char *)pktbuf); /* for seq_no */
+  *seq_no = atoi((char *)pktbuf); /* for seq_no */
   pktbuf = skip_until(pktbuf, ",");
-  *srv_id = atoi((FAR char *)pktbuf); /* for srv_id */
+  *srv_id = atoi((char *)pktbuf); /* for srv_id */
   pktbuf = skip_until(pktbuf, ",");
 
   /* Parse URI like /objid/objinst/resid */
 
   pktbuf = skip_until(pktbuf, "/");
-  inst->object_id = atoi((FAR char *)pktbuf);
+  inst->object_id = atoi((char *)pktbuf);
   pktbuf = skip_until(pktbuf, "/");
-  inst->object_inst = atoi((FAR char *)pktbuf);
+  inst->object_inst = atoi((char *)pktbuf);
   pktbuf = skip_until(pktbuf, "/");
-  inst->res_id = atoi((FAR char *)pktbuf);
+  inst->res_id = atoi((char *)pktbuf);
 
   inst->res_inst = -1;
   if (skip_until(pktbuf, "/") != NULL)
     {
       pktbuf = skip_until(pktbuf, "/");
-      inst->res_inst = atoi((FAR char *)pktbuf);
+      inst->res_inst = atoi((char *)pktbuf);
     }
 
   pktbuf = skip_until(pktbuf, ",/\r\n");
@@ -214,10 +205,10 @@ static FAR uint8_t *parse_instance(FAR uint8_t *pktbuf, FAR int *seq_no,
  ****************************************************************************/
 
 static int32_t read_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                 FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
-  parse_instance(pktbuf, (FAR int *)&cb_args[0], (FAR int *)&cb_args[1],
-                 (FAR struct lwm2mstub_instance_s *)(cb_args[2]));
+  parse_instance(pktbuf, (int *)&cb_args[0], (int *)&cb_args[1],
+                  (struct lwm2mstub_instance_s *)(cb_args[2]));
 
   return 0;
 }
@@ -227,26 +218,25 @@ static int32_t read_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
  ****************************************************************************/
 
 static int32_t write_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                  FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
   if (!cb_args[3] && ((int)cb_args[5]) <= 0)
     {
       return -1;
     }
 
-  pktbuf = parse_instance(pktbuf, (FAR int *)&cb_args[0],
-                          (FAR int *)&cb_args[1],
-                          (FAR struct lwm2mstub_instance_s *)(cb_args[2]));
+  pktbuf = parse_instance(pktbuf, (int *)&cb_args[0], (int *)&cb_args[1],
+                          (struct lwm2mstub_instance_s *)(cb_args[2]));
 
   if (*pktbuf == '\"')
     {
       pktbuf++;
     }
 
-  strcpy_until((FAR char *)cb_args[3], (int)cb_args[5], (FAR char **)&pktbuf,
+  strcpy_until((char *)cb_args[3], (int)cb_args[5], (char **)&pktbuf,
                "\",\r\n");
 
-  cb_args[4] = (FAR void *)strlen((FAR char *)cb_args[3]);
+  cb_args[4] = (void *)strlen((char *)cb_args[3]);
 
   return 0;
 }
@@ -256,10 +246,10 @@ static int32_t write_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
  ****************************************************************************/
 
 static int32_t exec_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                 FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
-  parse_instance(pktbuf, (FAR int *)&cb_args[0], (FAR int *)&cb_args[1],
-                 (FAR struct lwm2mstub_instance_s *)(cb_args[2]));
+  parse_instance(pktbuf, (int *)&cb_args[0], (int *)&cb_args[1],
+                  (struct lwm2mstub_instance_s *)(cb_args[2]));
 
   return 0;
 }
@@ -268,16 +258,15 @@ static int32_t exec_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
  * name: parse_observe
  ****************************************************************************/
 
-FAR static uint8_t *parse_observe(FAR uint8_t *pktbuf, FAR int *seq_no,
-                                  FAR int *srv_id, int tksize,
-                                  FAR char *token,
-                                  FAR struct lwm2mstub_instance_s *inst)
+static uint8_t *parse_observe(uint8_t *pktbuf, int *seq_no, int *srv_id,
+                           int tksize, char *token,
+                           struct lwm2mstub_instance_s *inst)
 {
-  *seq_no = atoi((FAR char *)pktbuf); /* for seq_no */
+  *seq_no = atoi((char *)pktbuf); /* for seq_no */
   pktbuf = skip_until(pktbuf, ",");
-  *srv_id = atoi((FAR char *)pktbuf); /* for server id */
+  *srv_id = atoi((char *)pktbuf); /* for server id */
   pktbuf = skip_until(pktbuf, "\"");
-  strcpy_until(token, tksize, (FAR char **)&pktbuf, "\"");
+  strcpy_until(token, tksize, (char **)&pktbuf, "\"");
   pktbuf = skip_until(pktbuf, ",");
   pktbuf = skip_until(pktbuf, "/");
 
@@ -286,16 +275,16 @@ FAR static uint8_t *parse_observe(FAR uint8_t *pktbuf, FAR int *seq_no,
   inst->res_id      = -1;
   inst->res_inst    = -1;
 
-  inst->object_id = atoi((FAR char *)pktbuf);
-  if (strcpy_until(NULL, 0, (FAR char **)&pktbuf, "/\",") == '/')
+  inst->object_id = atoi((char *)pktbuf);
+  if (strcpy_until(NULL, 0, (char **)&pktbuf, "/\",") == '/')
     {
-      inst->object_inst = atoi((FAR char *)pktbuf);
-      if (strcpy_until(NULL, 0, (FAR char **)&pktbuf, "/\",") == '/')
+      inst->object_inst = atoi((char *)pktbuf);
+      if (strcpy_until(NULL, 0, (char **)&pktbuf, "/\",") == '/')
         {
-          inst->res_id = atoi((FAR char *)pktbuf);
-          if (strcpy_until(NULL, 0, (FAR char **)&pktbuf, "/\",") == '/')
+          inst->res_id = atoi((char *)pktbuf);
+          if (strcpy_until(NULL, 0, (char **)&pktbuf, "/\",") == '/')
             {
-              inst->res_inst = atoi((FAR char *)pktbuf);
+              inst->res_inst = atoi((char *)pktbuf);
             }
         }
     }
@@ -308,14 +297,15 @@ FAR static uint8_t *parse_observe(FAR uint8_t *pktbuf, FAR int *seq_no,
  ****************************************************************************/
 
 static int32_t start_ov_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                     FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
-  FAR struct lwm2mstub_ovcondition_s *cond
-    = (FAR struct lwm2mstub_ovcondition_s *)cb_args[5];
+  struct lwm2mstub_ovcondition_s *cond
+    = (struct lwm2mstub_ovcondition_s *)cb_args[5];
 
-  parse_observe(pktbuf, (FAR int *)&cb_args[0], (FAR int *)&cb_args[1],
-                (int)cb_args[4], (FAR char *)cb_args[3],
-                (FAR struct lwm2mstub_instance_s *)cb_args[2]);
+  parse_observe(pktbuf,
+                (int *)&cb_args[0], (int *)&cb_args[1],
+                (int)cb_args[4], (char *)cb_args[3],
+                (struct lwm2mstub_instance_s *)cb_args[2]);
 
   cond->valid_mask = 0;
 
@@ -327,30 +317,32 @@ static int32_t start_ov_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
  ****************************************************************************/
 
 static int32_t stop_ov_request_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                    FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
-  parse_observe(pktbuf, (FAR int *)&cb_args[0], (FAR int *)&cb_args[1],
-                (int)cb_args[4], (FAR char *)cb_args[3],
-                (FAR struct lwm2mstub_instance_s *)cb_args[2]);
+  parse_observe(pktbuf,
+                (int *)&cb_args[0], (int *)&cb_args[1],
+                (int)cb_args[4], (char *)cb_args[3],
+                (struct lwm2mstub_instance_s *)cb_args[2]);
 
   return 0;
 }
 
 /****************************************************************************
- * name: fwupdate_notice_hndl
+ * name: fwup_srvop_handle
  ****************************************************************************/
 
-static int32_t fwupdate_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                    FAR void **cb_args, size_t arglen)
+static int32_t fwup_srvop_handle(FAR uint8_t *pktbuf, size_t pktsz,
+                          FAR void **cb_args, size_t arglen)
 {
-  FAR uint8_t *ep;
+  uint8_t *ep;
   FAR int *event = (FAR int *)&cb_args[0];
 
   /* Expected unsolicited event
+   *    %LWM2MOPEV: <event>[,....
    *    %LWM2MEV: <event>[,....
    */
 
-  *event = strtol((FAR const char *)pktbuf, (FAR char **)&ep, 10);
+  *event = strtol((const char *)pktbuf, (char **)&ep, 10);
   if ((*event == 0) && (pktbuf == ep))
     {
       return -1;
@@ -360,31 +352,13 @@ static int32_t fwupdate_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
 }
 
 /****************************************************************************
- * name: parse_inst_number
+ * name: fwupdate_notice_hndl
  ****************************************************************************/
 
-static int parse_inst_number(FAR uint8_t **buf, FAR size_t *bufsz)
+static int32_t fwupdate_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
+                          FAR void **cb_args, size_t arglen)
 {
-  int ret = 0;
-
-  if (!isdigit(**buf))
-    {
-      return NO_MEMBER;
-    }
-
-  while (*bufsz)
-    {
-      if (!isdigit(**buf))
-        {
-          break;
-        }
-
-      ret = ret * 10 + ((**buf) - '0');
-      (*bufsz)--;
-      (*buf)++;
-    }
-
-  return ret;
+  return fwup_srvop_handle(pktbuf, pktsz, cb_args, arglen);
 }
 
 /****************************************************************************
@@ -392,57 +366,9 @@ static int parse_inst_number(FAR uint8_t **buf, FAR size_t *bufsz)
  ****************************************************************************/
 
 static int32_t server_op_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
-                                     FAR void **cb_args, size_t arglen)
+                          FAR void **cb_args, size_t arglen)
 {
-  int i;
-  FAR int *event = (FAR int *)&cb_args[0];
-  FAR int *srvid = (FAR int *)&cb_args[1];
-  FAR int *inst  = (FAR int *)cb_args[2];
-
-  /* The content of "inst" is a type of struct lwm2mstub_instance_s in fact.
-   * But actually it is the same as int[4].
-   * To make simpler logic, inst is defined as int[4] (int pointer).
-   */
-
-  /* Set invalid value as initialize */
-
-  *srvid = -1;
-  inst[0] = -1;
-  inst[1] = -1;
-  inst[2] = -1;
-  inst[3] = -1;
-
-  /* Expected unsolicited event
-   *    %LWM2MOPEV: <event>[,[<serverShortId>],[<ObjectID>],
-   *                         [<ObjectInstanceID>],[<ResourceID>],
-   *                         [<ResourceInstanceID>],[<val>][,<MsgId>]]
-   */
-
-  *event = parse_inst_number(&pktbuf, &pktsz);
-  if (*event < 0)
-    {
-      return ERROR;
-    }
-
-  if (pktsz > 0 && pktbuf[0] == ',')
-    {
-      pktsz--;
-      pktbuf++;
-
-      *srvid = parse_inst_number(&pktbuf, &pktsz);
-
-      for (i = 0; i < 4 && pktsz > 0 && pktbuf[0] == ','; i++)
-        {
-          /* Skip comma */
-
-          pktbuf++;
-          pktsz--;
-
-          inst[i] = parse_inst_number(&pktbuf, &pktsz);
-        }
-    }
-
-  return OK;
+  return fwup_srvop_handle(pktbuf, pktsz, cb_args, arglen);
 }
 
 /****************************************************************************
@@ -453,12 +379,11 @@ static int32_t server_op_notice_hndl(FAR uint8_t *pktbuf, size_t pktsz,
  * name: lwm2mstub_get_handler
  ****************************************************************************/
 
-lwm2mstub_hndl_t lwm2mstub_get_handler(FAR uint8_t **pktbuf,
-                                       FAR size_t *pktsz,
-                                       FAR uint32_t *lcmdid)
+lwm2mstub_hndl_t lwm2mstub_get_handler(FAR uint8_t **pktbuf, size_t *pktsz,
+                                      uint32_t *lcmdid)
 {
-  FAR char *head_pos;
-  FAR struct urc_hdltbl_s *tbl;
+  char *head_pos;
+  struct urc_hdltbl_s *tbl;
   size_t shift_size = 0;
 
   *lcmdid = 0;
@@ -466,10 +391,10 @@ lwm2mstub_hndl_t lwm2mstub_get_handler(FAR uint8_t **pktbuf,
 
   while (tbl->head)
     {
-      head_pos = strstr((FAR char *)*pktbuf, tbl->head);
+      head_pos = strstr((char *)*pktbuf, tbl->head);
       if (head_pos)
         {
-          shift_size = head_pos - (FAR char *)*pktbuf + strlen(tbl->head);
+          shift_size = head_pos - (char *)*pktbuf + strlen(tbl->head);
 
           /* Follow shift_size to advance them */
 

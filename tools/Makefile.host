@@ -1,8 +1,6 @@
 ############################################################################
 # tools/Makefile.host
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -236,6 +234,9 @@ ifdef HOSTDYNEXT
 jlink-nuttx: jlink-nuttx$(HOSTDYNEXT)
 endif
 
+cmux$(HOSTEXEEXT): cmux.c
+	$(Q) $(HOSTCC) $(HOSTCFLAGS) $^ -o $@
+
 clean:
 	$(call DELFILE, b16)
 	$(call DELFILE, b16.exe)
@@ -274,6 +275,7 @@ clean:
 	$(call DELFILE, rmcr.exe)
 	$(call DELFILE, jlink-nuttx.so)
 	$(call DELFILE, jlink-nuttx.dll)
+	$(call DELFILE, cmux$(HOSTEXEEXT))
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) rm -rf *.dSYM
 endif

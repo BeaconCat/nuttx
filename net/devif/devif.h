@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/devif/devif.h
  *
- * SPDX-License-Identifier: BSD-3-Clause
- *
  *   Copyright (C) 2007-2009, 2013-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -274,6 +272,7 @@ struct devif_callback_s
   FAR devif_callback_event_t event;
   FAR void *priv;
   uint16_t flags;
+  uint8_t free_flags;
 };
 
 /****************************************************************************
