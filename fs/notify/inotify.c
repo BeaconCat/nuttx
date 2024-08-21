@@ -596,21 +596,21 @@ static int inotify_close(FAR struct file *filep)
  *
  ****************************************************************************/
 
-static FAR struct inotify_device_s *inotify_get_device_from_fd(int fd)
+static FAR struct inotify_device_s *
+inotify_get_device_from_fd(int fd, FAR struct file **filep)
 {
-  FAR struct file *filep;
-
-  if (fs_getfilep(fd, &filep) < 0)
+  if (fs_getfilep(fd, filep) < 0)
     {
       return NULL;
     }
 
-  if (filep == NULL || filep->f_inode != &g_inotify_inode)
+  if ((*filep)->f_inode != &g_inotify_inode)
     {
+      fs_putfilep(*filep);
       return NULL;
     }
 
-  return filep->f_priv;
+  return (*filep)->f_priv;
 }
 
 /****************************************************************************
@@ -1010,6 +1010,22 @@ static inline void notify_queue_filep_event(FAR struct file *filep,
 }
 
 /****************************************************************************
+ * Name: notify_free_entry
+ *
+ * Description:
+ *   Deallocate the hash entry.
+ *
+ ****************************************************************************/
+
+static void notify_free_entry(FAR ENTRY *entry)
+{
+  /* Key is alloced by lib_malloc, value is alloced by kmm_malloc */
+
+  lib_free(entry->key);
+  kmm_free(entry->data);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1040,6 +1056,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
   FAR struct inotify_watch_s *watch;
   FAR struct inotify_watch_s *old;
   FAR struct inotify_device_s *dev;
+  FAR struct file *filep;
   FAR char *abspath;
   struct stat buf;
   int ret;
@@ -1050,7 +1067,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
       return ERROR;
     }
 
-  dev = inotify_get_device_from_fd(fd);
+  dev = inotify_get_device_from_fd(fd, &filep);
   if (dev == NULL)
     {
       set_errno(EBADF);
@@ -1060,6 +1077,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
   abspath = lib_realpath(pathname, NULL, mask & IN_DONT_FOLLOW);
   if (abspath == NULL)
     {
+      fs_putfilep(filep);
       return ERROR;
     }
 
@@ -1130,6 +1148,7 @@ out:
   nxmutex_unlock(&g_inotify.lock);
 
 out_free:
+  fs_putfilep(filep);
   lib_free(abspath);
   if (ret < 0)
     {
@@ -1161,8 +1180,9 @@ int inotify_rm_watch(int fd, int wd)
 {
   FAR struct inotify_device_s *dev;
   FAR struct inotify_watch_s *watch;
+  FAR struct file *filep;
 
-  dev = inotify_get_device_from_fd(fd);
+  dev = inotify_get_device_from_fd(fd, &filep);
   if (dev == NULL)
     {
       set_errno(EBADF);
@@ -1176,6 +1196,7 @@ int inotify_rm_watch(int fd, int wd)
     {
       nxmutex_unlock(&dev->lock);
       nxmutex_unlock(&g_inotify.lock);
+      fs_putfilep(filep);
       set_errno(EINVAL);
       return ERROR;
     }
@@ -1183,6 +1204,7 @@ int inotify_rm_watch(int fd, int wd)
   inotify_remove_watch(dev, watch);
   nxmutex_unlock(&dev->lock);
   nxmutex_unlock(&g_inotify.lock);
+  fs_putfilep(filep);
   return OK;
 }
 
@@ -1276,6 +1298,7 @@ void notify_initialize(void)
 {
   int ret;
 
+  g_inotify.hash.free_entry = notify_free_entry;
   ret = hcreate_r(CONFIG_FS_NOTIFY_BUCKET_SIZE, &g_inotify.hash);
   if (ret != 1)
     {
