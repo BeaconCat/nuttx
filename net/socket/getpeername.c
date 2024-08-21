@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/socket/getpeername.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +31,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
 #include "socket/socket.h"
@@ -147,17 +146,19 @@ int getpeername(int sockfd, FAR struct sockaddr *addr,
                 FAR socklen_t *addrlen)
 {
   FAR struct socket *psock;
+  FAR struct file *filep;
   int ret;
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* Let psock_getpeername() do all of the work */
 
   if (ret == OK)
     {
       ret = psock_getpeername(psock, addr, addrlen);
+      fs_putfilep(filep);
     }
 
   if (ret < 0)

@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 
@@ -42,8 +43,8 @@
 struct riscv_mtimer_lowerhalf_s
 {
   struct oneshot_lowerhalf_s lower;
-  uintreg_t                  mtime;
-  uintreg_t                  mtimecmp;
+  uintptr_t                  mtime;
+  uintptr_t                  mtimecmp;
   uint64_t                   freq;
   uint64_t                   alarm;
   oneshot_callback_t         callback;
@@ -83,14 +84,14 @@ static const struct oneshot_operations_s g_riscv_mtimer_ops =
 #ifndef CONFIG_ARCH_USE_S_MODE
 static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 {
-#if CONFIG_ARCH_RV_MMIO_BITS == 64
+#ifdef CONFIG_ARCH_RV64
   /* priv->mtime is -1, means this SoC:
    * 1. does NOT support 64bit/DWORD write for the mtimer compare value regs,
    * 2. has NO memory mapped regs which hold the value of mtimer counter,
    *    it could be read from the CSR "time".
    */
 
-  return -1 == priv->mtime ? READ_CSR(CSR_TIME) : getreg64(priv->mtime);
+  return -1 == priv->mtime ? READ_CSR(time) : getreg64(priv->mtime);
 #else
   uint32_t hi;
   uint32_t lo;
@@ -109,7 +110,7 @@ static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 static void riscv_mtimer_set_mtimecmp(struct riscv_mtimer_lowerhalf_s *priv,
                                       uint64_t value)
 {
-#if CONFIG_ARCH_RV_MMIO_BITS == 64
+#ifdef CONFIG_ARCH_RV64
   if (-1 != priv->mtime)
     {
       putreg64(value, priv->mtimecmp);
@@ -211,28 +212,23 @@ static int riscv_mtimer_start(struct oneshot_lowerhalf_s *lower,
 {
   struct riscv_mtimer_lowerhalf_s *priv =
     (struct riscv_mtimer_lowerhalf_s *)lower;
-  uint64_t mtime = riscv_mtimer_get_mtime(priv);
-  uint64_t alarm = mtime + ts->tv_sec * priv->freq +
-                   ts->tv_nsec * priv->freq / NSEC_PER_SEC;
+  irqstate_t flags;
+  uint64_t mtime;
+  uint64_t alarm;
 
-  if (alarm < mtime)
-    {
-      priv->alarm    = UINT64_MAX;
-      priv->callback = NULL;
-      priv->arg      = NULL;
-    }
-  else
-    {
-      priv->alarm    = alarm;
-      priv->callback = callback;
-      priv->arg      = arg;
-    }
+  flags = up_irq_save();
 
-  if (!up_interrupt_context())
-    {
-      riscv_mtimer_set_mtimecmp(priv, priv->alarm);
-    }
+  mtime = riscv_mtimer_get_mtime(priv);
+  alarm = mtime + ts->tv_sec * priv->freq +
+          ts->tv_nsec * priv->freq / NSEC_PER_SEC;
 
+  priv->alarm    = alarm;
+  priv->callback = callback;
+  priv->arg      = arg;
+
+  riscv_mtimer_set_mtimecmp(priv, priv->alarm);
+
+  up_irq_restore(flags);
   return 0;
 }
 
@@ -266,30 +262,27 @@ static int riscv_mtimer_cancel(struct oneshot_lowerhalf_s *lower,
   struct riscv_mtimer_lowerhalf_s *priv =
     (struct riscv_mtimer_lowerhalf_s *)lower;
   uint64_t mtime;
-  uint64_t alarm = priv->alarm;
+  uint64_t alarm;
+  uint64_t nsec;
+  irqstate_t flags;
 
-  priv->alarm = UINT64_MAX;
-  if (!up_interrupt_context())
-    {
-      riscv_mtimer_set_mtimecmp(priv, priv->alarm);
-    }
+  flags = up_irq_save();
+
+  alarm = priv->alarm;
 
   mtime = riscv_mtimer_get_mtime(priv);
-  if (alarm > mtime)
-    {
-      uint64_t nsec = (alarm - mtime) * NSEC_PER_SEC / priv->freq;
-      ts->tv_sec  = nsec / NSEC_PER_SEC;
-      ts->tv_nsec = nsec % NSEC_PER_SEC;
-    }
-  else
-    {
-      ts->tv_sec  = 0;
-      ts->tv_nsec = 0;
-    }
+
+  riscv_mtimer_set_mtimecmp(priv, mtime + UINT64_MAX);
+
+  nsec = (alarm - mtime) * NSEC_PER_SEC / priv->freq;
+  ts->tv_sec  = nsec / NSEC_PER_SEC;
+  ts->tv_nsec = nsec % NSEC_PER_SEC;
 
   priv->alarm    = 0;
   priv->callback = NULL;
   priv->arg      = NULL;
+
+  up_irq_restore(flags);
 
   return 0;
 }
@@ -332,14 +325,11 @@ static int riscv_mtimer_interrupt(int irq, void *context, void *arg)
 {
   struct riscv_mtimer_lowerhalf_s *priv = arg;
 
-  priv->alarm = UINT64_MAX;
-
   if (priv->callback != NULL)
     {
       priv->callback(&priv->lower, priv->arg);
     }
 
-  riscv_mtimer_set_mtimecmp(priv, priv->alarm);
   return 0;
 }
 
@@ -348,7 +338,7 @@ static int riscv_mtimer_interrupt(int irq, void *context, void *arg)
  ****************************************************************************/
 
 struct oneshot_lowerhalf_s *
-riscv_mtimer_initialize(uintreg_t mtime, uintreg_t mtimecmp,
+riscv_mtimer_initialize(uintptr_t mtime, uintptr_t mtimecmp,
                         int irq, uint64_t freq)
 {
   struct riscv_mtimer_lowerhalf_s *priv;
