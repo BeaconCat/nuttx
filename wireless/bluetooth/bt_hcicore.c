@@ -329,7 +329,7 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status,
 
   if (g_btdev.sent_cmd->u.hci.opcode != opcode)
     {
-      wlerr("ERROR:  Unexpected completion of opcode 0x%04x "
+      wlerr("ERROR:  Unexpected completion of opcode 0x%04x " \
             "expected 0x%04x\n",
             opcode, g_btdev.sent_cmd->u.hci.opcode);
       return;
@@ -1499,10 +1499,6 @@ static void cmd_queue_deinit(void)
 static void cmd_queue_init(void)
 {
   int ret;
-#ifdef CONFIG_BLUETOOTH_TXCMD_PINNED_TO_CORE
-  cpu_set_t cpuset;
-#endif
-  int pid;
 
   /* When there is a command to be sent to the Bluetooth driver, it queued on
    * the Tx queue and received by logic on the Tx kernel thread.
@@ -1516,29 +1512,10 @@ static void cmd_queue_init(void)
 
   g_btdev.ncmd = 1;
   g_btdev.tx_status = OK;
-
-#ifdef CONFIG_BLUETOOTH_TXCMD_PINNED_TO_CORE
-  sched_lock();
-#endif
-
-  pid = kthread_create("BT HCI Tx", CONFIG_BLUETOOTH_TXCMD_PRIORITY,
+  ret = kthread_create("BT HCI Tx", CONFIG_BLUETOOTH_TXCMD_PRIORITY,
                        CONFIG_BLUETOOTH_TXCMD_STACKSIZE,
                        hci_tx_kthread, NULL);
-  DEBUGASSERT(pid > 0);
-
-#ifdef CONFIG_BLUETOOTH_TXCMD_PINNED_TO_CORE
-  CPU_ZERO(&cpuset);
-  CPU_SET((CONFIG_BLUETOOTH_TXCMD_CORE - 1), &cpuset);
-  ret = nxsched_set_affinity(pid, sizeof(cpuset), &cpuset);
-  if (ret)
-    {
-      wlerr("Failed to set affinity error=%d\n", ret);
-      DEBUGPANIC();
-    }
-
-  sched_unlock();
-#endif
-
+  DEBUGASSERT(ret > 0);
   UNUSED(ret);
 }
 
@@ -1659,10 +1636,10 @@ int bt_deinitialize(void)
 }
 
 /****************************************************************************
- * Name: bt_driver_register
+ * Name: bt_driver_set
  *
  * Description:
- *   Register the Bluetooth low-level driver with the Bluetooth stack.
+ *   Set the Bluetooth low-level driver with the Bluetooth stack.
  *   This is called from the low-level driver and is part of the driver
  *   interface prototyped in include/nuttx/wireless/bluetooth/bt_driver.h
  *
@@ -1677,7 +1654,7 @@ int bt_deinitialize(void)
  *
  ****************************************************************************/
 
-int bt_driver_register(FAR struct bt_driver_s *btdev)
+int bt_driver_set(FAR struct bt_driver_s *btdev)
 {
   DEBUGASSERT(btdev != NULL && btdev->open != NULL && btdev->send != NULL);
 
@@ -1694,13 +1671,12 @@ int bt_driver_register(FAR struct bt_driver_s *btdev)
 }
 
 /****************************************************************************
- * Name: bt_driver_unregister
+ * Name: bt_driver_unset
  *
  * Description:
- *   Unregister a Bluetooth low-level driver previously registered with
- *   bt_driver_register.  This may be called from the low-level driver and
- *   is part of the driver interface prototyped in
- *   include/nuttx/wireless/bluetooth/bt_driver.h
+ *   Unset a Bluetooth low-level driver previously set with bt_driver_set.
+ *   This may be called from the low-level driver and is part of the driver
+ *   interface prototyped in include/nuttx/wireless/bluetooth/bt_driver.h
  *
  * Input Parameters:
  *   btdev - An instance of the low-level drivers interface structure.
@@ -1710,7 +1686,7 @@ int bt_driver_register(FAR struct bt_driver_s *btdev)
  *
  ****************************************************************************/
 
-void bt_driver_unregister(FAR struct bt_driver_s *btdev)
+void bt_driver_unset(FAR struct bt_driver_s *btdev)
 {
   g_btdev.btdev = NULL;
 }

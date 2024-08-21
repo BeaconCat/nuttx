@@ -56,6 +56,9 @@
 #define MPFS_ACLINT_MSWI_ADDR      MPFS_CLINT_MSIP0
 #define MPFS_ACLINT_MTIMER_ADDR    MPFS_CLINT_MTIMECMP0
 
+#define MPFS_PMP_DEFAULT_ADDR      0xfffffffff
+#define MPFS_PMP_DEFAULT_PERM      0x000000009f
+
 #define MPFS_SYSREG_SOFT_RESET_CR     (MPFS_SYSREG_BASE + \
                                        MPFS_SYSREG_SOFT_RESET_CR_OFFSET)
 #define MPFS_SYSREG_SUBBLK_CLOCK_CR   (MPFS_SYSREG_BASE + \
@@ -84,8 +87,8 @@ typedef struct sbi_scratch_holder_s sbi_scratch_holder_t;
 
 extern const uint8_t __mpfs_nuttx_start[];
 extern const uint8_t __mpfs_nuttx_end[];
-extern const uint8_t _ssbi_ram[];
-extern const uint8_t _esbi_ram[];
+extern const uint8_t _ssbi_ddr[];
+extern const uint8_t _esbi_ddr[];
 
 /****************************************************************************
  * Private Function Prototypes
@@ -479,9 +482,9 @@ static void mpfs_opensbi_scratch_setup(uint32_t hartid)
    * them so that OpenSBI has no chance override then.
    */
 
-  g_scratches[hartid].scratch.fw_start = (unsigned long)_ssbi_ram;
-  g_scratches[hartid].scratch.fw_size  = (unsigned long)_esbi_ram -
-                                         (unsigned long)_ssbi_ram;
+  g_scratches[hartid].scratch.fw_start = (unsigned long)_ssbi_ddr;
+  g_scratches[hartid].scratch.fw_size  = (unsigned long)_esbi_ddr -
+                                         (unsigned long)_ssbi_ddr;
 
   g_scratches[hartid].scratch.fw_rw_offset =
       (unsigned long)g_scratches[hartid].scratch.fw_size;
@@ -508,6 +511,30 @@ static void mpfs_opensbi_scratch_setup(uint32_t hartid)
   g_scratches[hartid].scratch.fw_size      =
       g_scratches[hartid].scratch.fw_heap_offset +
       g_scratches[hartid].scratch.fw_heap_size;
+}
+
+/****************************************************************************
+ * Name: mpfs_opensbi_pmp_setup
+ *
+ * Description:
+ *   Initializes the PMP registers in a known default state.  All harts need
+ *   to set these registers.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void mpfs_opensbi_pmp_setup(void)
+{
+  /* All access granted */
+
+  csr_write(pmpaddr0, MPFS_PMP_DEFAULT_ADDR);
+  csr_write(pmpcfg0, MPFS_PMP_DEFAULT_PERM);
+  csr_write(pmpcfg2, 0);
 }
 
 /****************************************************************************
@@ -602,6 +629,8 @@ static int mpfs_opensbi_ecall_handler(long funcid,
 void __attribute__((noreturn)) mpfs_opensbi_setup(void)
 {
   uint32_t hartid = current_hartid();
+
+  mpfs_opensbi_pmp_setup();
 
   sbi_console_set_device(&mpfs_console);
   mpfs_opensbi_scratch_setup(hartid);

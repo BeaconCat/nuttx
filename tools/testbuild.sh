@@ -37,7 +37,6 @@ GITCLEAN=0
 SAVEARTIFACTS=0
 CHECKCLEAN=1
 CODECHECKER=0
-NINJACMAKE=0
 RUN=0
 
 case $(uname -s) in
@@ -50,9 +49,6 @@ case $(uname -s) in
   MINGW32*)
     HOST=MinGw
     ;;
-  MSYS*)
-    HOST=Msys
-    ;;
   *)
 
     # Assume linux as a fallback
@@ -62,11 +58,10 @@ esac
 
 function showusage {
   echo ""
-  echo "USAGE: $progname -h [-l|m|c|g|n] [-d] [-e <extraflags>] [-x] [-j <ncpus>] [-a <appsdir>] [-t <topdir>] [-p]"
-  echo "       [-A] [-C] [-G] [-N] [-R] [--codechecker] <testlist-file>"
+  echo "USAGE: $progname [-l|m|c|g|n] [-d] [-e <extraflags>] [-x] [-j <ncpus>] [-a <appsdir>] [-t <topdir>] [-p] [-G] [--codechecker] <testlist-file>"
+  echo "       $progname -h"
   echo ""
   echo "Where:"
-  echo "  -h will show this help test and terminate"
   echo "  -l|m|c|g|n selects Linux (l), macOS (m), Cygwin (c),"
   echo "     MSYS/MSYS2 (g) or Windows native (n). Default Linux"
   echo "  -d enables script debug output"
@@ -84,8 +79,8 @@ function showusage {
   echo "       * This assumes that only nuttx and apps repos need to be cleaned."
   echo "       * If the tree has files not managed by git, they will be removed"
   echo "         as well."
-  echo "  -N Use CMake with Ninja as the backend."
   echo "  -R execute \"run\" script in the config directories if exists."
+  echo "  -h will show this help test and terminate"
   echo "  --codechecker enables CodeChecker statically analyze the code."
   echo "  <testlist-file> selects the list of configurations to test.  No default"
   echo ""
@@ -137,9 +132,6 @@ while [ ! -z "$1" ]; do
   -C )
     CHECKCLEAN=0
     ;;
-  -N )
-    NINJACMAKE=1
-    ;;
   -R )
     RUN=1
     ;;
@@ -188,14 +180,14 @@ export APPSDIR
 testlist=`grep -v -E "^(-|#)|^[C|c][M|m][A|a][K|k][E|e]" $testfile || true`
 blacklist=`grep "^-" $testfile || true`
 
-if [ ${NINJACMAKE} -eq 1 ]; then
+if [ "X$HOST" == "XLinux" ]; then
   cmakelist=`grep "^[C|c][M|m][A|a][K|k][E|e]" $testfile | cut -d',' -f2 || true`
 fi
 
 cd $nuttx || { echo "ERROR: failed to CD to $nuttx"; exit 1; }
 
 function exportandimport {
-  # Do nothing until we finish to build the nuttx.
+  # Do nothing until we finish to build the nuttx
   if [ ! -f nuttx ]; then
     return $fail
   fi
@@ -285,7 +277,7 @@ function distclean {
       makefunc distclean
 
       # Remove .version manually because this file is shipped with
-      # the release package and then distclean has to keep it.
+      # the release package and then distclean has to keep it
 
       rm -f .version
 
@@ -385,14 +377,6 @@ function build_cmake {
   if ! cmake --build build 1>/dev/null; then
     cmake --build build
     fail=1
-  fi
-
-  if [ ${SAVEARTIFACTS} -eq 1 ]; then
-    artifactconfigdir=$ARTIFACTDIR/$(echo $config | sed "s/:/\//")/
-    mkdir -p $artifactconfigdir
-    cd $nuttx/build
-    xargs -I "{}" cp "{}" $artifactconfigdir < $nuttx/build/nuttx.manifest
-    cd $nuttx
   fi
 
   return $fail
@@ -511,14 +495,12 @@ function dotest {
   done
 
   unset cmake
-  if [ ${NINJACMAKE} -eq 1 ]; then
-    for l in $cmakelist; do
-      if [[ "${config/\//:}" == "${l}" ]]; then
-        echo "Cmake in present: $1"
-        cmake=1
-      fi
-    done
-  fi
+  for l in $cmakelist; do
+    if [[ "${config/\//:}" == "${l}" ]]; then
+      echo "Cmake in present: $1"
+      cmake=1
+    fi
+  done
 
   echo "Configuration/Tool: $1"
   if [ ${PRINTLISTONLY} -eq 1 ]; then
@@ -556,7 +538,7 @@ function dotest {
   fi
 
   # Perform the build test
-  echo $(date '+%Y-%m-%d %H:%M:%S')
+
   echo "------------------------------------------------------------------------------------"
   distclean
   configure
