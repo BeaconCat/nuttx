@@ -130,6 +130,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               up_current_regs()[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+              up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
               up_current_regs()[REG_RFLAGS] = 0;
 
               /* And make sure that the saved context in the TCB
@@ -162,6 +163,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+          tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
           tcb->xcp.regs[REG_RFLAGS] = 0;
         }
     }
@@ -248,6 +250,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    */
 
                   tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+                  tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
                   tcb->xcp.regs[REG_RFLAGS] = 0;
                 }
               else
@@ -267,7 +270,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * disabled
                    */
 
-                  up_current_regs()[REG_RIP]  = (uint64_t)x86_64_sigdeliver;
+                  up_current_regs()[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+                  up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
                   up_current_regs()[REG_RFLAGS] = 0;
 
                   /* And make sure that the saved context in the TCB
@@ -314,6 +318,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.regs[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
+          tcb->xcp.regs[REG_RSP]    = tcb->xcp.regs[REG_RSP] - 8;
           tcb->xcp.regs[REG_RFLAGS] = 0;
         }
     }
