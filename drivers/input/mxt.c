@@ -202,7 +202,7 @@ struct mxt_dev_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  FAR struct pollfd *fds[CONFIG_MXT_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_MXT_NPOLLWAITERS];
 };
 
 /****************************************************************************
@@ -226,7 +226,7 @@ static int mxt_putobject(FAR struct mxt_dev_s *priv, uint8_t type,
                          uint8_t offset, uint8_t value);
 #if 0 /* Not used */
 static int mxt_getobject(FAR struct mxt_dev_s *priv, uint8_t type,
-                         uint8_t offset, FAR uint8_t *value);
+              uint8_t offset, FAR uint8_t *value);
 #endif
 static int  mxt_flushmsgs(FAR struct mxt_dev_s *priv);
 
@@ -258,12 +258,11 @@ static int  mxt_close(FAR struct file *filep);
 static ssize_t mxt_read(FAR struct file *filep, FAR char *buffer,
                         size_t len);
 static int  mxt_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
-static int  mxt_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                     bool setup);
+static int  mxt_poll(FAR struct file *filep, struct pollfd *fds, bool setup);
 
 /* Initialization */
 
-static int  mxt_getinfo(FAR struct mxt_dev_s *priv);
+static int  mxt_getinfo(struct mxt_dev_s *priv);
 static int  mxt_getobjtab(FAR struct mxt_dev_s *priv);
 static int  mxt_hwinitialize(FAR struct mxt_dev_s *priv);
 
@@ -1510,7 +1509,7 @@ static int mxt_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  ****************************************************************************/
 
 static int mxt_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                    bool setup)
+                        bool setup)
 {
   FAR struct inode     *inode;
   FAR struct mxt_dev_s *priv;
@@ -1581,7 +1580,7 @@ static int mxt_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       /* This is a request to tear down the poll. */
 
-      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
+      struct pollfd **slot = (struct pollfd **)fds->priv;
       DEBUGASSERT(slot != NULL);
 
       /* Remove all memory of the poll setup */
@@ -1599,7 +1598,7 @@ errout:
  * Name: mxt_getinfo
  ****************************************************************************/
 
-static int mxt_getinfo(FAR struct mxt_dev_s *priv)
+static int mxt_getinfo(struct mxt_dev_s *priv)
 {
   int ret;
 

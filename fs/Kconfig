@@ -114,7 +114,6 @@ config SENDFILE_BUFSIZE
 config FS_HEAPSIZE
 	int "Independent heap bytes used by shm/tmpfs/pseudofile"
 	default 0
-	depends on FS_SHMFS || FS_TMPFS || PSEUDOFS_FILE
 	---help---
 		Support for shm/tmpfs/fs_pseudofile.c ram based fs memory.
 		default 0 to use kmm directly. independent heap disabled
@@ -142,6 +141,7 @@ source "fs/unionfs/Kconfig"
 source "fs/userfs/Kconfig"
 source "fs/hostfs/Kconfig"
 source "fs/rpmsgfs/Kconfig"
+source "fs/fatfs/Kconfig"
 source "fs/zipfs/Kconfig"
-source "fs/mnemofs/Kconfig"
+source "fs/yaffs/Kconfig"
 source "fs/v9fs/Kconfig"

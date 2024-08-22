@@ -49,6 +49,10 @@
 
 #define SEM_FAILED                NULL
 
+#ifndef CONFIG_SEM_PREALLOCHOLDERS
+#  define CONFIG_SEM_PREALLOCHOLDERS 0
+#endif
+
 /****************************************************************************
  * Public Type Declarations
  ****************************************************************************/
@@ -115,6 +119,10 @@ struct sem_s
 #  else
   struct semholder_s holder;     /* Slot for old and new holder */
 #  endif
+#endif
+#ifdef CONFIG_PRIORITY_PROTECT
+  uint8_t ceiling;               /* The priority ceiling owned by mutex  */
+  uint8_t saved;                 /* The saved priority of thread before boost */
 #endif
 };
 

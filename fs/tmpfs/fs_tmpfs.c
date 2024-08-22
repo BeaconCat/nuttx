@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -1620,7 +1621,7 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Handle attempts to write beyond the end of the file */
 
-  if ((filep->f_oflags & O_APPEND) != 0)
+  if ((filep->f_oflags & O_APPEND) == O_APPEND)
     {
       startpos = tfo->tfo_size;
     }
@@ -1824,6 +1825,13 @@ static int tmpfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           return ret;
         }
+    }
+  else if (cmd == FIOC_XIPBASE)
+    {
+      FAR uintptr_t *ptr = (FAR uintptr_t *)arg;
+
+      *ptr = (uintptr_t)tfo->tfo_data;
+      return OK;
     }
 
   return ret;

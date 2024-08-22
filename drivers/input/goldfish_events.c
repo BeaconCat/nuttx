@@ -24,6 +24,7 @@
 
 #include <debug.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
@@ -40,11 +41,11 @@
  ****************************************************************************/
 
 #ifndef putreg32
-#define putreg32(v, x) (*(FAR volatile uint32_t *)(x) = (v))
+#define putreg32(v, x) (*(volatile uint32_t *)(x) = (v))
 #endif
 
 #ifndef getreg32
-#define getreg32(x) (*(FAR volatile uint32_t *)(x))
+#define getreg32(x) (*(uint32_t *)(x))
 #endif
 
 /****************************************************************************
@@ -244,6 +245,8 @@ static void goldfish_events_worker(FAR void *arg)
   FAR struct goldfish_events_s *events = (FAR struct goldfish_events_s *)arg;
   struct goldfish_input_event evt;
 
+  up_enable_irq(events->irq);
+
   evt.type = getreg32(events->base + GOLDFISH_EVENTS_READ);
   putreg32(GOLDFISH_EVENTS_PAGE_ABSDATA,
            events->base + GOLDFISH_EVENTS_SET_PAGE);
@@ -259,18 +262,15 @@ static void goldfish_events_worker(FAR void *arg)
 
   if (goldfish_events_send_touch_event(events, &evt))
     {
-      goto out;
+      return;
     }
 
   if (goldfish_events_send_mouse_event(events, &evt))
     {
-      goto out;
+      return;
     }
 
   goldfish_events_send_keyboard_event(events, &evt);
-
-out:
-  up_enable_irq(events->irq);
 }
 
 /****************************************************************************
