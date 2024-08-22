@@ -48,8 +48,8 @@ struct notesnap_s
 {
   struct note_driver_s driver;
   struct notifier_block nb;
-  atomic_int index;
-  atomic_bool dumping;
+  size_t index;
+  bool dumping;
   struct notesnap_chunk_s buffer[CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
 };
 
@@ -150,20 +150,7 @@ static const struct note_driver_ops_s g_notesnap_ops =
 
 static struct notesnap_s g_notesnap =
 {
-  {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    "snap",
-    {
-      {
-        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  endif
-      },
-    },
-#endif
-    &g_notesnap_ops
-  }
+  {&g_notesnap_ops}
 };
 
 static FAR const char *g_notesnap_type[] =
@@ -381,28 +368,39 @@ int notesnap_register(void)
 
 void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 {
-  size_t index = g_notesnap.index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
   size_t i;
+  size_t index = g_notesnap.index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
+  clock_t lastcount = g_notesnap.buffer[index].count;
+  struct timespec lasttime =
+  {
+    0
+  };
 
   /* Stop recording while dumping */
 
   atomic_store(&g_notesnap.dumping, true);
 
-  for (i = 0; i < CONFIG_DRIVERS_NOTESNAP_NBUFFERS; i++)
+  for (i = index; i != index - 1;
+       i == CONFIG_DRIVERS_NOTESNAP_NBUFFERS - 1 ? i = 0 : i++)
     {
-      FAR struct notesnap_chunk_s *note = &g_notesnap.buffer
-          [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
-      struct timespec time;
+      FAR struct notesnap_chunk_s *note = &g_notesnap.buffer[i];
 
-      perf_convert(note->count, &time);
+      struct timespec time;
+      clock_t elapsed = note->count < lastcount ?
+                        note->count + CLOCK_MAX - lastcount :
+                        note->count - lastcount;
+      perf_convert(elapsed, &time);
+      clock_timespec_add(&lasttime, &time, &lasttime);
+      lastcount = note->count;
+
       lib_sprintf(stream,
-                  "snapshoot: [%" PRIu64 ".%09u] "
+                  "snapshoot: [%u.%09u] "
 #ifdef CONFIG_SMP
                   "[CPU%d] "
 #endif
                   "[%d] %-16s %#" PRIxPTR "\n",
-                  (uint64_t)time.tv_sec,
-                  (unsigned)time.tv_nsec,
+                  (unsigned)lasttime.tv_sec,
+                  (unsigned)lasttime.tv_nsec,
 #ifdef CONFIG_SMP
                   note->cpu,
 #endif
