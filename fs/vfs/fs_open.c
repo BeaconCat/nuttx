@@ -33,9 +33,11 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 
+#include "sched/sched.h"
 #include "inode/inode.h"
 #include "driver/driver.h"
 #include "notify/notify.h"
@@ -197,7 +199,11 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 
       /* Get the file structure of the opened character driver proxy */
 
+#ifdef CONFIG_BCH_DEVICE_READONLY
+      ret = block_proxy(filep, path, O_RDOK);
+#else
       ret = block_proxy(filep, path, oflags);
+#endif
 #ifdef CONFIG_FS_NOTIFY
       if (ret >= 0)
         {
@@ -362,7 +368,7 @@ int file_open(FAR struct file *filep, FAR const char *path, int oflags, ...)
   ret = file_vopen(filep, path, oflags, 0, ap);
   va_end(ap);
 
-  if (ret >= OK)
+  if (ret >= 0)
     {
       FS_ADD_BACKTRACE(filep);
     }
@@ -437,7 +443,7 @@ int nx_open(FAR const char *path, int oflags, ...)
   /* Let nx_vopen() do all of the work */
 
   va_start(ap, oflags);
-  fd = nx_vopen(nxsched_self(), path, oflags, ap);
+  fd = nx_vopen(this_task(), path, oflags, ap);
   va_end(ap);
 
   return fd;
@@ -467,7 +473,7 @@ int open(FAR const char *path, int oflags, ...)
   /* Let nx_vopen() do most of the work */
 
   va_start(ap, oflags);
-  fd = nx_vopen(nxsched_self(), path, oflags, ap);
+  fd = nx_vopen(this_task(), path, oflags, ap);
   va_end(ap);
 
   /* Set the errno value if any errors were reported by nx_open() */
