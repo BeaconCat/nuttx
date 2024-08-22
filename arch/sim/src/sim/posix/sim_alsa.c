@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
@@ -562,11 +561,17 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
   priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, OK);
 #endif
 
-  apb_free(priv->aux);
-  priv->aux = NULL;
+  if (priv->aux)
+    {
+      apb_free(priv->aux);
+      priv->aux = NULL;
+    }
 
-  priv->ops->uninit(priv->codec);
-  priv->ops = NULL;
+  if (priv->ops)
+    {
+      priv->ops->uninit(priv->codec);
+      priv->ops = NULL;
+    }
 
   return 0;
 }
@@ -629,6 +634,7 @@ static int sim_audio_flush(struct audio_lowerhalf_s *dev)
       struct ap_buffer_s *apb;
 
       apb = (struct ap_buffer_s *)dq_remfirst(&priv->pendq);
+      apb->flags &= ~AUDIO_APB_FINAL;
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK, NULL);
 #else
