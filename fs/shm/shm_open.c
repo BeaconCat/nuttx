@@ -81,7 +81,12 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
 
   SETUP_SEARCH(&desc, fullpath, false);
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto errout_with_search;
+    }
+
   ret = inode_find(&desc);
   if (ret >= 0)
     {
@@ -132,7 +137,7 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
       INODE_SET_SHM(inode);
       inode->u.i_ops = &g_shmfs_operations;
       inode->i_private = NULL;
-      atomic_fetch_add(&inode->i_crefs, 1);
+      inode->i_crefs = 1;
     }
 
   /* Associate the inode with a file structure */
@@ -143,6 +148,7 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
 
 errout_with_sem:
   inode_unlock();
+errout_with_search:
   RELEASE_SEARCH(&desc);
 #ifdef CONFIG_FS_NOTIFY
   if (ret >= 0)
