@@ -87,7 +87,7 @@ static uint8_t slcd_nibble(uint8_t ascii)
     }
   else
     {
-      return ascii - 'a' + 10;
+      return ascii - 'a';
     }
 }
 
