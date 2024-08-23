@@ -177,7 +177,12 @@ next_subdir:
    * of  zero.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto errout;
+    }
+
   ret = inode_reserve(newpath, 0777, &newinode);
   if (ret < 0)
     {
@@ -244,6 +249,8 @@ next_subdir:
 errout_with_lock:
   inode_unlock();
 
+errout:
+  RELEASE_SEARCH(&newdesc);
 #ifdef CONFIG_FS_NOTIFY
   if (ret >= 0)
     {
@@ -251,8 +258,6 @@ errout_with_lock:
     }
 #endif
 
-errout:
-  RELEASE_SEARCH(&newdesc);
   if (subdir != NULL)
     {
       lib_free(subdir);
@@ -351,6 +356,14 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
     {
       struct stat buf;
 
+#ifdef CONFIG_FS_NOTIFY
+      ret = oldinode->u.i_mops->stat(oldinode, oldpath, &buf);
+      if (ret >= 0)
+        {
+          oldisdir = S_ISDIR(buf.st_mode);
+        }
+#endif
+
 next_subdir:
       ret = oldinode->u.i_mops->stat(oldinode, newrelpath, &buf);
       if (ret >= 0)
@@ -391,7 +404,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      kmm_free(tmp);
+                      lib_free(tmp);
                     }
 
                   if (ret < 0)
@@ -425,9 +438,6 @@ next_subdir:
                   goto errout_with_newinode;
                 }
 
-#ifdef CONFIG_FS_NOTIFY
-              oldisdir = S_ISDIR(buf.st_mode);
-#endif
               if (oldinode->u.i_mops->unlink)
                 {
                   /* Attempt to remove the file before doing the rename.
@@ -444,18 +454,6 @@ next_subdir:
                 }
             }
         }
-#ifdef CONFIG_FS_NOTIFY
-      else
-        {
-          ret = oldinode->u.i_mops->stat(oldinode, oldrelpath, &buf);
-          if (ret < 0)
-            {
-              goto errout_with_newinode;
-            }
-
-          oldisdir = S_ISDIR(buf.st_mode);
-        }
-#endif
     }
 
   /* Perform the rename operation using the relative paths at the common
@@ -463,13 +461,6 @@ next_subdir:
    */
 
   ret = oldinode->u.i_mops->rename(oldinode, oldrelpath, newrelpath);
-
-#ifdef CONFIG_FS_NOTIFY
-  if (ret >= 0)
-    {
-      notify_rename(oldpath, oldisdir, newpath, newisdir);
-    }
-#endif
 
 errout_with_newinode:
   inode_release(newinode);
@@ -480,6 +471,13 @@ errout_with_newsearch:
     {
       lib_free(subdir);
     }
+
+#ifdef CONFIG_FS_NOTIFY
+  if (ret >= 0)
+    {
+      notify_rename(oldpath, oldisdir, newpath, newisdir);
+    }
+#endif
 
   return ret;
 }
