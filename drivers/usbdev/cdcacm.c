@@ -175,7 +175,7 @@ static void    cdcacm_resetconfig(FAR struct cdcacm_dev_s *priv);
 static int     cdcacm_epconfigure(FAR struct usbdev_ep_s *ep,
                  enum cdcacm_epdesc_e epid, bool last,
                  FAR struct usbdev_devinfo_s *devinfo,
-                 uint8_t speed);
+                 bool hispeed);
 static int     cdcacm_setconfig(FAR struct cdcacm_dev_s *priv,
                  uint8_t config);
 
@@ -626,7 +626,7 @@ static int cdcacm_requeue_rdrequest(FAR struct cdcacm_dev_s *priv,
   /* Requeue the read request */
 
   ep       = priv->epbulkout;
-  req->len = MAX(CONFIG_CDCACM_BULKOUT_REQLEN, ep->maxpacket);
+  req->len = ep->maxpacket;
   ret      = EP_SUBMIT(ep, req);
   if (ret != OK)
     {
@@ -915,11 +915,11 @@ static void cdcacm_resetconfig(FAR struct cdcacm_dev_s *priv)
 static int cdcacm_epconfigure(FAR struct usbdev_ep_s *ep,
                               enum cdcacm_epdesc_e epid, bool last,
                               FAR struct usbdev_devinfo_s *devinfo,
-                              uint8_t speed)
+                              bool hispeed)
 {
-  struct usb_ss_epdesc_s epdesc;
-  cdcacm_copy_epdesc(epid, &epdesc.epdesc, devinfo, speed);
-  return EP_CONFIGURE(ep, &epdesc.epdesc, last);
+  struct usb_epdesc_s epdesc;
+  cdcacm_copy_epdesc(epid, &epdesc, devinfo, hispeed);
+  return EP_CONFIGURE(ep, &epdesc, last);
 }
 
 /****************************************************************************
@@ -975,8 +975,18 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
 
   /* Configure the IN interrupt endpoint */
 
-  ret = cdcacm_epconfigure(priv->epintin, CDCACM_EPINTIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+#ifdef CONFIG_USBDEV_DUALSPEED
+  if (priv->usbdev->speed == USB_SPEED_HIGH)
+    {
+      ret = cdcacm_epconfigure(priv->epintin, CDCACM_EPINTIN, false,
+                               &priv->devinfo, true);
+    }
+  else
+#endif
+    {
+      ret = cdcacm_epconfigure(priv->epintin, CDCACM_EPINTIN, false,
+                               &priv->devinfo, false);
+    }
 
   if (ret < 0)
     {
@@ -988,8 +998,18 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
 
   /* Configure the IN bulk endpoint */
 
-  ret = cdcacm_epconfigure(priv->epbulkin, CDCACM_EPBULKIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+#ifdef CONFIG_USBDEV_DUALSPEED
+  if (priv->usbdev->speed == USB_SPEED_HIGH)
+    {
+      ret = cdcacm_epconfigure(priv->epbulkin, CDCACM_EPBULKIN, false,
+                               &priv->devinfo, true);
+    }
+  else
+#endif
+    {
+      ret = cdcacm_epconfigure(priv->epbulkin, CDCACM_EPBULKIN, false,
+                               &priv->devinfo, false);
+    }
 
   if (ret < 0)
     {
@@ -1001,8 +1021,18 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
 
   /* Configure the OUT bulk endpoint */
 
-  ret = cdcacm_epconfigure(priv->epbulkout, CDCACM_EPBULKOUT, true,
-                            &priv->devinfo, priv->usbdev->speed);
+#ifdef CONFIG_USBDEV_DUALSPEED
+  if (priv->usbdev->speed == USB_SPEED_HIGH)
+    {
+      ret = cdcacm_epconfigure(priv->epbulkout, CDCACM_EPBULKOUT, true,
+                               &priv->devinfo, true);
+    }
+  else
+#endif
+    {
+      ret = cdcacm_epconfigure(priv->epbulkout, CDCACM_EPBULKOUT, true,
+                               &priv->devinfo, false);
+    }
 
   if (ret < 0)
     {
@@ -1011,6 +1041,8 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
     }
 
   priv->epbulkout->priv = priv;
+
+  /* Queue read requests in the bulk OUT endpoint */
 
   DEBUGASSERT(priv->nrdq == 0);
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
@@ -1225,7 +1257,7 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   FAR struct cdcacm_wrreq_s *wrcontainer;
   FAR struct cdcacm_rdreq_s *rdcontainer;
   irqstate_t flags;
-  uint32_t reqlen;
+  uint16_t reqlen;
   int ret;
   int i;
 
@@ -1304,38 +1336,12 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   priv->epbulkout->priv = priv;
 
   /* Pre-allocate read requests.  The buffer size is one full packet. */
-#if defined(CONFIG_USBDEV_SUPERSPEED)
-  if (dev->speed == USB_SPEED_SUPER ||
-      dev->speed == USB_SPEED_SUPER_PLUS)
-    {
-      if (CONFIG_CDCACM_EPBULKOUT_MAXBURST < USB_SS_BULK_EP_MAXBURST)
-        {
-          reqlen = CONFIG_CDCACM_EPBULKOUT_SSSIZE *
-                   (CONFIG_CDCACM_EPBULKOUT_MAXBURST + 1);
-        }
-      else
-        {
-          reqlen = CONFIG_CDCACM_EPBULKOUT_SSSIZE *
-                   USB_SS_BULK_EP_MAXBURST;
-        }
-    }
-  else
-#endif
-#if defined(CONFIG_USBDEV_DUALSPEED)
-  if (dev->speed == USB_SPEED_HIGH)
-    {
-      reqlen = CONFIG_CDCACM_EPBULKOUT_HSSIZE;
-    }
-  else
-#endif
-    {
-      reqlen = CONFIG_CDCACM_EPBULKOUT_FSSIZE;
-    }
 
-  if (CONFIG_CDCACM_BULKOUT_REQLEN > reqlen)
-    {
-      reqlen = CONFIG_CDCACM_BULKOUT_REQLEN;
-    }
+#ifdef CONFIG_USBDEV_DUALSPEED
+  reqlen = CONFIG_CDCACM_EPBULKOUT_HSSIZE;
+#else
+  reqlen = CONFIG_CDCACM_EPBULKOUT_FSSIZE;
+#endif
 
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
     {
@@ -1363,33 +1369,11 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
    * shared with interrupt IN endpoint which does not need a large buffer.
    */
 
-#if defined(CONFIG_USBDEV_SUPERSPEED)
-  if (dev->speed == USB_SPEED_SUPER ||
-      dev->speed == USB_SPEED_SUPER_PLUS)
-    {
-      if (CONFIG_CDCACM_EPBULKIN_MAXBURST < USB_SS_BULK_EP_MAXBURST)
-        {
-          reqlen = CONFIG_CDCACM_EPBULKOUT_SSSIZE *
-                   (CONFIG_CDCACM_EPBULKIN_MAXBURST + 1);
-        }
-      else
-        {
-          reqlen = CONFIG_CDCACM_EPBULKOUT_SSSIZE *
-                   USB_SS_BULK_EP_MAXBURST;
-        }
-    }
-  else
+#ifdef CONFIG_USBDEV_DUALSPEED
+  reqlen = CONFIG_CDCACM_EPBULKIN_HSSIZE;
+#else
+  reqlen = CONFIG_CDCACM_EPBULKIN_FSSIZE;
 #endif
-#if defined(CONFIG_USBDEV_DUALSPEED)
-  if  (dev->speed == USB_SPEED_HIGH)
-    {
-      reqlen = CONFIG_CDCACM_EPBULKIN_HSSIZE;
-    }
-  else
-#endif
-    {
-      reqlen = CONFIG_CDCACM_EPBULKIN_FSSIZE;
-    }
 
   if (CONFIG_CDCACM_BULKIN_REQLEN > reqlen)
     {
@@ -1489,6 +1473,7 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
        */
 
       cdcacm_resetconfig(priv);
+      up_mdelay(50);
 
       /* Free the pre-allocated control request */
 
@@ -1642,9 +1627,8 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
 #ifndef CONFIG_CDCACM_COMPOSITE
               case USB_DESC_TYPE_DEVICE:
                 {
-                  ret = usbdev_copy_devdesc(ctrlreq->buf,
-                                            cdcacm_getdevdesc(),
-                                            dev->speed);
+                  ret = USB_SIZEOF_DEVDESC;
+                  memcpy(ctrlreq->buf, cdcacm_getdevdesc(), ret);
                 }
                 break;
 #endif
@@ -1673,8 +1657,12 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
 #ifndef CONFIG_CDCACM_COMPOSITE
               case USB_DESC_TYPE_CONFIG:
                 {
+#ifdef CONFIG_USBDEV_DUALSPEED
                   ret = cdcacm_mkcfgdesc(ctrlreq->buf, &priv->devinfo,
                                          dev->speed, ctrl->value[1]);
+#else
+                  ret = cdcacm_mkcfgdesc(ctrlreq->buf, &priv->devinfo);
+#endif
                 }
                 break;
 #endif
@@ -2940,9 +2928,8 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
   priv->serdev.priv         = priv;
 
   /* Initialize the USB class driver structure */
-#if defined(CONFIG_USBDEV_SUPERSPEED)
-  drvr->drvr.speed          = USB_SPEED_SUPER;
-#elif defined(CONFIG_USBDEV_DUALSPEED)
+
+#ifdef CONFIG_USBDEV_DUALSPEED
   drvr->drvr.speed          = USB_SPEED_HIGH;
 #else
   drvr->drvr.speed          = USB_SPEED_FULL;
@@ -3143,7 +3130,11 @@ void cdcacm_get_composite_devdesc(struct composite_devdesc_s *dev)
 
   /* Let the construction function calculate the size of config descriptor */
 
+#ifdef CONFIG_USBDEV_DUALSPEED
   dev->cfgdescsize  = cdcacm_mkcfgdesc(NULL, NULL, USB_SPEED_UNKNOWN, 0);
+#else
+  dev->cfgdescsize  = cdcacm_mkcfgdesc(NULL, NULL);
+#endif
 
   /* Board-specific logic must provide the device minor */
 

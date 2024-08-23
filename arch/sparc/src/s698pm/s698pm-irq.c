@@ -170,7 +170,7 @@ int s698pm_cpuint_initialize(void)
 #ifdef CONFIG_SMP
   /* Which CPU are we initializing */
 
-  cpu = this_cpu();
+  cpu = up_cpu_index();
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 #endif
 
