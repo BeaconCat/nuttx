@@ -35,10 +35,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef ARMV7M_PERIPHERAL_INTERRUPTS
-#  error ARMV7M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
-#endif
-
 /* This is the size of the vector table (in 4-byte entries).  This size
  * includes the (1) the peripheral interrupts, (2) space for 15 Cortex-M
  * exceptions, and (3) IDLE stack pointer which lies at the beginning of the
@@ -84,7 +80,7 @@
  * appropriate mask.
  */
 
-#define VECTOR_ALIGN ((~NVIC_VECTAB_TBLOFF_MASK & 0xffff) + 1)
+#define VECTAB_ALIGN ((~NVIC_VECTAB_TBLOFF_MASK & 0xffff) + 1)
 
 #ifdef CONFIG_ARCH_RAMVECTORS
 
@@ -105,7 +101,7 @@
  */
 
 extern up_vector_t g_ram_vectors[ARMV7M_VECTAB_SIZE]
-  locate_data(".ram_vectors") aligned_data(128);
+  locate_data(".ram_vectors") aligned_data(VECTAB_ALIGN);
 
 /****************************************************************************
  * Public Function Prototypes
