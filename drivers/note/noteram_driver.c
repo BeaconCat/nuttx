@@ -32,7 +32,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
-#include <poll.h>
 
 #include <nuttx/spinlock.h>
 #include <nuttx/sched.h>
@@ -84,7 +83,6 @@ struct noteram_driver_s
   volatile unsigned int ni_tail;
   volatile unsigned int ni_read;
   spinlock_t lock;
-  FAR struct pollfd *pfd;
 };
 
 /* The structure to hold the context data of trace dump */
@@ -103,7 +101,6 @@ struct noteram_dump_cpu_context_s
 struct noteram_dump_context_s
 {
   struct noteram_dump_cpu_context_s cpu[NCPUS];
-  unsigned int mode;
 };
 
 /****************************************************************************
@@ -114,9 +111,7 @@ static int noteram_open(FAR struct file *filep);
 static int noteram_close(FAR struct file *filep);
 static ssize_t noteram_read(FAR struct file *filep,
                             FAR char *buffer, size_t buflen);
-static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
-static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                        bool setup);
+static int noteram_ioctl(struct file *filep, int cmd, unsigned long arg);
 static void noteram_add(FAR struct note_driver_s *drv,
                         FAR const void *note, size_t len);
 static void
@@ -136,13 +131,9 @@ static const struct file_operations g_noteram_fops =
   NULL,          /* write */
   NULL,          /* seek */
   noteram_ioctl, /* ioctl */
-  NULL,          /* mmap */
-  NULL,          /* truncate */
-  noteram_poll,  /* poll */
 };
 
-static uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE]
-  locate_data(CONFIG_DRIVERS_NOTERAM_SECTION);
+static uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE];
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -155,20 +146,7 @@ static const struct note_driver_ops_s g_noteram_ops =
 
 struct noteram_driver_s g_noteram_driver =
 {
-  {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    "ram",
-    {
-      {
-        CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  endif
-      },
-    },
-#endif
-    &g_noteram_ops
-  },
+  {&g_noteram_ops},
   g_ramnote_buffer,
   CONFIG_DRIVERS_NOTERAM_BUFSIZE,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
@@ -458,39 +436,30 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   FAR struct lib_memoutstream_s stream;
   ssize_t ret;
-  irqstate_t flags;
 
-  if (ctx->mode == NOTERAM_MODE_READ_BINARY)
+  lib_memoutstream(&stream, buffer, buflen);
+
+  do
     {
+      irqstate_t flags;
+      uint8_t note[256];
+
+      /* Get the next note (removing it from the buffer) */
+
       flags = spin_lock_irqsave_wo_note(&drv->lock);
-      ret = noteram_get(drv, (FAR uint8_t *)buffer, buflen);
+      ret = noteram_get(drv, note, sizeof(note));
       spin_unlock_irqrestore_wo_note(&drv->lock, flags);
-    }
-  else
-    {
-      lib_memoutstream(&stream, buffer, buflen);
-
-      do
+      if (ret <= 0)
         {
-          uint8_t note[256];
-
-          /* Get the next note (removing it from the buffer) */
-
-          flags = spin_lock_irqsave_wo_note(&drv->lock);
-          ret = noteram_get(drv, note, sizeof(note));
-          spin_unlock_irqrestore_wo_note(&drv->lock, flags);
-          if (ret <= 0)
-            {
-              return ret;
-            }
-
-          /* Parse notes into text format */
-
-          ret = noteram_dump_one(note, (FAR struct lib_outstream_s *)&stream,
-                                 ctx);
+          return ret;
         }
-      while (ret == 0);
+
+      /* Parse notes into text format */
+
+      ret = noteram_dump_one(note, (FAR struct lib_outstream_s *)&stream,
+                             ctx);
     }
+  while (ret == 0);
 
   return ret;
 }
@@ -553,114 +522,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         break;
 
-      /* NOTERAM_GETREADMODE
-       *      - Get read mode
-       *        Argument: A writable pointer to unsigned int
-       */
-
-      case NOTERAM_GETREADMODE:
-        if (arg == 0)
-          {
-            ret = -EINVAL;
-          }
-        else
-          {
-            FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-
-            *(FAR unsigned int *)arg = ctx->mode;
-            ret = OK;
-          }
-        break;
-
-      /* NOTERAM_SETREADMODE
-       *      - Set read mode
-       *        Argument: A read-only pointer to unsigned int
-       */
-
-      case NOTERAM_SETREADMODE:
-        if (arg == 0)
-          {
-            ret = -EINVAL;
-          }
-        else
-          {
-            FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-
-            ctx->mode = *(FAR unsigned int *)arg;
-            ret = OK;
-          }
-        break;
-
       default:
           break;
     }
 
-  spin_unlock_irqrestore_wo_note(&drv->lock, flags);
-  return ret;
-}
-
-/****************************************************************************
- * Name: noteram_poll
- ****************************************************************************/
-
-static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                        bool setup)
-{
-  int ret = 0;
-  FAR struct inode *inode;
-  FAR struct noteram_driver_s *drv;
-  irqstate_t flags;
-
-  DEBUGASSERT(filep != NULL && fds != NULL);
-  inode = filep->f_inode;
-
-  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
-  drv = inode->i_private;
-
-  flags = spin_lock_irqsave_wo_note(&drv->lock);
-
-  /* Ignore waits that do not include POLLIN */
-
-  if ((fds->events & POLLIN) == 0)
-    {
-      ret = -EDEADLK;
-      goto errout;
-    }
-
-  /* Are we setting up the poll?  Or tearing it down? */
-
-  if (setup)
-    {
-      /* Check if we can accept this poll.
-       * For now, only one thread can poll the device at any time
-       * (shorter / simpler code)
-       */
-
-      if (drv->pfd)
-        {
-          ret = -EBUSY;
-          goto errout;
-        }
-
-      drv->pfd = fds;
-
-      /* Is there unread data in noteram? then trigger POLLIN now -
-       * don't wait for RX.
-       */
-
-      if (noteram_unread_length(drv) > 0)
-        {
-          spin_unlock_irqrestore_wo_note(&drv->lock, flags);
-          poll_notify(&drv->pfd, 1, POLLIN);
-          return ret;
-        }
-    }
-  else /* Tear it down */
-    {
-      drv->pfd = NULL;
-    }
-
-errout:
   spin_unlock_irqrestore_wo_note(&drv->lock, flags);
   return ret;
 }
@@ -733,7 +598,6 @@ static void noteram_add(FAR struct note_driver_s *driver,
   memcpy(drv->ni_buffer, buf + space, notelen - space);
   drv->ni_head = noteram_next(drv, head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_wo_note(&drv->lock, flags);
-  poll_notify(&drv->pfd, 1, POLLIN);
 }
 
 /****************************************************************************
@@ -785,11 +649,11 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
                                FAR struct note_common_s *note,
                                FAR struct noteram_dump_context_s *ctx)
 {
-  struct timespec ts;
   pid_t pid;
+  uint32_t nsec = note->nc_systime_nsec;
+  uint32_t sec = note->nc_systime_sec;
   int ret;
 
-  perf_convert(note->nc_systime, &ts);
   pid = note->nc_pid;
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;
@@ -797,10 +661,8 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
   int cpu = 0;
 #endif
 
-  ret = lib_sprintf(s, "%8s-%-3u [%d] %3" PRIu64 ".%09lu: ",
-                    get_taskname(pid), get_pid(pid), cpu,
-                    (uint64_t)ts.tv_sec, ts.tv_nsec);
-
+  ret = lib_sprintf(s, "%8s-%-3u [%d] %3" PRIu32 ".%09" PRIu32 ": ",
+                    get_taskname(pid), get_pid(pid), cpu, sec, nsec);
   return ret;
 }
 
@@ -849,65 +711,6 @@ static int noteram_dump_sched_switch(FAR struct lib_outstream_s *s,
 #endif
 
 /****************************************************************************
- * Name: noteram_dump_printf
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-static int noteram_dump_printf(FAR struct lib_outstream_s *s,
-                               FAR struct note_printf_s *note)
-{
-  size_t ret = 0;
-
-  if (note->npt_type == 0)
-    {
-      ret = lib_bsprintf(s, note->npt_fmt, note->npt_data);
-    }
-  else
-    {
-      size_t count = NOTE_PRINTF_GET_COUNT(note->npt_type);
-      char fmt[128];
-      size_t i;
-
-      fmt[0] = '\0';
-      ret += lib_sprintf(s, "%p", note->npt_fmt);
-      for (i = 0; i < count; i++)
-        {
-          int type = NOTE_PRINTF_GET_TYPE(note->npt_type, i);
-
-          switch (type)
-            {
-              case NOTE_PRINTF_UINT32:
-                {
-                  strcat(fmt, " %u");
-                }
-                break;
-              case NOTE_PRINTF_UINT64:
-                {
-                  strcat(fmt, " %llu");
-                }
-                break;
-              case NOTE_PRINTF_STRING:
-                {
-                  strcat(fmt, " %s");
-                }
-                break;
-              case NOTE_PRINTF_DOUBLE:
-                {
-                  strcat(fmt, " %f");
-                }
-            }
-        }
-
-        ret += lib_bsprintf(s, fmt, note->npt_data);
-        lib_stream_putc(s, '\n');
-        ret++;
-    }
-
-  return ret;
-}
-#endif
-
-/****************************************************************************
  * Name: noteram_dump_one
  ****************************************************************************/
 
@@ -936,7 +739,6 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
   switch (note->nc_type)
     {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
     case NOTE_START:
       {
         ret += noteram_dump_header(s, note, ctx);
@@ -956,6 +758,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       }
       break;
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
     case NOTE_SUSPEND:
       {
         FAR struct note_suspend_s *nsu = (FAR struct note_suspend_s *)p;
@@ -1008,6 +811,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       {
         FAR struct note_syscall_enter_s *nsc;
         int i;
+        int j;
         uintptr_t arg;
 
         nsc = (FAR struct note_syscall_enter_s *)p;
@@ -1021,7 +825,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         ret += lib_sprintf(s, "sys_%s(",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED]);
 
-        for (i = 0; i < nsc->nsc_argc; i++)
+        for (i = j = 0; i < nsc->nsc_argc; i++)
           {
             arg = nsc->nsc_args[i];
             if (i == 0)
@@ -1097,27 +901,6 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       break;
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
-    case NOTE_WDOG_START:
-    case NOTE_WDOG_CANCEL:
-    case NOTE_WDOG_ENTER:
-    case NOTE_WDOG_LEAVE:
-      {
-        FAR struct note_wdog_s *nw;
-        FAR const char *name[] =
-          {
-            "start", "cancel", "enter", "leave",
-          };
-
-        nw = (FAR struct note_wdog_s *)p;
-        ret += noteram_dump_header(s, note, ctx);
-        ret += lib_sprintf(s, "tracing_mark_write: I|%d|wdog: %s-%pS %p\n",
-                           pid, name[note->nc_type - NOTE_WDOG_START],
-                           (FAR void *)nw->handler, (FAR void *)nw->arg);
-      }
-      break;
-#endif
-
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
     case NOTE_CSECTION_ENTER:
     case NOTE_CSECTION_LEAVE:
@@ -1150,30 +933,42 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-    case NOTE_DUMP_PRINTF:
+    case NOTE_DUMP_STRING:
       {
-        FAR struct note_printf_s *npt;
+        FAR struct note_string_s *nst;
+        uintptr_t ip;
 
-        npt = (FAR struct note_printf_s *)p;
-        ret += noteram_dump_header(s, &npt->npt_cmn, ctx);
-        ret += lib_sprintf(s, "tracing_mark_write: ");
-        ret += noteram_dump_printf(s, npt);
+        nst = (FAR struct note_string_s *)p;
+        ret += noteram_dump_header(s, note, ctx);
+        ip = nst->nst_ip;
+
+        if (nst->nst_data[1] == '\0' &&
+            (nst->nst_data[0] == 'B' || nst->nst_data[0] == 'E'))
+          {
+            ret += lib_sprintf(s, "tracing_mark_write: %c|%d|%pS\n",
+                               nst->nst_data[0], pid, (FAR void *)ip);
+          }
+        else
+          {
+            ret += lib_sprintf(s, "tracing_mark_write: %s\n",
+                               nst->nst_data);
+          }
       }
       break;
     case NOTE_DUMP_BEGIN:
     case NOTE_DUMP_END:
       {
-        FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
+        FAR struct note_binary_s *nbi = (FAR struct note_binary_s *)p;
         char c = note->nc_type == NOTE_DUMP_BEGIN ? 'B' : 'E';
         int len = note->nc_length - SIZEOF_NOTE_EVENT(0);
         uintptr_t ip;
 
-        ip = nbi->nev_ip;
-        ret += noteram_dump_header(s, &nbi->nev_cmn, ctx);
+        ip = nbi->nbi_ip;
+        ret += noteram_dump_header(s, &nbi->nbi_cmn, ctx);
         if (len > 0)
           {
             ret += lib_sprintf(s, "tracing_mark_write: %c|%d|%.*s\n",
-                               c, pid, len, (FAR const char *)nbi->nev_data);
+                               c, pid, len, (FAR const char *)nbi->nbi_data);
           }
         else
           {
@@ -1184,21 +979,43 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       break;
     case NOTE_DUMP_MARK:
       {
-        int len = note->nc_length - sizeof(struct note_event_s);
-        FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
-        ret += noteram_dump_header(s, &nbi->nev_cmn, ctx);
+        int len = note->nc_length - sizeof(struct note_binary_s);
+        FAR struct note_binary_s *nbi = (FAR struct note_binary_s *)p;
+        ret += noteram_dump_header(s, &nbi->nbi_cmn, ctx);
         ret += lib_sprintf(s, "tracing_mark_write: I|%d|%.*s\n",
-                           pid, len, (FAR const char *)nbi->nev_data);
+                           pid, len, (FAR const char *)nbi->nbi_data);
       }
       break;
     case NOTE_DUMP_COUNTER:
       {
-        FAR struct note_event_s *nbi = (FAR struct note_event_s *)p;
+        FAR struct note_binary_s *nbi = (FAR struct note_binary_s *)p;
         FAR struct note_counter_s *counter;
-        counter = (FAR struct note_counter_s *)nbi->nev_data;
-        ret += noteram_dump_header(s, &nbi->nev_cmn, ctx);
+        counter = (FAR struct note_counter_s *)nbi->nbi_data;
+        ret += noteram_dump_header(s, &nbi->nbi_cmn, ctx);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%ld\n",
                            pid, counter->name, counter->value);
+      }
+      break;
+    case NOTE_DUMP_BINARY:
+      {
+        FAR struct note_binary_s *nbi;
+        uint8_t count;
+        uintptr_t ip;
+        int i;
+
+        nbi = (FAR struct note_binary_s *)p;
+        ret += noteram_dump_header(s, note, ctx);
+        count = note->nc_length - sizeof(struct note_binary_s) + 1;
+        ip = nbi->nbi_ip;
+
+        ret += lib_sprintf(s, "tracing_mark_write: %pS: count=%u",
+                           (FAR void *)ip, count);
+        for (i = 0; i < count; i++)
+          {
+            ret += lib_sprintf(s, " 0x%x", nbi->nbi_data[i]);
+          }
+
+        ret += lib_sprintf(s, "\n");
       }
       break;
 #endif
@@ -1242,7 +1059,7 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
 {
   struct noteram_dump_context_s ctx;
   struct lib_syslograwstream_s stream;
-  uint8_t note[256];
+  uint8_t note[64];
 
   lib_syslograwstream_open(&stream);
   lib_sprintf(&stream.common, "# tracer:nop\n#\n");
@@ -1335,40 +1152,21 @@ FAR struct note_driver_s *
 noteram_initialize(FAR const char *devpath, size_t bufsize, bool overwrite)
 {
   FAR struct noteram_driver_s *drv;
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  size_t len = strlen(devpath) + 1;
-#else
-  size_t len = 0;
-#endif
   int ret;
 
-  drv = kmm_malloc(sizeof(*drv) + len + bufsize);
+  drv = kmm_malloc(sizeof(*drv) + bufsize);
   if (drv == NULL)
     {
       return NULL;
     }
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-
-  memcpy(drv + 1, devpath, len);
-  drv->driver.name = (FAR const char *)(drv + 1);
-  drv->driver.filter.mode.flag =
-                      CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
-
-#  ifdef CONFIG_SMP
-  drv->driver.filter.mode.cpuset =
-                      CONFIG_SCHED_INSTRUMENTATION_CPUSET;
-#  endif
-
-#endif
 
   drv->driver.ops = &g_noteram_ops;
   drv->ni_bufsize = bufsize;
-  drv->ni_buffer = (FAR uint8_t *)(drv + 1) + len;
+  drv->ni_buffer = (FAR uint8_t *)(drv + 1);
   drv->ni_overwrite = overwrite;
   drv->ni_head = 0;
   drv->ni_tail = 0;
   drv->ni_read = 0;
-  drv->pfd = NULL;
 
   ret = note_driver_register(&drv->driver);
   if (ret < 0)

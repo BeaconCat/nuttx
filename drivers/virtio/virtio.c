@@ -24,6 +24,7 @@
 
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/virtio/virtio.h>
@@ -70,6 +71,48 @@ static struct virtio_bus_s g_virtio_bus =
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: virtio_alloc_buf
+ ****************************************************************************/
+
+FAR void *virtio_alloc_buf(FAR struct virtio_device *vdev,
+                           size_t size, size_t align)
+{
+  if (align == 0)
+    {
+      return kmm_malloc(size);
+    }
+  else
+    {
+      return kmm_memalign(align, size);
+    }
+}
+
+/****************************************************************************
+ * Name: virtio_zalloc_buf
+ ****************************************************************************/
+
+FAR void *virtio_zalloc_buf(FAR struct virtio_device *vdev,
+                            size_t size, size_t align)
+{
+  FAR void *ptr = virtio_alloc_buf(vdev, size, align);
+  if (ptr != NULL)
+    {
+      memset(ptr, 0, size);
+    }
+
+  return ptr;
+}
+
+/****************************************************************************
+ * Name: virtio_mmio_free_buf
+ ****************************************************************************/
+
+void virtio_free_buf(FAR struct virtio_device *vdev, FAR void *buf)
+{
+  kmm_free(buf);
+}
 
 /****************************************************************************
  * Name: virtio_register_drivers
@@ -321,12 +364,12 @@ int virtio_unregister_device(FAR struct virtio_device *device)
         container_of(node, struct virtio_device_item_s, node);
       if (item->device == device)
         {
-          /* Call driver remove and mark item->driver NULL to indicate
-           * the device unmatched
-           */
+          /* Call driver remove */
 
-          item->driver->remove(device);
-          item->driver = NULL;
+          if (item->driver)
+            {
+              item->driver->remove(device);
+            }
 
           /* Remove the device from the device list and free memory */
 
