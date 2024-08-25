@@ -56,7 +56,7 @@ void host_freeheap(void *mem)
   _aligned_free(mem);
 }
 
-void *host_allocshmem(const char *name, size_t size)
+void *host_allocshmem(const char *name, size_t size, int master)
 {
   HANDLE handle;
   void *mem;
