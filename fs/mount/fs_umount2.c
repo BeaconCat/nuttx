@@ -110,12 +110,7 @@ int nx_umount2(FAR const char *target, unsigned int flags)
 
   /* Hold the semaphore through the unbind logic */
 
-  ret = inode_lock();
-  if (ret < 0)
-    {
-      goto errout_with_mountpt;
-    }
-
+  inode_lock();
   ret = mountpt_inode->u.i_mops->unbind(mountpt_inode->i_private,
                                        &blkdrvr_inode, flags);
   if (ret < 0)
@@ -145,8 +140,7 @@ int nx_umount2(FAR const char *target, unsigned int flags)
     {
       /* Just decrement the reference count (without deleting it) */
 
-      DEBUGASSERT(mountpt_inode->i_crefs > 0);
-      mountpt_inode->i_crefs--;
+      atomic_fetch_sub(&mountpt_inode->i_crefs, 1);
       inode_unlock();
     }
   else

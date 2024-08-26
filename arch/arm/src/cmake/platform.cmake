@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm/src/cmake/platform.cmake
+# ./arch/arm/src/cmake/platform.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -107,7 +107,7 @@ if(CONFIG_LIBSUPCXX)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_SCHED_GCOV)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a

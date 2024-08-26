@@ -1,7 +1,6 @@
 .. include:: /substitutions.rst
 .. _simulator:
 
-=========
 Simulator
 =========
 
@@ -17,7 +16,7 @@ submit a PR to improve this guide!
 .. todo:: Windows instructions
 
 Prerequisites For macOS
-=======================
+-----------------------
 
 We need ``genromfs`` to build simulators(NON GUI).
 
@@ -38,7 +37,7 @@ For GUI Applications we need X11 Libraries, libx11 can also be built using Homeb
       $ sudo port install xorg-server
 
 Compiling
-=========
+---------
 
 #. Configure the Simulator
 
@@ -95,7 +94,7 @@ Compiling
 .. _simulator_accessing_the_network:
 
 Accessing the Network
-=====================
+---------------------
 
 #. Here we'll use the ``sim:tcpblaster`` configuration because it comes with networking
    that is ready to use.
@@ -203,7 +202,7 @@ Accessing the Network
    Success!
 
 Testing / capturing TCP network traffic
-=======================================
+---------------------------------------
 
 #. Start Wireshark (or tcpdump) on Linux and capture the appeared tap0 interface.
 
@@ -229,7 +228,7 @@ Testing / capturing TCP network traffic
 #. Observe TCP network traffic in Wireshark / tcpdump on Linux.
 
 Stopping
-========
+--------
 
 #. The normal way to stop:
 
@@ -258,6 +257,6 @@ Stopping
        $ sudo ./tools/simhostroute.sh wlan0 off
 
 Debugging
-=========
+---------
 
 You can debug the simulator like any regular Linux program.
