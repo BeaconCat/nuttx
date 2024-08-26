@@ -33,18 +33,21 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 
 #include "inode/inode.h"
 #include "fs_rammap.h"
+#include "sched/sched.h"
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static int file_munmap_(FAR void *start, size_t length, bool kernel)
+static int file_munmap_(FAR void *start, size_t length,
+                        enum mm_map_type_e type)
 {
-  FAR struct tcb_s *tcb = nxsched_self();
+  FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
   FAR struct mm_map_entry_s *entry = NULL;
   FAR struct mm_map_s *mm = get_current_mm();
@@ -99,7 +102,7 @@ unlock:
 
 int file_munmap(FAR void *start, size_t length)
 {
-  return file_munmap_(start, length, true);
+  return file_munmap_(start, length, MAP_KERNEL);
 }
 
 /****************************************************************************
@@ -156,7 +159,7 @@ int munmap(FAR void *start, size_t length)
 {
   int ret;
 
-  ret = file_munmap_(start, length, false);
+  ret = file_munmap_(start, length, MAP_USER);
   if (ret < 0)
     {
       set_errno(-ret);
