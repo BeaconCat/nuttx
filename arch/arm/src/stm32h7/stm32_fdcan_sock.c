@@ -547,7 +547,7 @@ static void fdcan_dumpregs(struct fdcan_driver_s *priv)
       /* Protocol error -- check protocol status register for details */
 
       regval = getreg32(priv->base + STM32_FDCAN_PSR_OFFSET);
-      printf("--PSR.LEC = %" PRId32 "\n", regval & FDCAN_PSR_LEC_MASK);
+      printf("--PSR.LEC = %d\n", regval & FDCAN_PSR_LEC);
     }
 }
 #endif
@@ -880,7 +880,7 @@ static int fdcan_transmit(struct fdcan_driver_s *priv)
 
       header.id.esi = (frame->can_id & CAN_ERR_FLAG) ? 1 : 0;
       header.id.rtr = (frame->can_id & CAN_RTR_FLAG) ? 1 : 0;
-      header.dlc = len_to_can_dlc[frame->len];
+      header.dlc = g_len_to_can_dlc[frame->len];
       header.brs = brs; /* Bitrate switching */
       header.fdf = 1;   /* CAN-FD frame */
       header.efc = 0;   /* Don't store Tx events */
@@ -1140,10 +1140,8 @@ static void fdcan_receive_work(void *arg)
       /* Read the frame contents */
 
 #ifdef CONFIG_NET_CAN_CANFD
-      if (rf->header.fdf)
+      if (rf->header.fdf) /* CAN FD frame */
         {
-          /* CAN FD frame */
-
           struct canfd_frame *frame = (struct canfd_frame *)priv->rx_pool;
 
           if (rf->header.id.xtd)
@@ -1161,7 +1159,7 @@ static void fdcan_receive_work(void *arg)
               frame->can_id |= CAN_RTR_FLAG;
             }
 
-          frame->len = can_dlc_to_len[rf->header.dlc];
+          frame->len = g_can_dlc_to_len[rf->header.dlc];
 
           uint32_t *frame_data_word = (uint32_t *)&frame->data[0];
 
@@ -1181,11 +1179,9 @@ static void fdcan_receive_work(void *arg)
           priv->dev.d_len = sizeof(struct canfd_frame);
           priv->dev.d_buf = (uint8_t *)frame;
         }
-      else
+      else /* CAN 2.0 Frame */
 #endif
         {
-          /* CAN 2.0 Frame */
-
           struct can_frame *frame = (struct can_frame *)priv->rx_pool;
 
           if (rf->header.id.xtd)
@@ -2082,7 +2078,7 @@ int fdcan_initialize(struct fdcan_driver_s *priv)
     }
 
 #ifdef CONFIG_STM32H7_FDCAN_REGDEBUG
-  const struct fdcan_bitseg *tim = &priv->arbi_timing;
+  const fdcan_bitseg *tim = &priv->arbi_timing;
   ninfo("[fdcan][arbi] Timings: presc=%u sjw=%u bs1=%u bs2=%u\r\n",
         tim->prescaler, tim->sjw, tim->bs1, tim->bs2);
 #endif
@@ -2106,7 +2102,7 @@ int fdcan_initialize(struct fdcan_driver_s *priv)
     }
 
 #ifdef CONFIG_STM32H7_FDCAN_REGDEBUG
-  tim = &priv->data_timing;
+  const fdcan_bitseg *tim = &priv->data_timing;
   ninfo("[fdcan][data] Timings: presc=%u sjw=%u bs1=%u bs2=%u\r\n",
         tim->prescaler, tim->sjw, tim->bs1, tim->bs2);
 #endif
