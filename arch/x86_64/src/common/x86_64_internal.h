@@ -64,9 +64,14 @@
 #    undef  USE_SERIALDRIVER
 #    undef  USE_EARLYSERIALINIT
 #    undef  CONFIG_DEV_LOWCONSOLE
-#  elif defined(CONFIG_16550_UART)
+#  elif defined(CONFIG_16550_UART) && \
+        !defined(CONFIG_16550_NO_SERIAL_CONSOLE)
 #    define USE_SERIALDRIVER 1
 #    define USE_EARLYSERIALINIT 1
+#  elif defined(CONFIG_16550_PCI_UART) && \
+        !defined(CONFIG_16550_PCI_NO_SERIAL_CONSOLE)
+#    define USE_SERIALDRIVER 1
+#    undef  USE_EARLYSERIALINIT
 #  endif
 #endif
 
@@ -98,6 +103,14 @@
 #define STACK_ALIGN_MASK    (STACK_ALIGNMENT - 1)
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
+
+/* This is the value used to mark the stack for subsequent stack monitoring
+ * logic.
+ */
+
+#define STACK_COLOR         0xdeadbeef
+#define INTSTACK_COLOR      0xdeadbeef
+#define HEAP_COLOR          'h'
 
 #define getreg8(p)          inb(p)
 #define putreg8(v,p)        outb(v,p)
@@ -146,7 +159,7 @@ extern const uintptr_t g_idle_topstack[];
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 extern uint8_t g_intstackalloc[];
-extern uint8_t g_intstackalloc[];
+extern uint8_t g_isrstackalloc[];
 #endif
 
 /* These symbols are setup by the linker script. */
@@ -247,6 +260,13 @@ void x86_64_usbuninitialize(void);
 
 #ifdef CONFIG_PCI
 void x86_64_pci_init(void);
+#endif
+
+/* Defined in intel64_checkstack.c */
+
+#ifdef CONFIG_STACK_COLORATION
+size_t x86_64_stack_check(void *stackbase, size_t nbytes);
+void x86_64_stack_color(void *stackbase, size_t nbytes);
 #endif
 
 #endif /* __ASSEMBLY__ */
