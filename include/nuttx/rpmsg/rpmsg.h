@@ -47,6 +47,7 @@
 
 struct rpmsg_s
 {
+  bool                         init;
   struct metal_list            bind;
   rmutex_t                     lock;
   struct metal_list            node;
@@ -59,11 +60,11 @@ struct rpmsg_s
 
 /**
  * struct rpmsg_ops_s - Rpmsg device operations
- * wait: wait sem.
- * post: post sem.
- * get_cpuname: get cpu name.
- * get_tx_buffer_size: get tx buffer size.
- * get_rx_buffer_size: get rx buffer size.
+ * @wait: wait sem.
+ * @post: post sem.
+ * @get_cpuname: get cpu name.
+ * @get_tx_buffer_size: get tx buffer size.
+ * @get_rx_buffer_size: get rx buffer size.
  */
 
 struct rpmsg_ops_s
@@ -73,6 +74,7 @@ struct rpmsg_ops_s
   CODE int (*ioctl)(FAR struct rpmsg_s *rpmsg, int cmd, unsigned long arg);
   CODE void (*panic)(FAR struct rpmsg_s *rpmsg);
   CODE void (*dump)(FAR struct rpmsg_s *rpmsg);
+  CODE FAR const char *(*get_local_cpuname)(FAR struct rpmsg_s *rpmsg);
   CODE FAR const char *(*get_cpuname)(FAR struct rpmsg_s *rpmsg);
   CODE int (*get_tx_buffer_size)(FAR struct rpmsg_s *rpmsg);
   CODE int (*get_rx_buffer_size)(FAR struct rpmsg_s *rpmsg);
@@ -102,6 +104,7 @@ extern "C"
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 
+FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev);
 FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev);
 
 int rpmsg_get_tx_buffer_size(FAR struct rpmsg_device *rdev);
@@ -117,17 +120,20 @@ void rpmsg_unregister_callback(FAR void *priv,
                                rpmsg_dev_cb_t device_destroy,
                                rpmsg_match_cb_t ns_match,
                                rpmsg_bind_cb_t ns_bind);
+
 void rpmsg_ns_bind(FAR struct rpmsg_device *rdev,
                    FAR const char *name, uint32_t dest);
 void rpmsg_ns_unbind(FAR struct rpmsg_device *rdev,
                      FAR const char *name, uint32_t dest);
+
 void rpmsg_device_created(FAR struct rpmsg_s *rpmsg);
 void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg);
+
 int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
                    FAR const struct rpmsg_ops_s *ops);
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg);
-int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg);
 
+int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg);
 int rpmsg_panic(FAR const char *cpuname);
 void rpmsg_dump_all(void);
 
