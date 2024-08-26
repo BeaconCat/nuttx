@@ -75,18 +75,9 @@
 
 int timer_getoverrun(timer_t timerid)
 {
-  FAR struct posix_timer_s *timer = timer_gethandle(timerid);
-  int ret;
-
-  if (!timer)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
-
-  ret = timer->pt_overrun;
-
-  return ret > DELAYTIMER_MAX ? DELAYTIMER_MAX : ret;
+  UNUSED(timerid);
+  set_errno(EINVAL);
+  return ERROR;
 }
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

@@ -410,8 +410,8 @@ static int netprocfs_rxstatistics_header(
     FAR struct netprocfs_file_s *netfile)
 {
   DEBUGASSERT(netfile != NULL);
-  return snprintf(netfile->line, NET_LINELEN , "\tRX: %-8s %-8s %-8s %-8s\n",
-                  "Received", "Fragment", "Errors", "Bytes");
+  return snprintf(netfile->line, NET_LINELEN , "\tRX: %-8s %-8s %-8s\n",
+                  "Received", "Fragment", "Errors");
 }
 #endif /* CONFIG_NETDEV_STATISTICS */
 
@@ -429,12 +429,10 @@ static int netprocfs_rxstatistics(FAR struct netprocfs_file_s *netfile)
   dev = netfile->dev;
   stats = &dev->d_statistics;
 
-  return snprintf(netfile->line, NET_LINELEN, \
-                  "\t    %08lx %08lx %08lx %-16llx\n",
+  return snprintf(netfile->line, NET_LINELEN, "\t    %08lx %08lx %08lx\n",
                   (unsigned long)stats->rx_packets,
                   (unsigned long)stats->rx_fragments,
-                  (unsigned long)stats->rx_errors,
-                  (unsigned long long)stats->rx_bytes);
+                  (unsigned long)stats->rx_errors);
 }
 #endif /* CONFIG_NETDEV_STATISTICS */
 
@@ -526,9 +524,8 @@ static int netprocfs_txstatistics_header(
 {
   DEBUGASSERT(netfile != NULL);
 
-  return snprintf(netfile->line, NET_LINELEN,
-                 "\tTX: %-8s %-8s %-8s %-8s %-8s\n",
-                 "Queued", "Sent", "Errors", "Timeouts", "Bytes");
+  return snprintf(netfile->line, NET_LINELEN, "\tTX: %-8s %-8s %-8s %-8s\n",
+                 "Queued", "Sent", "Errors", "Timeouts");
 }
 #endif /* CONFIG_NETDEV_STATISTICS */
 
@@ -547,12 +544,11 @@ static int netprocfs_txstatistics(FAR struct netprocfs_file_s *netfile)
   stats = &dev->d_statistics;
 
   return snprintf(netfile->line, NET_LINELEN,
-                  "\t    %08lx %08lx %08lx %08lx %-16llx \n",
+                  "\t    %08lx %08lx %08lx %08lx\n",
                   (unsigned long)stats->tx_packets,
                   (unsigned long)stats->tx_done,
                   (unsigned long)stats->tx_errors,
-                  (unsigned long)stats->tx_timeouts,
-                  (unsigned long long)stats->tx_bytes);
+                  (unsigned long)stats->tx_timeouts);
 }
 #endif /* CONFIG_NETDEV_STATISTICS */
 
