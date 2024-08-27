@@ -46,11 +46,6 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-if(POLICY CMP0169)
-  # allow to call FetchContent_Populate directly
-  cmake_policy(SET CMP0169 OLD)
-endif()
-
 # Basic CMake configuration ##################################################
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -70,12 +65,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Process board config & directory locations #################################
 
 set(NUTTX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-# unceaned previous make build can cause various types of cmake error
-if(EXISTS "${NUTTX_DIR}/.config")
-  message(
-    FATAL_ERROR "Please distclean previous make build with `make distclean`")
-endif()
 
 if(NOT DEFINED BOARD_CONFIG)
   message(FATAL_ERROR "Please define configuration with BOARD_CONFIG")
@@ -158,7 +147,7 @@ endif()
 include(nuttx_kconfig)
 nuttx_export_kconfig_by_value(${NUTTX_DEFCONFIG} "CONFIG_APPS_DIR")
 
-if((NOT NUTTX_APPS_DIR) AND (NOT CONFIG_APPS_DIR))
+if(NOT CONFIG_APPS_DIR)
   if(EXISTS "${NUTTX_DIR}/../apps")
     set(NUTTX_APPS_DIR "${NUTTX_DIR}/../apps")
   elseif(EXISTS "${NUTTX_DIR}/../nuttx-apps")
@@ -178,7 +167,6 @@ if(NOT EXISTS "${NUTTX_APPS_DIR}")
   message(FATAL_ERROR "Application directory ${NUTTX_APPS_DIR} is not found")
 endif()
 
-get_filename_component(NUTTX_APPS_DIR ${NUTTX_APPS_DIR} ABSOLUTE)
 get_filename_component(apps_dir ${NUTTX_APPS_DIR} NAME)
 set(NUTTX_APPS_BINDIR "${CMAKE_BINARY_DIR}/${apps_dir}")
 
@@ -198,13 +186,20 @@ set(ENV{DRIVERS_PLATFORM_DIR} dummy) # TODO
 
 set(ENV{HOST_LINUX} n)
 set(ENV{HOST_MACOS} n)
-set(ENV{HOST_BSD} n)
 set(ENV{HOST_WINDOWS} n)
 set(ENV{HOST_OTHER} n)
 
-# We define host
-include(nuttx_sethost)
-nuttx_sethost()
+if(APPLE)
+  set(ENV{HOST_MACOS} y)
+elseif(WIN32)
+  set(ENV{HOST_WINDOWS} y)
+elseif(UNIX)
+  set(ENV{HOST_LINUX} y)
+  set(LINUX TRUE)
+else()
+  set(ENV{HOST_OTHER} y)
+  set(OTHER_OS TRUE)
+endif()
 
 include(nuttx_parse_function_args)
 include(nuttx_add_subdirectory)
@@ -333,15 +328,9 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config OR NOT "${NUTTX_DEFCONFIG}" STREQUAL
   # store original expanded .config
   configure_file(${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/.config.orig
                  COPYONLY)
-
-  string(REPLACE "\n" ";" KCONFIG_ESTRING ${KCONFIG_ERROR})
-  foreach(estring ${KCONFIG_ESTRING})
-    string(REGEX MATCH "the 'modules' option is not supported" result
-                 ${estring})
-    if(NOT result)
-      message(WARNING "Kconfig Configuration Error: ${estring}")
-    endif()
-  endforeach()
+  if(KCONFIG_ERROR)
+    message(WARNING "Kconfig Configuration Error: ${KCONFIG_ERROR}")
+  endif()
 
   if(KCONFIG_STATUS AND NOT KCONFIG_STATUS EQUAL 0)
     message(
@@ -375,6 +364,7 @@ include(nuttx_add_symtab)
 include(nuttx_add_module)
 include(nuttx_add_dependencies)
 include(nuttx_export_header)
+include(nuttx_remove_compile_options)
 include(nuttx_source_file_properties)
 include(menuconfig)
 
@@ -404,13 +394,21 @@ set(CMAKE_TOOLCHAIN_FILE
 # This triggers configuration
 
 project(NuttX LANGUAGES C CXX ASM)
-
 if(WIN32)
   enable_language(ASM_MASM)
 endif()
 
 # Setup platform options (this needs to happen after project(), once the
 # toolchain file has been processed)
+
+# Support custom Toolchain options by custom Boards
+if(CONFIG_ARCH_BOARD_CUSTOM)
+  if(EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake
+     AND EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
+    # must be added AFTER ToolchainFile and BEFORE platform
+    include(${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
+  endif()
+endif()
 
 include(platform)
 
@@ -452,7 +450,6 @@ if(CONFIG_ARCH_SIM)
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
   target_compile_options(sim_head PRIVATE ${options})
-  target_compile_options(sim_head PRIVATE -fvisibility=default)
 
   # We need the relocatable object to be first in the list of libraries to be
   # linked against final nuttx binary
@@ -479,7 +476,7 @@ if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
   endif()
 endif()
 
-if(MSVC)
+if(WIN32)
   add_compile_options(
     -W2
     -wd4116 # unnamed type definition in parentheses
@@ -492,44 +489,17 @@ if(MSVC)
 else()
   add_compile_options(
     # system wide warnings
-    -Wall $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes> -Wshadow -Wundef
+    -Wall
+    $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+    -Wshadow
+    -Wundef
     # system wide options
+    $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>
     $<$<COMPILE_LANGUAGE:ASM>:-D__ASSEMBLY__>)
-endif()
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-else()
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-D_STDLIB_H_>)
-endif()
-
-if(NOT CONFIG_CXX_EXCEPTION)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-                      $<$<COMPILE_LANGUAGE:CXX>:-fcheck-new>)
-endif()
-
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
 endif()
 
 if(CONFIG_NDEBUG)
   add_compile_options(-DNDEBUG)
-endif()
-
-# Cmake build provide absolute paths to compile files. If __FILE__ macros are
-# used in the source code(ASSERT), the binary will contain many invalid paths.
-# This saves some memory, stops exposing build systems locations in binaries,
-# make failure logs more deterministic and most importantly makes builds more
-# failure logs more deterministic and most importantly makes builds more
-# deterministic. Debuggers usually have a path mapping feature to ensure the
-# files are still found.
-if(NOT MSVC)
-  if(CONFIG_OUTPUT_STRIP_PATHS)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_APPS_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_BOARD_ABS_DIR}=)
-    add_compile_options(-fmacro-prefix-map=${NUTTX_CHIP_ABS_DIR}=)
-  endif()
 endif()
 
 add_definitions(-D__NuttX__)
@@ -638,14 +608,15 @@ if(CONFIG_BUILD_FLAT)
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 endif()
 
-set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs})
+set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs}
+               ${nuttx_extra_libs})
 
 if(NOT CONFIG_ARCH_SIM)
 
   # TODO: nostart/nodefault not applicable to nuttx toolchain
   target_link_libraries(
-    nuttx PRIVATE ${NUTTX_EXTRA_FLAGS} -T${ldscript} -Wl,--start-group
-                  ${nuttx_libs} ${nuttx_extra_libs} -Wl,--end-group)
+    nuttx PRIVATE ${NUTTX_EXTRA_FLAGS} -Wl,--script=${ldscript}
+                  -Wl,--start-group ${nuttx_libs} -Wl,--end-group)
 
   # generate binary outputs in different formats (.bin, .hex, etc)
   nuttx_generate_outputs(nuttx)
@@ -670,6 +641,9 @@ elseif(WIN32)
        "${CONFIG_SIM_STACKSIZE_ADJUSTMENT} + ${CONFIG_IDLETHREAD_STACKSIZE}"
        OUTPUT_FORMAT DECIMAL)
   target_link_options(nuttx PUBLIC /STACK:${LINK_STACKSIZE},${LINK_STACKSIZE})
+  if("${CMAKE_GENERATOR_PLATFORM}" STREQUAL "x64")
+    target_link_options(nuttx PUBLIC /LARGEADDRESSAWARE:NO)
+  endif()
   set(nuttx_libs_paths)
   foreach(lib ${nuttx_libs})
     list(APPEND nuttx_libs_paths $<TARGET_FILE:${lib}>)
@@ -678,52 +652,25 @@ elseif(WIN32)
   add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/nuttx_all.lib
     COMMAND ${CMAKE_AR} /OUT:${CMAKE_BINARY_DIR}/nuttx_all.lib
-            ${nuttx_libs_paths} ${nuttx_extra_libs}
-    DEPENDS ${nuttx_libs} ${nuttx_extra_libs}
+            ${nuttx_libs_paths}
+    DEPENDS ${nuttx_libs}
     VERBATIM)
   add_custom_target(nuttx_all-lib DEPENDS ${CMAKE_BINARY_DIR}/nuttx_all.lib)
   add_dependencies(nuttx nuttx_all-lib)
   target_link_libraries(nuttx PRIVATE $<TARGET_OBJECTS:sim_head>
                                       ${CMAKE_BINARY_DIR}/nuttx_all.lib)
 else()
+
+  if(NOT APPLE)
+    # generate SIM ld.script for cheat C++ global construction
+    include(nuttx_generate_sim_ld)
+  endif()
+
   # On sim platform the link step is a little different. NuttX is first built
   # into a partially linked relocatable object nuttx.rel with no interface to
   # host OS. Then, the names of symbols that conflict with libc symbols are
   # renamed. The final nuttx binary is built by linking the host-specific
   # objects with the relocatable binary.
-
-  # C++ global objects are constructed before main get executed, but it isn't a
-  # good point for simulator because NuttX doesn't finish the kernel
-  # initialization yet. So we have to skip the standard facilities and do the
-  # construction by ourself. But how to achieve the goal? 1.Command linker
-  # generate the default script(-verbose) 2.Replace
-  # __init_array_start/__init_array_end with _sinit/_einit 3.Append
-  # __init_array_start = .; __init_array_end = .; Step 2 let nxtask_startup find
-  # objects need to construct Step 3 cheat the host there is no object to
-  # construct Note: the destructor can be fixed in the same way.
-
-  if(NOT APPLE)
-    add_custom_command(
-      OUTPUT nuttx.ld
-      COMMAND
-        ${CMAKE_C_COMPILER} ${CMAKE_EXE_LINKER_FLAGS}
-        $<$<BOOL:${CONFIG_SIM_M32}>:-m32> -Wl,-verbose 2> /dev/null >
-        nuttx-orig.ld || true
-      COMMAND
-        cat nuttx-orig.ld | sed -e '/====/,/====/!d\;//d' -e
-        's/__executable_start/_stext/g' -e 's/__init_array_start/_sinit/g' -e
-        's/__init_array_end/_einit/g' -e 's/__fini_array_start/_sfini/g' -e
-        's/__fini_array_end/_efini/g' > nuttx.ld
-      COMMAND
-        echo ARGS
-        '__init_array_start = .\; __init_array_end = .\; __fini_array_start = .\; __fini_array_end = .\;'
-        >> nuttx.ld
-      COMMAND sed -i '/\\.data *:/i " ${CONFIG_SIM_CUSTOM_DATA_SECTION} " '
-              nuttx.ld)
-  endif()
-
-  # conflicting symbols to rename
-
   include(nuttx_redefine_symbols)
 
   # TODO: do with single function call?
@@ -732,28 +679,16 @@ else()
     list(APPEND nuttx_libs_paths $<TARGET_FILE:${lib}>)
   endforeach()
 
-  if(APPLE)
-    add_custom_command(
-      OUTPUT nuttx.rel
-      COMMAND
-        ${CMAKE_LINKER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} ${nuttx_extra_libs}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
-      COMMAND_EXPAND_LISTS)
-  else()
-    add_custom_command(
-      OUTPUT nuttx.rel
-      COMMAND
-        ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} ${nuttx_extra_libs}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-      COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head sim_redefine_symbols
-      COMMAND_EXPAND_LISTS)
-  endif()
+  add_custom_command(
+    OUTPUT nuttx.rel
+    COMMAND
+      ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
+      $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
+      ${nuttx_libs_paths} $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o
+      nuttx.rel
+    COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
+    DEPENDS ${nuttx_libs} sim_head sim_redefine_symbols
+    COMMAND_EXPAND_LISTS)
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
                                       $<$<NOT:$<BOOL:${APPLE}>>:nuttx.ld>)
 
@@ -791,22 +726,7 @@ if(CONFIG_BUILD_PROTECTED)
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 
   get_property(user_ldscript GLOBAL PROPERTY LD_SCRIPT_USER)
-
-  if(DEFINED PREPROCES)
-    get_filename_component(LD_SCRIPT_NAME ${user_ldscript} NAME)
-    set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
-    add_custom_command(
-      OUTPUT ${LD_SCRIPT_TMP}
-      DEPENDS ${user_ldscript}
-      COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_CHIP_ABS_DIR}
-              ${user_ldscript} > ${LD_SCRIPT_TMP}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    add_custom_target(user_ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
-    add_dependencies(nuttx_user user_ldscript_tmp)
-    set(user_ldscript ${LD_SCRIPT_TMP})
-  endif()
-
-  list(TRANSFORM user_ldscript PREPEND "-T")
+  list(TRANSFORM user_ldscript PREPEND "-Wl,--script=")
 
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
@@ -815,8 +735,14 @@ if(CONFIG_BUILD_PROTECTED)
     OUTPUT_VARIABLE nuttx_user_libgcc)
 
   # reset link options for userspace to prevent sections from being accidentally
-  # deleted
-  set_target_properties(nuttx_user PROPERTIES LINK_OPTIONS "")
+  # deleted Toolchain link options
+  get_target_property(nuttx_user_LINK_OPTIONS nuttx_user LINK_OPTIONS)
+  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--gc-sections")
+  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--cref")
+  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx.map")
+  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--entry=__start")
+  set_target_properties(nuttx_user PROPERTIES LINK_OPTIONS
+                                              "${nuttx_user_LINK_OPTIONS}")
 
   target_link_options(
     nuttx_user PRIVATE -nostartfiles -nodefaultlibs
@@ -832,11 +758,6 @@ if(CONFIG_BUILD_PROTECTED)
             ${nuttx_user_libgcc}
             $<$<BOOL:${CONFIG_HAVE_CXX}>:supc++>
             $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group>)
-
-  target_include_directories(
-    nuttx_user SYSTEM
-    PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include
-            ${CMAKE_BINARY_DIR}/include_arch)
 
   add_custom_command(
     OUTPUT User.map
