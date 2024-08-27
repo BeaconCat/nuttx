@@ -1052,6 +1052,7 @@ static int mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg)
   mmcsd_sendcmdpoll(priv, MMCSD_CMD6, arg);
   return mmcsd_recv_r1(priv, MMCSD_CMD6);
 }
+#endif
 
 #endif /* CONFIG_MMCSD_IOCSUPPORT */
 
