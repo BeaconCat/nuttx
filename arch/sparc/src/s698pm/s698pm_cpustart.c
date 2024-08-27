@@ -71,6 +71,8 @@ volatile static spinlock_t g_cpu_boot;
 
 void s698pm_cpu_boot(void)
 {
+  struct tcb_s *tcb = this_task();
+
   _info("CPU%d Started\n", this_cpu());
 
   /* Initialize CPU interrupts */
@@ -82,12 +84,12 @@ void s698pm_cpu_boot(void)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
 
-  sched_note_cpu_started(this_task());
+  sched_note_cpu_started(tcb);
 #endif
 
   /* Reset scheduler parameters */
 
-  nxsched_resume_scheduler(this_task());
+  nxsched_resume_scheduler(tcb);
 
   /* And finally, enable cpu interrupts */
 
