@@ -19,8 +19,7 @@
 # ##############################################################################
 
 function(nuttx_create_symlink old new)
-  if(IS_DIRECTORY ${old} AND CMAKE_HOST_SYSTEM_NAME MATCHES
-                             "MSYS|CYGWIN|Windows")
+  if(IS_DIRECTORY ${old} AND WIN32)
     execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${old} ${new})
   else()
     file(CREATE_LINK ${old} ${new} COPY_ON_ERROR SYMBOLIC)
