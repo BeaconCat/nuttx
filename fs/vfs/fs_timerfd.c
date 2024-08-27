@@ -31,7 +31,6 @@
 
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/mutex.h>
 
@@ -124,7 +123,7 @@ static struct inode g_timerfd_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  ATOMIC_VAR_INIT(1),     /* i_crefs */
+  1,                      /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_timerfd_fops       /* u */
@@ -512,9 +511,12 @@ int timerfd_settime(int fd, int flags,
       goto errout;
     }
 
-  if (filep->f_inode->u.i_ops != &g_timerfd_fops)
+  /* Check fd come from us */
+
+  if (!filep->f_inode || filep->f_inode->u.i_ops != &g_timerfd_fops)
     {
-      goto errout_with_filep;
+      ret = -EINVAL;
+      goto errout;
     }
 
   dev = (FAR struct timerfd_priv_s *)filep->f_priv;
@@ -554,7 +556,6 @@ int timerfd_settime(int fd, int flags,
   if (new_value->it_value.tv_sec <= 0 && new_value->it_value.tv_nsec <= 0)
     {
       leave_critical_section(intflags);
-      fs_putfilep(filep);
       return OK;
     }
 
@@ -600,15 +601,12 @@ int timerfd_settime(int fd, int flags,
   if (ret < 0)
     {
       leave_critical_section(intflags);
-      goto errout_with_filep;
+      goto errout;
     }
 
   leave_critical_section(intflags);
-  fs_putfilep(filep);
   return OK;
 
-errout_with_filep:
-  fs_putfilep(filep);
 errout:
   set_errno(-ret);
   return ERROR;
@@ -637,9 +635,11 @@ int timerfd_gettime(int fd, FAR struct itimerspec *curr_value)
       goto errout;
     }
 
-  if (filep->f_inode->u.i_ops != &g_timerfd_fops)
+  /* Check fd come from us */
+
+  if (!filep->f_inode || filep->f_inode->u.i_ops != &g_timerfd_fops)
     {
-      fs_putfilep(filep);
+      ret = -EINVAL;
       goto errout;
     }
 
@@ -653,7 +653,6 @@ int timerfd_gettime(int fd, FAR struct itimerspec *curr_value)
 
   clock_ticks2time(&curr_value->it_value, ticks);
   clock_ticks2time(&curr_value->it_interval, dev->delay);
-  fs_putfilep(filep);
   return OK;
 
 errout:
