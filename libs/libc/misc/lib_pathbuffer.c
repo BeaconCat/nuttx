@@ -95,15 +95,9 @@ FAR char *lib_get_pathbuffer(void)
 
   nxmutex_unlock(&g_pathbuffer.lock);
 
-  /* If no free buffer is found, allocate a new one if
-   * CONFIG_LIBC_PATHBUFFER_MALLOC is enabled
-   */
+  /* If no free buffer is found, allocate a new one */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
   return lib_malloc(PATH_MAX);
-#else
-  return NULL;
-#endif
 }
 
 /****************************************************************************
@@ -140,7 +134,5 @@ void lib_put_pathbuffer(FAR char *buffer)
 
   /* Free the buffer if it was dynamically allocated */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
-  return lib_free(buffer);
-#endif
+  lib_free(buffer);
 }
