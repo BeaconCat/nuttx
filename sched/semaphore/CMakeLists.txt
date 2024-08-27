@@ -30,10 +30,15 @@ set(CSRCS
     sem_post.c
     sem_recover.c
     sem_reset.c
-    sem_waitirq.c)
+    sem_waitirq.c
+    sem_rw.c)
 
 if(CONFIG_PRIORITY_INHERITANCE)
   list(APPEND CSRCS sem_initialize.c sem_holder.c sem_setprotocol.c)
+endif()
+
+if(CONFIG_PRIORITY_PROTECT)
+  list(APPEND CSRCS sem_protect.c)
 endif()
 
 target_sources(sched PRIVATE ${CSRCS})

@@ -40,12 +40,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Configuration ************************************************************/
-
-#ifndef CONFIG_SEM_PREALLOCHOLDERS
-#  define CONFIG_SEM_PREALLOCHOLDERS 0
-#endif
-
 /****************************************************************************
  * Private Type Declarations
  ****************************************************************************/
@@ -317,7 +311,7 @@ static int nxsem_boostholderprio(FAR struct semholder_s *pholder,
    * because the thread is already running at a sufficient priority.
    */
 
-  if (rtcb->sched_priority > htcb->sched_priority)
+  if (rtcb && htcb && rtcb->sched_priority > htcb->sched_priority)
     {
       /* Raise the priority of the holder of the semaphore.  This
        * cannot cause a context switch because we have preemption
@@ -599,7 +593,8 @@ void nxsem_destroyholder(FAR sem_t *sem)
 #else
   /* There may be an issue if there are multiple holders of the semaphore. */
 
-  DEBUGASSERT(sem->holder.htcb == NULL);
+  DEBUGASSERT(sem->holder.htcb == NULL
+              || sem->holder.htcb == this_task());
 
 #endif
 
@@ -755,14 +750,13 @@ void nxsem_release_holder(FAR sem_t *sem)
               return;
             }
         }
-
-      /* The current task is not a holder */
-
-      DEBUGPANIC();
 #else
       pholder = &sem->holder;
-      DEBUGASSERT(pholder->htcb == rtcb);
-      nxsem_freeholder(sem, pholder);
+      if (pholder->htcb)
+        {
+          DEBUGASSERT(pholder->htcb == rtcb);
+          nxsem_freeholder(sem, pholder);
+        }
 #endif
     }
 }
