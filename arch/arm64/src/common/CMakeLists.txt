@@ -29,7 +29,7 @@ list(APPEND SRCS arm64_fork_func.S)
 list(APPEND SRCS arm64_initialize.c arm64_initialstate.c arm64_boot.c)
 list(APPEND SRCS arm64_nputs.c arm64_copystate.c arm64_createstack.c)
 list(APPEND SRCS arm64_releasestack.c arm64_stackframe.c arm64_usestack.c)
-list(APPEND SRCS arm64_exit.c arm64_fork.c)
+list(APPEND SRCS arm64_exit.c arm64_fork.c arm64_switchcontext.c)
 list(APPEND SRCS arm64_schedulesigaction.c arm64_sigdeliver.c)
 list(APPEND SRCS arm64_getintstack.c arm64_registerdump.c)
 list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c)
@@ -52,9 +52,6 @@ endif()
 
 if(CONFIG_ARM64_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm64_gicv2.c)
-  if(CONFIG_ARM64_GICV2M)
-    list(APPEND SRCS arm64_gicv2m.c)
-  endif()
 endif()
 
 if(CONFIG_ARCH_HAVE_MMU)
@@ -63,10 +60,6 @@ endif()
 
 if(CONFIG_ARCH_HAVE_MPU)
   list(APPEND SRCS arm64_mpu.c)
-  set_source_files_properties(
-    arm64_mpu.c TARGET_DIRECTORY arch
-    PROPERTIES COMPILE_FLAGS -fno-sanitize=kernel-hwaddress
-               -fno-sanitize=kernel-address)
 endif()
 
 if(CONFIG_ARM64_PSCI)
@@ -83,16 +76,16 @@ if(CONFIG_BUILD_KERNEL)
        arm64_signal_dispatch.c)
 endif()
 
+if(CONFIG_ARCH_KERNEL_STACK)
+  list(APPEND SRCS arm64_addrenv_kstack.c)
+endif()
+
 if(CONFIG_ARCH_ADDRENV)
-  list(APPEND SRCS arm64_addrenv.c arm64_addrenv_utils.c arm64_pgalloc.c)
+  list(APPEND SRCS arm64_addrenv.c arm64_pgalloc.c arm64_addrenv_perms.c)
+  list(APPEND SRCS arm64_addrenv_utils.c arm64_addrenv_shm.c)
+  list(APPEND SRCS arm64_addrenv_pgmap.c)
   if(CONFIG_ARCH_STACK_DYNAMIC)
     list(APPEND SRCS arm64_addrenv_ustack.c)
-  endif()
-  if(CONFIG_ARCH_KERNEL_STACK)
-    list(APPEND SRCS arm64_addrenv_kstack.c)
-  endif()
-  if(CONFIG_ARCH_VMA_MAPPING)
-    list(APPEND SRCS arm64_addrenv_shm.c)
   endif()
 endif()
 
@@ -118,10 +111,6 @@ endif()
 
 if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
-endif()
-
-if(CONFIG_ARCH_HAVE_DEBUG)
-  list(APPEND SRCS arm64_hwdebug.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

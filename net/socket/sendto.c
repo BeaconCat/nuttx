@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/socket/sendto.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -199,7 +201,6 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
                FAR const struct sockaddr *to, socklen_t tolen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
   ssize_t ret;
 #ifdef CONFIG_BUILD_KERNEL
   struct sockaddr_storage kaddr;
@@ -236,14 +237,13 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &filep, &psock);
+  ret = sockfd_socket(sockfd, &psock);
 
   /* And let psock_sendto do all of the work */
 
   if (ret == OK)
     {
       ret = psock_sendto(psock, buf, len, flags, to, tolen);
-      fs_putfilep(filep);
     }
 
 #ifdef CONFIG_BUILD_KERNEL
