@@ -56,8 +56,7 @@
  *
  ****************************************************************************/
 
-int32_t uuid_compare(FAR const uuid_t *a, FAR const uuid_t *b,
-                     FAR uint32_t *status)
+int32_t uuid_compare(const uuid_t *a, const uuid_t *b, uint32_t *status)
 {
   if (status != NULL)
     {

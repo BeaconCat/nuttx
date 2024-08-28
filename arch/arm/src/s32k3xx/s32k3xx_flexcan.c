@@ -856,7 +856,6 @@ static int s32k3xx_transmit(struct s32k3xx_driver_s *priv)
       if (frame->can_id & CAN_EFF_FLAG)
         {
           cs.ide = 1;
-          cs.srr = 1;
           mb->id.ext = frame->can_id & MASKEXTID;
         }
       else
@@ -880,7 +879,6 @@ static int s32k3xx_transmit(struct s32k3xx_driver_s *priv)
       if (frame->can_id & CAN_EFF_FLAG)
         {
           cs.ide = 1;
-          cs.srr = 1;
           mb->id.ext = frame->can_id & MASKEXTID;
         }
       else
@@ -890,7 +888,7 @@ static int s32k3xx_transmit(struct s32k3xx_driver_s *priv)
 
       cs.rtr = frame->can_id & FLAGRTR ? 1 : 0;
 
-      cs.dlc = len_to_can_dlc[frame->len];
+      cs.dlc = g_len_to_can_dlc[frame->len];
 
       frame_data_word = (uint32_t *)&frame->data[0];
 
@@ -1020,11 +1018,9 @@ static void s32k3xx_receive(struct s32k3xx_driver_s *priv, uint32_t flags)
       /* Read the frame contents */
 
 #ifdef CONFIG_NET_CAN_CANFD
-      if (rf->cs.edl)
+      if (rf->cs.edl) /* CAN FD frame */
         {
-          /* CAN FD frame */
-
-          struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc;
+        struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc;
 
           if (rf->cs.ide)
             {
@@ -1041,7 +1037,7 @@ static void s32k3xx_receive(struct s32k3xx_driver_s *priv, uint32_t flags)
               frame->can_id |= FLAGRTR;
             }
 
-          frame->len = can_dlc_to_len[rf->cs.dlc];
+          frame->len = g_can_dlc_to_len[rf->cs.dlc];
 
           frame_data_word = (uint32_t *)&frame->data[0];
 
