@@ -45,6 +45,8 @@
 
 #include "chip.h"
 #include "arm_internal.h"
+#include "ram_vectors.h"
+#include "nvic.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -57,16 +59,31 @@
 #endif
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /* Chip-specific entrypoint */
 
 extern void __start(void);
 
+static void start(void)
+{
+  /* Zero lr to mark the end of backtrace */
+
+  asm volatile ("mov lr, %0\n\t"
+                "bx      %1\n\t"
+                :
+                : "r"(0), "r"(__start));
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
 /* Common exception entrypoint */
 
 extern void exception_common(void);
+extern void exception_direct(void);
 
 /****************************************************************************
  * Public data
@@ -78,10 +95,11 @@ extern void exception_common(void);
  * As all exceptions (interrupts) are routed via exception_common, we just
  * need to fill this array with pointers to it.
  *
- * Note that the [ ... ] designated initialiser is a GCC extension.
+ * Note that the [ ... ] designated initializer is a GCC extension.
  */
 
-const void * const _vectors[] locate_data(".vectors") =
+const void * const _vectors[] locate_data(".vectors")
+                              aligned_data(VECTAB_ALIGN) =
 {
   /* Initial stack */
 
@@ -89,9 +107,11 @@ const void * const _vectors[] locate_data(".vectors") =
 
   /* Reset exception handler */
 
-  __start,
+  start,
 
   /* Vectors 2 - n point directly at the generic handler */
 
-  [2 ... (15 + ARMV6M_PERIPHERAL_INTERRUPTS)] = exception_common
+  [2 ... NVIC_IRQ_PENDSV] = &exception_common,
+  [(NVIC_IRQ_PENDSV + 1) ... (15 + ARMV6M_PERIPHERAL_INTERRUPTS)]
+                          = &exception_direct
 };

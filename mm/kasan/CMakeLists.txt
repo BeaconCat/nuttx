@@ -17,9 +17,22 @@
 # the License.
 #
 # ##############################################################################
+set(SRCS hook.c)
+
 if(CONFIG_MM_KASAN)
-  target_sources(mm PRIVATE kasan.c)
-  set_source_files_properties(kasan.c PROPERTIES COMPILE_FLAGS
-                                                 -fno-sanitize=kernel-address)
-  set_source_files_properties(kasan.c PROPERTIES COMPILE_FLAGS -fno-lto)
+  list(APPEND FLAGS -fno-builtin)
+  if(CONFIG_MM_KASAN_GENERIC)
+    list(APPEND FLAGS -fno-sanitize=kernel-address)
+  endif()
+
+  if(CONFIG_MM_KASAN_SW_TAGS)
+    list(APPEND FLAGS -fno-sanitize=kernel-hwaddress)
+  endif()
+
+  if(CONFIG_LTO_NONE)
+    list(APPEND FLAGS -fno-lto)
+  endif()
 endif()
+
+target_sources(mm PRIVATE ${SRCS})
+target_compile_options(mm PRIVATE ${FLAGS})
