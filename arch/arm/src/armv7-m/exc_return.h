@@ -83,21 +83,30 @@
 #  define EXC_RETURN_FPU         EXC_RETURN_STD_CONTEXT
 #endif
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define EXC_RETURN_STACK       EXC_RETURN_PROCESS_STACK
-#else
-#  define EXC_RETURN_STACK       0
-#endif
-
-/* EXC_RETURN_THREAD: Return to thread mode.
- * If EXC_RETURN_STACK is 0, Return to thread mode.
- * Execution uses MSP after return.
- * If EXC_RETURN_STACK is EXC_RETURN_PROCESS_STACK, Return to
- * thread mode. Execution uses PSP after return.
+/* EXC_RETURN_PRIVTHR: Return to privileged thread mode. In protected build,
+ * exception return gets state from the main stack. In flat build, exception
+ * return gets state from the process stack.
  */
 
-#define EXC_RETURN_THREAD        (EXC_RETURN_BASE | EXC_RETURN_FPU | \
-                                  EXC_RETURN_THREAD_MODE | EXC_RETURN_STACK)
+#ifdef CONFIG_BUILD_PROTECTED
+#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | EXC_RETURN_FPU | \
+                                  EXC_RETURN_THREAD_MODE)
+#elif CONFIG_ARCH_INTERRUPTSTACK > 7
+#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | EXC_RETURN_FPU | \
+                                  EXC_RETURN_THREAD_MODE | \
+                                  EXC_RETURN_PROCESS_STACK)
+#else
+#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | EXC_RETURN_FPU | \
+                                  EXC_RETURN_THREAD_MODE)
+#endif
+
+/* EXC_RETURN_UNPRIVTHR: Return to unprivileged thread mode. Exception return
+ * gets state from the process stack.
+ */
+
+#define EXC_RETURN_UNPRIVTHR     (EXC_RETURN_BASE | EXC_RETURN_FPU | \
+                                  EXC_RETURN_THREAD_MODE | \
+                                  EXC_RETURN_PROCESS_STACK)
 
 /****************************************************************************
  * Inline Functions
