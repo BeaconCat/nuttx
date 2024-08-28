@@ -100,7 +100,7 @@ int sam_audio_null_initialize(int minor)
       /* Get a null audio interface
        */
 
-      nullaudio = audio_null_initialize();
+      nullaudio = audio_null_initialize(true);
       if (!nullaudio)
         {
           auderr("ERROR: Failed to get the NULL audio interface\n");
@@ -123,7 +123,7 @@ int sam_audio_null_initialize(int minor)
 
       /* Create a device name */
 
-      snprintf(devname, sizeof(devname), "pcm%d",  minor);
+      snprintf(devname, 12, "pcm%d",  minor);
 
       /* Finally, we can register the PCM/NULL audio device. */
 
