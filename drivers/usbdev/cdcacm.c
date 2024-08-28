@@ -813,7 +813,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the IN interrupt endpoint */
 
   ret = cdcacm_epconfigure(priv->epintin, CDCACM_EPINTIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
@@ -826,7 +826,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the IN bulk endpoint */
 
   ret = cdcacm_epconfigure(priv->epbulkin, CDCACM_EPBULKIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
@@ -839,7 +839,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the OUT bulk endpoint */
 
   ret = cdcacm_epconfigure(priv->epbulkout, CDCACM_EPBULKOUT, true,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
