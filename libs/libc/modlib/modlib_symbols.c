@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_symbols.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -320,8 +322,6 @@ int modlib_readsym(FAR struct mod_loadinfo_s *loadinfo, int index,
  *   loadinfo  - Load state information
  *   sym       - Symbol table entry (value might be undefined)
  *   sh_offset - Offset of strtab
- *   exports   - Pointer to the symbol table
- *   nexports  - Number of symbols in the symbol table*
  *
  * Returned Value:
  *   0 (OK) is returned on success and a negated errno is returned on
@@ -337,12 +337,12 @@ int modlib_readsym(FAR struct mod_loadinfo_s *loadinfo, int index,
 
 int modlib_symvalue(FAR struct module_s *modp,
                     FAR struct mod_loadinfo_s *loadinfo, FAR Elf_Sym *sym,
-                    Elf_Off sh_offset,
-                    FAR const struct symtab_s *exports, int nexports)
+                    Elf_Off sh_offset)
 {
   FAR const struct symtab_s *symbol;
   struct mod_exportinfo_s exportinfo;
   uintptr_t secbase;
+  int nsymbols;
   int ret;
 
   switch (sym->st_shndx)
@@ -406,8 +406,9 @@ int modlib_symvalue(FAR struct module_s *modp,
 
         if (symbol == NULL)
           {
-            symbol = symtab_findbyname(exports, exportinfo.name,
-                                       nexports);
+            modlib_getsymtab(&symbol, &nsymbols);
+            symbol = symtab_findbyname(symbol, exportinfo.name,
+                                       nsymbols);
           }
 
         /* Was the symbol found from any exporter? */
@@ -443,10 +444,6 @@ int modlib_symvalue(FAR struct module_s *modp,
               (uintptr_t)(sym->st_value + secbase));
 
         sym->st_value += secbase;
-        if (loadinfo->gotindex >= 0)
-          {
-            sym->st_value -= loadinfo->shdr[sym->st_shndx].sh_offset;
-          }
       }
       break;
     }

@@ -607,7 +607,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       /* This is a request to tear down the poll. */
 
-      struct pollfd **slot = (struct pollfd **)fds->priv;
+      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
 
       /* Remove all memory of the poll setup */
 
@@ -747,7 +747,7 @@ void ramlog_syslog_register(void)
  ****************************************************************************/
 
 #ifdef CONFIG_RAMLOG_SYSLOG
-int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
+int ramlog_putc(FAR syslog_channel_t *channel, int ch)
 {
   char cch = ch;
 
@@ -762,7 +762,7 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
   return ch;
 }
 
-ssize_t ramlog_write(FAR struct syslog_channel_s *channel,
+ssize_t ramlog_write(FAR syslog_channel_t *channel,
                      FAR const char *buffer, size_t buflen)
 {
   return ramlog_addbuf(&g_sysdev, buffer, buflen);
