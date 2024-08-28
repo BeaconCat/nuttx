@@ -151,25 +151,6 @@ static void vhost_defered_probe_work(FAR void *arg)
 }
 
 /****************************************************************************
- * Name: vhost_remove_device
- ****************************************************************************/
-
-static void vhost_remove_device(FAR struct vhost_device_item_s *item)
-{
-  /* Call driver remove and mark item->driver NULL to indicate
-   * the device unmatched.
-   */
-
-  item->driver->remove(item->device);
-  item->driver = NULL;
-
-  /* Remove the device from the device list and free memory */
-
-  list_delete(&item->node);
-  kmm_free(item);
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -200,7 +181,7 @@ int vhost_register_driver(FAR struct vhost_driver *driver)
   list_for_every_entry(&g_vhost_bus.device, item, struct vhost_device_item_s,
                        node)
     {
-      if (driver->device == item->device->id.device)
+      if (item->driver == NULL && driver->device == item->device->id.device)
         {
           /* If found the device in the device list, call driver probe,
            * if probe success, assign item->driver to indicate the device
@@ -316,6 +297,7 @@ int vhost_register_device(FAR struct vhost_device *device)
                * matched.
                */
 
+              device->priv = driver;
               if (driver->probe(device) >= 0)
                 {
                   item->driver = driver;
@@ -352,7 +334,17 @@ int vhost_unregister_device(FAR struct vhost_device *device)
     {
       if (item->device == device)
         {
-          vhost_remove_device(item);
+          /* Call driver remove */
+
+          if (item->driver)
+            {
+              item->driver->remove(item->device);
+            }
+
+          /* Remove the device from the device list and free memory */
+
+          list_delete(&item->node);
+          kmm_free(item);
           goto out;
         }
     }
@@ -362,7 +354,8 @@ int vhost_unregister_device(FAR struct vhost_device *device)
     {
       if (item->device == device)
         {
-          vhost_remove_device(item);
+          list_delete(&item->node);
+          kmm_free(item);
           goto out;
         }
     }
@@ -378,13 +371,20 @@ out:
 
 void vhost_register_drivers(void)
 {
+  struct metal_init_params params = METAL_INIT_DEFAULTS;
   int ret;
+
+  ret = metal_init(&params);
+  if (ret < 0)
+    {
+      vhosterr("metal_init failed, ret=%d\n", ret);
+    }
 
 #ifdef CONFIG_DRIVERS_VHOST_RNG
   ret = vhost_register_rng_driver();
   if (ret < 0)
     {
-      vrterr("vhost_register_rng_driver failed, ret=%d\n", ret);
+      vhosterr("vhost_register_rng_driver failed, ret=%d\n", ret);
     }
 #endif
 
