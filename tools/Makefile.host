@@ -234,9 +234,6 @@ ifdef HOSTDYNEXT
 jlink-nuttx: jlink-nuttx$(HOSTDYNEXT)
 endif
 
-cmux$(HOSTEXEEXT): cmux.c
-	$(Q) $(HOSTCC) $(HOSTCFLAGS) $^ -o $@
-
 clean:
 	$(call DELFILE, b16)
 	$(call DELFILE, b16.exe)
@@ -275,7 +272,6 @@ clean:
 	$(call DELFILE, rmcr.exe)
 	$(call DELFILE, jlink-nuttx.so)
 	$(call DELFILE, jlink-nuttx.dll)
-	$(call DELFILE, cmux$(HOSTEXEEXT))
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) rm -rf *.dSYM
 endif
