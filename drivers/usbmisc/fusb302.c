@@ -803,9 +803,7 @@ static void fusb302_worker(FAR void *arg)
 
   nxmutex_lock(&priv->devlock);
 
-  /* just to double check we really should be here */
-
-  if (!priv->int_pending)
+  if (!priv->int_pending) /* just to double check we really should be here */
     {
       fusb302_err("ERROR: worker task run with no interrupt\n");
       goto error_exit;
@@ -1705,7 +1703,7 @@ static int fusb302_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   {
   case USBCIOC_READ_DEVID:
     {
-      ret = fusb302_read_device_id(priv, (FAR uint8_t *)arg);
+      ret = fusb302_read_device_id(priv, (uint8_t *)arg);
     }
     break;
 
@@ -1722,7 +1720,7 @@ static int fusb302_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     break;
   case USBCIOC_READ_STATUS:
     {
-      ret = fusb302_read_status(priv, (FAR uint8_t *)arg);
+      ret = fusb302_read_status(priv, (uint8_t *)arg);
     }
     break;
 
@@ -1813,7 +1811,7 @@ static int fusb302_poll(FAR struct file *filep,
     {
       /* This is a request to tear down the poll. */
 
-      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
+      struct pollfd **slot = (struct pollfd **)fds->priv;
       DEBUGASSERT(slot != NULL);
 
       /* Remove all memory of the poll setup */
