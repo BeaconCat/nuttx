@@ -56,9 +56,9 @@
 
 void x86_64_check_and_enable_capability(void)
 {
-  uint32_t ebx;
-  uint32_t ecx;
-  uint32_t require = 0;
+  unsigned long ebx;
+  unsigned long ecx;
+  unsigned long require = 0;
 
   /* Check SSE3 instructions availability */
 
@@ -124,8 +124,8 @@ void x86_64_check_and_enable_capability(void)
   require |= X86_64_CPUID_01_RDRAND;
 #endif
 
-  __asm__ volatile("cpuid" : "=c" (ecx) : "a" (X86_64_CPUID_CAP)
-                   : "rdx", "memory");
+  asm volatile("cpuid" : "=c" (ecx) : "a" (X86_64_CPUID_CAP)
+      : "rdx", "memory");
 
   /* Check features availability from ECX */
 
@@ -150,8 +150,8 @@ void x86_64_check_and_enable_capability(void)
   require |= X86_64_CPUID_07_CLWB;
 #endif
 
-  __asm__ volatile("cpuid" : "=b" (ebx) : "a" (X86_64_CPUID_EXTCAP), "c" (0)
-                   : "rdx", "memory");
+  asm volatile("cpuid" : "=b" (ebx) : "a" (X86_64_CPUID_EXTCAP), "c" (0)
+               : "rdx", "memory");
 
   /* Check features availability */
 
@@ -168,9 +168,9 @@ void x86_64_check_and_enable_capability(void)
 #ifdef CONFIG_ARCH_X86_64_HAVE_XSAVE
   /* Check XSAVE state area size for the current XCR0 state */
 
-  __asm__ volatile("cpuid" : "=b" (ebx)
-                   : "a" (X86_64_CPUID_XSAVE), "c" (0)
-                   : "rdx", "memory");
+  asm volatile("cpuid" : "=b" (ebx)
+               : "a" (X86_64_CPUID_XSAVE), "c" (0)
+               : "rdx", "memory");
 
   if (XCPTCONTEXT_XMM_AREA_SIZE < ebx)
     {
@@ -190,9 +190,8 @@ void x86_64_check_and_enable_capability(void)
   return;
 
 err:
-  __asm__ volatile ("cli");
-  __asm__ volatile ("hlt");
-
+  asm volatile ("cli");
+  asm volatile ("hlt");
   goto err;
 }
 
