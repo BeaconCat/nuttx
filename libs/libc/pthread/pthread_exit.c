@@ -53,6 +53,10 @@
 
 void pthread_exit(FAR void *exit_value)
 {
+  FAR struct tls_info_s *info = tls_get_info();
+
+  info->flags |= TLS_THREAD_EIXT;
+
   /* Mark the pthread as non-cancelable to avoid additional calls to
    * pthread_exit() due to any cancellation point logic that might get
    * kicked off by actions taken during pthread_exit processing.
@@ -60,9 +64,7 @@ void pthread_exit(FAR void *exit_value)
 
   task_setcancelstate(TASK_CANCEL_DISABLE, NULL);
 
-#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
-  pthread_cleanup_popall(tls_get_info());
-#endif
+  tls_cleanup_popall(tls_get_info());
 
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
   tls_destruct();
