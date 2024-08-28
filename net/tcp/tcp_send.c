@@ -55,6 +55,7 @@
 #include <nuttx/net/netstats.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/tcp.h>
+#include <nuttx/wqueue.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
@@ -146,6 +147,12 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
     }
   else
     {
+      if (work_available(&conn->work) && conn->tx_unacked != 0)
+        {
+          conn->timeout = false;
+          tcp_update_retrantimer(conn, conn->rto);
+        }
+
       /* Update the TCP received window based on I/O buffer availability */
 
       uint32_t rcvseq = tcp_getsequence(conn->rcvseq);
@@ -627,13 +634,8 @@ void tcp_synack(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
   tcp->optdata[optlen++] = tcp_mss & 0xff;
 
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
-  if (tcp_get_recvwindow(dev, conn) < UINT16_MAX)
-    {
-      conn->rcv_scale = 0;
-    }
-  else if (tcp->flags == TCP_SYN ||
-           ((tcp->flags == (TCP_ACK | TCP_SYN)) &&
-           (conn->flags & TCP_WSCALE)))
+  if (tcp->flags == TCP_SYN ||
+      ((tcp->flags == (TCP_ACK | TCP_SYN)) && (conn->flags & TCP_WSCALE)))
     {
       tcp->optdata[optlen++] = TCP_OPT_NOOP;
       tcp->optdata[optlen++] = TCP_OPT_WS;
