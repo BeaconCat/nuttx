@@ -62,14 +62,6 @@ config USBDEV_MAXPOWER
 		the device is bus powered (USBDEV_BUSPOWERED).  It is, however, used
 		unconditionally in several USB device drivers.
 
-config USBDEV_SOFINTERRUPT
-	bool "Enable USB device SOF interrupts"
-	default n
-	---help---
-		Enable USB start-of-frame interrupts.
-		Can be used for synchronizing to host clock rate.
-		Board logic must provide usbdev_sof_irq() function.
-
 config USBDEV_DMA
 	bool "Enable DMA methods"
 	default n
@@ -432,6 +424,8 @@ menuconfig CDCACM
 	bool "USB Modem (CDC/ACM) support"
 	default n
 	select SERIAL_REMOVABLE
+	select SERIAL_TXDMA
+	select SERIAL_RXDMA
 	---help---
 		Enables USB Modem (CDC/ACM) support
 
@@ -648,6 +642,14 @@ config CDCACM_NWRREQS
 	default 4
 	---help---
 		The number of write/read requests that can be in flight
+
+config CDCACM_BULKOUT_REQLEN
+	int "Size of one read request buffer"
+	default 512 if USBDEV_DUALSPEED
+	default 256 if !USBDEV_DUALSPEED
+	---help---
+		Read buffer size maybe larger than the maxpacket size. Increasing
+		the buffer size can effectively improve the transmission speed.
 
 config CDCACM_BULKIN_REQLEN
 	int "Size of one write request buffer"
@@ -1465,10 +1467,9 @@ endif # CDCECM
 menuconfig NET_CDCNCM
 	bool "CDC-NCM Ethernet-over-USB"
 	default n
-	depends on SCHED_WORKQUEUE
-	depends on NETDEVICES
-	depends on NET
-	depends on NET_ETHERNET
+	select NETDEVICES
+	select NET
+	select NET_ETHERNET
 	---help---
 		References:
 		- "Universal Serial Bus - Communications Class - Subclass
@@ -1724,7 +1725,6 @@ endif # CDCNCM
 config USBDEV_FS
 	bool
 	default n
-	select SCHED_HPWORK
 	---help---
 		Enables USBDEV FS support, userspace can use fs to control USB device.
 
@@ -1741,6 +1741,12 @@ config USBDEV_FS_NPOLLWAITERS
 	default 2
 	---help---
 		Maximum number of threads that can be waiting on poll().
+
+config USBDEV_FS_NEP0REQS
+	int "Number of ep0 requests that can be in flight"
+	default 4
+	---help---
+		The number of ep0 requests that can be in flight
 
 endif #USBDEV_FS
 
