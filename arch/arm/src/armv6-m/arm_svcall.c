@@ -117,10 +117,10 @@ static void dispatch_syscall(void)
 
 int arm_svcall(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb = this_task();
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
+  DEBUGASSERT(regs && regs == CURRENT_REGS);
   cmd = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
@@ -158,16 +158,16 @@ int arm_svcall(int irq, void *context, void *arg)
        *   R0 = SYS_restore_context
        *   R1 = restoreregs
        *
-       * In this case, we simply need to set current_regs to restore register
-       * area referenced in the saved R1. context == current_regs is the
-       * normal exception return.  By setting current_regs = context[R1], we
+       * In this case, we simply need to set CURRENT_REGS to restore register
+       * area referenced in the saved R1. context == CURRENT_REGS is the
+       * normal exception return.  By setting CURRENT_REGS = context[R1], we
        * force the return to the saved context referenced in R1.
        */
 
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
-          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
+          CURRENT_REGS = (uint32_t *)regs[REG_R1];
         }
         break;
 
@@ -184,7 +184,7 @@ int arm_svcall(int irq, void *context, void *arg)
        *
        * In this case, we do both: We save the context registers to the save
        * register area reference by the saved contents of R1 and then set
-       * current_regs to the save register area referenced by the saved
+       * CURRENT_REGS to the save register area referenced by the saved
        * contents of R2.
        */
 
@@ -192,7 +192,7 @@ int arm_svcall(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          tcb->xcp.regs = (uint32_t *)regs[REG_R2];
+          CURRENT_REGS = (uint32_t *)regs[REG_R2];
         }
         break;
 
@@ -211,7 +211,7 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          struct tcb_s *rtcb = this_task();
+          struct tcb_s *rtcb = nxsched_self();
           int index = (int)rtcb->xcp.nsyscalls - 1;
 
           /* Make sure that there is a saved syscall return address. */
@@ -224,6 +224,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_PC]         = rtcb->xcp.syscall[index].sysreturn;
           regs[REG_EXC_RETURN] = rtcb->xcp.syscall[index].excreturn;
+          regs[REG_CONTROL]    = rtcb->xcp.syscall[index].ctrlreturn;
           rtcb->xcp.nsyscalls  = index;
 
           /* The return value must be in R0-R1.  dispatch_syscall()
@@ -263,7 +264,11 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)USERSPACE->task_startup;
-          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
+          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+
+          /* Return unprivileged mode */
+
+          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s task_startup:
@@ -296,7 +301,11 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)regs[REG_R1]; /* startup */
-          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
+          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+
+          /* Return unprivileged mode */
+
+          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
 
           /* Change the parameter ordering to match the expectation of the
            * user space pthread_startup:
@@ -325,7 +334,7 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_BUILD_PROTECTED
       case SYS_signal_handler:
         {
-          struct tcb_s *rtcb   = this_task();
+          struct tcb_s *rtcb   = nxsched_self();
 
           /* Remember the caller's return address */
 
@@ -337,7 +346,11 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)USERSPACE->signal_handler;
-          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
+          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+
+          /* Return unprivileged mode */
+
+          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s signal_handler.
@@ -363,15 +376,18 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_BUILD_PROTECTED
       case SYS_signal_handler_return:
         {
-          struct tcb_s *rtcb   = this_task();
+          struct tcb_s *rtcb   = nxsched_self();
 
           /* Set up to return to the kernel-mode signal dispatching logic. */
 
           DEBUGASSERT(rtcb->xcp.sigreturn != 0);
 
           regs[REG_PC]         = rtcb->xcp.sigreturn;
-          regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
+          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
+          /* Return privileged mode */
+
+          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
           rtcb->xcp.sigreturn  = 0;
         }
         break;
@@ -385,7 +401,7 @@ int arm_svcall(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = this_task();
+          struct tcb_s *rtcb = nxsched_self();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */
@@ -402,10 +418,15 @@ int arm_svcall(int irq, void *context, void *arg)
 
           rtcb->xcp.syscall[index].sysreturn  = regs[REG_PC];
           rtcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
+          rtcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
           rtcb->xcp.nsyscalls  = index + 1;
 
           regs[REG_PC]         = (uint32_t)dispatch_syscall;
-          regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
+          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+
+          /* Return privileged mode */
+
+          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
 
           /* Offset R0 to account for the reserved values */
 
@@ -425,30 +446,40 @@ int arm_svcall(int irq, void *context, void *arg)
    * switch.
    */
 
-  if (regs != tcb->xcp.regs)
-    {
-      restore_critical_section(tcb, this_cpu());
-
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-      regs = (uint32_t *)tcb->xcp.regs;
-
+#  ifndef CONFIG_DEBUG_SVCALL
+  if (cmd > SYS_switch_context)
+#  else
+  if (regs != CURRENT_REGS)
+#  endif
+    {
       svcinfo("SVCall Return:\n");
       svcinfo("  R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              regs[REG_R0],  regs[REG_R1], regs[REG_R2],  regs[REG_R3],
-              regs[REG_R4],  regs[REG_R5], regs[REG_R6],  regs[REG_R7]);
+              CURRENT_REGS[REG_R0],  CURRENT_REGS[REG_R1],
+              CURRENT_REGS[REG_R2],  CURRENT_REGS[REG_R3],
+              CURRENT_REGS[REG_R4],  CURRENT_REGS[REG_R5],
+              CURRENT_REGS[REG_R6],  CURRENT_REGS[REG_R7]);
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              regs[REG_R8],  regs[REG_R9], regs[REG_R10], regs[REG_R11],
-              regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
-      svcinfo(" PSR: %08x EXC_RETURN: %08x\n",
-              regs[REG_XPSR], regs[REG_EXC_RETURN]);
-#endif
+              CURRENT_REGS[REG_R8],  CURRENT_REGS[REG_R9],
+              CURRENT_REGS[REG_R10], CURRENT_REGS[REG_R11],
+              CURRENT_REGS[REG_R12], CURRENT_REGS[REG_R13],
+              CURRENT_REGS[REG_R14], CURRENT_REGS[REG_R15]);
+      svcinfo(" PSR: %08x PRIMASK: %08x EXC_RETURN: %08x\n",
+              CURRENT_REGS[REG_XPSR], CURRENT_REGS[REG_PRIMASK],
+              CURRENT_REGS[REG_EXC_RETURN]);
     }
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
+#  ifdef CONFIG_DEBUG_SVCALL
   else
     {
       svcinfo("SVCall Return: %d\n", regs[REG_R0]);
     }
+#  endif
 #endif
+
+  if (regs != CURRENT_REGS)
+    {
+      restore_critical_section();
+    }
 
   return OK;
 }

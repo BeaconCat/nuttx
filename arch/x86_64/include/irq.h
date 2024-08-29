@@ -50,7 +50,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
 /* CPU private data */
 
 struct intel64_cpu_s
@@ -101,7 +100,7 @@ static inline_function int up_cpu_index(void)
 {
   int cpu;
 
-  __asm__ volatile(
+  asm volatile(
     "\tmovl %%gs:(%c1), %0\n"
     : "=r" (cpu)
     : "i" (offsetof(struct intel64_cpu_s, id))
@@ -120,17 +119,17 @@ static inline_function int up_cpu_index(void)
 static inline_function uint64_t *up_current_regs(void)
 {
   uint64_t *regs;
-  __asm__ volatile("movq %%gs:(%c1), %0"
-                   : "=rm" (regs)
-                   : "i" (offsetof(struct intel64_cpu_s, current_regs)));
+  asm volatile("movq %%gs:(%c1), %0"
+               : "=rm" (regs)
+               : "i" (offsetof(struct intel64_cpu_s, current_regs)));
   return regs;
 }
 
 static inline_function void up_set_current_regs(uint64_t *regs)
 {
-  __asm__ volatile("movq %0, %%gs:(%c1)"
-                   :: "r" (regs), "i" (offsetof(struct intel64_cpu_s,
-                                                current_regs)));
+  asm volatile("movq %0, %%gs:(%c1)"
+               :: "r" (regs), "i" (offsetof(struct intel64_cpu_s,
+                                            current_regs)));
 }
 
 /****************************************************************************
@@ -147,13 +146,6 @@ static inline_function bool up_interrupt_context(void)
 {
   return up_current_regs() != NULL;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint64_t *)((regs) ? (regs) : up_current_regs()))[REG_RIP])
 
 #undef EXTERN
 #ifdef __cplusplus
