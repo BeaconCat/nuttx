@@ -71,30 +71,17 @@
 
 #define EXC_RETURN_HANDLER       0xfffffff1
 
-/* EXC_RETURN_PRIVTHR: Return to privileged thread mode. In protected build,
- * exception return gets state from the main stack. In flat build, exception
- * return gets state from the process stack.
- */
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
 
-#ifdef CONFIG_BUILD_PROTECTED
-#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE)
-#elif CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE | \
-                                  EXC_RETURN_PROCESS_STACK)
+/* Execution uses PSP after return */
+
+#  define EXC_RETURN_THREAD      0xfffffffd
 #else
-#  define EXC_RETURN_PRIVTHR     (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE)
+
+/* Execution uses MSP after return */
+
+#  define EXC_RETURN_THREAD      0xfffffff9
 #endif
-
-/* EXC_RETURN_UNPRIVTHR: Return to unprivileged mode. Exception return
- * gets state from the process stack.
- */
-
-#define EXC_RETURN_UNPRIVTHR     (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE | \
-                                  EXC_RETURN_PROCESS_STACK)
 
 /****************************************************************************
  * Inline Functions

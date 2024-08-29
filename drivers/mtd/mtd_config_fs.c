@@ -62,7 +62,7 @@
  * so we make a buffer to do compare or move.
  */
 
-#define NVS_BUFFER_SIZE                 MAX(NVS_ALIGN_UP(32), NVS_ALIGN_SIZE)
+#define NVS_BUFFER_SIZE                 32
 
 /* If data is written after last ate, and power loss happens,
  * we need to find a clean offset by skipping dirty data.
@@ -234,25 +234,12 @@ static int nvs_flash_rd(FAR struct nvs_fs *fs, uint32_t addr,
   offset += addr & ADDR_OFFS_MASK;
 
   ret = MTD_READ(fs->mtd, offset, len, data);
-  if (ret == -EBADMSG)
+  if (ret < 0)
     {
-      /* ECC fail first time
-       * try again to avoid transient electronic interference
-       */
-
-      ret = MTD_READ(fs->mtd, offset, len, data);
-      if (ret == -EBADMSG)
-        {
-          /* ECC fail second time
-           * fill ~erasestate to trigger recovery process
-           */
-
-          memset(data, ~fs->erasestate, len);
-          ret = 0;
-        }
+      return ret;
     }
 
-  return ret < 0 ? ret : 0;
+  return OK;
 }
 
 /****************************************************************************
