@@ -29,12 +29,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/cache.h>
-#include <nuttx/coredump.h>
 #include <nuttx/compiler.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
 #include <nuttx/init.h>
-#include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
@@ -84,13 +81,6 @@
 #endif
 
 #define DUMP_PTR(p, x) ((uintptr_t)(&(p)[(x)]) < stack_top ? (p)[(x)] : 0)
-#define DUMP_STRIDE    (sizeof(FAR void *) * 8)
-
-#if UINTPTR_MAX <= UINT32_MAX
-#  define DUMP_FORMAT " %08" PRIxPTR ""
-#elif UINTPTR_MAX <= UINT64_MAX
-#  define DUMP_FORMAT " %016" PRIxPTR ""
-#endif
 
 /* Architecture can overwrite the default XCPTCONTEXT alignment */
 
@@ -109,7 +99,7 @@ static bool g_cpu_paused[CONFIG_SMP_NCPUS];
 static uintptr_t g_last_regs[CONFIG_SMP_NCPUS][XCPTCONTEXT_REGS]
                  aligned_data(XCPTCONTEXT_ALIGN);
 
-static FAR const char * const g_policy[4] =
+static FAR const char *g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
 };
@@ -160,12 +150,13 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
 {
   uintptr_t stack;
 
-  for (stack = sp; stack <= stack_top; stack += DUMP_STRIDE)
+  for (stack = sp; stack <= stack_top; stack += 32)
     {
-      FAR uintptr_t *ptr = (FAR uintptr_t *)stack;
+      FAR uint32_t *ptr = (FAR uint32_t *)stack;
 
-      _alert("%p:"DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
-             DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT "\n",
+      _alert("%p: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+             " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+             " %08" PRIx32 "\n",
              (FAR void *)stack, DUMP_PTR(ptr, 0), DUMP_PTR(ptr , 1),
              DUMP_PTR(ptr, 2), DUMP_PTR(ptr, 3), DUMP_PTR(ptr, 4),
              DUMP_PTR(ptr, 5), DUMP_PTR(ptr , 6), DUMP_PTR(ptr, 7));
@@ -191,9 +182,9 @@ static void dump_stackinfo(FAR const char *tag, uintptr_t sp,
 
       /* Get more information */
 
-      if (sp - DUMP_STRIDE >= base)
+      if (sp - 32 >= base)
         {
-          sp -= DUMP_STRIDE;
+          sp -= 32;
         }
 
       stack_dump(sp, top);
@@ -367,7 +358,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Stringify the argument vector */
 
-  nxtask_argvstr(tcb, args, sizeof(args));
+  group_argvstr(tcb, args, sizeof(args));
 
   /* get the task_state */
 
@@ -548,7 +539,7 @@ static void dump_lockholder(pid_t tid)
   backtrace_format(buf, sizeof(buf), mutex->backtrace,
                    CONFIG_LIBC_MUTEX_BACKTRACE);
 
-  _alert("Mutex holder(%d) backtrace:%s\n", mutex->holder, buf);
+  _alert("Mutex holder(%d) backtrace: %s\n", mutex->holder, buf);
 }
 #else
 #  define dump_lockholder(tid)
