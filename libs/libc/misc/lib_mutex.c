@@ -58,6 +58,35 @@ static bool nxmutex_is_reset(FAR mutex_t *mutex)
 }
 
 /****************************************************************************
+ * Name: nxmutex_add_backtrace
+ *
+ * Description:
+ *   This function add the backtrace of the holder of the mutex.
+ *
+ * Parameters:
+ *   mutex - mutex descriptor.
+ *
+ * Return Value:
+ *
+ ****************************************************************************/
+
+#if CONFIG_LIBC_MUTEX_BACKTRACE > 0
+static void nxmutex_add_backtrace(FAR mutex_t *mutex)
+{
+  int n;
+
+  n = sched_backtrace(mutex->holder, mutex->backtrace,
+                      CONFIG_LIBC_MUTEX_BACKTRACE, 0);
+  if (n < CONFIG_LIBC_MUTEX_BACKTRACE)
+    {
+      mutex->backtrace[n] = NULL;
+    }
+}
+#else
+#  define nxmutex_add_backtrace(mutex)
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -223,6 +252,7 @@ int nxmutex_lock(FAR mutex_t *mutex)
       if (ret >= 0)
         {
           mutex->holder = _SCHED_GETTID();
+          nxmutex_add_backtrace(mutex);
           break;
         }
       else if (ret != -EINTR && ret != -ECANCELED)
@@ -266,6 +296,8 @@ int nxmutex_trylock(FAR mutex_t *mutex)
     }
 
   mutex->holder = _SCHED_GETTID();
+  nxmutex_add_backtrace(mutex);
+
   return ret;
 }
 
@@ -317,6 +349,7 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
   if (ret >= 0)
     {
       mutex->holder = _SCHED_GETTID();
+      nxmutex_add_backtrace(mutex);
     }
 
   return ret;
@@ -353,7 +386,7 @@ int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
   struct timespec rqtp;
 
   clock_gettime(CLOCK_MONOTONIC, &now);
-  clock_ticks2time(MSEC2TICK(timeout), &delay);
+  clock_ticks2time(&delay, MSEC2TICK(timeout));
   clock_timespec_add(&now, &delay, &rqtp);
 
   /* Wait until we get the lock or until the timeout expires */
@@ -479,6 +512,78 @@ int nxmutex_restorelock(FAR mutex_t *mutex, unsigned int locked)
 {
   return locked ? nxmutex_lock(mutex) : OK;
 }
+
+/****************************************************************************
+ * Name: nxmutex_set_protocol
+ *
+ * Description:
+ *   This function attempts to set the priority protocol of a mutex.
+ *
+ * Parameters:
+ *   mutex        - mutex descriptor.
+ *   protocol     - mutex protocol value to set.
+ *
+ * Return Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure
+ *
+ ****************************************************************************/
+
+int nxmutex_set_protocol(FAR mutex_t *mutex, int protocol)
+{
+  return nxsem_set_protocol(&mutex->sem, protocol);
+}
+
+/****************************************************************************
+ * Name: nxmutex_getprioceiling
+ *
+ * Description:
+ *   This function attempts to get the priority ceiling of a mutex.
+ *
+ * Parameters:
+ *   mutex        - mutex descriptor.
+ *   prioceiling  - location to return the mutex priority ceiling.
+ *
+ * Return Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PRIORITY_PROTECT
+int nxmutex_getprioceiling(FAR const mutex_t *mutex, int *prioceiling)
+{
+  return nxsem_getprioceiling(&mutex->sem, prioceiling);
+}
+#endif
+
+/****************************************************************************
+ * Name: nxmutex_setprioceiling
+ *
+ * Description:
+ *   This function attempts to set the priority ceiling of a mutex.
+ *
+ * Parameters:
+ *   mutex        - mutex descriptor.
+ *   prioceiling  - mutex priority ceiling value to set.
+ *   old_ceiling  - location to return the mutex ceiling priority set before.
+ *
+ * Return Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PRIORITY_PROTECT
+int nxmutex_setprioceiling(FAR mutex_t *mutex, int prioceiling,
+                           FAR int *old_ceiling)
+{
+  return nxsem_setprioceiling(&mutex->sem, prioceiling, old_ceiling);
+}
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_init
