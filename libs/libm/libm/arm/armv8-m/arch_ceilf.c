@@ -1,8 +1,7 @@
 /****************************************************************************
  * libs/libm/libm/arm/armv8-m/arch_ceilf.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2011, 2012 ARM Ltd.
+ *   Copyright (c) 2011, 2012 ARM Ltd.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

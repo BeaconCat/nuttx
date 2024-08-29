@@ -29,7 +29,6 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/pci/pci.h>
 #include <nuttx/pci/pci_ecam.h>
-#include <nuttx/nuttx.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -41,6 +40,8 @@
 #define writew(v,a)  (*(FAR volatile uint16_t *)(a) = (v))
 #define readl(a)     (*(FAR volatile uint32_t *)(a))
 #define writel(v,a)  (*(FAR volatile uint32_t *)(a) = (v))
+
+#define IS_ALIGNED(x, a) (((x) & ((a) - 1)) == 0)
 
 /****************************************************************************
  * Private Function Prototypes
@@ -118,7 +119,6 @@ static const struct pci_ops_s g_pci_ecam_ops =
  *
  * Returned Value:
  *   Return the struct pci_ecam_pcie s address
- *
  ****************************************************************************/
 
 static inline FAR struct pci_ecam_s *
@@ -168,7 +168,6 @@ static FAR void *pci_ecam_conf_address(FAR const struct pci_bus_s *bus,
  *
  * Returned Value:
  *   True if success, false if failed
- *
  ****************************************************************************/
 
 static bool pci_ecam_addr_valid(FAR const struct pci_bus_s *bus,
@@ -195,7 +194,6 @@ static bool pci_ecam_addr_valid(FAR const struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Return the specify enum result of operation
- *
  ****************************************************************************/
 
 static int pci_ecam_read_config(FAR struct pci_bus_s *bus,
@@ -253,7 +251,6 @@ static int pci_ecam_read_config(FAR struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Return the specify enum result of operation
- *
  ****************************************************************************/
 
 static int pci_ecam_write_config(FAR struct pci_bus_s *bus,
@@ -452,7 +449,6 @@ static int pci_ecam_get_irq(FAR struct pci_bus_s *bus, uint32_t devfn,
  *
  * Returned Value:
  *   Return 0 if success, nageative if failed
- *
  ****************************************************************************/
 
 int pci_ecam_register(FAR const struct pci_resource_s *cfg,
