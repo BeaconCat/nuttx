@@ -34,13 +34,11 @@
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
-#  include <arch/syscall.h>
 #endif
 
 /* Include NuttX-specific IRQ definitions */
 
 #include <nuttx/irq.h>
-#include <nuttx/bits.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
@@ -146,11 +144,14 @@
 #define REG_ELR             (32)
 #define REG_SPSR            (33)
 #define REG_SP_EL0          (34)
+#define REG_EXE_DEPTH       (35)
+#define REG_TPIDR_EL0       (36)
+#define REG_TPIDR_EL1       (37)
 
 /* In Armv8-A Architecture, the stack must align with 16 byte */
 
-#define ARM64_CONTEXT_REGS  (36)
-#define ARM64_CONTEXT_SIZE  (8 * ARM64_CONTEXT_REGS)
+#define XCPTCONTEXT_GP_REGS (38)
+#define XCPTCONTEXT_GP_SIZE (8 * XCPTCONTEXT_GP_REGS)
 
 #ifdef CONFIG_ARCH_FPU
 
@@ -166,86 +167,58 @@
 
 /* 128bit registers */
 
-#define REG_Q0              (0)
-#define REG_Q1              (1)
-#define REG_Q2              (2)
-#define REG_Q3              (3)
-#define REG_Q4              (4)
-#define REG_Q5              (5)
-#define REG_Q6              (6)
-#define REG_Q7              (7)
-#define REG_Q8              (8)
-#define REG_Q9              (9)
-#define REG_Q10             (10)
-#define REG_Q11             (11)
-#define REG_Q12             (12)
-#define REG_Q13             (13)
-#define REG_Q14             (14)
-#define REG_Q15             (15)
-#define REG_Q16             (16)
-#define REG_Q17             (17)
-#define REG_Q18             (18)
-#define REG_Q19             (19)
-#define REG_Q20             (20)
-#define REG_Q21             (21)
-#define REG_Q22             (22)
-#define REG_Q23             (23)
-#define REG_Q24             (24)
-#define REG_Q25             (25)
-#define REG_Q26             (26)
-#define REG_Q27             (27)
-#define REG_Q28             (28)
-#define REG_Q29             (29)
-#define REG_Q30             (30)
-#define REG_Q31             (31)
+#define FPU_REG_Q0          (0)
+#define FPU_REG_Q1          (1)
+#define FPU_REG_Q2          (2)
+#define FPU_REG_Q3          (3)
+#define FPU_REG_Q4          (4)
+#define FPU_REG_Q5          (5)
+#define FPU_REG_Q6          (6)
+#define FPU_REG_Q7          (7)
+#define FPU_REG_Q8          (8)
+#define FPU_REG_Q9          (9)
+#define FPU_REG_Q10         (10)
+#define FPU_REG_Q11         (11)
+#define FPU_REG_Q12         (12)
+#define FPU_REG_Q13         (13)
+#define FPU_REG_Q14         (14)
+#define FPU_REG_Q15         (15)
+#define FPU_REG_Q16         (16)
+#define FPU_REG_Q17         (17)
+#define FPU_REG_Q18         (18)
+#define FPU_REG_Q19         (19)
+#define FPU_REG_Q20         (20)
+#define FPU_REG_Q21         (21)
+#define FPU_REG_Q22         (22)
+#define FPU_REG_Q23         (23)
+#define FPU_REG_Q24         (24)
+#define FPU_REG_Q25         (25)
+#define FPU_REG_Q26         (26)
+#define FPU_REG_Q27         (27)
+#define FPU_REG_Q28         (28)
+#define FPU_REG_Q29         (29)
+#define FPU_REG_Q30         (30)
+#define FPU_REG_Q31         (31)
 
 /* 32 bit registers
  */
-#define REG_FPSR            (0)
-#define REG_FPCR            (1)
+#define FPU_REG_FPSR        (0)
+#define FPU_REG_FPCR        (1)
 
 /* FPU registers(Q0~Q31, 128bit): 32x2 = 64
  * FPU FPSR/SPSR(32 bit) : 1
  * FPU TRAP: 1
  * 64 + 1 + 1 = 66
  */
-#define FPU_CONTEXT_REGS    (66)
+#define XCPTCONTEXT_FPU_REGS      (66)
 #else
-#define FPU_CONTEXT_REGS    (0)
+#define XCPTCONTEXT_FPU_REGS      (0)
 #endif
 
-#define FPU_CONTEXT_SIZE    (8 * FPU_CONTEXT_REGS)
+#define FPUCONTEXT_SIZE     (8 * XCPTCONTEXT_FPU_REGS)
 
-#define XCPTCONTEXT_REGS    (ARM64_CONTEXT_REGS + FPU_CONTEXT_REGS)
+#define XCPTCONTEXT_REGS    (XCPTCONTEXT_GP_REGS + XCPTCONTEXT_FPU_REGS)
 #define XCPTCONTEXT_SIZE    (8 * XCPTCONTEXT_REGS)
-
-/* Friendly register names */
-
-#define REG_FP              REG_X29
-#define REG_LR              REG_X30
-
-#define DAIFSET_FIQ_BIT     BIT(0)
-#define DAIFSET_IRQ_BIT     BIT(1)
-#define DAIFSET_ABT_BIT     BIT(2)
-#define DAIFSET_DBG_BIT     BIT(3)
-
-#define DAIFCLR_FIQ_BIT     BIT(0)
-#define DAIFCLR_IRQ_BIT     BIT(1)
-#define DAIFCLR_ABT_BIT     BIT(2)
-#define DAIFCLR_DBG_BIT     BIT(3)
-
-#define DAIF_FIQ_BIT        BIT(6)
-#define DAIF_IRQ_BIT        BIT(7)
-#define DAIF_ABT_BIT        BIT(8)
-#define DAIF_DBG_BIT        BIT(9)
-
-#define DAIF_MASK           (0xf << 6)
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define up_irq_is_disabled(flags) (((flags) & DAIF_FIQ_BIT) != 0)
-#else
-#  define up_irq_is_disabled(flags) (((flags) & DAIF_IRQ_BIT) != 0)
-#endif
 
 #ifndef __ASSEMBLY__
 
@@ -260,6 +233,25 @@ extern "C"
 /****************************************************************************
  * Public Data
  ****************************************************************************/
+
+/* g_current_regs[] holds a references to the current interrupt level
+ * register storage structure.  It is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
+ */
+
+/* For the case of architectures with multiple CPUs, then there must be one
+ * such value for each processor that can receive an interrupt.
+ */
+
+EXTERN volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
+#define CURRENT_REGS (g_current_regs[up_cpu_index()])
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
 
 struct xcptcontext
 {
@@ -296,7 +288,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -322,10 +314,11 @@ struct xcptcontext
 
   uintptr_t *ustkptr;  /* Saved user stack pointer */
   uintptr_t *kstack;   /* Allocate base of the (aligned) kernel stack */
-  uintptr_t *kstkptr;  /* Saved kernel stack pointer */
 #  endif
 #endif
 };
+
+#endif /* __ASSEMBLY__ */
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -424,29 +417,27 @@ static inline void up_irq_restore(irqstate_t flags)
 #endif
 
 /****************************************************************************
- * Schedule acceleration macros
+ * Name: up_interrupt_context
+ *
+ * Description: Return true is we are currently executing in
+ * the interrupt handler context.
+ *
  ****************************************************************************/
 
-#define up_current_regs()      (this_task()->xcp.regs)
-#define up_this_task()         ((struct tcb_s *)(read_sysreg(tpidr_el1) & ~1ul))
-#define up_update_task(t)      modify_sysreg(t, ~1ul, tpidr_el1)
-#define up_interrupt_context() (read_sysreg(tpidr_el1) & 1)
+static inline bool up_interrupt_context(void)
+{
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
+#endif
 
-#define up_switch_context(tcb, rtcb)                              \
-  do {                                                            \
-    if (!up_interrupt_context())                                  \
-      {                                                           \
-        sys_call2(SYS_switch_context, (uintptr_t)&rtcb->xcp.regs, \
-                  (uintptr_t)tcb->xcp.regs);                      \
-      }                                                           \
-  } while (0)
+  bool ret = (CURRENT_REGS != NULL);
 
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
 
-#define up_getusrpc(regs) \
-    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_ELR])
+  return ret;
+}
 
 #undef EXTERN
 #ifdef __cplusplus
