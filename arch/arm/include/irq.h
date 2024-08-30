@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
 #  include <stdbool.h>
+#  include <arch/syscall.h>
 #endif
 
 /****************************************************************************
@@ -76,6 +77,17 @@
 
 #ifndef __ASSEMBLY__
 
+#ifndef up_switch_context
+#define up_switch_context(tcb, rtcb)                              \
+  do {                                                            \
+    if (!up_interrupt_context())                                  \
+      {                                                           \
+        sys_call2(SYS_switch_context, (uintptr_t)&rtcb->xcp.regs, \
+                  (uintptr_t)tcb->xcp.regs);                      \
+      }                                                           \
+  } while (0)
+#endif
+
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -85,63 +97,12 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Data
+ * Name: up_getusrpc
  ****************************************************************************/
 
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
- */
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-/****************************************************************************
- * Inline functions
- ****************************************************************************/
-
-static inline_function uint32_t *up_current_regs(void)
-{
-  return (uint32_t *)g_current_regs[up_cpu_index()];
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-  g_current_regs[up_cpu_index()] = regs;
-}
-
-/****************************************************************************
- * Name: up_interrupt_context
- *
- * Description:
- *   Return true is we are currently executing in the interrupt
- *   handler context.
- *
- ****************************************************************************/
-
-noinstrument_function
-static inline bool up_interrupt_context(void)
-{
-#ifdef CONFIG_SMP
-  irqstate_t flags = up_irq_save();
-#endif
-
-  bool ret = up_current_regs() != NULL;
-
-#ifdef CONFIG_SMP
-  up_irq_restore(flags);
-#endif
-
-  return ret;
-}
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN
