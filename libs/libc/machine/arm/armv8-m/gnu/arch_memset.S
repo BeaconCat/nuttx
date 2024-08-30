@@ -69,9 +69,9 @@
 
 	.thumb
 	.syntax unified
-	.global ARCH_LIBCFUN(memset)
-	.type	ARCH_LIBCFUN(memset), %function
-ARCH_LIBCFUN(memset):
+	.global memset
+	.type	memset, %function
+memset:
 #if __ARM_FEATURE_PAC_DEFAULT
 #  if __ARM_FEATURE_BTI_DEFAULT
 	pacbti	ip, lr, sp
@@ -166,6 +166,6 @@ ARCH_LIBCFUN(memset):
 	ldmfd	sp!, {r0, r4-r7, pc}
 #  endif /* __ARM_FEATURE_PAC_DEFAULT */
 #endif
-	.size ARCH_LIBCFUN(memset), . - ARCH_LIBCFUN(memset)
+	.size memset, . - memset
 
 #endif
