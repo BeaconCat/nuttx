@@ -32,17 +32,11 @@
 
 #include <nuttx/i2c/i2c_master.h>
 
-#ifdef CONFIG_S32K1XX_LPI2C0
 #include "s32k1xx_lpi2c.h"
-#endif
-
-#ifdef CONFIG_S32K1XX_FLEXIO_I2C
-#include "s32k1xx_flexio_i2c.h"
-#endif
 
 #include "ucans32k146.h"
 
-#ifdef CONFIG_I2C_DRIVER
+#ifdef CONFIG_S32K1XX_LPI2C
 
 /****************************************************************************
  * Public Functions
@@ -60,7 +54,7 @@ int weak_function s32k1xx_i2cdev_initialize(void)
 {
   int ret = OK;
 
-#ifdef CONFIG_S32K1XX_LPI2C0
+#if defined(CONFIG_S32K1XX_LPI2C0) && defined(CONFIG_I2C_DRIVER)
   /* LPI2C0 *****************************************************************/
 
   /* Initialize the I2C driver for LPI2C0 */
@@ -79,25 +73,9 @@ int weak_function s32k1xx_i2cdev_initialize(void)
       s32k1xx_i2cbus_uninitialize(lpi2c0);
       return ret;
     }
-
-#elif defined(CONFIG_S32K1XX_FLEXIO_I2C)
-
-  struct i2c_master_s *flexio_i2c0 = s32k1xx_flexio_i2cbus_initialize(0);
-  if (flexio_i2c0 == NULL)
-    {
-      i2cerr("ERROR: FAILED to initialize FlexIO I2C\n");
-      return -ENODEV;
-    }
-
-  ret = i2c_register(flexio_i2c0, 0);
-  if (ret < 0)
-    {
-      i2cerr("ERROR: FAILED to register LPI2C0 driver\n");
-      return ret;
-    }
-#endif
+#endif /* CONFIG_S32K1XX_LPI2C0 && CONFIG_I2C_DRIVER */
 
   return ret;
 }
 
-#endif /* CONFIG_I2C_DRIVER */
+#endif /* CONFIG_S32K1XX_LPSPI */

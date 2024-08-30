@@ -150,6 +150,9 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
                            * periodic transmission of probes */
       case SO_OOBINLINE:  /* Leaves received out-of-band data inline */
       case SO_REUSEADDR:  /* Allow reuse of local addresses */
+#ifdef CONFIG_NET_TIMESTAMP
+      case SO_TIMESTAMP:  /* Generates a timestamp for each incoming packet */
+#endif
         {
           sockopt_t optionset;
 
@@ -346,17 +349,19 @@ int getsockopt(int sockfd, int level, int option,
                void *value, socklen_t *value_len)
 {
   FAR struct socket *psock;
+  FAR struct file *filep;
   int ret;
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* Then let psock_getsockopt() do all of the work */
 
   if (ret == OK)
     {
       ret = psock_getsockopt(psock, level, option, value, value_len);
+      fs_putfilep(filep);
     }
 
   if (ret < 0)
