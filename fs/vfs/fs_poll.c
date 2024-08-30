@@ -56,6 +56,48 @@ struct pollfd_s
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: poll_teardown
+ *
+ * Description:
+ *   Teardown the poll operation for each descriptor in the list and return
+ *   the count of non-zero poll events.
+ *
+ ****************************************************************************/
+
+static inline void poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
+                                 FAR int *count)
+{
+  unsigned int i;
+
+  /* Process each descriptor in the list */
+
+  *count = 0;
+  for (i = 0; i < nfds; i++)
+    {
+      if (fds[i].fd >= 0)
+        {
+          int status = poll_fdsetup(fds[i].fd, &fds[i], false);
+          if (status < 0)
+            {
+              fds[i].revents |= POLLERR;
+            }
+        }
+
+      /* Check if any events were posted */
+
+      if (fds[i].revents != 0)
+        {
+          (*count)++;
+        }
+
+      /* Un-initialize the poll structure */
+
+      fds[i].arg = NULL;
+      fds[i].cb  = NULL;
+    }
+}
+
+/****************************************************************************
  * Name: poll_setup
  *
  * Description:
@@ -67,8 +109,8 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
                              FAR sem_t *sem)
 {
   unsigned int i;
-  unsigned int j;
   int ret = OK;
+  int count = 0;
 
   /* Process each descriptor in the list */
 
@@ -100,82 +142,38 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
       if (fds[i].fd >= 0)
         {
           ret = poll_fdsetup(fds[i].fd, &fds[i], true);
-        }
-
-      if (ret < 0)
-        {
-          /* Setup failed for fds[i]. We now need to teardown previously
-           * setup fds[0 .. (i - 1)] to release allocated resources and
-           * to prevent memory corruption by access to freed/released 'fds'
-           * and 'sem'.
-           */
-
-          for (j = 0; j < i; j++)
+          if (ret < 0)
             {
-              poll_fdsetup(fds[j].fd, &fds[j], false);
+              poll_teardown(fds, i, &count);
+              fds[i].revents |= POLLERR;
+              fds[i].arg = NULL;
+              fds[i].cb = NULL;
+              return count + 1;
             }
-
-          /* Indicate an error on the file descriptor */
-
-          fds[i].revents |= POLLERR;
-          return ret;
+          else if (fds[i].revents != 0)
+            {
+              count++;
+            }
         }
     }
 
-  return OK;
-}
-
-/****************************************************************************
- * Name: poll_teardown
- *
- * Description:
- *   Teardown the poll operation for each descriptor in the list and return
- *   the count of non-zero poll events.
- *
- ****************************************************************************/
-
-static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
-                                FAR int *count, int ret)
-{
-  unsigned int i;
-  int status = OK;
-
-  /* Process each descriptor in the list */
-
-  *count = 0;
-  for (i = 0; i < nfds; i++)
+  if (count > 0)
     {
-      if (fds[i].fd >= 0)
-        {
-          status = poll_fdsetup(fds[i].fd, &fds[i], false);
-        }
+      /* If there are already events available in poll_setup,
+       * we execute teardown and return immediately.
+       */
 
-      if (status < 0)
-        {
-          ret = status;
-        }
-
-      /* Check if any events were posted */
-
-      if (fds[i].revents != 0)
-        {
-          (*count)++;
-        }
-
-      /* Un-initialize the poll structure */
-
-      fds[i].arg = NULL;
-      fds[i].cb  = NULL;
+      poll_teardown(fds, i, &count);
     }
 
-  return ret;
+  return count;
 }
 
 /****************************************************************************
  * Name: poll_cleanup
  *
  * Description:
- *   Setup the poll operation for each descriptor in the list.
+ *   Cleanup the poll operation.
  *
  ****************************************************************************/
 
@@ -184,7 +182,7 @@ static void poll_cleanup(FAR void *arg)
   FAR struct pollfd_s *fdsinfo = (FAR struct pollfd_s *)arg;
   int count;
 
-  poll_teardown(fdsinfo->fds, fdsinfo->nfds, &count, OK);
+  poll_teardown(fdsinfo->fds, fdsinfo->nfds, &count);
 }
 
 /****************************************************************************
@@ -218,7 +216,9 @@ int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup)
 
   /* Let file_poll() do the rest */
 
-  return file_poll(filep, fds, setup);
+  ret = file_poll(filep, fds, setup);
+  fs_putfilep(filep);
+  return ret;
 }
 
 /****************************************************************************
@@ -341,12 +341,23 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
           /* Yes, it does... Setup the poll */
 
           ret = inode->u.i_ops->poll(filep, fds, setup);
+          if (ret < 0)
+            {
+              ferr("poll failed:%p, setup:%d, ret:%d\n",
+                   inode->u.i_ops->poll, setup, ret);
+            }
         }
+
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
                inode->u.i_mops->poll != NULL)
         {
           ret = inode->u.i_mops->poll(filep, fds, setup);
+          if (ret < 0)
+            {
+              ferr("poll failed:%p, setup:%d, ret:%d\n",
+                   inode->u.i_ops->poll, setup, ret);
+            }
         }
 #endif
 
@@ -411,8 +422,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
   FAR struct pollfd *kfds;
   sem_t sem;
   int count = 0;
-  int ret2;
-  int ret;
+  int ret = OK;
 
   DEBUGASSERT(nfds == 0 || fds != NULL);
 
@@ -444,8 +454,13 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
   /* Set up the poll structure */
 
   nxsem_init(&sem, 0, 0);
-  ret = poll_setup(kfds, nfds, &sem);
-  if (ret >= 0)
+
+  /* If there are already events available in poll_setup,
+   * we return immediately
+   */
+
+  count = poll_setup(kfds, nfds, &sem);
+  if (count == 0)
     {
       struct pollfd_s fdsinfo;
 
@@ -457,13 +472,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
       fdsinfo.nfds = nfds;
       tls_cleanup_push(tls_get_info(), poll_cleanup, &fdsinfo);
 
-      if (timeout == 0)
-        {
-          /* Poll returns immediately whether we have a poll event or not. */
-
-          ret = OK;
-        }
-      else if (timeout > 0)
+      if (timeout > 0)
         {
           /* "Implementations may place limitations on the granularity of
            * timeout intervals. If the requested timeout interval requires
@@ -482,7 +491,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
            * will return immediately.
            */
 
-          ret = nxsem_tickwait(&sem, MSEC2TICK(timeout));
+          ret = nxsem_tickwait(&sem, MSEC2TICK((clock_t)timeout));
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -495,7 +504,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
               /* EINTR is the only other error expected in normal operation */
             }
         }
-      else
+      else if (timeout < 0)
         {
           /* Wait for the poll event or signal with no timeout */
 
@@ -508,11 +517,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
        * Preserve ret, if negative, since it holds the result of the wait.
        */
 
-      ret2 = poll_teardown(kfds, nfds, &count, ret);
-      if (ret2 < 0 && ret >= 0)
-        {
-          ret = ret2;
-        }
+      poll_teardown(kfds, nfds, &count);
 
       /* Pop the cancellation point */
 
