@@ -47,6 +47,7 @@
 #include <nuttx/fs/procfs.h>
 
 #include "mount/mount.h"
+#include "sched/sched.h"
 
 /****************************************************************************
  * External Definitions
@@ -55,7 +56,6 @@
 extern const struct procfs_operations g_clk_operations;
 extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
-extern const struct procfs_operations g_cpufreq_operations;
 extern const struct procfs_operations g_critmon_operations;
 extern const struct procfs_operations g_fdt_operations;
 extern const struct procfs_operations g_iobinfo_operations;
@@ -67,7 +67,6 @@ extern const struct procfs_operations g_module_operations;
 extern const struct procfs_operations g_pm_operations;
 extern const struct procfs_operations g_proc_operations;
 extern const struct procfs_operations g_tcbinfo_operations;
-extern const struct procfs_operations g_thermal_operations;
 extern const struct procfs_operations g_uptime_operations;
 extern const struct procfs_operations g_version_operations;
 extern const struct procfs_operations g_pressure_operations;
@@ -112,10 +111,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #if !defined(CONFIG_SCHED_CPULOAD_NONE) && \
     !defined(CONFIG_FS_PROCFS_EXCLUDE_CPULOAD)
   { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE   },
-#endif
-
-#if defined(CONFIG_CPUFREQ) && defined(CONFIG_CPUFREQ_PROCFS)
-  { "cpufreq",      &g_cpufreq_operations,  PROCFS_FILE_TYPE   },
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR
@@ -195,11 +190,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
 
 #if defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
   { "tcbinfo",      &g_tcbinfo_operations,  PROCFS_FILE_TYPE   },
-#endif
-
-#ifdef CONFIG_THERMAL_PROCFS
-  { "thermal",      &g_thermal_operations,  PROCFS_DIR_TYPE    },
-  { "thermal/**",   &g_thermal_operations,  PROCFS_UNKOWN_TYPE },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_UPTIME
@@ -327,7 +317,7 @@ struct procfs_level0_s
 
   uint8_t lastlen;                       /* length of last reported static dir */
   FAR const char *lastread;              /* Pointer to last static dir read */
-  pid_t pid[0];                          /* Snapshot of all active task IDs */
+  pid_t pid[1];                          /* Snapshot of all active task IDs */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -374,15 +364,6 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   index = dir->base.index;
   dir->pid[index] = tcb->pid;
   dir->base.index = index + 1;
-}
-
-/****************************************************************************
- * Name: procfs_thread_number
- ****************************************************************************/
-
-static void procfs_thread_number(FAR struct tcb_s *tcb, FAR void *arg)
-{
-  (*(FAR size_t *)arg)++;
 }
 
 /****************************************************************************
@@ -434,11 +415,6 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 
       if (fnmatch(g_procfs_entries[x].pathpattern, relpath, 0) == 0)
         {
-          if (g_procfs_entries[x].type == PROCFS_DIR_TYPE)
-            {
-              return -EISDIR;
-            }
-
           /* Match found!  Stat using this procfs entry */
 
           DEBUGASSERT(g_procfs_entries[x].ops &&
@@ -665,7 +641,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-      nxsched_foreach(procfs_thread_number, &num);
+      num = g_npidhash;
 #endif
 
       level0 = (FAR struct procfs_level0_s *)

@@ -77,8 +77,8 @@
 
 /* g_current_regs[] holds a reference to the current interrupt level
  * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -144,10 +144,10 @@ void up_initialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      up_current_regs()[i] = NULL;
+      g_current_regs[i] = NULL;
     }
 #else
-  up_set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 #endif
 
   /* Colorize the interrupt stack */
