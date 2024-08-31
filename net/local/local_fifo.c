@@ -166,7 +166,7 @@ static bool local_fifo_exists(FAR const char *path)
  *
  ****************************************************************************/
 
-static int local_create_fifo(FAR const char *path, uint32_t bufsize)
+static int local_create_fifo(FAR const char *path)
 {
   int ret;
 
@@ -174,7 +174,7 @@ static int local_create_fifo(FAR const char *path, uint32_t bufsize)
 
   if (!local_fifo_exists(path))
     {
-      ret = nx_mkfifo(path, 0644, bufsize);
+      ret = nx_mkfifo(path, 0644, CONFIG_DEV_FIFO_SIZE);
       if (ret < 0)
         {
           nerr("ERROR: Failed to create FIFO %s: %d\n", path, ret);
@@ -422,8 +422,7 @@ int local_set_pollthreshold(FAR struct local_conn_s *conn,
  *
  ****************************************************************************/
 
-int local_create_fifos(FAR struct local_conn_s *conn,
-                       uint32_t cssize, uint32_t scsize)
+int local_create_fifos(FAR struct local_conn_s *conn)
 {
   char path[LOCAL_FULLPATH_LEN];
   int ret;
@@ -431,13 +430,13 @@ int local_create_fifos(FAR struct local_conn_s *conn,
   /* Create the client-to-server FIFO if it does not already exist. */
 
   local_cs_name(conn, path);
-  ret = local_create_fifo(path, cssize);
+  ret = local_create_fifo(path);
   if (ret >= 0)
     {
       /* Create the server-to-client FIFO if it does not already exist. */
 
       local_sc_name(conn, path);
-      ret = local_create_fifo(path, scsize);
+      ret = local_create_fifo(path);
     }
 
   return ret;
@@ -453,14 +452,14 @@ int local_create_fifos(FAR struct local_conn_s *conn,
 
 #ifdef CONFIG_NET_LOCAL_DGRAM
 int local_create_halfduplex(FAR struct local_conn_s *conn,
-                            FAR const char *path, uint32_t bufsize)
+                            FAR const char *path)
 {
   char fullpath[LOCAL_FULLPATH_LEN];
 
   /* Create the half duplex FIFO if it does not already exist. */
 
   local_hd_name(path, fullpath);
-  return local_create_fifo(fullpath, bufsize);
+  return local_create_fifo(fullpath);
 }
 #endif /* CONFIG_NET_LOCAL_DGRAM */
 
@@ -687,7 +686,7 @@ int local_open_receiver(FAR struct local_conn_s *conn, bool nonblock)
            */
 
           ret = local_set_pollinthreshold(&conn->lc_infile,
-                                          2 * sizeof(lc_size_t));
+                                          2 * sizeof(uint16_t));
         }
     }
 
@@ -730,7 +729,7 @@ int local_open_sender(FAR struct local_conn_s *conn, FAR const char *path,
            */
 
           ret = local_set_polloutthreshold(&conn->lc_outfile,
-                                           2 * sizeof(lc_size_t));
+                                           2 * sizeof(uint16_t));
         }
     }
 
