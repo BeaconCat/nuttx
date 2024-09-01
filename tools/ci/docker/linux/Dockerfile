@@ -320,6 +320,7 @@ WORKDIR /tools
 # Pull in the tools we just built for nuttx
 COPY --from=nuttx-tools /tools/bloaty/ bloaty/
 ENV PATH="/tools/bloaty/bin:$PATH"
+
 COPY --from=nuttx-tools /tools/kconfig-frontends/ kconfig-frontends/
 ENV PATH="/tools/kconfig-frontends/bin:$PATH"
 
@@ -403,6 +404,7 @@ RUN mkdir -p /tools/ccache/bin && \
   ln -sf `which ccache` /tools/ccache/bin/xtensa-esp32s2-elf-g++ && \
   ln -sf `which ccache` /tools/ccache/bin/xtensa-esp32s3-elf-gcc && \
   ln -sf `which ccache` /tools/ccache/bin/xtensa-esp32s3-elf-g++
+
 ENV PATH="/tools/ccache/bin:$PATH"
 
 CMD [ "/bin/bash" ]
