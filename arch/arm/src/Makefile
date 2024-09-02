@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
+include $(TOPDIR)/Make.defs
 include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_ARMV7A),y)          # ARMv7-A
@@ -154,7 +154,6 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_IAR),y)
   VPATH += common$(DELIM)iar
 else # ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
   VPATH += common$(DELIM)gnu
-  VPATH += common$(DELIM)ghs
 endif
 
 all: $(HEAD_OBJ) $(BIN)
@@ -246,15 +245,12 @@ endif
 
 # Dependencies
 
-makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_ASRC:.S=.dds)
-	$(call CATFILE, Make.dep, $^)
-	$(call DELFILE, $^)
-
 .depend: Makefile chip$(DELIM)Make.defs $(SRCS) $(TOPDIR)$(DELIM).config
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MAKE) makedepfile DEPPATH="$(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))"
+	$(Q) $(MKDEP) $(patsubst %,--dep-path %,$(subst :, ,$(VPATH))) \
+	 "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
 	$(Q) touch $@
 
 depend: .depend

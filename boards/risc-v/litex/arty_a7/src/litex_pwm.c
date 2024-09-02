@@ -60,7 +60,10 @@ int litex_pwm_setup(void)
   struct pwm_lowerhalf_s *pwm = NULL;
   int ret = OK;
   int channel;
-  char devpath[12];
+  char devpath[12] =
+    {
+        0
+    };
 
   for (channel = 0; channel < LITEX_PWM_MAX; channel++)
     {
@@ -73,7 +76,7 @@ int litex_pwm_setup(void)
 
       /* Register the PWM driver at "/dev/pwmX" */
 
-      snprintf(devpath, sizeof(devpath), "/dev/pwm%d", channel);
+      snprintf(devpath, 12, "/dev/pwm%d", channel);
       ret = pwm_register(devpath, pwm);
       if (ret < 0)
         {

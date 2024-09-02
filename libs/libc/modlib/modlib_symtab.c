@@ -62,7 +62,7 @@ extern int CONFIG_MODLIB_NSYMBOLS_VAR;
  ****************************************************************************/
 
 static FAR const struct symtab_s *g_modlib_symtab;
-static int g_modlib_nsymbols;
+static FAR int g_modlib_nsymbols;
 
 /****************************************************************************
  * Public Functions
