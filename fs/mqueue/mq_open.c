@@ -74,7 +74,7 @@ static int nxmq_file_close(FAR struct file *filep)
 {
   FAR struct inode *inode = filep->f_inode;
 
-  if (inode->i_crefs <= 1 && (inode->i_flags & FSNODEFLAG_DELETED))
+  if (atomic_load(&inode->i_crefs) <= 0)
     {
       FAR struct mqueue_inode_s *msgq = inode->i_private;
 
@@ -285,12 +285,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       /* Create an inode in the pseudo-filesystem at this path */
 
-      ret = inode_lock();
-      if (ret < 0)
-        {
-          goto errout_with_lock;
-        }
-
+      inode_lock();
       ret = inode_reserve(fullpath, mode, &inode);
       inode_unlock();
 
@@ -322,7 +317,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       /* Set the initial reference count on this inode to one */
 
-      inode->i_crefs    = 1;
+      atomic_fetch_add(&inode->i_crefs, 1);
 
       if (created)
         {
@@ -393,7 +388,6 @@ static mqd_t nxmq_vopen(FAR const char *mq_name, int oflags, va_list ap)
  *  behavior of this function
  *
  * Input Parameters:
- *   mq - address of to-be-initialized struct file instance.
  *   mq_name - Name of the queue to open
  *   oflags - open flags
  *   Optional parameters.  When the O_CREAT flag is specified, two optional
@@ -408,7 +402,7 @@ static mqd_t nxmq_vopen(FAR const char *mq_name, int oflags, va_list ap)
  * Returned Value:
  *   This is an internal OS interface and should not be used by applications.
  *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success, instance pointed by mq is also initialized.
+ *   returned on success, mqdes point to the new message queue descriptor.
  *   A negated errno value is returned on failure.
  *
  ****************************************************************************/

@@ -249,20 +249,26 @@ struct crypt_kop
   struct crparam crk_param[CRK_MAXPARAM];
 };
 
-#define CRK_MOD_EXP           0
-#define CRK_MOD_EXP_CRT       1
-#define CRK_DSA_SIGN          2
-#define CRK_DSA_VERIFY        3
-#define CRK_DH_COMPUTE_KEY    4
-#define CRK_RSA_PKCS15_VERIFY 5
-#define CRK_ALGORITHM_MAX     5 /* Keep updated */
+#define CRK_MOD_EXP                0
+#define CRK_MOD_EXP_CRT            1
+#define CRK_DSA_SIGN               2
+#define CRK_DSA_VERIFY             3
+#define CRK_DH_COMPUTE_KEY         4
+#define CRK_RSA_PKCS15_VERIFY      5
+#define CRK_ECDSA_SECP256R1_SIGN   6
+#define CRK_ECDSA_SECP256R1_VERIFY 7
+#define CRK_ECDSA_SECP256R1_GENKEY 8
+#define CRK_ALGORITHM_MAX          8 /* Keep updated */
 
-#define CRF_MOD_EXP           (1 << CRK_MOD_EXP)
-#define CRF_MOD_EXP_CRT       (1 << CRK_MOD_EXP_CRT)
-#define CRF_DSA_SIGN          (1 << CRK_DSA_SIGN)
-#define CRF_DSA_VERIFY        (1 << CRK_DSA_VERIFY)
-#define CRF_DH_COMPUTE_KEY    (1 << CRK_DH_COMPUTE_KEY)
-#define CRF_RSA_PKCS15_VERIFY (1 << CRK_RSA_PKCS15_VERIFY)
+#define CRF_MOD_EXP                (1 << CRK_MOD_EXP)
+#define CRF_MOD_EXP_CRT            (1 << CRK_MOD_EXP_CRT)
+#define CRF_DSA_SIGN               (1 << CRK_DSA_SIGN)
+#define CRF_DSA_VERIFY             (1 << CRK_DSA_VERIFY)
+#define CRF_DH_COMPUTE_KEY         (1 << CRK_DH_COMPUTE_KEY)
+#define CRF_RSA_PKCS15_VERIFY      (1 << CRK_RSA_PKCS15_VERIFY)
+#define CRF_ECDSA_SECP256R1_SIGN   (1 << CRK_ECDSA_SECP256R1_SIGN)
+#define CRF_ECDSA_SECP256R1_VERIFY (1 << CRK_ECDSA_SECP256R1_VERIFY)
+#define CRF_ECDSA_SECP256R1_GENKEY (1 << CRK_ECDSA_SECP256R1_GENKEY)
 
 struct cryptkop
 {
@@ -374,11 +380,10 @@ extern const uint8_t hmac_opad_buffer[HMAC_MAX_BLOCK_LEN];
 int crypto_newsession(FAR uint64_t *, FAR struct cryptoini *, int);
 int crypto_freesession(uint64_t);
 int crypto_register(uint32_t, FAR int *,
-                    CODE int (*)(FAR uint32_t *, FAR struct cryptoini *),
+                    CODE int (*)(uint32_t *, struct cryptoini *),
                     CODE int (*)(uint64_t),
                     CODE int (*)(FAR struct cryptop *));
-int crypto_kregister(uint32_t, FAR int *,
-                     CODE int (*)(FAR struct cryptkop *));
+int crypto_kregister(uint32_t, FAR int *, CODE int (*)(struct cryptkop *));
 int crypto_unregister(uint32_t, int);
 int crypto_get_driverid(uint8_t);
 int crypto_invoke(FAR struct cryptop *);
