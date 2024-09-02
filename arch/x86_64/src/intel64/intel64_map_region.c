@@ -89,7 +89,7 @@ int up_map_region(void *base, size_t size, int flags)
 
               /* Map the page table to the prior level */
 
-              mmu_ln_setentry(ptlevel, ptprev, paddr, vaddr, 0);
+              mmu_ln_setentry(ptlevel, ptprev, paddr, vaddr, X86_PAGE_WR);
 
               /* This is then used to map the final level */
 
