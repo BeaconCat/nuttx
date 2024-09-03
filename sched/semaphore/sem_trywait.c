@@ -66,7 +66,7 @@
 
 int nxsem_trywait(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int ret;
 
@@ -81,12 +81,20 @@ int nxsem_trywait(FAR sem_t *sem)
    */
 
   flags = enter_critical_section();
+  rtcb = this_task();
 
   /* If the semaphore is available, give it to the requesting task */
 
   if (sem->semcount > 0)
     {
       /* It is, let the task take the semaphore */
+
+      ret = nxsem_protect_wait(sem);
+      if (ret < 0)
+        {
+          leave_critical_section(flags);
+          return ret;
+        }
 
       sem->semcount--;
       nxsem_add_holder(sem);
