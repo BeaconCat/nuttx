@@ -347,11 +347,9 @@ static const struct usbdev_epinfo_s g_rndis_epintindesc =
       .type      = USB_DESC_TYPE_ENDPOINT,
 #ifndef CONFIG_RNDIS_COMPOSITE
       .addr      = RNDIS_EPINTIN_ADDR,
-#else
-      .addr      = USB_DIR_IN,
 #endif
       .attr      = USB_EP_ATTR_XFER_INT,
-      .interval  = 10
+      .interval  = 1
     },
   .reqnum        = 1,
   .fssize        = CONFIG_RNDIS_EPINTIN_FSSIZE,
@@ -399,8 +397,6 @@ static const struct usbdev_epinfo_s g_rndis_epbulkindesc =
       .type      = USB_DESC_TYPE_ENDPOINT,
 #ifndef CONFIG_RNDIS_COMPOSITE
       .addr      = RNDIS_EPBULKIN_ADDR,
-#else
-      .addr      = USB_DIR_IN,
 #endif
       .attr      = USB_EP_ATTR_XFER_BULK,
 #ifdef CONFIG_USBDEV_DUALSPEED
@@ -438,8 +434,6 @@ static const struct usbdev_epinfo_s g_rndis_epbulkoutdesc =
       .type      = USB_DESC_TYPE_ENDPOINT,
 #ifndef CONFIG_RNDIS_COMPOSITE
       .addr      = RNDIS_EPBULKOUT_ADDR,
-#else
-      .addr      = USB_DIR_OUT,
 #endif
       .attr      = USB_EP_ATTR_XFER_BULK,
 #ifdef CONFIG_USBDEV_DUALSPEED
@@ -1950,7 +1944,6 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
                                   uint8_t speed, uint8_t type)
 {
   uint16_t totallen = 0;
-  uint8_t epno;
   int ret;
 
   /* Check for switches between high and full speed */
@@ -2014,9 +2007,8 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 
   totallen += sizeof(struct usb_ifdesc_s);
 
-  epno = devinfo ? devinfo->epno[RNDIS_EP_INTIN_IDX] : 0;
   ret = usbdev_copy_epdesc((struct usb_epdesc_s *)buf,
-                           epno,
+                           devinfo->epno[RNDIS_EP_INTIN_IDX],
                            speed,
                            &g_rndis_epintindesc);
 
@@ -2040,9 +2032,8 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 
   totallen += sizeof(struct usb_ifdesc_s);
 
-  epno = devinfo ? devinfo->epno[RNDIS_EP_BULKIN_IDX] : 0;
   ret = usbdev_copy_epdesc((struct usb_epdesc_s *)buf,
-                           epno,
+                           devinfo->epno[RNDIS_EP_BULKIN_IDX],
                            speed,
                            &g_rndis_epbulkindesc);
   if (buf != NULL)
@@ -2052,9 +2043,8 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 
   totallen += ret;
 
-  epno = devinfo ? devinfo->epno[RNDIS_EP_BULKOUT_IDX] : 0;
   ret = usbdev_copy_epdesc((struct usb_epdesc_s *)buf,
-                           epno,
+                           devinfo->epno[RNDIS_EP_BULKOUT_IDX],
                            speed,
                            &g_rndis_epbulkoutdesc);
   if (buf != NULL)
@@ -2081,7 +2071,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   FAR struct rndis_dev_s *priv = ((FAR struct rndis_driver_s *)driver)->dev;
   FAR struct rndis_req_s *reqcontainer;
   irqstate_t flags;
-  size_t reqlen;
+  uint32_t reqlen;
   int ret;
   int i;
 
@@ -2518,7 +2508,7 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
                 case USB_DESC_TYPE_CONFIG:
                   {
                     ret = usbclass_mkcfgdesc(ctrlreq->buf, &priv->devinfo,
-                                             dev->speed, ctrl->value[1]);
+                                             dev->speed, ctrl->req);
                   }
                   break;
 #endif
