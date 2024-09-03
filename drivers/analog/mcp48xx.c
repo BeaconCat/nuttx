@@ -106,6 +106,8 @@ static int  mcp48xx_ioctl(FAR struct dac_dev_s *dev, int cmd,
  * Private Data
  ****************************************************************************/
 
+static struct mcp48xx_dev_s g_devpriv;
+
 static const struct dac_ops_s g_dacops =
 {
   mcp48xx_reset,        /* ao_reset */
@@ -114,6 +116,12 @@ static const struct dac_ops_s g_dacops =
   mcp48xx_txint,        /* ao_txint */
   mcp48xx_send,         /* ao_send */
   mcp48xx_ioctl         /* ao_ioctl */
+};
+
+static struct dac_dev_s g_dacdev =
+{
+  &g_dacops,    /* ad_ops */
+  &g_devpriv    /* ad_priv */
 };
 
 /****************************************************************************
@@ -329,35 +337,15 @@ FAR struct dac_dev_s *mcp48xx_initialize(FAR struct spi_dev_s *spi,
                                          uint32_t spidev)
 {
   FAR struct mcp48xx_dev_s *priv;
-  FAR struct dac_dev_s *dacdev;
   int i;
 
   /* Sanity check */
 
   DEBUGASSERT(spi != NULL);
 
-  /* Initialize the DAC device structure */
-
-  priv = kmm_malloc(sizeof(struct mcp48xx_dev_s));
-  if (priv == NULL)
-    {
-      aerr("ERROR: Failed to allocate mcp48xx_dev_s instance\n");
-      free(priv);
-      return NULL;
-    }
-
-  dacdev = kmm_malloc(sizeof(struct dac_dev_s));
-  if (dacdev == NULL)
-    {
-      aerr("ERROR: Failed to allocate dac_dev_s instance\n");
-      return NULL;
-    }
-
-  dacdev->ad_ops = &g_dacops;
-  dacdev->ad_priv = priv;
-
   /* Initialize the MCP48XX device structure */
 
+  priv = (FAR struct mcp48xx_dev_s *)g_dacdev.ad_priv;
   priv->spi = spi;
   priv->spidev = spidev;
 
@@ -368,7 +356,7 @@ FAR struct dac_dev_s *mcp48xx_initialize(FAR struct spi_dev_s *spi,
       priv->cmd[i] = MCP48XX_SHDN | MCP48XX_GA;
     }
 
-  return dacdev;
+  return &g_dacdev;
 }
 
 #endif /* CONFIG_MCP48XX */
