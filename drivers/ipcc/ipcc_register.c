@@ -25,7 +25,7 @@
 #include <nuttx/config.h>
 #include <nuttx/ipcc.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -164,7 +164,7 @@ int ipcc_register(FAR struct ipcc_lower_s *ipcc)
 
   /* Create the character device name */
 
-  snprintf(devname, DEVNAME_FMTLEN, DEVNAME_FMT, ipcc->chan);
+  snprintf(devname, sizeof(devname), DEVNAME_FMT, ipcc->chan);
   if ((ret = register_driver(devname, &g_ipcc_fops, 0666, priv)))
     {
       goto error;
