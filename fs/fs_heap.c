@@ -22,15 +22,17 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
+
 #include "fs_heap.h"
 
-#if defined(CONFIG_FS_HEAPSIZE) && CONFIG_FS_HEAPSIZE > 0
+#if CONFIG_FS_HEAPSIZE > 0
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static FAR struct mm_heap_s *g_fs_heap;
+static struct mm_heap_s *g_fs_heap = NULL;
 
 /****************************************************************************
  * Public Functions
