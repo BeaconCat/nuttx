@@ -365,7 +365,6 @@ static int lpc54_setrelative(struct rtc_lowerhalf_s *lower,
   struct lpc54_cbinfo_s *cbinfo;
   struct timespec ts;
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->id == 0);
   priv = (struct lpc54_lowerhalf_s *)lower;
@@ -376,7 +375,7 @@ static int lpc54_setrelative(struct rtc_lowerhalf_s *lower,
        * about being suspended and working on an old time.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
 
       /* Get the current time in seconds */
 
@@ -404,7 +403,7 @@ static int lpc54_setrelative(struct rtc_lowerhalf_s *lower,
           cbinfo->priv = NULL;
         }
 
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   return ret;

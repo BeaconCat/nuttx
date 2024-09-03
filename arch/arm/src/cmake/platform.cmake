@@ -1,5 +1,5 @@
 # ##############################################################################
-# ./arch/arm/src/cmake/platform.cmake
+# arch/arm/src/cmake/platform.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -73,13 +73,40 @@ endforeach()
 
 separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
 
-find_extra_lib(extra_library)
+execute_process(
+  COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+          --print-libgcc-file-name
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  OUTPUT_VARIABLE extra_library)
+if(NOT EXISTS ${extra_library} AND CONFIG_ARCH_TOOLCHAIN_CLANG)
+  get_filename_component(COMPILER_RT_LIB ${extra_library} NAME)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+            --print-file-name ${COMPILER_RT_LIB}
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE extra_library)
+endif()
 
-list(APPEND EXTRA_LIB ${extra_library})
+if(CMAKE_HOST_SYSTEM_NAME MATCHES "MSYS|CYGWIN|Windows")
+  cmake_path(GET extra_library FILENAME extra_filename_library)
+  list(APPEND EXTRA_LIB -l:${extra_filename_library})
+else()
+  list(APPEND EXTRA_LIB ${extra_library})
+endif()
 
 if(NOT CONFIG_LIBM)
-  find_toolchain_lib(extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+            --print-file-name=libm.a
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE extra_library)
+
+  if(CMAKE_HOST_SYSTEM_NAME MATCHES "MSYS|CYGWIN|Windows")
+    cmake_path(GET extra_library FILENAME extra_filename_library)
+    list(APPEND EXTRA_LIB -l:${extra_filename_library})
+  else()
+    list(APPEND EXTRA_LIB ${extra_library})
+  endif()
 endif()
 
 if(CONFIG_LIBSUPCXX)
@@ -88,16 +115,28 @@ if(CONFIG_LIBSUPCXX)
             --print-file-name=libsupc++.a
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  if(CMAKE_HOST_SYSTEM_NAME MATCHES "MSYS|CYGWIN|Windows")
+    cmake_path(GET extra_library FILENAME extra_filename_library)
+    list(APPEND EXTRA_LIB -l:${extra_filename_library})
+  else()
+    list(APPEND EXTRA_LIB ${extra_library})
+  endif()
 endif()
 
-if(CONFIG_SCHED_GCOV)
+if(CONFIG_ARCH_COVERAGE)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  if(CMAKE_HOST_SYSTEM_NAME MATCHES "MSYS|CYGWIN|Windows")
+    cmake_path(GET extra_library FILENAME extra_filename_library)
+    list(APPEND EXTRA_LIB -l:${extra_filename_library})
+  else()
+    list(APPEND EXTRA_LIB ${extra_library})
+  endif()
 endif()
 
 nuttx_add_extra_library(${EXTRA_LIB})
+
+set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

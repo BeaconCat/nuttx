@@ -90,8 +90,10 @@
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
                     FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
+  sclock_t ticks;
+  int status;
   int ret = ERROR;
 
   DEBUGASSERT(sem != NULL && abstime != NULL);
@@ -105,8 +107,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    * enabled while we are blocked waiting for the semaphore.
    */
 
-  flags = enter_critical_section_nonirq();
-  rtcb = this_task();
+  flags = enter_critical_section();
 
   /* Try to take the semaphore without waiting. */
 
@@ -130,16 +131,34 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
     }
 #endif
 
-  if (clockid == CLOCK_REALTIME)
+  /* Convert the timespec to clock ticks.  We must have interrupts
+   * disabled here so that this time stays valid until the wait begins.
+   *
+   * clock_abstime2ticks() returns zero on success or a POSITIVE errno
+   * value on failure.
+   */
+
+  status = clock_abstime2ticks(clockid, abstime, &ticks);
+
+  /* If the time has already expired return immediately. */
+
+  if (status == OK && ticks <= 0)
     {
-      wd_start_realtime(&rtcb->waitdog, abstime,
-                        nxsem_timeout, (wdparm_t)rtcb);
+      ret = -ETIMEDOUT;
+      goto out;
     }
-  else
+
+  /* Handle any time-related errors */
+
+  if (status != OK)
     {
-      wd_start_abstime(&rtcb->waitdog, abstime,
-                       nxsem_timeout, (wdparm_t)rtcb);
+      ret = -status;
+      goto out;
     }
+
+  /* Start the watchdog */
+
+  wd_start(&rtcb->waitdog, ticks, nxsem_timeout, nxsched_gettid());
 
   /* Now perform the blocking wait.  If nxsem_wait() fails, the
    * negated errno value will be returned below.
@@ -154,7 +173,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
   /* We can now restore interrupts and delete the watchdog */
 
 out:
-  leave_critical_section_nonirq(flags);
+  leave_critical_section(flags);
   return ret;
 }
 
