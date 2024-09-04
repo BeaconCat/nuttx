@@ -231,13 +231,12 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
 {
   switch (epid)
     {
-#ifdef CONFIG_CDCACM_HAVE_EPINTIN
     case CDCACM_EPINTIN:  /* Interrupt IN endpoint */
       {
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)     /* Max burst */
+        if (CONFIG_CDCACM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_INT_EP_MAXBURST - 1;
           }
@@ -253,14 +252,13 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
                                         CONFIG_CDCACM_EPINTIN_SSSIZE);
       }
       break;
-#endif
 
     case CDCACM_EPBULKOUT:  /* Bulk OUT endpoint */
       {
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)  /* Max burst */
+        if (CONFIG_CDCACM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -269,7 +267,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
             epcompdesc->mxburst = CONFIG_CDCACM_EPBULKOUT_MAXBURST;
           }
 
-        if (CONFIG_CDCACM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM) /* Max stream */
+        if (CONFIG_CDCACM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -288,7 +286,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)   /* Max burst */
+        if (CONFIG_CDCACM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -297,7 +295,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
             epcompdesc->mxburst = CONFIG_CDCACM_EPBULKIN_MAXBURST;
           }
 
-        if (CONFIG_CDCACM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)  /* Max stream */
+        if (CONFIG_CDCACM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -351,7 +349,6 @@ int cdcacm_copy_epdesc(enum cdcacm_epdesc_e epid,
 
   switch (epid)
     {
-#ifdef CONFIG_CDCACM_HAVE_EPINTIN
     case CDCACM_EPINTIN:  /* Interrupt IN endpoint */
       {
         epdesc->len  = USB_SIZEOF_EPDESC;            /* Descriptor length */
@@ -395,7 +392,6 @@ int cdcacm_copy_epdesc(enum cdcacm_epdesc_e epid,
         epdesc->interval = 10;                       /* Interval */
       }
       break;
-#endif
 
     case CDCACM_EPBULKOUT:  /* Bulk OUT endpoint */
       {
@@ -589,11 +585,7 @@ int16_t cdcacm_mkcfgdesc(FAR uint8_t *buf,
       dest->type     = USB_DESC_TYPE_INTERFACE;              /* Descriptor type */
       dest->ifno     = devinfo->ifnobase;                    /* Interface number */
       dest->alt      = CDCACM_NOTALTIFID;                    /* Alternate setting */
-#ifdef CONFIG_CDCACM_HAVE_EPINTIN
-      dest->neps = 1;                                        /* Number of endpoints */
-#else
-      dest->neps = 0;                                        /* Number of endpoints */
-#endif
+      dest->neps     = 1;                                    /* Number of endpoints */
       dest->classid  = USB_CLASS_CDC;                        /* Interface class */
       dest->subclass = CDC_SUBCLASS_ACM;                     /* Interface sub-class */
       dest->protocol = CDC_PROTO_ATM;                        /* Interface protocol */
@@ -683,7 +675,6 @@ int16_t cdcacm_mkcfgdesc(FAR uint8_t *buf,
 
   length += sizeof(struct cdc_callmgmt_funcdesc_s);
 
-#ifdef CONFIG_CDCACM_HAVE_EPINTIN
   /* Interrupt IN endpoint descriptor */
 
   ret = cdcacm_copy_epdesc(CDCACM_EPINTIN,
@@ -696,7 +687,6 @@ int16_t cdcacm_mkcfgdesc(FAR uint8_t *buf,
     }
 
   length += ret;
-#endif
 
   /* Data interface descriptor */
 
