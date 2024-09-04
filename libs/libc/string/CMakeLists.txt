@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/string/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -21,7 +23,6 @@
 # Add the string C files to the build
 
 set(SRCS
-    lib_bzero.c
     lib_ffs.c
     lib_ffsl.c
     lib_ffsll.c

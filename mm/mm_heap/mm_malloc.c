@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/mm_heap/mm_malloc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -357,11 +359,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-#if CONFIG_MM_BACKTRACE >= 0
         PID_MM_ALLOC, 0, ULONG_MAX
-#else
-        PID_MM_ALLOC
-#endif
       };
 #  endif
 #endif

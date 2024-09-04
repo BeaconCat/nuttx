@@ -42,6 +42,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Configuration ************************************************************/
+
+#ifndef CONFIG_SEM_PREALLOCHOLDERS
+#  define CONFIG_SEM_PREALLOCHOLDERS 0
+#endif
+
 /****************************************************************************
  * Private Type Declarations
  ****************************************************************************/
@@ -595,8 +601,7 @@ void nxsem_destroyholder(FAR sem_t *sem)
 #else
   /* There may be an issue if there are multiple holders of the semaphore. */
 
-  DEBUGASSERT(sem->holder.htcb == NULL
-              || sem->holder.htcb == this_task());
+  DEBUGASSERT(sem->holder.htcb == NULL || sem->holder.htcb == this_task());
 
 #endif
 
