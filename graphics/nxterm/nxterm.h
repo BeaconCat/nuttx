@@ -159,7 +159,7 @@ struct nxterm_state_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  struct pollfd *fds[CONFIG_NXTERM_NPOLLWAITERS];
+  FAR struct pollfd *fds[CONFIG_NXTERM_NPOLLWAITERS];
 #endif /* CONFIG_NXTERM_NXKBDIN */
 };
 
