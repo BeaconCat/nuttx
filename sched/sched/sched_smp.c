@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_smp.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,7 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <nuttx/arch.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
@@ -60,7 +61,6 @@ struct smp_call_data_s
 
 static sq_queue_t g_smp_call_queue[CONFIG_SMP_NCPUS];
 static struct smp_call_data_s g_smp_call_data;
-static spinlock_t g_smp_call_lock;
 
 /****************************************************************************
  * Private Functions
@@ -86,9 +86,9 @@ static void nxsched_smp_call_add(int cpu,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&g_smp_call_lock);
+  flags = enter_critical_section();
   sq_addlast(&call_data->node[cpu], &g_smp_call_queue[cpu]);
-  spin_unlock_irqrestore(&g_smp_call_lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -119,10 +119,11 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
   FAR sq_entry_t *next;
   int cpu = this_cpu();
 
-  irqstate_t flags = spin_lock_irqsave(&g_smp_call_lock);
+  irqstate_t flags = enter_critical_section();
 
   call_queue = &g_smp_call_queue[cpu];
 
+  up_cpu_paused_save();
   sq_for_every_safe(call_queue, curr, next)
     {
       FAR struct smp_call_data_s *call_data =
@@ -131,18 +132,9 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
 
       sq_rem(&call_data->node[cpu], call_queue);
 
-      spin_unlock_irqrestore(&g_smp_call_lock, flags);
+      leave_critical_section(flags);
 
       ret = call_data->func(call_data->arg);
-
-      flags = spin_lock_irqsave(&g_smp_call_lock);
-      if (spin_is_locked(&call_data->lock))
-        {
-          if (--call_data->refcount == 0)
-            {
-              spin_unlock(&call_data->lock);
-            }
-        }
 
       if (call_data->cookie != NULL)
         {
@@ -153,9 +145,20 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
 
           nxsem_post(&call_data->cookie->sem);
         }
+
+      if (spin_is_locked(&call_data->lock))
+        {
+          if (--call_data->refcount == 0)
+            {
+              spin_unlock(&call_data->lock);
+            }
+        }
+
+      flags = enter_critical_section();
     }
 
-  spin_unlock_irqrestore(&g_smp_call_lock, flags);
+  up_cpu_paused_restore();
+  leave_critical_section(flags);
   return OK;
 }
 
@@ -217,20 +220,13 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     };
 
   FAR struct smp_call_data_s *call_data;
-  int remote_cpus;
+  int remote_cpus = 0;
   int ret = OK;
   int i;
 
-  /* Cannot wait in interrupt context. */
-
-  DEBUGASSERT(!(wait && up_interrupt_context()));
-
   /* Prevent reschedule on another processor */
 
-  if (!up_interrupt_context())
-    {
-      sched_lock();
-    }
+  sched_lock();
 
   if (CPU_ISSET(this_cpu(), &cpuset))
     {
@@ -243,8 +239,7 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
       CPU_CLR(this_cpu(), &cpuset);
     }
 
-  remote_cpus = CPU_COUNT(&cpuset);
-  if (remote_cpus == 0)
+  if (CPU_COUNT(&cpuset) == 0)
     {
       goto out;
     }
@@ -266,17 +261,22 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
 
   call_data->func = func;
   call_data->arg  = arg;
-  call_data->refcount = remote_cpus;
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       if (CPU_ISSET(i, &cpuset))
         {
           nxsched_smp_call_add(i, call_data);
+          remote_cpus++;
         }
     }
 
-  up_send_smp_call(cpuset);
+  call_data->refcount = remote_cpus;
+
+  if (remote_cpus > 0)
+    {
+      up_send_smp_call(cpuset);
+    }
 
   if (wait)
     {
@@ -298,10 +298,6 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     }
 
 out:
-  if (!up_interrupt_context())
-    {
-      sched_unlock();
-    }
-
+  sched_unlock();
   return ret;
 }
