@@ -20,7 +20,7 @@
 
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
 
-  set(LIBCXXABI_VERSION CONFIG_LIBCXXABI_VERSION)
+  set(LIBCXXABI_VERSION ${CONFIG_LIBCXXABI_VERSION})
 
   FetchContent_Declare(
     libcxxabi
@@ -39,6 +39,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
         ""
         TEST_COMMAND
         ""
+    PATCH_COMMAND ""
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -48,12 +49,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
     FetchContent_Populate(libcxxabi)
   endif()
 endif()
-
-set_property(
-  TARGET nuttx
-  APPEND
-  PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES
-           ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
 
 nuttx_add_system_library(libcxxabi)
 
@@ -80,9 +75,11 @@ list(APPEND SRCS stdlib_exception.cpp stdlib_new_delete.cpp
 # Internal files
 list(APPEND SRCS abort_message.cpp fallback_malloc.cpp private_typeinfo.cpp)
 
-# Always compile libcxxabi with exception
 if(CONFIG_CXX_EXCEPTION)
+  add_compile_definitions(LIBCXXABI_ENABLE_EXCEPTIONS)
   list(APPEND SRCS cxa_exception.cpp cxa_personality.cpp)
+else()
+  list(APPEND SRCS cxa_noexception.cpp)
 endif()
 
 if(CONFIG_LIBCXXABI)
@@ -96,23 +93,11 @@ foreach(src ${SRCS})
   list(APPEND TARGET_SRCS ${src})
 endforeach()
 
-if(CONFIG_SIM_UBSAN OR CONFIG_MM_UBSAN)
-  target_compile_options(libcxxabi PRIVATE -fno-sanitize=vptr)
-endif()
-
-# Fix compilation error on ARM32:libcxxabi/src/cxa_personality.cpp:594:22:
-# error: '_URC_FATAL_PHASE1_ERROR' was not declared in this scope 594 |
-# results.reason = _URC_FATAL_PHASE1_ERROR;
-if(CONFIG_ARCH_ARM)
-  target_compile_definitions(libcxxabi
-                             PRIVATE _URC_FATAL_PHASE2_ERROR=_URC_FAILURE)
-  target_compile_definitions(libcxxabi
-                             PRIVATE _URC_FATAL_PHASE1_ERROR=_URC_FAILURE)
-  target_compile_definitions(libcxxabi
-                             PRIVATE LIBCXXABI_NON_DEMANGLING_TERMINATE)
-endif()
+# RTTI is required for building the libcxxabi library
+target_compile_options(libcxxabi PRIVATE -frtti)
 
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
 target_compile_options(libcxxabi PRIVATE -frtti)
-target_include_directories(libcxxabi BEFORE
-                           PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
+target_include_directories(
+  libcxxabi BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include
+                           ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
