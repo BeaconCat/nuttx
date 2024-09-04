@@ -78,25 +78,27 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   arm_ack_irq(irq);
 
+  /* Set current regs for crash dump */
+
+  up_set_current_regs(regs);
+
   if (irq == NVIC_IRQ_PENDSV)
     {
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+      /* Dispatch the PendSV interrupt */
+
+      irq_dispatch(irq, regs);
+#endif
+
       up_irq_save();
       g_running_tasks[this_cpu()]->xcp.regs = regs;
     }
   else
     {
-      /* Set current regs for crash dump */
-
-      up_set_current_regs(regs);
-
       /* Dispatch irq */
 
       tcb->xcp.regs = regs;
       irq_dispatch(irq, regs);
-
-      /* Clear current regs */
-
-      up_set_current_regs(NULL);
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -106,16 +108,6 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    */
 
   tcb = this_task();
-
-#ifdef CONFIG_ARCH_ADDRENV
-  /* Make sure that the address environment for the previously
-   * running task is closed down gracefully (data caches dump,
-   * MMU flushed) and set up the address environment for the new
-   * thread at the head of the ready-to-run list.
-   */
-
-  addrenv_switch(NULL);
-#endif
 
   /* Update scheduler parameters */
 
@@ -130,6 +122,10 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   g_running_tasks[this_cpu()] = tcb;
   regs = tcb->xcp.regs;
 #endif
+
+  /* Clear current regs */
+
+  up_set_current_regs(NULL);
 
   board_autoled_off(LED_INIRQ);
 

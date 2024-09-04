@@ -164,9 +164,7 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
   /* Sanity checks. */
 
   if (timerid == NULL || (clockid != CLOCK_REALTIME &&
-      clockid != CLOCK_MONOTONIC && clockid != CLOCK_BOOTTIME) ||
-      (evp != NULL && evp->sigev_notify == SIGEV_SIGNAL &&
-       !GOOD_SIGNO(evp->sigev_signo)))
+      clockid != CLOCK_MONOTONIC && clockid != CLOCK_BOOTTIME))
     {
       set_errno(EINVAL);
       return ERROR;
