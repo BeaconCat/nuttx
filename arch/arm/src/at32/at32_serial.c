@@ -37,6 +37,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
@@ -105,7 +106,7 @@
                  DMA_CCR_MSIZE_8BITS   | \
                  CONFIG_USART_RXDMAPRIO)
 
-#endif  /* SERIAL_HAVE_RXDMA */
+#endif /* SERIAL_HAVE_RXDMA */
 
 #ifdef SERIAL_HAVE_TXDMA
 
