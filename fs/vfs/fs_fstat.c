@@ -32,6 +32,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/mtd/mtd.h>
+#include <nuttx/net/net.h>
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -236,7 +237,8 @@ int nx_fstat(int fd, FAR struct stat *buf)
     {
       /* Perform the fstat operation */
 
-      return file_fstat(filep, buf);
+      ret = file_fstat(filep, buf);
+      fs_putfilep(filep);
     }
 
   return ret;

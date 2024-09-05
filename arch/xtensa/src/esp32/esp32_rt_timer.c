@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>
@@ -263,7 +262,7 @@ static void delete_rt_timer(struct rt_timer_s *timer)
   irqstate_t flags;
   struct esp32_rt_priv_s *priv = &g_rt_priv;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   if (timer->state == RT_TIMER_READY)
     {
@@ -282,7 +281,7 @@ static void delete_rt_timer(struct rt_timer_s *timer)
   timer->state = RT_TIMER_DELETE;
 
 exit:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -709,7 +708,7 @@ int esp32_rt_timer_init(void)
   priv->timer = tim;
   priv->pid   = (pid_t)pid;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* ESP32 hardware timer configuration:
    *   - 1 counter = 1us
@@ -727,7 +726,7 @@ int esp32_rt_timer_init(void)
 
   ESP32_TIM_START(tim);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return 0;
 }
