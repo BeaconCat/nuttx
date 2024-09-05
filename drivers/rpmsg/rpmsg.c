@@ -183,6 +183,24 @@ int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
   return rpmsg->ops->post(rpmsg, sem);
 }
 
+FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev)
+{
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  FAR const char *cpuname = NULL;
+
+  if (rpmsg == NULL)
+    {
+      return NULL;
+    }
+
+  if (rpmsg->ops->get_local_cpuname)
+    {
+      cpuname = rpmsg->ops->get_local_cpuname(rpmsg);
+    }
+
+  return cpuname && cpuname[0] ? cpuname : CONFIG_RPMSG_LOCAL_CPUNAME;
+}
+
 FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev)
 {
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
@@ -229,7 +247,7 @@ int rpmsg_register_callback(FAR void *priv,
       FAR struct rpmsg_s *rpmsg =
         metal_container_of(node, struct rpmsg_s, node);
 
-      if (rpmsg->rdev->ns_unbind_cb == NULL)
+      if (!rpmsg->init)
         {
           continue;
         }
@@ -307,7 +325,7 @@ void rpmsg_unregister_callback(FAR void *priv,
           FAR struct rpmsg_s *rpmsg =
             metal_container_of(pnode, struct rpmsg_s, node);
 
-          if (rpmsg->rdev->ns_unbind_cb)
+          if (rpmsg->init)
             {
               device_destroy(rpmsg->rdev, priv);
             }
@@ -397,6 +415,7 @@ void rpmsg_device_created(FAR struct rpmsg_s *rpmsg)
         }
     }
 
+  rpmsg->init = true;
   nxrmutex_unlock(&g_rpmsg_lock);
 
 #ifdef CONFIG_RPMSG_PING
@@ -491,7 +510,11 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
   FAR struct metal_list *node;
   int ret = OK;
 
-  nxrmutex_lock(&g_rpmsg_lock);
+  if (!up_interrupt_context())
+    {
+      nxrmutex_lock(&g_rpmsg_lock);
+    }
+
   metal_list_for_each(&g_rpmsg, node)
     {
       FAR struct rpmsg_s *rpmsg =
@@ -507,7 +530,11 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
         }
     }
 
-  nxrmutex_unlock(&g_rpmsg_lock);
+  if (!up_interrupt_context())
+    {
+      nxrmutex_unlock(&g_rpmsg_lock);
+    }
+
   return ret;
 }
 
