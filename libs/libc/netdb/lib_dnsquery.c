@@ -669,8 +669,7 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
               /* Obtain the IPv6 response */
 
               ret = dns_recv_response(sd, &query->addr[next],
-                                      CONFIG_NETDB_MAX_IPv6ADDR,
-                                      &qdata->qinfo,
+                                      *query->naddr - next, &qdata->qinfo,
                                       &query->ttl, qdata->buffer);
               if (ret >= 0)
                 {
@@ -719,8 +718,7 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
                 }
 
               ret = dns_recv_response(sd, &query->addr[next],
-                                      CONFIG_NETDB_MAX_IPv4ADDR,
-                                      &qdata->qinfo,
+                                      *query->naddr - next, &qdata->qinfo,
                                       &query->ttl, qdata->buffer);
               if (ret >= 0)
                 {
@@ -754,6 +752,11 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
         }
       else if (query->result != -EAGAIN)
         {
+          if (query->result == -EINTR)
+            {
+              nerr("ERROR: dns query cancel");
+              return 1;
+            }
           break;
         }
     }

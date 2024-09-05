@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <ctype.h>
+#include <elf.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/ascii.h>
 #include <nuttx/gdbstub.h>
+#include <nuttx/memoryregion.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -68,6 +70,7 @@ struct gdb_state_s
   size_t pkt_len;                         /* Packet send and receive length */
   uint8_t running_regs[XCPTCONTEXT_SIZE]; /* Registers of running thread */
   size_t size;                            /* Size of registers */
+  FAR struct memory_region_s *range;      /* Memory regions */
   uintptr_t registers[0];                 /* Registers of other threads */
 };
 
@@ -633,6 +636,7 @@ static ssize_t gdb_hex2bin(FAR void *buf, size_t buf_len,
           in[pos], in[pos + 1], 0
         };
 
+      set_errno(0);
       out[pos / 2] = strtoul(ch, NULL, 16); /* Decode high nibble */
       if (out[pos / 2] == 0 && get_errno())
         {
@@ -704,6 +708,40 @@ static ssize_t gdb_bin2bin(FAR void *buf, size_t buf_len,
 }
 
 /****************************************************************************
+ * Name: gdb_is_valid_region
+ * Description:
+ *   Check if the address is in the memory region.
+ *
+ ****************************************************************************/
+
+static bool gdb_is_valid_region(FAR struct gdb_state_s *state,
+                                uintptr_t addr, size_t len, uint32_t flags)
+{
+  FAR struct memory_region_s *region = state->range;
+
+  if (state->range == NULL)
+    {
+      /* No memory region, so allow all access */
+
+      return true;
+    }
+
+  while (region->start != 0)
+    {
+      if (addr >= region->start &&
+          addr <= region->end - len &&
+          (region->flags & flags) == flags)
+        {
+          return true;
+        }
+
+      region++;
+    }
+
+  return false;
+}
+
+/****************************************************************************
  * Command Functions
  ****************************************************************************/
 
@@ -732,7 +770,14 @@ static ssize_t gdb_get_memory(FAR struct gdb_state_s *state,
                               uintptr_t addr, size_t len,
                               gdb_format_func_t format)
 {
-  return format(buf, buf_len, (FAR const void *)addr, len);
+  ssize_t ret = -EINVAL;
+
+  if (gdb_is_valid_region(state, addr, len, PF_R))
+    {
+      return format(buf, buf_len, (FAR const void *)addr, len);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -760,7 +805,14 @@ static ssize_t gdb_put_memory(FAR struct gdb_state_s *state,
                               uintptr_t addr, size_t len,
                               gdb_format_func_t format)
 {
-  return format((FAR void *)addr, len, buf, buf_len);
+  ssize_t ret = -EINVAL;
+
+  if (gdb_is_valid_region(state, addr, len, PF_W))
+    {
+      return format((FAR void *)addr, len, buf, buf_len);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -882,7 +934,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
     {
       if (up_interrupt_context())
         {
-          reg = (FAR uint8_t *)CURRENT_REGS;
+          reg = (FAR uint8_t *)up_current_regs();
         }
       else
         {
@@ -1616,13 +1668,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-        type = DEBUGPOINT_WATCHPOINT_WO;
+          type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-        type = DEBUGPOINT_WATCHPOINT_RO;
+          type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-        type = DEBUGPOINT_WATCHPOINT_RW;
+          type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1793,6 +1845,16 @@ FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
   state->priv = priv;
   state->monitor = monitor;
 
+  if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
+    {
+      state->range = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
+      if (state->range == NULL)
+        {
+          lib_free(state);
+          return NULL;
+        }
+    }
+
   return state;
 }
 
@@ -1811,6 +1873,11 @@ void gdb_state_uninit(FAR struct gdb_state_s *state)
 {
   if (state != NULL)
     {
+      if (state->range != NULL)
+        {
+          free_memory_region(state->range);
+        }
+
       lib_free(state);
     }
 }
