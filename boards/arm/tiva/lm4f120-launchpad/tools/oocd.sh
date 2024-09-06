@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# See Documentation/platforms/arm/tiva/boards/lm4f120-launchpad/README.txt for information about
+# See boards/arm/tiva/lm4f120-launchpad/README.txt for information about
 # this file.
 
 TOPDIR=$1

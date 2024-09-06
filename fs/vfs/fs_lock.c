@@ -36,8 +36,8 @@
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
 
-#include "sched/sched.h"
 #include "lock.h"
+#include "sched/sched.h"
 
 /****************************************************************************
  * Pre-processor Definitions

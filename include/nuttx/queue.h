@@ -31,14 +31,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_INLINE_QUEUE
-#  ifndef STATIC_INLINE
-#    define STATIC_INLINE static inline_function
-#  endif
-#else
-#  define STATIC_INLINE
-#endif
-
 #define sq_init(q) \
   do \
     { \
@@ -107,6 +99,17 @@
     } \
   while (0)
 
+#define dq_addfirst_notempty(p, q) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_node = (p); \
+      tmp_node->blink = NULL; \
+      tmp_node->flink = (q)->head; \
+      (q)->head->blink = tmp_node; \
+      (q)->head = tmp_node; \
+    } \
+  while (0)
+
 #define sq_addlast(p, q) \
   do \
     { \
@@ -170,6 +173,9 @@
   for((p) = (q)->head, (tmp) = (p) ? (p)->flink : NULL; \
       (p) != NULL; (p) = (tmp), (tmp) = (p) ? (p)->flink : NULL)
 
+#define dq_for_every(q, p) sq_for_every(q, p)
+#define dq_for_every_safe(q, p, tmp) sq_for_every_safe(q, p, tmp)
+
 #define sq_rem(p, q) \
   do \
     { \
@@ -182,6 +188,10 @@
               if (tmp_node == (q)->tail) \
                 { \
                   (q)->tail = NULL; \
+                } \
+              else \
+                { \
+                  tmp_node->flink = NULL; \
                 } \
             } \
           else \
@@ -223,6 +233,27 @@
         } \
       tmp_node->flink = NULL; \
       tmp_node->blink = NULL; \
+    } \
+  while (0)
+
+#define dq_rem_head(p, q) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_node = (p); \
+      FAR dq_entry_t *tmp_next = tmp_node->flink; \
+      (q)->head = tmp_next; \
+      tmp_next->blink = NULL; \
+      tmp_node->flink = NULL; \
+    } \
+  while (0)
+
+#define dq_rem_mid(p) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_prev = (FAR dq_entry_t *)p->blink; \
+      FAR dq_entry_t *tmp_next = (FAR dq_entry_t *)p->flink; \
+      tmp_prev->flink = tmp_next; \
+      tmp_next->blink = tmp_prev; \
     } \
   while (0)
 
@@ -351,12 +382,9 @@ extern "C"
 
 /* Add nodes to queues */
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-void sq_addafter(FAR sq_entry_t *prev, FAR sq_entry_t *node,
-                 FAR sq_queue_t *queue);
-#else
-STATIC_INLINE void sq_addafter(FAR sq_entry_t *prev, FAR sq_entry_t *node,
-                               FAR sq_queue_t *queue)
+static inline_function void sq_addafter(FAR sq_entry_t *prev,
+                                        FAR sq_entry_t *node,
+                                        FAR sq_queue_t *queue)
 {
   if (!queue->head || prev == queue->tail)
     {
@@ -368,14 +396,10 @@ STATIC_INLINE void sq_addafter(FAR sq_entry_t *prev, FAR sq_entry_t *node,
       prev->flink = node;
     }
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-void dq_addafter(FAR dq_entry_t *prev, FAR dq_entry_t *node,
-                 FAR dq_queue_t *queue);
-#else
-STATIC_INLINE void dq_addafter(FAR dq_entry_t *prev, FAR dq_entry_t *node,
-                               FAR dq_queue_t *queue)
+static inline_function void dq_addafter(FAR dq_entry_t *prev,
+                                        FAR dq_entry_t *node,
+                                        FAR dq_queue_t *queue)
 {
   if (!queue->head || prev == queue->tail)
     {
@@ -390,15 +414,11 @@ STATIC_INLINE void dq_addafter(FAR dq_entry_t *prev, FAR dq_entry_t *node,
       prev->flink = node;
     }
 }
-#endif
 
 /* Remove nodes from queues */
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR sq_entry_t *sq_remafter(FAR sq_entry_t *node, FAR sq_queue_t *queue);
-#else
-STATIC_INLINE FAR sq_entry_t *sq_remafter(FAR sq_entry_t *node,
-                                          FAR sq_queue_t *queue)
+static inline_function FAR sq_entry_t *sq_remafter(FAR sq_entry_t *node,
+                                                   FAR sq_queue_t *queue)
 {
   FAR sq_entry_t *ret = node->flink;
 
@@ -419,13 +439,9 @@ STATIC_INLINE FAR sq_entry_t *sq_remafter(FAR sq_entry_t *node,
 
   return ret;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR dq_entry_t *dq_remafter(FAR dq_entry_t *node, FAR dq_queue_t *queue);
-#else
-STATIC_INLINE FAR dq_entry_t *dq_remafter(FAR dq_entry_t *node,
-                                          FAR dq_queue_t *queue)
+static inline_function FAR dq_entry_t *dq_remafter(FAR dq_entry_t *node,
+                                                   FAR dq_queue_t *queue)
 {
   FAR dq_entry_t *ret = node->flink;
 
@@ -436,12 +452,8 @@ STATIC_INLINE FAR dq_entry_t *dq_remafter(FAR dq_entry_t *node,
 
   return ret;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR sq_entry_t *sq_remlast(FAR sq_queue_t *queue);
-#else
-STATIC_INLINE FAR sq_entry_t *sq_remlast(FAR sq_queue_t *queue)
+static inline_function FAR sq_entry_t *sq_remlast(FAR sq_queue_t *queue)
 {
   FAR sq_entry_t *ret = queue->tail;
 
@@ -471,12 +483,8 @@ STATIC_INLINE FAR sq_entry_t *sq_remlast(FAR sq_queue_t *queue)
 
   return ret;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR dq_entry_t *dq_remlast(FAR dq_queue_t *queue);
-#else
-STATIC_INLINE FAR dq_entry_t *dq_remlast(FAR dq_queue_t *queue)
+static inline_function FAR dq_entry_t *dq_remlast(FAR dq_queue_t *queue)
 {
   FAR dq_entry_t *ret = queue->tail;
 
@@ -500,12 +508,8 @@ STATIC_INLINE FAR dq_entry_t *dq_remlast(FAR dq_queue_t *queue)
 
   return ret;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR sq_entry_t *sq_remfirst(FAR sq_queue_t *queue);
-#else
-STATIC_INLINE FAR sq_entry_t *sq_remfirst(FAR sq_queue_t *queue)
+static inline_function FAR sq_entry_t *sq_remfirst(FAR sq_queue_t *queue)
 {
   FAR sq_entry_t *ret = queue->head;
 
@@ -522,12 +526,8 @@ STATIC_INLINE FAR sq_entry_t *sq_remfirst(FAR sq_queue_t *queue)
 
   return ret;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-FAR dq_entry_t *dq_remfirst(FAR dq_queue_t *queue);
-#else
-STATIC_INLINE FAR dq_entry_t *dq_remfirst(FAR dq_queue_t *queue)
+static inline_function FAR dq_entry_t *dq_remfirst(FAR dq_queue_t *queue)
 {
   FAR dq_entry_t *ret = queue->head;
 
@@ -551,14 +551,10 @@ STATIC_INLINE FAR dq_entry_t *dq_remfirst(FAR dq_queue_t *queue)
 
   return ret;
 }
-#endif
 
 /* Count nodes in queues */
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-size_t sq_count(FAR sq_queue_t *queue);
-#else
-STATIC_INLINE size_t sq_count(FAR sq_queue_t *queue)
+static inline_function size_t sq_count(FAR sq_queue_t *queue)
 {
   FAR sq_entry_t *node;
   size_t count;
@@ -569,12 +565,8 @@ STATIC_INLINE size_t sq_count(FAR sq_queue_t *queue)
 
   return count;
 }
-#endif
 
-#ifndef CONFIG_LIBC_INLINE_QUEUE
-size_t dq_count(FAR dq_queue_t *queue);
-#else
-STATIC_INLINE size_t dq_count(FAR dq_queue_t *queue)
+static inline_function size_t dq_count(FAR dq_queue_t *queue)
 {
   FAR dq_entry_t *node;
   size_t count;
@@ -585,7 +577,6 @@ STATIC_INLINE size_t dq_count(FAR dq_queue_t *queue)
 
   return count;
 }
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus
