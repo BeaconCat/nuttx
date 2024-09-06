@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/igmp/igmp_initialize.c
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * IGMP initialization logic
  *
  *   Copyright (C) 2010, 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
