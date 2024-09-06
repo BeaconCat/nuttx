@@ -31,6 +31,7 @@
 
 #include <debug.h>
 
+#include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/mutex.h>
 
@@ -123,7 +124,7 @@ static struct inode g_timerfd_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  1,                      /* i_crefs */
+  ATOMIC_VAR_INIT(1),     /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_timerfd_fops       /* u */
@@ -511,12 +512,9 @@ int timerfd_settime(int fd, int flags,
       goto errout;
     }
 
-  /* Check fd come from us */
-
-  if (!filep->f_inode || filep->f_inode->u.i_ops != &g_timerfd_fops)
+  if (filep->f_inode->u.i_ops != &g_timerfd_fops)
     {
-      ret = -EINVAL;
-      goto errout;
+      goto errout_with_filep;
     }
 
   dev = (FAR struct timerfd_priv_s *)filep->f_priv;
@@ -535,8 +533,8 @@ int timerfd_settime(int fd, int flags,
 
       /* Convert that to a struct timespec and return it */
 
-      clock_ticks2time(delay, &old_value->it_value);
-      clock_ticks2time(dev->delay, &old_value->it_interval);
+      clock_ticks2time(&old_value->it_value, delay);
+      clock_ticks2time(&old_value->it_interval, dev->delay);
     }
 
   /* Disarm the timer (in case the timer was already armed when
@@ -556,12 +554,13 @@ int timerfd_settime(int fd, int flags,
   if (new_value->it_value.tv_sec <= 0 && new_value->it_value.tv_nsec <= 0)
     {
       leave_critical_section(intflags);
+      fs_putfilep(filep);
       return OK;
     }
 
   /* Setup up any repetitive timer */
 
-  clock_time2ticks(&new_value->it_interval, &delay);
+  delay = clock_time2ticks(&new_value->it_interval);
   dev->delay = delay;
 
   /* We need to disable timer interrupts through the following section so
@@ -583,7 +582,7 @@ int timerfd_settime(int fd, int flags,
        * returns success.
        */
 
-      clock_time2ticks(&new_value->it_value, &delay);
+      delay = clock_time2ticks(&new_value->it_value);
     }
 
   /* If the time is in the past or now, then set up the next interval
@@ -601,12 +600,15 @@ int timerfd_settime(int fd, int flags,
   if (ret < 0)
     {
       leave_critical_section(intflags);
-      goto errout;
+      goto errout_with_filep;
     }
 
   leave_critical_section(intflags);
+  fs_putfilep(filep);
   return OK;
 
+errout_with_filep:
+  fs_putfilep(filep);
 errout:
   set_errno(-ret);
   return ERROR;
@@ -635,11 +637,9 @@ int timerfd_gettime(int fd, FAR struct itimerspec *curr_value)
       goto errout;
     }
 
-  /* Check fd come from us */
-
-  if (!filep->f_inode || filep->f_inode->u.i_ops != &g_timerfd_fops)
+  if (filep->f_inode->u.i_ops != &g_timerfd_fops)
     {
-      ret = -EINVAL;
+      fs_putfilep(filep);
       goto errout;
     }
 
@@ -651,8 +651,9 @@ int timerfd_gettime(int fd, FAR struct itimerspec *curr_value)
 
   /* Convert that to a struct timespec and return it */
 
-  clock_ticks2time(ticks, &curr_value->it_value);
-  clock_ticks2time(dev->delay, &curr_value->it_interval);
+  clock_ticks2time(&curr_value->it_value, ticks);
+  clock_ticks2time(&curr_value->it_interval, dev->delay);
+  fs_putfilep(filep);
   return OK;
 
 errout:

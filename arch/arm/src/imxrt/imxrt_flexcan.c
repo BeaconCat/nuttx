@@ -696,7 +696,7 @@ static int imxrt_transmit(struct imxrt_driver_s *priv)
 
       cs.rtr = frame->can_id & FLAGRTR ? 1 : 0;
 
-      cs.dlc = len_to_can_dlc[frame->len];
+      cs.dlc = g_len_to_can_dlc[frame->len];
 
       frame_data_word = (uint32_t *)&frame->data[0];
 
@@ -856,11 +856,9 @@ static void imxrt_receive(struct imxrt_driver_s *priv,
       /* Read the frame contents */
 
 #ifdef CONFIG_NET_CAN_CANFD
-      if (rf->cs.edl)
+      if (rf->cs.edl) /* CAN FD frame */
         {
-          /* CAN FD frame */
-
-          struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc_fd;
+        struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc_fd;
 
           if (rf->cs.ide)
             {
@@ -877,7 +875,7 @@ static void imxrt_receive(struct imxrt_driver_s *priv,
               frame->can_id |= FLAGRTR;
             }
 
-          frame->len = can_dlc_to_len[rf->cs.dlc];
+          frame->len = g_can_dlc_to_len[rf->cs.dlc];
 
           frame_data_word = (uint32_t *)&frame->data[0];
 
@@ -898,12 +896,10 @@ static void imxrt_receive(struct imxrt_driver_s *priv,
           priv->dev.d_len = sizeof(struct canfd_frame);
           priv->dev.d_buf = (uint8_t *)frame;
         }
-      else
+      else /* CAN 2.0 Frame */
 #endif
         {
-          /* CAN 2.0 Frame */
-
-          struct can_frame *frame = (struct can_frame *)priv->rxdesc;
+        struct can_frame *frame = (struct can_frame *)priv->rxdesc;
 
           if (rf->cs.ide)
             {
@@ -1498,7 +1494,7 @@ static int imxrt_txavail(struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NETDEV_IOCTL
+#ifdef CONFIG_NETDEV_CAN_BITRATE_IOCTL
 static int imxrt_ioctl(struct net_driver_s *dev, int cmd,
                          unsigned long arg)
 {
@@ -1509,7 +1505,6 @@ static int imxrt_ioctl(struct net_driver_s *dev, int cmd,
 
   switch (cmd)
     {
-#ifdef CONFIG_NETDEV_CAN_BITRATE_IOCTL
       case SIOCGCANBITRATE: /* Get bitrate from a CAN controller */
         {
           struct can_ioctl_data_s *req =
@@ -1578,7 +1573,7 @@ static int imxrt_ioctl(struct net_driver_s *dev, int cmd,
             }
         }
         break;
-#endif
+
       default:
         ret = -ENOTTY;
         break;
