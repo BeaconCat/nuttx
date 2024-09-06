@@ -27,7 +27,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <debug.h>
-#include <sched.h>
 
 /****************************************************************************
  * Public Functions
@@ -60,11 +59,6 @@ int pthread_mutexattr_init(FAR pthread_mutexattr_t *attr)
   else
     {
       attr->pshared = 0;
-
-#ifdef CONFIG_PRIORITY_PROTECT
-      attr->proto   = PTHREAD_PRIO_NONE;
-      attr->ceiling = sched_get_priority_min(SCHED_FIFO);
-#endif
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
 #  ifdef CONFIG_PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT

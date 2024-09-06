@@ -36,6 +36,8 @@
 
 #include "shm/shm.h"
 
+#ifdef CONFIG_MM_SHM
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -188,7 +190,7 @@ static int shm_extend(int shmid, size_t size)
 
       /* Zero the allocated page. */
 
-      memset((void *)region->sr_pages[pgalloc], 0, MM_PGSIZE);
+      memset((FAR void *)region->sr_pages[pgalloc], 0, MM_PGSIZE);
 
       /* Increment the number of pages successfully allocated */
 
@@ -479,3 +481,4 @@ errout:
   return ERROR;
 }
 
+#endif /* CONFIG_MM_SHM */
