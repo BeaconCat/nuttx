@@ -409,7 +409,6 @@
 struct mfrc522_dev_s
 {
   uint8_t state;
-  uint8_t pm_level;
   FAR struct spi_dev_s *spi;          /* SPI interface */
 };
 

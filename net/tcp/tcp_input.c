@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/tcp/tcp_input.c
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * Handling incoming TCP input
  *
  *   Copyright (C) 2007-2014, 2017-2019, 2020 Gregory Nutt. All rights
  *     reserved.
@@ -1214,18 +1213,15 @@ found:
                   return;
                 }
             }
-          else
+          else if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
             {
 #ifdef CONFIG_NET_TCP_OUT_OF_ORDER
               /* Queue out-of-order segments. */
 
               tcp_input_ofosegs(dev, conn, iplen);
 #endif
-              if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
-                {
-                  tcp_send(dev, conn, TCP_ACK, tcpiplen);
-                  return;
-                }
+              tcp_send(dev, conn, TCP_ACK, tcpiplen);
+              return;
             }
         }
     }
