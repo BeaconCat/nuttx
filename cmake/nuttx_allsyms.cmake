@@ -1,6 +1,8 @@
 # ##############################################################################
 # cmake/nuttx_allsyms.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -52,7 +54,8 @@ macro(define_allsyms_link_target inter_target dep_target allsyms_file)
       )
     endif()
     target_sources(nuttx PRIVATE ${ALLSYMS_SOURCE})
-    set(ALLSYMS_INCDIR ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
+    set(ALLSYMS_INCDIR ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include
+                       ${CMAKE_BINARY_DIR}/include_arch)
     set_source_files_properties(
       ${ALLSYMS_SOURCE} PROPERTIES INCLUDE_DIRECTORIES "${ALLSYMS_INCDIR}")
   else()
@@ -73,8 +76,9 @@ macro(define_allsyms_link_target inter_target dep_target allsyms_file)
 
     # relink target and nuttx have exactly the same configuration
     target_include_directories(
-      ${inter_target} SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/include
-                                    ${CMAKE_BINARY_DIR}/include)
+      ${inter_target} SYSTEM
+      PUBLIC ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include
+             ${CMAKE_BINARY_DIR}/include_arch)
     target_compile_definitions(
       ${inter_target} PRIVATE $<TARGET_PROPERTY:nuttx,NUTTX_KERNEL_DEFINITIONS>)
     target_compile_options(
