@@ -35,7 +35,6 @@
 
 #include <arch/irq.h>
 #include <sys/stat.h>
-#include <sys/param.h>
 
 #include "utils/utils.h"
 #include "socket/socket.h"
@@ -88,7 +87,7 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
 
   /* Create the FIFOs needed for the connection */
 
-  ret = local_create_fifos(client, server->lc_rcvsize, client->lc_rcvsize);
+  ret = local_create_fifos(client);
   if (ret < 0)
     {
       nerr("ERROR: Failed to create FIFOs for %s: %d\n",

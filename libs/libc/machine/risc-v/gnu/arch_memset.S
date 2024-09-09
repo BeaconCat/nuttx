@@ -18,9 +18,9 @@
 #ifdef LIBC_BUILD_MEMSET
 
 .text
-.global ARCH_LIBCFUN(memset)
-.type	ARCH_LIBCFUN(memset), @function
-ARCH_LIBCFUN(memset):
+.global memset
+.type	memset, @function
+memset:
 	li t1, 15
 	move a4, a0
 	bleu a2, t1, .Ltiny
@@ -107,6 +107,6 @@ ARCH_LIBCFUN(memset):
 	add a2, a2, a5
 	bleu a2, t1, .Ltiny
 	j .Laligned
-	.size	ARCH_LIBCFUN(memset), .-ARCH_LIBCFUN(memset)
+	.size	memset, .-memset
 
 #endif
