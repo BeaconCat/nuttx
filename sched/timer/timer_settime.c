@@ -94,11 +94,32 @@ static inline void timer_signotify(FAR struct posix_timer_s *timer)
 static inline void timer_restart(FAR struct posix_timer_s *timer,
                                  wdparm_t itimer)
 {
+  clock_t ticks;
+  sclock_t delay;
+
   /* If this is a repetitive timer, then restart the watchdog */
 
   if (timer->pt_delay)
     {
-      wd_start(&timer->pt_wdog, timer->pt_delay, timer_timeout, itimer);
+      /* Check whether next expected time is reached */
+
+      ticks = clock_systime_ticks();
+      timer->pt_overrun = 0;
+
+      for (; ; )
+        {
+          timer->pt_expected += timer->pt_delay;
+          delay               = timer->pt_expected - ticks;
+          if (delay > 0)
+            {
+              break;
+            }
+
+          timer->pt_overrun++;
+        }
+
+      wd_start_abstick(&timer->pt_wdog, timer->pt_expected,
+                       timer_timeout, itimer);
     }
 }
 
@@ -222,7 +243,6 @@ int timer_settime(timer_t timerid, int flags,
                   FAR struct itimerspec *ovalue)
 {
   FAR struct posix_timer_s *timer = timer_gethandle(timerid);
-  irqstate_t intflags;
   sclock_t delay;
   int ret = OK;
 
@@ -242,8 +262,8 @@ int timer_settime(timer_t timerid, int flags,
 
       /* Convert that to a struct timespec and return it */
 
-      clock_ticks2time(delay, &ovalue->it_value);
-      clock_ticks2time(timer->pt_delay, &ovalue->it_interval);
+      clock_ticks2time(&ovalue->it_value, delay);
+      clock_ticks2time(&ovalue->it_interval, timer->pt_delay);
     }
 
   /* Disarm the timer (in case the timer was already armed when
@@ -269,22 +289,13 @@ int timer_settime(timer_t timerid, int flags,
 
   if (value->it_interval.tv_sec > 0 || value->it_interval.tv_nsec > 0)
     {
-      clock_time2ticks(&value->it_interval, &delay);
-
-      /* REVISIT: Should pt_delay be sclock_t? */
-
-      timer->pt_delay = (int)delay;
+      delay = clock_time2ticks(&value->it_interval);
+      timer->pt_delay = delay;
     }
   else
     {
       timer->pt_delay = 0;
     }
-
-  /* We need to disable timer interrupts through the following section so
-   * that the system timer is stable.
-   */
-
-  intflags = enter_critical_section();
 
   /* Check if abstime is selected */
 
@@ -292,7 +303,9 @@ int timer_settime(timer_t timerid, int flags,
     {
       /* Calculate a delay corresponding to the absolute time in 'value' */
 
-      ret = clock_abstime2ticks(timer->pt_clock, &value->it_value, &delay);
+      clock_abstime2ticks(timer->pt_clock, &value->it_value,
+                          &timer->pt_expected);
+      timer->pt_expected += clock_systime_ticks();
     }
   else
     {
@@ -301,32 +314,14 @@ int timer_settime(timer_t timerid, int flags,
        * returns success.
        */
 
-      ret = clock_time2ticks(&value->it_value, &delay);
-    }
-
-  if (ret < 0)
-    {
-      goto errout;
-    }
-
-  /* If the specified time has already passed, the function shall succeed
-   * and the expiration notification shall be made.
-   */
-
-  if (delay < 0)
-    {
-      delay = 0;
+      delay = clock_time2ticks(&value->it_value);
+      timer->pt_expected = clock_systime_ticks() + delay;
     }
 
   /* Then start the watchdog */
 
-  if (delay >= 0)
-    {
-      ret = wd_start(&timer->pt_wdog, delay, timer_timeout, (wdparm_t)timer);
-    }
-
-errout:
-  leave_critical_section(intflags);
+  ret = wd_start_abstick(&timer->pt_wdog, timer->pt_expected,
+                         timer_timeout, (wdparm_t)timer);
 
   if (ret < 0)
     {
