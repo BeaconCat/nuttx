@@ -225,7 +225,7 @@ struct usbhost_cdcmbim_s
   uint16_t                bulkmxpacket; /* Max packet size for Bulk OUT endpoint */
   uint16_t                ntbseq;       /* NTB sequence number */
 
-  FAR struct pollfd      *fds[CONFIG_USBHOST_CDCMBIM_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_USBHOST_CDCMBIM_NPOLLWAITERS];
 
   /* Network device members */
 
@@ -256,7 +256,6 @@ static void usbhost_notification_work(FAR void *arg);
 static void usbhost_notification_callback(FAR void *arg, ssize_t nbytes);
 static void usbhost_rxdata_work(FAR void *arg);
 static void usbhost_bulkin_work(FAR void *arg);
-static void usbhost_bulkin_callback(FAR void *arg, ssize_t nbytes);
 
 static void usbhost_destroy(FAR void *arg);
 
@@ -268,10 +267,10 @@ static inline int usbhost_devinit(FAR struct usbhost_cdcmbim_s *priv);
 
 /* (Little Endian) Data helpers */
 
-static inline uint16_t usbhost_getle16(FAR const uint8_t *val);
-static inline void usbhost_putle16(FAR uint8_t *dest, uint16_t val);
-static inline uint32_t usbhost_getle32(FAR const FAR uint8_t *val);
-static void usbhost_putle32(FAR uint8_t *dest, uint32_t val);
+static inline uint16_t usbhost_getle16(const uint8_t *val);
+static inline void usbhost_putle16(uint8_t *dest, uint16_t val);
+static inline uint32_t usbhost_getle32(const uint8_t *val);
+static void usbhost_putle32(uint8_t *dest, uint32_t val);
 
 /* Buffer memory management */
 
@@ -280,9 +279,9 @@ static void usbhost_free_buffers(FAR struct usbhost_cdcmbim_s *priv);
 
 /* struct usbhost_registry_s methods */
 
-static FAR struct usbhost_class_s *
-usbhost_create(FAR struct usbhost_hubport_s *hport,
-               FAR const struct usbhost_id_s *id);
+static struct usbhost_class_s
+              *usbhost_create(FAR struct usbhost_hubport_s *hport,
+                              FAR const struct usbhost_id_s *id);
 
 /* struct usbhost_class_s methods */
 
@@ -301,16 +300,16 @@ static int     cdcwdm_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 /* NuttX network callback functions */
 
-static int cdcmbim_ifup(FAR struct net_driver_s *dev);
-static int cdcmbim_ifdown(FAR struct net_driver_s *dev);
-static int cdcmbim_txavail(FAR struct net_driver_s *dev);
+static int cdcmbim_ifup(struct net_driver_s *dev);
+static int cdcmbim_ifdown(struct net_driver_s *dev);
+static int cdcmbim_txavail(struct net_driver_s *dev);
 
 /* Network support functions */
 
-static void cdcmbim_receive(FAR struct usbhost_cdcmbim_s *priv,
-                            FAR uint8_t *buf, size_t len);
+static void cdcmbim_receive(struct usbhost_cdcmbim_s *priv, uint8_t *buf,
+                            size_t len);
 
-static int cdcmbim_txpoll(FAR struct net_driver_s *dev);
+static int cdcmbim_txpoll(struct net_driver_s *dev);
 
 /****************************************************************************
  * Private Data
@@ -364,16 +363,15 @@ static uint32_t g_devinuse;
 
 static int usbhost_ctrl_cmd(FAR struct usbhost_cdcmbim_s *priv,
                             uint8_t type, uint8_t req, uint16_t value,
-                            uint16_t iface, FAR uint8_t *payload,
-                            uint16_t len)
+                            uint16_t iface, uint8_t *payload, uint16_t len)
 {
   FAR struct usbhost_hubport_s *hport;
-  FAR struct usb_ctrlreq_s *ctrlreq;
+  struct usb_ctrlreq_s *ctrlreq;
   int ret;
 
   hport = priv->usbclass.hport;
 
-  ctrlreq       = (FAR struct usb_ctrlreq_s *)priv->ctrlreq;
+  ctrlreq       = (struct usb_ctrlreq_s *)priv->ctrlreq;
   ctrlreq->type = type;
   ctrlreq->req  = req;
 
@@ -509,7 +507,7 @@ static ssize_t cdcwdm_write(FAR struct file *filep, FAR const char *buffer,
                          USB_REQ_DIR_OUT | USB_REQ_TYPE_CLASS |
                          USB_REQ_RECIPIENT_INTERFACE,
                          USB_CDC_SEND_ENCAPSULATED_COMMAND,
-                         0, priv->ctrlif, (FAR uint8_t *)buffer, buflen);
+                         0, priv->ctrlif, (uint8_t *)buffer, buflen);
 
   nxmutex_unlock(&priv->lock);
 
@@ -592,7 +590,7 @@ static int cdcwdm_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       /* This is a request to tear down the poll. */
 
-      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
+      struct pollfd **slot = (struct pollfd **)fds->priv;
       DEBUGASSERT(slot);
 
       /* Remove all memory of the poll setup */
@@ -711,7 +709,7 @@ static inline void usbhost_mkdevname(FAR struct usbhost_cdcmbim_s *priv,
 
 static void usbhost_bulkin_callback(FAR void *arg, ssize_t nbytes)
 {
-  FAR struct usbhost_cdcmbim_s *priv = (FAR struct usbhost_cdcmbim_s *)arg;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)arg;
   uint32_t delay = 0;
 
   DEBUGASSERT(priv);
@@ -742,15 +740,15 @@ static void usbhost_bulkin_callback(FAR void *arg, ssize_t nbytes)
 
 static void usbhost_bulkin_work(FAR void *arg)
 {
-  FAR struct usbhost_cdcmbim_s *priv;
-  FAR struct usbhost_hubport_s *hport;
-  FAR struct usb_cdc_ncm_nth16_s *nth;
+  struct usbhost_cdcmbim_s *priv;
+  struct usbhost_hubport_s *hport;
+  struct usb_cdc_ncm_nth16_s *nth;
   uint16_t ndpoffset;
   uint16_t dgram_len;
   uint16_t dgram_off;
   uint16_t block_len;
 
-  priv = (FAR struct usbhost_cdcmbim_s *)arg;
+  priv = (struct usbhost_cdcmbim_s *)arg;
   DEBUGASSERT(priv);
 
   hport = priv->usbclass.hport;
@@ -771,7 +769,7 @@ static void usbhost_bulkin_work(FAR void *arg)
 
   /* Parse the NTB header */
 
-  nth = (FAR struct usb_cdc_ncm_nth16_s *)priv->rxnetbuf;
+  nth = (struct usb_cdc_ncm_nth16_s *)priv->rxnetbuf;
 
   if (usbhost_getle32(nth->signature) != USB_CDC_NCM_NTH16_SIGNATURE)
     {
@@ -798,9 +796,9 @@ static void usbhost_bulkin_work(FAR void *arg)
 
   do
     {
-      FAR struct usb_cdc_ncm_dpe16_s *dpe;
-      FAR struct usb_cdc_ncm_ndp16_s *ndp
-        = (FAR struct usb_cdc_ncm_ndp16_s *)(priv->rxnetbuf + ndpoffset);
+      struct usb_cdc_ncm_dpe16_s *dpe;
+      struct usb_cdc_ncm_ndp16_s *ndp
+        = (struct usb_cdc_ncm_ndp16_s *)(priv->rxnetbuf + ndpoffset);
 
       ndpoffset = usbhost_getle16(ndp->next_ndp_index);
 
@@ -821,7 +819,7 @@ static void usbhost_bulkin_work(FAR void *arg)
 
 out:
     DRVR_ASYNCH(hport->drvr, priv->bulkin,
-                (FAR uint8_t *)priv->rxnetbuf, CDCMBIM_NETBUF_SIZE,
+                (uint8_t *)priv->rxnetbuf, CDCMBIM_NETBUF_SIZE,
                 usbhost_bulkin_callback, priv);
     nxmutex_unlock(&priv->lock);
 }
@@ -854,7 +852,7 @@ static void usbhost_rxdata_work(FAR void *arg)
   };
 
   FAR struct usbhost_cdcmbim_s *priv;
-  FAR struct mbim_header_s *hdr;
+  struct mbim_header_s *hdr;
   uint32_t len;
   int ret;
 
@@ -882,7 +880,7 @@ static void usbhost_rxdata_work(FAR void *arg)
       goto errout;
     }
 
-  hdr = (FAR struct mbim_header_s *)priv->comm_rxbuf;
+  hdr = (struct mbim_header_s *)priv->comm_rxbuf;
   len = usbhost_getle32(hdr->len);
 
   if (len > priv->maxctrlsize)
@@ -1169,9 +1167,9 @@ static int usbhost_cfgdesc(FAR struct usbhost_cdcmbim_s *priv,
   FAR struct usbhost_hubport_s *hport;
   FAR struct usb_cfgdesc_s *cfgdesc;
   FAR struct usb_desc_s *desc;
-  struct usbhost_epdesc_s bindesc;
-  struct usbhost_epdesc_s boutdesc;
-  struct usbhost_epdesc_s iindesc;
+  FAR struct usbhost_epdesc_s bindesc;
+  FAR struct usbhost_epdesc_s boutdesc;
+  FAR struct usbhost_epdesc_s iindesc;
   int remaining;
   uint8_t found = 0;
   int ret;
@@ -1210,20 +1208,20 @@ static int usbhost_cfgdesc(FAR struct usbhost_cdcmbim_s *priv,
         {
         case USB_DESC_TYPE_CSINTERFACE:
           {
-            FAR struct usb_csifdesc_s *csdesc =
-                (FAR struct usb_csifdesc_s *)desc;
+            FAR struct usb_csifdesc_s *csdesc = (FAR struct usb_csifdesc_s *)
+                                                desc;
 
             /* MBIM functional descriptor */
 
             if (csdesc->subtype == CDC_DSUBTYPE_MBIM)
               {
                 FAR struct usb_mbim_desc_s *mbim =
-                    (FAR struct usb_mbim_desc_s *)desc;
+                                (FAR struct usb_mbim_desc_s *)desc;
 
                 priv->maxctrlsize = usbhost_getle16(mbim->max_ctrl_message);
                 uinfo("MBIM max control size: %u\n", priv->maxctrlsize);
                 uinfo("MBIM max segment size: %u\n",
-                      usbhost_getle16(mbim->max_segment_size));
+                                usbhost_getle16(mbim->max_segment_size));
               }
           }
           break;
@@ -1234,8 +1232,8 @@ static int usbhost_cfgdesc(FAR struct usbhost_cdcmbim_s *priv,
 
         case USB_DESC_TYPE_INTERFACE:
           {
-            FAR struct usb_ifdesc_s *ifdesc =
-                (FAR struct usb_ifdesc_s *)configdesc;
+            FAR struct usb_ifdesc_s *ifdesc = (FAR struct usb_ifdesc_s *)
+                                              configdesc;
 
             uinfo("Interface descriptor\n");
             DEBUGASSERT(remaining >= USB_SIZEOF_IFDESC);
@@ -1268,8 +1266,8 @@ static int usbhost_cfgdesc(FAR struct usbhost_cdcmbim_s *priv,
 
         case USB_DESC_TYPE_ENDPOINT:
           {
-            FAR struct usb_epdesc_s *epdesc =
-                (FAR struct usb_epdesc_s *)configdesc;
+            FAR struct usb_epdesc_s *epdesc = (FAR struct usb_epdesc_s *)
+                                              configdesc;
 
             uinfo("Endpoint descriptor\n");
             DEBUGASSERT(remaining >= USB_SIZEOF_EPDESC);
@@ -1480,7 +1478,7 @@ static int cdc_ncm_read_parameters(FAR struct usbhost_cdcmbim_s *priv)
                          USB_REQ_DIR_IN | USB_REQ_TYPE_CLASS |
                          USB_REQ_RECIPIENT_INTERFACE,
                          USB_CDC_GET_NTB_PARAMETERS,
-                         0, priv->ctrlif, (FAR uint8_t *)&params,
+                         0, priv->ctrlif, (uint8_t *)&params,
                          sizeof(params));
   if (ret == OK)
     {
@@ -1557,7 +1555,7 @@ static inline int usbhost_devinit(FAR struct usbhost_cdcmbim_s *priv)
       printf("set NTB input size failed: %d\n", ret);
     }
 
-#if 0
+  #if 0
   /* Set max datagram size to MTU */
 
   ret = cdc_ncm_set_max_dgram_size(priv, 2048);
@@ -1565,7 +1563,7 @@ static inline int usbhost_devinit(FAR struct usbhost_cdcmbim_s *priv)
     {
       printf("Failed to set max dgram size: %d\n", ret);
     }
-#endif
+  #endif
 
   /* Register the driver */
 
@@ -1657,7 +1655,7 @@ static inline int usbhost_devinit(FAR struct usbhost_cdcmbim_s *priv)
  *
  ****************************************************************************/
 
-static inline uint16_t usbhost_getle16(FAR const uint8_t *val)
+static inline uint16_t usbhost_getle16(const uint8_t *val)
 {
   return (uint16_t)val[1] << 8 | (uint16_t)val[0];
 }
@@ -1677,7 +1675,7 @@ static inline uint16_t usbhost_getle16(FAR const uint8_t *val)
  *
  ****************************************************************************/
 
-static void usbhost_putle16(FAR uint8_t *dest, uint16_t val)
+static void usbhost_putle16(uint8_t *dest, uint16_t val)
 {
   dest[0] = val & 0xff; /* Little endian means LS byte first in byte stream */
   dest[1] = val >> 8;
@@ -1698,12 +1696,12 @@ static void usbhost_putle16(FAR uint8_t *dest, uint16_t val)
  *
  ****************************************************************************/
 
-static inline uint32_t usbhost_getle32(FAR const uint8_t *val)
+static inline uint32_t usbhost_getle32(const uint8_t *val)
 {
   /* Little endian means LS halfword first in byte stream */
 
   return (uint32_t)usbhost_getle16(&val[2]) << 16 |
-         (uint32_t)usbhost_getle16(val);
+                                   (uint32_t)usbhost_getle16(val);
 }
 
 /****************************************************************************
@@ -1721,7 +1719,7 @@ static inline uint32_t usbhost_getle32(FAR const uint8_t *val)
  *
  ****************************************************************************/
 
-static void usbhost_putle32(FAR uint8_t *dest, uint32_t val)
+static void usbhost_putle32(uint8_t *dest, uint32_t val)
 {
   /* Little endian means LS halfword first in byte stream */
 
@@ -1891,9 +1889,9 @@ static void usbhost_free_buffers(FAR struct usbhost_cdcmbim_s *priv)
  *
  ****************************************************************************/
 
-static FAR struct usbhost_class_s *
-usbhost_create(FAR struct usbhost_hubport_s *hport,
-               FAR const struct usbhost_id_s *id)
+static FAR struct usbhost_class_s
+                  *usbhost_create(FAR struct usbhost_hubport_s *hport,
+                                  FAR const struct usbhost_id_s *id)
 {
   FAR struct usbhost_cdcmbim_s *priv;
 
@@ -1980,8 +1978,8 @@ usbhost_create(FAR struct usbhost_hubport_s *hport,
 static int usbhost_connect(FAR struct usbhost_class_s *usbclass,
                            FAR const uint8_t *configdesc, int desclen)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)usbclass;
+  FAR struct usbhost_cdcmbim_s *priv = (FAR struct usbhost_cdcmbim_s *)
+                                       usbclass;
   int ret;
 
   DEBUGASSERT(priv != NULL &&
@@ -2031,10 +2029,10 @@ static int usbhost_connect(FAR struct usbhost_class_s *usbclass,
  *
  ****************************************************************************/
 
-static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
+static int usbhost_disconnected(struct usbhost_class_s *usbclass)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)usbclass;
+  FAR struct usbhost_cdcmbim_s *priv = (FAR struct usbhost_cdcmbim_s *)
+                                       usbclass;
   irqstate_t flags;
 
   DEBUGASSERT(priv != NULL);
@@ -2100,12 +2098,12 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
  *
  ****************************************************************************/
 
-static int cdcmbim_transmit(FAR struct usbhost_cdcmbim_s *priv)
+static int cdcmbim_transmit(struct usbhost_cdcmbim_s *priv)
 {
-  FAR struct usbhost_hubport_s *hport;
-  FAR struct usb_cdc_ncm_nth16_s *nth;
-  FAR struct usb_cdc_ncm_ndp16_s *ndp;
-  FAR struct usb_cdc_ncm_dpe16_s *dpe;
+  struct usbhost_hubport_s *hport;
+  struct usb_cdc_ncm_nth16_s *nth;
+  struct usb_cdc_ncm_ndp16_s *ndp;
+  struct usb_cdc_ncm_dpe16_s *dpe;
   ssize_t ret;
   uint16_t len = 0;
 
@@ -2118,7 +2116,7 @@ static int cdcmbim_transmit(FAR struct usbhost_cdcmbim_s *priv)
   NETDEV_TXPACKETS(&priv->netdev);
 
   len = sizeof(struct usb_cdc_ncm_nth16_s);
-  nth = (FAR struct usb_cdc_ncm_nth16_s *)priv->txnetbuf;
+  nth = (struct usb_cdc_ncm_nth16_s *)priv->txnetbuf;
 
   /* Begin filling NTH */
 
@@ -2193,8 +2191,8 @@ static int cdcmbim_transmit(FAR struct usbhost_cdcmbim_s *priv)
  *
  ****************************************************************************/
 
-static void cdcmbim_receive(FAR struct usbhost_cdcmbim_s *priv,
-                            FAR uint8_t *buf, size_t len)
+static void cdcmbim_receive(struct usbhost_cdcmbim_s *priv,
+                            uint8_t *buf, size_t len)
 {
   uinfo("received packet: %d len\n", len);
 
@@ -2264,10 +2262,10 @@ static void cdcmbim_receive(FAR struct usbhost_cdcmbim_s *priv,
  *
  ****************************************************************************/
 
-static int cdcmbim_txpoll(FAR struct net_driver_s *dev)
+static int cdcmbim_txpoll(struct net_driver_s *dev)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)dev->d_private;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)
+                                   dev->d_private;
 
   /* If the polling resulted in data that should be sent out on the network,
    * the field d_len is set to a value > 0.
@@ -2303,11 +2301,11 @@ static int cdcmbim_txpoll(FAR struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-static int cdcmbim_ifup(FAR struct net_driver_s *dev)
+static int cdcmbim_ifup(struct net_driver_s *dev)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)dev->d_private;
-  FAR struct usbhost_hubport_s *hport = priv->usbclass.hport;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)
+                                   dev->d_private;
+  struct usbhost_hubport_s *hport = priv->usbclass.hport;
   int ret;
 
 #ifdef CONFIG_NET_IPv4
@@ -2355,10 +2353,10 @@ static int cdcmbim_ifup(FAR struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-static int cdcmbim_ifdown(FAR struct net_driver_s *dev)
+static int cdcmbim_ifdown(struct net_driver_s *dev)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)dev->d_private;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)
+                                   dev->d_private;
   irqstate_t flags;
 
   flags = enter_critical_section();
@@ -2390,9 +2388,9 @@ static int cdcmbim_ifdown(FAR struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-static void cdcmbim_txavail_work(FAR void *arg)
+static void cdcmbim_txavail_work(void *arg)
 {
-  FAR struct usbhost_cdcmbim_s *priv = (FAR struct usbhost_cdcmbim_s *)arg;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)arg;
 
   net_lock();
 
@@ -2425,10 +2423,10 @@ static void cdcmbim_txavail_work(FAR void *arg)
  *
  ****************************************************************************/
 
-static int cdcmbim_txavail(FAR struct net_driver_s *dev)
+static int cdcmbim_txavail(struct net_driver_s *dev)
 {
-  FAR struct usbhost_cdcmbim_s *priv =
-      (FAR struct usbhost_cdcmbim_s *)dev->d_private;
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)
+                                   dev->d_private;
 
   if (work_available(&priv->txpollwork))
     {
