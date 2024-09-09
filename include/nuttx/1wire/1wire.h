@@ -177,17 +177,16 @@
 struct onewire_dev_s;
 struct onewire_ops_s
 {
-  CODE int (*reset)(FAR struct onewire_dev_s *dev);
-  CODE int (*write)(FAR struct onewire_dev_s *dev, FAR const uint8_t *buffer,
-                    int buflen);
-  CODE int (*read)(FAR struct onewire_dev_s *dev, FAR uint8_t *buffer,
-                   int buflen);
-  CODE int (*exchange)(FAR struct onewire_dev_s *dev, bool reset,
-                       FAR const uint8_t *txbuffer, int txbuflen,
-                       FAR uint8_t *rxbuffer, int rxbuflen);
-  CODE int (*writebit)(FAR struct onewire_dev_s *dev,
-                       FAR const uint8_t *bit);
-  CODE int (*readbit)(FAR struct onewire_dev_s *dev, FAR uint8_t *bit);
+  int    (*reset)(FAR struct onewire_dev_s *dev);
+  int    (*write)(FAR struct onewire_dev_s *dev, FAR const uint8_t *buffer,
+           int buflen);
+  int    (*read)(FAR struct onewire_dev_s *dev, FAR uint8_t *buffer,
+           int buflen);
+  int    (*exchange)(FAR struct onewire_dev_s *dev, bool reset,
+                     FAR const uint8_t *txbuffer, int txbuflen,
+                     FAR uint8_t *rxbuffer, int rxbuflen);
+  int    (*writebit)(FAR struct onewire_dev_s *dev, FAR const uint8_t *bit);
+  int    (*readbit)(FAR struct onewire_dev_s *dev, FAR uint8_t *bit);
 };
 
 /* 1-Wire private data. This structure only defines the initial fields of the
@@ -197,7 +196,7 @@ struct onewire_ops_s
 
 struct onewire_dev_s
 {
-  FAR const struct onewire_ops_s *ops; /* 1-Wire vtable */
+  const struct onewire_ops_s *ops; /* 1-Wire vtable */
 };
 
 /****************************************************************************

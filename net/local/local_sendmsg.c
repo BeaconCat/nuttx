@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/local/local_sendmsg.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -77,9 +75,9 @@ static int local_sendctl(FAR struct local_conn_s *conn,
   FAR struct local_conn_s *peer;
   FAR struct file *filep2;
   FAR struct file *filep;
-  FAR struct cmsghdr *cmsg;
+  struct cmsghdr *cmsg;
   int count = 0;
-  FAR int *fds;
+  int *fds;
   int ret;
   int i = 0;
 
@@ -100,7 +98,7 @@ static int local_sendctl(FAR struct local_conn_s *conn,
           goto fail;
         }
 
-      fds = (FAR int *)CMSG_DATA(cmsg);
+      fds = (int *)CMSG_DATA(cmsg);
       count = (cmsg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(int);
 
       if (count + peer->lc_cfpcount >= LOCAL_NCONTROLFDS)
@@ -434,7 +432,7 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR const struct sockaddr *to = msg->msg_name;
   FAR const struct iovec *buf = msg->msg_iov;
   socklen_t tolen = msg->msg_namelen;
-  size_t len = msg->msg_iovlen;
+  ssize_t len = msg->msg_iovlen;
 #ifdef CONFIG_NET_LOCAL_SCM
   FAR struct local_conn_s *conn = psock->s_conn;
   int count = 0;
@@ -448,17 +446,19 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           return count;
         }
     }
-#endif /* CONFIG_NET_LOCAL_SCM */
 
   len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
              local_send(psock, buf, len, flags);
-#ifdef CONFIG_NET_LOCAL_SCM
+
   if (len < 0 && count > 0)
     {
       net_lock();
       local_freectl(conn, count);
       net_unlock();
     }
+#else
+  len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
+             local_send(psock, buf, len, flags);
 #endif
 
   return len;
