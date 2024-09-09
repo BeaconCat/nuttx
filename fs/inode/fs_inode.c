@@ -22,8 +22,14 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+
 #include <nuttx/fs/fs.h>
-#include <nuttx/rwsem.h>
+#include <nuttx/mutex.h>
 
 #include "inode/inode.h"
 
@@ -39,7 +45,7 @@
  * Private Data
  ****************************************************************************/
 
-static rw_semaphore_t g_inode_lock = RWSEM_INITIALIZER;
+static rmutex_t g_inode_lock = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Public Functions
@@ -65,50 +71,24 @@ void inode_initialize(void)
  * Name: inode_lock
  *
  * Description:
- *   Get writeable exclusive access to the in-memory inode tree.
+ *   Get exclusive access to the in-memory inode tree (g_inode_sem).
  *
  ****************************************************************************/
 
-void inode_lock(void)
+int inode_lock(void)
 {
-  down_write(&g_inode_lock);
-}
-
-/****************************************************************************
- * Name: inode_rlock
- *
- * Description:
- *   Get readable exclusive access to the in-memory inode tree.
- *
- ****************************************************************************/
-
-void inode_rlock(void)
-{
-  down_read(&g_inode_lock);
+  return nxrmutex_lock(&g_inode_lock);
 }
 
 /****************************************************************************
  * Name: inode_unlock
  *
  * Description:
- *   Relinquish writeable exclusive access to the in-memory inode tree.
+ *   Relinquish exclusive access to the in-memory inode tree (g_inode_sem).
  *
  ****************************************************************************/
 
 void inode_unlock(void)
 {
-  up_write(&g_inode_lock);
-}
-
-/****************************************************************************
- * Name: inode_runlock
- *
- * Description:
- *   Relinquish read exclusive access to the in-memory inode tree.
- *
- ****************************************************************************/
-
-void inode_runlock(void)
-{
-  up_read(&g_inode_lock);
+  DEBUGVERIFY(nxrmutex_unlock(&g_inode_lock));
 }

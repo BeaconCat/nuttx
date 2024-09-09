@@ -30,7 +30,6 @@
 
 #include <nuttx/mm/mm.h>
 #include <nuttx/addrenv.h>
-#include <nuttx/arch.h>
 #include <nuttx/pgalloc.h>
 
 #include "umm_heap/umm_heap.h"
