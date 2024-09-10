@@ -29,7 +29,6 @@
 #include <nuttx/virtio/virtio.h>
 
 #include "client.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -110,7 +109,7 @@ static int virtio_9p_create(FAR struct v9fs_transport_s **transport,
   start += 4;
   end = strchr(start, ',');
   length = end ? end - start + 1 : strlen(start) + 1;
-  priv = fs_heap_zalloc(sizeof(struct virtio_9p_priv_s) + length);
+  priv = kmm_zalloc(sizeof(struct virtio_9p_priv_s) + length);
   if (priv == NULL)
     {
       return -ENOMEM;
@@ -126,7 +125,7 @@ static int virtio_9p_create(FAR struct v9fs_transport_s **transport,
   ret = virtio_register_driver(&priv->vdrv);
   if (ret < 0)
     {
-      fs_heap_free(priv);
+      kmm_free(priv);
     }
 
   return ret;
@@ -141,7 +140,7 @@ static void virtio_9p_destroy(FAR struct v9fs_transport_s *transport)
   FAR struct virtio_9p_priv_s *priv =
             container_of(transport, struct virtio_9p_priv_s, transport);
   virtio_unregister_driver(&priv->vdrv);
-  fs_heap_free(priv);
+  kmm_free(priv);
 }
 
 /****************************************************************************
@@ -221,7 +220,7 @@ static int virtio_9p_probe(FAR struct virtio_device *vdev)
   int ret;
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER);
-  virtio_negotiate_features(vdev, 1 << VIRTIO_9P_MOUNT_TAG, NULL);
+  virtio_negotiate_features(vdev, 1 << VIRTIO_9P_MOUNT_TAG);
   virtio_set_status(vdev, VIRTIO_CONFIG_FEATURES_OK);
 
   if (!virtio_has_feature(vdev, VIRTIO_9P_MOUNT_TAG))
@@ -243,7 +242,7 @@ static int virtio_9p_probe(FAR struct virtio_device *vdev)
 
   vqname[0] = "virtio_9p_vq";
   callback[0] = virtio_9p_done;
-  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback, NULL);
+  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);

@@ -99,7 +99,7 @@ FAR char *lib_get_pathbuffer(void)
    * CONFIG_LIBC_PATHBUFFER_MALLOC is enabled
    */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_ALLOCATION
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
   return lib_malloc(PATH_MAX);
 #else
   return NULL;
@@ -140,7 +140,7 @@ void lib_put_pathbuffer(FAR char *buffer)
 
   /* Free the buffer if it was dynamically allocated */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_ALLOCATION
-  return lib_free(buffer);
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
+  lib_free(buffer);
 #endif
 }

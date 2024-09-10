@@ -36,8 +36,6 @@
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
 
-#include "fs_heap.h"
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -123,7 +121,7 @@ static int pressure_open(FAR struct file *filep, FAR const char *relpath,
       return -ENOENT;
     }
 
-  priv = fs_heap_zalloc(sizeof(struct pressure_file_s));
+  priv = kmm_zalloc(sizeof(struct pressure_file_s));
   if (!priv)
     {
       return -ENOMEM;
@@ -294,7 +292,7 @@ static int pressure_dup(FAR const struct file *oldp, FAR struct file *newp)
   FAR struct pressure_file_s *newpriv;
   uint32_t flags;
 
-  newpriv = fs_heap_zalloc(sizeof(struct pressure_file_s));
+  newpriv = kmm_zalloc(sizeof(struct pressure_file_s));
   if (newpriv == NULL)
     {
       return -ENOMEM;
@@ -321,7 +319,7 @@ static int pressure_opendir(FAR const char *relpath,
   finfo("relpath: \"%s\"\n", relpath ? relpath : "NULL");
   DEBUGASSERT(relpath);
 
-  level = fs_heap_zalloc(sizeof(struct procfs_dir_priv_s));
+  level = kmm_zalloc(sizeof(struct procfs_dir_priv_s));
   if (level == NULL)
     {
       return -ENOMEM;
@@ -341,7 +339,7 @@ static int pressure_opendir(FAR const char *relpath,
 static int pressure_closedir(FAR struct fs_dirent_s *dir)
 {
   DEBUGASSERT(dir);
-  fs_heap_free(dir);
+  kmm_free(dir);
   return OK;
 }
 
