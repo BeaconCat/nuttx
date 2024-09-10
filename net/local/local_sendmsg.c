@@ -75,9 +75,9 @@ static int local_sendctl(FAR struct local_conn_s *conn,
   FAR struct local_conn_s *peer;
   FAR struct file *filep2;
   FAR struct file *filep;
-  struct cmsghdr *cmsg;
+  FAR struct cmsghdr *cmsg;
   int count = 0;
-  int *fds;
+  FAR int *fds;
   int ret;
   int i = 0;
 
@@ -98,7 +98,7 @@ static int local_sendctl(FAR struct local_conn_s *conn,
           goto fail;
         }
 
-      fds = (int *)CMSG_DATA(cmsg);
+      fds = (FAR int *)CMSG_DATA(cmsg);
       count = (cmsg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(int);
 
       if (count + peer->lc_cfpcount >= LOCAL_NCONTROLFDS)
@@ -118,13 +118,11 @@ static int local_sendctl(FAR struct local_conn_s *conn,
           filep2 = kmm_zalloc(sizeof(*filep2));
           if (!filep2)
             {
-              fs_putfilep(filep);
               ret = -ENOMEM;
               goto fail;
             }
 
           ret = file_dup2(filep, filep2);
-          fs_putfilep(filep);
           if (ret < 0)
             {
               kmm_free(filep2);
@@ -432,7 +430,7 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR const struct sockaddr *to = msg->msg_name;
   FAR const struct iovec *buf = msg->msg_iov;
   socklen_t tolen = msg->msg_namelen;
-  ssize_t len = msg->msg_iovlen;
+  size_t len = msg->msg_iovlen;
 #ifdef CONFIG_NET_LOCAL_SCM
   FAR struct local_conn_s *conn = psock->s_conn;
   int count = 0;
@@ -446,19 +444,17 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           return count;
         }
     }
+#endif /* CONFIG_NET_LOCAL_SCM */
 
   len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
              local_send(psock, buf, len, flags);
-
+#ifdef CONFIG_NET_LOCAL_SCM
   if (len < 0 && count > 0)
     {
       net_lock();
       local_freectl(conn, count);
       net_unlock();
     }
-#else
-  len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
-             local_send(psock, buf, len, flags);
 #endif
 
   return len;

@@ -65,7 +65,7 @@
 
 void xtensa_panic(int xptcode, uint32_t *regs)
 {
-  up_set_current_regs(regs);
+  CURRENT_REGS = regs;
 
   /* We get here when a un-dispatch-able, irrecoverable exception occurs */
 
@@ -75,8 +75,11 @@ void xtensa_panic(int xptcode, uint32_t *regs)
 
   syslog_flush();
 
-  _alert("Unhandled Exception %d task: %s\n", xptcode,
-         get_task_name(running_task()));
+#if CONFIG_TASK_NAME_SIZE > 0
+  _alert("Unhandled Exception %d task: %s\n", xptcode, running_task()->name);
+#else
+  _alert("Unhandled Exception %d\n", xptcode);
+#endif
 
   PANIC_WITH_REGS("panic", regs);  /* Should not return */
   for (; ; );
@@ -164,7 +167,7 @@ void xtensa_panic(int xptcode, uint32_t *regs)
 
 void xtensa_user_panic(int exccause, uint32_t *regs)
 {
-  up_set_current_regs(regs);
+  CURRENT_REGS = regs;
 
   /* We get here when a un-dispatch-able, irrecoverable exception occurs */
 
@@ -174,8 +177,12 @@ void xtensa_user_panic(int exccause, uint32_t *regs)
 
   syslog_flush();
 
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("User Exception: EXCCAUSE=%04x task: %s\n",
-         exccause, get_task_name(running_task()));
+         exccause, running_task()->name);
+#else
+  _alert("User Exception: EXCCAUSE=%04x\n", exccause);
+#endif
 
   PANIC_WITH_REGS("user panic", regs); /* Should not return */
   for (; ; );
