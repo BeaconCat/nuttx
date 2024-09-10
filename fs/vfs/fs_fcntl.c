@@ -159,7 +159,7 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
 
               if ((filep->f_oflags & O_APPEND) != 0)
                 {
-                  ret = file_seek(filep, 0, SEEK_END);
+                  file_seek(filep, 0, SEEK_END);
                 }
             }
         }
@@ -350,12 +350,13 @@ int fcntl(int fd, int cmd, ...)
   ret = fs_getfilep(fd, &filep);
   if (ret >= 0)
     {
+      DEBUGASSERT(filep != NULL);
+
       /* Let file_vfcntl() do the real work.  The errno is not set on
        * failures.
        */
 
       ret = file_vfcntl(filep, cmd, ap);
-      fs_putfilep(filep);
     }
 
   if (ret < 0)
