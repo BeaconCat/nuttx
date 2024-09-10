@@ -35,106 +35,100 @@
 
 #include "arm_internal.h"
 #include "exc_return.h"
-
-/****************************************************************************
- * Inline Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: arm_from_thread
- *
- * Description:
- *   If not defined CONFIG_ARCH_HAVE_TRUSTZONE
- *   Return true if interrupt return to thread mode, false otherwise.
- *
- *   If defined CONFIG_ARCH_HAVE_TRUSTZONE
- *   Return true if interrupt return to thread mode, or if it is the first
- *   interrupt from TEE to REE, or REE to TEE, false otherwise.
- *
- *   Interrupt nesting between TEE and REE can be determined based
- *   on the S and ES bits of EXC_RETURN
- *   If TEE interrupts REE, then EXC_RETURN.S=0, EXC_RETURN.ES=1;
- *   Conversely, EXC_RETURN.S=1, EXC_RETURN.ES=0.
- *
- *   But only one level nesting between TEE and REE is supported, and
- *   recursive nesting between TEE and REE is not supported.
- *
- ****************************************************************************/
-
-static inline bool arm_from_thread(uint32_t excret)
-{
-  if (excret & EXC_RETURN_THREAD_MODE)
-    {
-      return true;
-    }
-
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-  if (!(excret & EXC_RETURN_SECURE_STACK) &&
-      (excret & EXC_RETURN_EXC_SECURE))
-    {
-      return true;
-    }
-
-  if (!(excret & EXC_RETURN_EXC_SECURE) &&
-      (excret & EXC_RETURN_SECURE_STACK))
-    {
-      return true;
-    }
-#endif
-
-  return false;
-}
+#include "nvic.h"
+#include "psr.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
+void exception_direct(void)
+{
+  int irq = getipsr();
+
+#ifdef CONFIG_ARCH_FPU
+  __asm__ __volatile__
+    (
+      "mov r0, %0\n"
+      "vmsr fpscr, r0\n"
+      :
+      : "i" (ARMV8M_FPSCR_LTPSIZE_NONE)
+    );
+#endif
+
+  arm_ack_irq(irq);
+  irq_dispatch(irq, NULL);
+
+  if (g_running_tasks[this_cpu()] != this_task())
+    {
+      up_trigger_irq(NVIC_IRQ_PENDSV, 0);
+    }
+}
+
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
+  struct tcb_s *tcb = this_task();
+
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
 #else
 
-  if (arm_from_thread(regs[REG_EXC_RETURN]))
-    {
-      CURRENT_REGS = regs;
-    }
-
   /* Acknowledge the interrupt */
 
   arm_ack_irq(irq);
 
-  /* Deliver the IRQ */
+  if (irq == NVIC_IRQ_PENDSV)
+    {
+      up_irq_save();
+      g_running_tasks[this_cpu()]->xcp.regs = regs;
+    }
+  else
+    {
+      /* Set current regs for crash dump */
 
-  irq_dispatch(irq, regs);
+      up_set_current_regs(regs);
+
+      /* Dispatch irq */
+
+      tcb->xcp.regs = regs;
+      irq_dispatch(irq, regs);
+
+      /* Clear current regs */
+
+      up_set_current_regs(NULL);
+    }
 
   /* If a context switch occurred while processing the interrupt then
-   * CURRENT_REGS may have change value.  If we return any value different
+   * current_regs may have change value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
 
-  if (arm_from_thread(regs[REG_EXC_RETURN]))
-    {
-      /* Restore the cpu lock */
+  tcb = this_task();
 
-      if (regs != CURRENT_REGS)
-        {
-          /* Record the new "running" task when context switch occurred.
-           * g_running_tasks[] is only used by assertion logic for reporting
-           * crashes.
-           */
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Make sure that the address environment for the previously
+   * running task is closed down gracefully (data caches dump,
+   * MMU flushed) and set up the address environment for the new
+   * thread at the head of the ready-to-run list.
+   */
 
-          g_running_tasks[this_cpu()] = this_task();
+  addrenv_switch(NULL);
+#endif
 
-          regs = (uint32_t *)CURRENT_REGS;
-        }
+  /* Update scheduler parameters */
 
-      /* Update the CURRENT_REGS to NULL. */
+  nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
+  nxsched_resume_scheduler(tcb);
 
-      CURRENT_REGS = NULL;
-    }
+  /* Record the new "running" task when context switch occurred.
+   * g_running_tasks[] is only used by assertion logic for reporting
+   * crashes.
+   */
+
+  g_running_tasks[this_cpu()] = tcb;
+  regs = tcb->xcp.regs;
 #endif
 
   board_autoled_off(LED_INIRQ);
