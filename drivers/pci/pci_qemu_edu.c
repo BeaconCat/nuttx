@@ -27,12 +27,12 @@
 #include <debug.h>
 #include <errno.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/pci/pci.h>
+#include <nuttx/pci/pci_qemu_edu.h>
 #include <nuttx/semaphore.h>
-
-#include "pci_drivers.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -398,7 +398,7 @@ static int pci_qemu_edu_probe(FAR struct pci_device_s *dev)
 {
   struct pci_qemu_edu_priv_s priv;
   unsigned int flags;
-  int irq = 0;
+  uint8_t irq;
   int ret;
 
   /* Enable EDU device */
@@ -443,7 +443,8 @@ static int pci_qemu_edu_probe(FAR struct pci_device_s *dev)
 
   /* Run IRQ Tests */
 
-  irq = pci_get_irq(dev);
+  pci_read_config_byte(dev, PCI_INTERRUPT_LINE, &irq);
+  irq = IRQ0 + irq;
   pciinfo("IRQ TEST: Attaching IRQ %u to %p\n", irq, pci_qemu_edu_interrupt);
 
   irq_attach(irq, pci_qemu_edu_interrupt, &priv);
@@ -457,36 +458,6 @@ static int pci_qemu_edu_probe(FAR struct pci_device_s *dev)
 
   /* Run MSI Tests */
 
-  pciinfo("MSI TEST\n");
-
-  irq = 0;
-  ret = pci_alloc_irq(dev, &irq, 1);
-  if (ret != 1)
-    {
-      pcierr("Failed to allocate MSI %d\n", ret);
-      goto err;
-    }
-
-  pciinfo("MSI TEST: Attaching MSI %u to %p\n",
-          irq, pci_qemu_edu_interrupt);
-
-  ret = pci_connect_irq(dev, &irq, 1);
-  if (ret != OK)
-    {
-      pcierr("Failed to connect MSI %d\n", ret);
-      goto err;
-    }
-
-  irq_attach(irq, pci_qemu_edu_interrupt, &priv);
-  up_enable_irq(irq);
-
-  pci_qemu_edu_test_intx(&priv);
-  pci_qemu_edu_test_dma(&priv);
-
-  up_disable_irq(irq);
-  irq_detach(irq);
-  pci_release_irq(dev, &irq, 1);
-
   /* Uninitialize the driver */
 
   nxsem_destroy(&priv.isr_done);
@@ -494,11 +465,6 @@ static int pci_qemu_edu_probe(FAR struct pci_device_s *dev)
   /* TODO: add pci unmap api */
 
 err:
-  if (irq != 0)
-    {
-      pci_release_irq(dev, &irq, 1);
-    }
-
   pci_clear_master(dev);
   pci_disable_device(dev);
   return ret;

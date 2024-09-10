@@ -38,6 +38,8 @@
 
 #include <sys/mman.h>
 
+#include "sched/sched.h"
+
 #if defined(CONFIG_BUILD_KERNEL)
 
 /****************************************************************************
