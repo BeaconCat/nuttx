@@ -110,7 +110,7 @@ int up_timer_gettick(FAR clock_t *ticks)
   struct timespec ts;
   int ret;
   ret = up_timer_gettime(&ts);
-  *ticks = timespec_to_tick(&ts);
+  *ticks = clock_time2ticks(&ts);
   return ret;
 }
 #endif
@@ -120,7 +120,7 @@ int up_timer_gettick(FAR clock_t *ticks)
 int up_alarm_tick_start(clock_t ticks)
 {
   struct timespec ts;
-  timespec_from_tick(&ts, ticks);
+  clock_ticks2time(&ts, ticks);
   return up_alarm_start(&ts);
 }
 
@@ -129,14 +129,14 @@ int up_alarm_tick_cancel(FAR clock_t *ticks)
   struct timespec ts;
   int ret;
   ret = up_alarm_cancel(&ts);
-  *ticks = timespec_to_tick(&ts);
+  *ticks = clock_time2ticks(&ts);
   return ret;
 }
 #  else
 int up_timer_tick_start(clock_t ticks)
 {
   struct timespec ts;
-  timespec_from_tick(&ts, ticks);
+  clock_ticks2time(&ts, ticks);
   return up_timer_start(&ts);
 }
 
@@ -145,7 +145,7 @@ int up_timer_tick_cancel(FAR clock_t *ticks)
   struct timespec ts;
   int ret;
   ret = up_timer_cancel(&ts);
-  *ticks = timespec_to_tick(&ts);
+  *ticks = clock_time2ticks(&ts);
   return ret;
 }
 #  endif
@@ -337,14 +337,6 @@ static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
   clock_update_wall_time();
 #endif
 
-#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
-  /* Perform CPU load measurements (before any timer-initiated context
-   * switches can occur)
-   */
-
-  nxsched_process_cpuload_ticks(elapsed);
-#endif
-
   /* Process watchdogs */
 
   tmp = wd_timer(ticks, noswitches);
@@ -472,7 +464,7 @@ void nxsched_alarm_expiration(FAR const struct timespec *ts)
 
   DEBUGASSERT(ts);
 
-  ticks = timespec_to_tick(ts);
+  ticks = clock_time2ticks(ts);
   nxsched_alarm_tick_expiration(ticks);
 }
 #endif
