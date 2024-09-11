@@ -66,7 +66,7 @@
 
 /* Mark user memory if in kernel build */
 
-#ifdef CONFIG_BUILD_KERNEL
+#ifndef CONFIG_BUILD_KERNEL
 #  define MMU_USER_DEFAULT      (X86_PAGE_USER)
 #else
 #  define MMU_USER_DEFAULT      (0)
