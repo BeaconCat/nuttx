@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/environ/environ.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -38,8 +36,6 @@
 #  define env_dup(group, envp) (0)
 #  define env_release(group)   (0)
 #else
-
-#  define SCHED_ENVIRON_RESERVED (4)
 
 /****************************************************************************
  * Public Data

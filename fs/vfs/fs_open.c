@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 
@@ -258,7 +259,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
       ret = -ENXIO;
     }
 
-  if (ret == -EISDIR)
+  if (ret == -EISDIR && ((oflags & O_WRONLY) == 0))
     {
       ret = dir_allocate(filep, desc.relpath);
     }
@@ -367,7 +368,7 @@ int file_open(FAR struct file *filep, FAR const char *path, int oflags, ...)
   ret = file_vopen(filep, path, oflags, 0, ap);
   va_end(ap);
 
-  if (ret >= OK)
+  if (ret >= 0)
     {
       FS_ADD_BACKTRACE(filep);
     }

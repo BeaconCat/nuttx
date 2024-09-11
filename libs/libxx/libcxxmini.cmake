@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libxx/libcxxmini.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,11 +20,9 @@
 
 nuttx_add_system_library(libcxxmini)
 
-set_source_files_properties(
-  libcxxmini/libxx_new.cxx PROPERTIES COMPILE_FLAGS -Wno-missing-exception-spec)
-set_source_files_properties(
-  libcxxmini/libxx_newa.cxx PROPERTIES COMPILE_FLAGS
-                                       -Wno-missing-exception-spec)
+if(NOT CONFIG_XTENSA_TOOLCHAIN_XCC)
+  add_compile_options(-Wno-missing-exception-spec)
+endif()
 
 target_sources(
   libcxxmini
