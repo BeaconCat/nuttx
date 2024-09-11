@@ -856,11 +856,9 @@ static void kinetis_receive(struct kinetis_driver_s *priv,
       /* Read the frame contents */
 
 #ifdef CONFIG_NET_CAN_CANFD
-      if (rf->cs.edl)
+      if (rf->cs.edl) /* CAN FD frame */
         {
-          /* CAN FD frame */
-
-          struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc;
+        struct canfd_frame *frame = (struct canfd_frame *)priv->rxdesc;
 
           if (rf->cs.ide)
             {
@@ -898,12 +896,10 @@ static void kinetis_receive(struct kinetis_driver_s *priv,
           priv->dev.d_len = sizeof(struct canfd_frame);
           priv->dev.d_buf = (uint8_t *)frame;
         }
-      else
+      else /* CAN 2.0 Frame */
 #endif
         {
-          /* CAN 2.0 Frame */
-
-          struct can_frame *frame = (struct can_frame *)priv->rxdesc;
+        struct can_frame *frame = (struct can_frame *)priv->rxdesc;
 
           if (rf->cs.ide)
             {
