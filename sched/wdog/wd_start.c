@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/wdog/wd_start.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,7 +38,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
 #include "wdog/wdog.h"
@@ -55,11 +56,9 @@
        { \
          clock_t start; \
          clock_t elapsed; \
-         sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)arg); \
          start = perf_gettime(); \
          func(arg); \
          elapsed = perf_gettime() - start; \
-         sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)arg); \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
            { \
              CRITMONITOR_PANIC("WDOG %p, %s IRQ, execute too long %ju\n", \
@@ -69,15 +68,7 @@
        } \
      while (0)
 #else
-#  define CALL_FUNC(func, arg) \
-      do \
-        { \
-          sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)arg); \
-          func(arg); \
-          sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)arg); \
-        } \
-      while (0)
-
+#  define CALL_FUNC(func, arg) func(arg)
 #endif
 
 /****************************************************************************
@@ -189,8 +180,6 @@ void wd_insert(FAR struct wdog_s *wdog, clock_t expired,
 {
   FAR struct wdog_s *curr;
 
-  DEBUGASSERT(wdog && wdentry);
-
   /* Traverse the watchdog list */
 
   list_for_every_entry(&g_wdactivelist, curr, struct wdog_s, node)
@@ -223,7 +212,7 @@ void wd_insert(FAR struct wdog_s *wdog, clock_t expired,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: wd_start_abstick
+ * Name: wd_start_absolute
  *
  * Description:
  *   This function adds a watchdog timer to the active timer queue.  The
@@ -258,8 +247,8 @@ void wd_insert(FAR struct wdog_s *wdog, clock_t expired,
  *
  ****************************************************************************/
 
-int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
-                     wdentry_t wdentry, wdparm_t arg)
+int wd_start_absolute(FAR struct wdog_s *wdog, clock_t ticks,
+                      wdentry_t wdentry, wdparm_t arg)
 {
   irqstate_t flags;
   bool reassess = false;
@@ -271,8 +260,25 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
       return -EINVAL;
     }
 
+  /* Calculate ticks+1, forcing the delay into a range that we can handle.
+   *
+   * NOTE that one is added to the delay.  This is correct and must not be
+   * changed:  The contract for the use wdog_start is that the wdog will
+   * delay FOR AT LEAST as long as requested, but may delay longer due to
+   * variety of factors.  The wdog logic has no knowledge of the the phase
+   * of the system timer when it is started:  The next timer interrupt may
+   * occur immediately or may be delayed for almost a full cycle. In order
+   * to meet the contract requirement, the requested time is also always
+   * incremented by one so that the delay is always at least as long as
+   * requested.
+   *
+   * There is extensive documentation about this time issue elsewhere.
+   */
+
+  ticks++;
+
   /* NOTE:  There is a race condition here... the caller may receive
-   * the watchdog between the time that wd_start_abstick is called and
+   * the watchdog between the time that wd_start_absolute is called and
    * the critical section is established.
    */
 
@@ -289,8 +295,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   wd_insert(wdog, ticks, wdentry, arg);
 
-  reassess |= list_is_head(&g_wdactivelist, &wdog->node);
-  if (!g_wdtimernested && reassess)
+  if (!g_wdtimernested &&
+      (reassess || list_is_head(&g_wdactivelist, &wdog->node)))
     {
       /* Resume the interval timer that will generate the next
        * interval event. If the timer at the head of the list changed,
@@ -313,8 +319,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
   wd_insert(wdog, ticks, wdentry, arg);
 #endif
   leave_critical_section(flags);
-
-  sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
   return OK;
 }
 
@@ -364,8 +368,8 @@ int wd_start(FAR struct wdog_s *wdog, sclock_t delay,
       return -EINVAL;
     }
 
-  return wd_start_abstick(wdog, clock_systime_ticks() + delay,
-                          wdentry, arg);
+  return wd_start_absolute(wdog, clock_systime_ticks() + delay,
+                           wdentry, arg);
 }
 
 /****************************************************************************

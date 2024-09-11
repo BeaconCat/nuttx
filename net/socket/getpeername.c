@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
 #include "socket/socket.h"
@@ -148,19 +147,17 @@ int getpeername(int sockfd, FAR struct sockaddr *addr,
                 FAR socklen_t *addrlen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
   int ret;
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &filep, &psock);
+  ret = sockfd_socket(sockfd, &psock);
 
   /* Let psock_getpeername() do all of the work */
 
   if (ret == OK)
     {
       ret = psock_getpeername(psock, addr, addrlen);
-      fs_putfilep(filep);
     }
 
   if (ret < 0)
