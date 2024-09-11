@@ -265,43 +265,7 @@ int up_pause_handler(int irq, void *c, void *arg)
 }
 
 /****************************************************************************
- * Name: up_pause_async_handler
- *
- * Description:
- *   This is the handler for async pause.
- *
- *   1. It saves the current task state at the head of the current assigned
- *      task list.
- *   2. It porcess g_delivertasks
- *   3. Returns from interrupt, restoring the state of the new task at the
- *      head of the ready to run list.
- *
- * Input Parameters:
- *   Standard interrupt handling
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-int up_pause_async_handler(int irq, void *c, void *arg)
-{
-  struct tcb_s *tcb;
-  int cpu = this_cpu();
-
-  tcb = current_task(cpu);
-  nxsched_suspend_scheduler(tcb);
-  x86_64_savestate(tcb->xcp.regs);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  nxsched_resume_scheduler(tcb);
-  x86_64_restorestate(tcb->xcp.regs);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_cpu_async_pause
  *
  * Description:
  *   pause task execution on the CPU
@@ -319,14 +283,14 @@ int up_pause_async_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+inline_function int up_cpu_async_pause(int cpu)
 {
   cpu_set_t cpuset;
 
   CPU_ZERO(&cpuset);
   CPU_SET(cpu, &cpuset);
 
-  up_trigger_irq(SMP_IPI_ASYNC_IRQ, cpuset);
+  up_trigger_irq(SMP_IPI_IRQ, cpuset);
 
   return OK;
 }
@@ -372,7 +336,6 @@ void up_send_smp_call(cpu_set_t cpuset)
 
 int up_cpu_pause(int cpu)
 {
-  cpu_set_t cpuset;
   sinfo("cpu=%d\n", cpu);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
@@ -399,10 +362,7 @@ int up_cpu_pause(int cpu)
 
   /* Execute Pause IRQ to CPU(cpu) */
 
-  CPU_ZERO(&cpuset);
-  CPU_SET(cpu, &cpuset);
-
-  up_trigger_irq(SMP_IPI_IRQ, cpuset);
+  up_cpu_async_pause(cpu);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
