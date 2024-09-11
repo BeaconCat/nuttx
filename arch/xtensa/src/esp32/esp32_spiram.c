@@ -84,10 +84,12 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
                                           int psize, int num)
 {
   uint32_t regval;
+  uint32_t statecpu0;
 #ifdef CONFIG_SMP
   int cpu_to_stop = 0;
+  uint32_t statecpu1;
+  bool smp_start = OSINIT_OS_READY();
 #endif
-  const bool os_ready = OSINIT_OS_READY();
   unsigned int i;
   unsigned int shift;
   unsigned int mask_s;
@@ -169,27 +171,23 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
    * the flash guards to make sure the cache is disabled.
    */
 
-  flags = 0; /* suppress GCC warning */
-  if (os_ready)
-    {
-      flags = enter_critical_section();
-    }
+  flags = enter_critical_section();
 
 #ifdef CONFIG_SMP
   /* The other CPU might be accessing the cache at the same time, just by
    * using variables in external RAM.
    */
 
-  if (os_ready)
+  if (smp_start)
     {
       cpu_to_stop = this_cpu() == 1 ? 0 : 1;
       up_cpu_pause(cpu_to_stop);
     }
 
-  spi_disable_cache(1);
+  spi_disable_cache(1, &statecpu1);
 #endif
 
-  spi_disable_cache(0);
+  spi_disable_cache(0, &statecpu0);
 
   /* mmu change */
 
@@ -203,33 +201,29 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
   if (cpu_no == 0)
     {
       regval  = getreg32(DPORT_PRO_CACHE_CTRL1_REG);
-      regval &= ~DPORT_PRO_CMMU_SRAM_PAGE_MODE_M;
-      regval |= mask_s << DPORT_PRO_CMMU_SRAM_PAGE_MODE_S;
+      regval &= ~DPORT_PRO_CMMU_SRAM_PAGE_MODE;
+      regval |= mask_s;
       putreg32(regval, DPORT_PRO_CACHE_CTRL1_REG);
     }
   else
     {
       regval  = getreg32(DPORT_APP_CACHE_CTRL1_REG);
-      regval &= ~DPORT_APP_CMMU_SRAM_PAGE_MODE_M;
-      regval |= mask_s << DPORT_APP_CMMU_SRAM_PAGE_MODE_S;
+      regval &= ~DPORT_APP_CMMU_SRAM_PAGE_MODE;
+      regval |= mask_s;
       putreg32(regval, DPORT_APP_CACHE_CTRL1_REG);
     }
 
-  spi_enable_cache(0);
+  spi_enable_cache(0, statecpu0);
 #ifdef CONFIG_SMP
-  spi_enable_cache(1);
+  spi_enable_cache(1, statecpu1);
 
-  if (os_ready)
+  if (smp_start)
     {
       up_cpu_resume(cpu_to_stop);
     }
 #endif
 
-  if (os_ready)
-    {
-      leave_critical_section(flags);
-    }
-
+  leave_critical_section(flags);
   return 0;
 }
 
@@ -247,7 +241,7 @@ void IRAM_ATTR esp_spiram_init_cache(void)
 
 #ifdef CONFIG_SMP
   regval  = getreg32(DPORT_APP_CACHE_CTRL1_REG);
-  regval &= ~DPORT_APP_CACHE_MASK_DRAM1;
+  regval &= ~(1 << DPORT_APP_CACHE_MASK_DRAM1);
   putreg32(regval, DPORT_APP_CACHE_CTRL1_REG);
   cache_sram_mmu_set(1, 0, SOC_EXTRAM_DATA_LOW, 0, 32, 128);
 #endif

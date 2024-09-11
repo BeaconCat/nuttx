@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/pthread/pthread_exit.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -55,6 +53,10 @@
 
 void pthread_exit(FAR void *exit_value)
 {
+  FAR struct tls_info_s *info = tls_get_info();
+
+  info->flags |= TLS_THREAD_EIXT;
+
   /* Mark the pthread as non-cancelable to avoid additional calls to
    * pthread_exit() due to any cancellation point logic that might get
    * kicked off by actions taken during pthread_exit processing.

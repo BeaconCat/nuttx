@@ -25,13 +25,11 @@
 #include <debug.h>
 
 #include <nuttx/pci/pci.h>
-#include <nuttx/pci/pci_qemu_edu.h>
-#include <nuttx/pci/pci_qemu_test.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
 #include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
-#include <nuttx/virtio/virtio-pci.h>
 #include <nuttx/net/e1000.h>
 #include <nuttx/net/igc.h>
+#include <nuttx/virtio/virtio-pci.h>
 
 #include "pci_drivers.h"
 
@@ -44,7 +42,6 @@
  *
  * Description:
  *   Register all the pci drivers to pci bus
- *
  ****************************************************************************/
 
 int pci_register_drivers(void)
@@ -66,8 +63,6 @@ int pci_register_drivers(void)
       pcierr("pci_register_uio_ivshmem_driver failed, ret=%d\n", ret);
     }
 #endif
-
-  /* Initialization rptun ivshmem driver */
 
 #ifdef CONFIG_RPTUN_IVSHMEM
   ret = pci_register_rptun_ivshmem_driver();
@@ -106,13 +101,11 @@ int pci_register_drivers(void)
     }
 #endif
 
-  /* Initialization virtio pci driver */
-
-#ifdef CONFIG_DRIVERS_VIRTIO_PCI
-  ret = register_virtio_pci_driver();
+#ifdef CONFIG_PCI_EP_TEST
+  ret = pci_register_ep_test_driver();
   if (ret < 0)
     {
-      pcierr("register_virtio_pci_driver failed, ret=%d\n", ret);
+      pcierr("pci_register_ep_test_driver failed, ret=%d\n", ret);
     }
 #endif
 
@@ -129,14 +122,6 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_register_epf_test_driver failed, ret=%d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_PCI_EP_TEST
-  ret = pci_register_ep_test_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_ep_test_driver failed, ret=%d\n", ret);
     }
 #endif
 
@@ -159,6 +144,18 @@ int pci_register_drivers(void)
       pcierr("pci_igc_init failed, ret=%d\n", ret);
     }
 #endif
+
+  /* Initialization virtio pci driver */
+
+#ifdef CONFIG_DRIVERS_VIRTIO_PCI
+  ret = register_virtio_pci_driver();
+  if (ret < 0)
+    {
+      pcierr("register_virtio_pci_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+  pci_dev_register();
 
   UNUSED(ret);
   return ret;
