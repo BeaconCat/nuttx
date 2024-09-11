@@ -1,8 +1,6 @@
 ############################################################################
 # openamp/libmetal.defs
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -56,6 +54,10 @@ CSRCS += libmetal/lib/log.c
 CSRCS += libmetal/lib/shmem.c
 CSRCS += libmetal/lib/version.c
 
+ifeq ($(CONFIG_OPENAMP_CACHE),y)
+  CFLAGS += -DMETAL_CACHE
+endif
+
 CFLAGS += -DMETAL_INTERNAL
 
 LIBMETAL_HDRS_SEDEXP := \
@@ -79,16 +81,13 @@ libmetal.zip:
 	$(Q) unzip -o libmetal.zip
 	$(Q) mv libmetal-$(VERSION) libmetal
 	$(Q) patch -p0 < 0001-libmetal-add-metal_list_for_each_safe-support.patch
-	$(Q) patch -p0 < 0002-libmetal-nuttx-io.c-align-access-when-read-write-siz.patch
-	$(Q) patch -p0 < 0003-libmetal-nuttx-io.c-Fix-void-pointer-arithmetic-in-a.patch
-	$(Q) patch -p0 < 0004-libmetal-atomic-enable-64-bit-atomic-by-toolchain-bu.patch
 
 .libmetal_headers: libmetal.zip
 else
 .libmetal_headers:
 endif
 	$(eval headers := $(wildcard libmetal/lib/compiler/gcc/*.h))
-	$(eval headers += $(wildcard libmetal/lib/processor/$(LIBMETAL_ARCH)/*.h))
+	$(eval headers += $(wildcard libmetal/lib/processor/generic/*.h))
 	$(eval headers += $(wildcard libmetal/lib/system/nuttx/*.h))
 	$(eval headers += $(wildcard libmetal/lib/*.h))
 	$(foreach header,$(headers), \
