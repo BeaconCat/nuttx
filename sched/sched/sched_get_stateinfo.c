@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/sched/sched_get_stateinfo.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -55,7 +53,7 @@ static FAR const char * const g_statenames[] =
   , "Waiting,MQ empty"
   , "Waiting,MQ full"
 #endif
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   , "Waiting,Paging fill"
 #endif
 #ifdef CONFIG_SIG_SIGSTOP_ACTION

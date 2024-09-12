@@ -872,7 +872,7 @@ static int skel_ioctl(FAR struct net_driver_s *dev, int cmd,
       /* Add cases here to support the IOCTL commands */
 
       default:
-        nerr("ERROR: Unrecognized IOCTL command: %d\n", cmd);
+        nerr("ERROR: Unrecognized IOCTL command: %d\n", command);
         return -ENOTTY;  /* Special return value for this case */
     }
 
