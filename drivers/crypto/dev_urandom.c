@@ -182,7 +182,7 @@ static ssize_t devurand_read(FAR struct file *filep, FAR char *buffer,
 
   while (n >= 4)
     {
-      *(FAR uint32_t *)buffer = PRNG();
+      *(uint32_t *)buffer = PRNG();
       buffer += 4;
       n -= 4;
     }
