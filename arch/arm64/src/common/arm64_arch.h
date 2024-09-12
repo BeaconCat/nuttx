@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <arch/arch.h>
 
 /* Unsigned integer with bit position n set (signed in
  * assembly language).
@@ -51,23 +52,6 @@
  */
 #define BIT_MASK(n)     (BIT(n) - 1)
 #define BIT64_MASK(n)   (BIT64(n) - 1ULL)
-
-#define DAIFSET_FIQ_BIT     BIT(0)
-#define DAIFSET_IRQ_BIT     BIT(1)
-#define DAIFSET_ABT_BIT     BIT(2)
-#define DAIFSET_DBG_BIT     BIT(3)
-
-#define DAIFCLR_FIQ_BIT     BIT(0)
-#define DAIFCLR_IRQ_BIT     BIT(1)
-#define DAIFCLR_ABT_BIT     BIT(2)
-#define DAIFCLR_DBG_BIT     BIT(3)
-
-#define DAIF_FIQ_BIT        BIT(6)
-#define DAIF_IRQ_BIT        BIT(7)
-#define DAIF_ABT_BIT        BIT(8)
-#define DAIF_DBG_BIT        BIT(9)
-
-#define DAIF_MASK           (0xf << 6)
 
 /* Arm® Architecture Registers Armv8, for Armv8-A architecture profile
  * ( DDI 0595, ID121321 ), defined:
@@ -95,6 +79,17 @@
 #define SCTLR_SA_BIT        BIT(3)
 #define SCTLR_I_BIT         BIT(12)
 
+#define ACTLR_AUX_BIT        BIT(9)
+#define ACTLR_CLPORTS_BIT    BIT(8)
+#define ACTLR_CLPMU_BIT      BIT(7)
+#define ACTLR_TESTR1_BIT     BIT(6)
+#define ACTLR_CDBG_BIT       BIT(5)
+#define ACTLR_PATCH_BIT      BIT(4)
+#define ACTLR_BPRED_BIT      BIT(3)
+#define ACTLR_POWER_BIT      BIT(2)
+#define ACTLR_DIAGNOSTIC_BIT BIT(1)
+#define ACTLR_REGIONS_BIT    BIT(0)
+
 /* SPSR M[3:0] define
  *
  * Arm® Architecture Registers Armv8, for Armv8-A architecture profile
@@ -119,8 +114,6 @@
 #define SPSR_MODE_EL1H      (0x5)
 #define SPSR_MODE_EL2T      (0x8)
 #define SPSR_MODE_EL2H      (0x9)
-#define SPSR_MODE_EL3T      (0xc)
-#define SPSR_MODE_EL3H      (0xd)
 #define SPSR_MODE_MASK      (0xf)
 
 /* CurrentEL: Current Exception Level */
@@ -132,13 +125,6 @@
 #define MODE_EL2            (0x2)
 #define MODE_EL1            (0x1)
 #define MODE_EL0            (0x0)
-
-/* struct arm64_boot_params member offset for assembly code
- * struct is defined at arm64_cpustart.c
- */
-
-#define BOOT_PARAM_MPID     0
-#define BOOT_PARAM_SP       8
 
 #ifndef __ASSEMBLY__
 
@@ -265,43 +251,25 @@
 
 #define CONFIG_MAX_XLAT_TABLES      10
 
+/* Virtual address space size
+ * Allows choosing one of multiple possible virtual address
+ * space sizes. The level of translation table is determined by
+ * a combination of page size and virtual address space size.
+ *
+ * The choice could be: 32, 36, 42, 48
+ */
+
+#define CONFIG_ARM64_VA_BITS        48
+/* Physical address space size
+ * Choose the maximum physical address range that the kernel will support.
+ *
+ * The choice could be: 32, 36, 42, 48
+ */
+
+#define CONFIG_ARM64_PA_BITS        48
+
 #define L1_CACHE_SHIFT              (6)
 #define L1_CACHE_BYTES              BIT(L1_CACHE_SHIFT)
-
-/****************************************************************************
- * Type Declarations
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_FPU
-
-/****************************************************************************
- * armv8 fpu registers and context
- ****************************************************************************/
-
-struct fpu_reg
-{
-  __int128 q[32];
-  uint32_t fpsr;
-  uint32_t fpcr;
-};
-
-#endif
-
-/****************************************************************************
- * Registers and exception context
- ****************************************************************************/
-
-struct regs_context
-{
-  uint64_t  regs[31];  /* x0~x30 */
-  uint64_t  sp_elx;
-  uint64_t  elr;
-  uint64_t  spsr;
-  uint64_t  sp_el0;
-  uint64_t  exe_depth;
-  uint64_t  tpidr_el0;
-  uint64_t  tpidr_el1;
-};
 
 /****************************************************************************
  * Public Function Prototypes
@@ -395,78 +363,41 @@ static inline void arch_nop(void)
 
 /****************************************************************************
  * Name:
- *   read_/write_/zero_ sysreg
+ *   arm64_current_el()
  *
  * Description:
  *
- *   ARMv8 Architecture Registers access method
- *   All the macros need a memory clobber
+ *   Get current execute level
  *
  ****************************************************************************/
 
-#define read_sysreg(reg)                         \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)  \
-                    : "=r" (__val) :: "memory"); \
-    __val;                                       \
+#define arm64_current_el()                \
+  ({                                      \
+    uint64_t __el;                        \
+    int      __ret;                       \
+    __asm__ volatile ("mrs %0, CurrentEL" \
+                      : "=r" (__el));     \
+    __ret = GET_EL(__el);                 \
+    __ret;                                \
   })
-
-#define read_sysreg_dump(reg)                    \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)  \
-                    : "=r" (__val) :: "memory"); \
-    sinfo("%s, regval=0x%llx\n",                 \
-          STRINGIFY(reg), __val);                \
-    __val;                                       \
-  })
-
-#define write_sysreg(__val, reg)                   \
-  ({                                               \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", %0" \
-                      : : "r" (__val) : "memory"); \
-  })
-
-#define zero_sysreg(reg)                            \
-  ({                                                \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", xzr" \
-                      ::: "memory");                \
-  })
-
-/* Non-atomic modification of registers */
 
 #define modreg8(v,m,a)  putreg8((getreg8(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg16(v,m,a) putreg16((getreg16(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 
-/* Atomic modification of registers */
-
-void modifyreg8(unsigned int addr, uint8_t clearbits, uint8_t setbits);
-void modifyreg16(unsigned int addr, uint16_t clearbits, uint16_t setbits);
-void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
-
 /****************************************************************************
  * Name:
- *   arch_get_exception_depth
  *   arch_get_current_tcb
  *
  * Description:
- *   tpidrro_el0 is used to record exception depth, it's used for fpu trap
- * happened at exception context (like IRQ).
- *   tpidr_el1 is used to record TCB at present, it's used for fpu and task
+ *   tpidr_el0 is used to record TCB at present, it's used for fpu and task
  * switch propose
  *
  ****************************************************************************/
 
-static inline int arch_get_exception_depth(void)
-{
-  return read_sysreg(tpidrro_el0);
-}
-
 static inline uint64_t arch_get_current_tcb(void)
 {
-  return read_sysreg(tpidr_el1);
+  return read_sysreg(tpidr_el0);
 }
 
 void arch_cpu_idle(void);
@@ -531,7 +462,7 @@ void arm64_cpu_enable(void);
 #ifdef CONFIG_SMP
 uint64_t arm64_get_mpid(int cpu);
 #else
-#  define arm64_get_mpid(cpu) GET_MPIDR()
+#  define arm64_get_mpid(cpu) (GET_MPIDR() & MPIDR_ID_MASK)
 #endif /* CONFIG_SMP */
 
 /****************************************************************************

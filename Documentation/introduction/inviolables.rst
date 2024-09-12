@@ -1,2 +1,1 @@
-.. include:: ../../INVIOLABLES.md
-   :parser: myst_parser.sphinx_
+.. mdinclude:: ../../INVIOLABLES.md

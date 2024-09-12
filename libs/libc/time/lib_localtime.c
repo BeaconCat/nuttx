@@ -60,6 +60,8 @@
 
 #include <sys/param.h>
 
+#include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/init.h>
 #include <nuttx/fs/fs.h>
@@ -685,7 +687,7 @@ static int tzload(FAR const char *name,
       goto oops;
     }
 
-  fid = _NX_OPEN(name, O_RDONLY);
+  fid = _NX_OPEN(name, O_RDONLY | O_CLOEXEC);
   if (fid < 0)
     {
       goto oops;
