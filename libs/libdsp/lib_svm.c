@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <dsp.h>
 #include <string.h>
 
@@ -356,7 +357,7 @@ void svm3(FAR struct svm3_state_f32_s *s, FAR ab_frame_f32_t *v_ab)
  ****************************************************************************/
 
 void svm3_current_correct(FAR struct svm3_state_f32_s *s,
-                          FAR float *c0, FAR float *c1, FAR float *c2)
+                          float *c0, float *c1, float *c2)
 {
   /* Get best ADC samples according to SVM sector.
    *

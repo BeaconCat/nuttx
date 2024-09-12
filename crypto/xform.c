@@ -618,9 +618,7 @@ void aes_ctr_crypt(caddr_t key, FAR uint8_t *data)
   for (i = AESCTR_BLOCKSIZE - 1;
         i >= AESCTR_NONCESIZE + AESCTR_IVSIZE; i--)
     {
-      /* continue on overflow */
-
-      if (++ctx->ac_block[i])
+      if (++ctx->ac_block[i])   /* continue on overflow */
         {
           break;
         }

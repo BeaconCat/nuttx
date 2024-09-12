@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/pthread/pthread_condsignal.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -93,7 +91,7 @@ int pthread_cond_signal(FAR pthread_cond_t *cond)
           if (sval < 0)
             {
               sinfo("Signalling...\n");
-              ret = pthread_sem_give(&cond->sem);
+              ret = -nxsem_post(&cond->sem);
             }
         }
     }
