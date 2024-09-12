@@ -35,4 +35,9 @@ AFLAGS += $(CFLAGS) -D__ASSEMBLY__
 
 # ELF module definitions
 
-LDELFFLAGS += --oformat elf64-littleriscv
+CELFFLAGS = $(CFLAGS)
+CXXELFFLAGS = $(CXXFLAGS)
+
+LDELFFLAGS = --oformat elf64-littleriscv
+LDELFFLAGS += -r -e main
+LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/binfmt/libelf/gnu-elf.ld)

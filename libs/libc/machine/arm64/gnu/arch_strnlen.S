@@ -86,7 +86,7 @@
 	mov	len, limit
 	ret
 
-def_fn ARCH_LIBCFUN(strnlen)
+def_fn strnlen
 	cbz	limit, .Lhit_limit
 	mov	zeroones, #REP8_01
 	bic	src, srcin, #15
@@ -189,6 +189,6 @@ def_fn ARCH_LIBCFUN(strnlen)
 	csinv	data1, data1, xzr, le
 	csel	data2, data2, data2a, le
 	b	.Lrealigned
-	.size	ARCH_LIBCFUN(strnlen), . - .Lstart	/* Include pre-padding in size.  */
+	.size	strnlen, . - .Lstart	/* Include pre-padding in size.  */
 
 #endif
