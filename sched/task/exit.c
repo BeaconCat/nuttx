@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/task/exit.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -73,6 +71,12 @@ void _exit(int status)
 
 #endif
 
+  /* Make sure that we are in a critical section with local interrupts.
+   * The IRQ state will be restored when the next task is started.
+   */
+
+  enter_critical_section();
+
   /* Perform common task termination logic.  This will get called again later
    * through logic kicked off by up_exit().
    *
@@ -84,6 +88,8 @@ void _exit(int status)
    * list and trying to execute code that depends on this_task() crashes at
    * once, or does something very naughty.
    */
+
+  tcb->flags |= TCB_FLAG_EXIT_PROCESSING;
 
   nxtask_exithook(tcb, status);
 

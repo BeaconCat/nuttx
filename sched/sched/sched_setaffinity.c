@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/sched/sched_setaffinity.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -78,14 +76,13 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
   irqstate_t flags;
   int ret = OK;
 
-  DEBUGASSERT(cpusetsize == sizeof(cpu_set_t) && mask != NULL);
+  DEBUGASSERT(cpusetsize == sizeof(cpu_set_t) && mask != NULL && *mask != 0);
 
-  /* Make sure that affinity mask is valid */
+  /* Don't permit changing the affinity mask of any task locked to a CPU
+   * (i.e., an IDLE task)
+   */
 
-  if (*mask == 0)
-    {
-      return -EINVAL;
-    }
+  flags = enter_critical_section();
 
   /* Verify that the PID corresponds to a real task */
 
@@ -101,14 +98,9 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
   if (tcb == NULL)
     {
       ret = -ESRCH;
-      goto errout;
+      goto errout_with_csection;
     }
 
-  /* Don't permit changing the affinity mask of any task locked to a CPU
-   * (i.e., an IDLE task)
-   */
-
-  flags = enter_critical_section();
   if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
     {
       ret = -EINVAL;
@@ -150,8 +142,6 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
 
 errout_with_csection:
   leave_critical_section(flags);
-
-errout:
   return ret;
 }
 

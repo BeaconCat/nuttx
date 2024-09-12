@@ -34,6 +34,8 @@
 
 #include "lib_netdb.h"
 
+#ifdef CONFIG_LIBC_NETDB
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -114,3 +116,4 @@ int getservbyname_r(FAR const char *name, FAR const char *proto,
   return ENOENT;
 }
 
+#endif /* CONFIG_LIBC_NETDB */
