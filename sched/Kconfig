@@ -47,7 +47,7 @@ config DISABLE_ENVIRON
 endif # DISABLE_OS_API
 
 config DISABLE_IDLE_LOOP
-	bool "Disable idle loop support"
+	bool
 	default n
 	---help---
 		This option allows nx_start to return instead of
@@ -310,6 +310,8 @@ config TICKET_SPINLOCK
 	---help---
 		Use ticket spinlock algorithm.
 
+endif # SPINLOCK
+
 config RW_SPINLOCK
 	bool "Support read-write Spinlocks"
 	default n
@@ -317,8 +319,6 @@ config RW_SPINLOCK
 		Spinlocks are spilit into read and write lock.
 		Reader can take read lock simultaneously and only one writer
 		can take write lock.
-
-endif # SPINLOCK
 
 config IRQCHAIN
 	bool "Enable multi handler sharing a IRQ"
@@ -450,20 +450,6 @@ config INIT_ENTRYPOINT
 		The name of the entry point for user applications.  For the example
 		applications this is of the form 'app_main' where 'app' is the application
 		name. If not defined, INIT_ENTRYPOINT defaults to "main".
-
-		Note that main must take "argc" and "argv" arguments:
-
-		int main(int argc, FAR char *argv[])
-
-		Otherwise, if using a signature such as "int main(void)" a compilation
-		error will result:
-
-		> $ make
-		> CC:  CustomHello.c <command-line>: error: conflicting types for
-		> 'custom_hello_main'
-		> CustomHello.c:3:5: note: in expansion of macro 'main'
-		>     3 | int main(void)
-		>       |     ^~~~
 
 config INIT_ENTRYNAME
 	string "Application entry name"
@@ -775,15 +761,13 @@ endif # SCHED_CHILD_STATUS
 config SCHED_WAITPID
 	bool "Enable waitpid() API"
 	default n
-	depends on SCHED_HAVE_PARENT || !BUILD_KERNEL
 	---help---
 		Enables the waitpid() interface in a default, non-standard mode
 		(non-standard in the sense that the waited for PID need not be child
 		of the caller).  If SCHED_HAVE_PARENT is also defined, then this
 		setting will modify the behavior or waitpid() (making more spec
 		compliant) and will enable the waitid() and wait() interfaces as
-		well. Note that SCHED_HAVE_PARENT must be defined in BUILD_KERNEL if
-		SCHED_WAITPID is needed.
+		well.
 
 config SCHED_DUMP_LEAK
 	bool "Enable catch task memory leak"
@@ -1027,7 +1011,6 @@ config SCHED_CPULOAD_NONE
 
 config SCHED_CPULOAD_SYSCLK
 	bool "Use system clock"
-	depends on !SCHED_TICKLESS
 	---help---
 		If this option is enabled, the system clock is used for cpu load
 		measurement by default.
@@ -1077,18 +1060,17 @@ config SCHED_CPULOAD_CRITMONITOR
 
 endchoice
 
-if SCHED_CPULOAD_EXTCLK
-
 config SCHED_CPULOAD_TICKSPERSEC
-	int "External clock rate"
+	int "CPU load sampling clock frequency(HZ)"
 	default 100
 	---help---
-		If an external clock is used to drive the sampling for the CPU load
-		calculations, then this value must be provided.  This value provides
-		the rate of the external clock interrupts in units of ticks per
-		second.  The default value of 100 corresponds to a 100Hz clock.  NOTE:
+		CPU load sampling clock frequency, in HZ. Use sysclk clock source,
+		use wdt, EXTCLK clock source, use an external timer.
+		The default value of 100 corresponds to a 100Hz clock.  NOTE:
 		that 100Hz is the default frequency of the system time and, hence,
 		the worst possible choice in most cases.
+
+if SCHED_CPULOAD_EXTCLK
 
 choice
 	prompt "Select CPU load timer"
@@ -1161,6 +1143,13 @@ config SCHED_CPULOAD_TIMECONSTANT
 		The accumulated CPU count is divided by two when the accumulated
 		tick count exceeds this time constant.  This time constant is in
 		units of seconds.
+
+config SCHED_PROFIL_TICKSPERSEC
+	int "Profile sampling rate"
+	default 1000
+	---help---
+		This is the frequency at which the profil functon will sample the
+		running program. The default is 1000Hz.
 
 menuconfig SCHED_INSTRUMENTATION
 	bool "System performance monitor hooks"
@@ -1337,6 +1326,27 @@ config SCHED_STACK_RECORD
 		TCB.  Useful if scheduler instrumentation is selected.  Set to zero
 		to disable.Through instrumentation, record the backtrace at
 		the deepest point in the stack.
+
+config SCHED_GPROF
+	bool "Enable gprof profiling"
+	default n
+	---help---
+		Enable gprof profiling support.  This will cause the compiler to
+		generate additional code to support profiling.  This will also
+		cause the linker to include the gmon.out file in the final
+		executable.
+		Add the "-pg" parameter to the Makefile when compiling to obtain
+		the function call graph of the specified module.
+
+config SCHED_GPROF_ALL
+	bool "Enable gprof call graph for all modules"
+	depends on SCHED_GPROF
+	default n
+	---help---
+		Enable gprof profiling for all code, it will instrument
+		all code, which will cause a large performance penalty for the code.
+		You can add the '-pg' parameter to the specified module in the
+		makefile to only analyze the content of the module.
 
 config SCHED_GCOV
 	bool "Enable GCOV support"
@@ -1592,20 +1602,6 @@ endmenu # RTOS hooks
 
 menu "Signal Configuration"
 
-config SIG_PREALLOC_ACTIONS
-	int "Number of pre-allocated sigactions"
-	default 4
-	---help---
-		The number of pre-allocated sigaction structures.
-
-config SIG_ALLOC_ACTIONS
-	int "Num of sigactions to allocate per time"
-	default 1
-	---help---
-		The number of sigactions to allocate per time. Note that
-		if this number is larger than 1, the allocation won't be
-		returned to the heap but kept in a free list for reuse.
-
 config SIG_PREALLOC_IRQ_ACTIONS
 	int "Number of pre-allocated irq actions"
 	default 4 if DEFAULT_SMALL
@@ -1757,7 +1753,6 @@ config MODULE
 	bool "Enable loadable OS modules"
 	default n
 	select LIBC_MODLIB
-	select ARCH_USE_TEXT_HEAP if ARCH_HAVE_TEXT_HEAP
 	---help---
 		Enable support for loadable OS modules.  Default: n
 
@@ -1996,23 +1991,32 @@ config GROUP_KILL_CHILDREN_TIMEOUT_MS
 		> 0 means wait timeout
 		= 0 means don't do kill signal
 
-config PID_INITIAL_COUNT
-	int "Initial length of pid table"
-	default 8 if DEFAULT_SMALL
-	default 16 if !DEFAULT_SMALL
-	---help---
-		This is the initial length of pid table, which the system
-		can still expand when needed. It is rounded up to power of
-		two by current implementation. If the number of threads in
-		your system is known at design time, setting this to it.
-
 config SCHED_EVENTS
 	bool "Schedule Event objects"
 	default n
+	help
+	  This option enables event objects. Threads may wait on event
+	  objects for specific events, but both threads and ISRs may deliver
+	  events to event objects.
+
+config SCHED_PERF_EVENTS
+	bool "Support Perf Events"
+	select SCHED_RESUMESCHEDULER
+	select SCHED_SUSPENDSCHEDULER
+	default n
 	---help---
-		This option enables event objects. Threads may wait on event
-		objects for specific events, but both threads and ISRs may deliver
-		events to event objects.
+		Enable to support perf events.
+
+config COREDUMP
+	bool "Coredump support"
+	depends on ARCH_HAVE_TCBINFO
+	default n
+	---help---
+		Generate ELF core dump to provide information about the CPU state and the
+		memory state of program.
+		The memory state embeds a snapshot of all segments mapped in the
+		memory space of the program. The CPU state contains register values
+		when the core dump has been generated.
 
 config ASSERT_PAUSE_CPU_TIMEOUT
 	int "Timeout in milisecond to pause another CPU when assert"
