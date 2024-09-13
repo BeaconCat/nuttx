@@ -60,7 +60,7 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
   DEBUGASSERT(up_current_regs() == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
+   * g_current_regs is also used to manage interrupt level context switches.
    */
 
   up_set_current_regs(regs);
@@ -99,7 +99,7 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
       __isync();
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set g_current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 

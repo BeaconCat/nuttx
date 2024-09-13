@@ -41,7 +41,6 @@ SECTIONS
 {
     .text : {
         _stext = ABSOLUTE(.);
-        . = ALIGN(4);
         *(.vectors)
         *(.text .text.*)
         *(.fixup)
@@ -54,13 +53,6 @@ SECTIONS
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
         _etext = ABSOLUTE(.);
-    } > flash
-
-    .resource_table :
-    {
-        . = ALIGN(8);
-        KEEP(*(.resource_table))
-        . = ALIGN(4);
     } > flash
 
     .init_section : {

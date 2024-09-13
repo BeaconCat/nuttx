@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/mqueue/mq_setattr.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -118,18 +116,16 @@ int mq_setattr(mqd_t mqdes, const struct mq_attr *mq_stat,
   int ret;
 
   ret = fs_getfilep(mqdes, &filep);
-  if (ret < 0)
+  if (ret >= 0)
     {
-      set_errno(-ret);
-      return ERROR;
+      ret = file_mq_setattr(filep, mq_stat, oldstat);
+      fs_putfilep(filep);
+      if (ret >= 0)
+        {
+          return OK;
+        }
     }
 
-  ret = file_mq_setattr(filep, mq_stat, oldstat);
-  if (ret < 0)
-    {
-      set_errno(-ret);
-      return ERROR;
-    }
-
-  return OK;
+  set_errno(-ret);
+  return ERROR;
 }
