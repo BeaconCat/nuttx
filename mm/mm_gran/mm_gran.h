@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/mm_gran/mm_gran.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,7 +47,7 @@
 
 /* Debug */
 
-#ifdef CONFIG_DEBUG_GRAN
+#ifdef CONFIG_DEBUG_GRAM
 #  define granerr                    _err
 #  define granwarn                   _warn
 #  define graninfo                   _info
@@ -68,7 +66,6 @@
 struct gran_s
 {
   uint8_t    log2gran;  /* Log base 2 of the size of one granule */
-  uint8_t    log2align; /* Log base 2 of required alignment */
   uint16_t   ngranules; /* The total number of (aligned) granules in the heap */
 #ifdef CONFIG_GRAN_INTR
   irqstate_t irqstate;  /* For exclusive access to the GAT */
