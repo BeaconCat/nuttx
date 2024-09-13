@@ -34,7 +34,6 @@ include semaphore/Make.defs
 include mqueue/Make.defs
 include shm/Make.defs
 include socket/Make.defs
-include event/Make.defs
 
 # Additional files required is mount-able file systems are supported
 
@@ -57,11 +56,10 @@ include userfs/Make.defs
 include hostfs/Make.defs
 include littlefs/Make.defs
 include rpmsgfs/Make.defs
-include fatfs/Make.defs
 include zipfs/Make.defs
-include yaffs/Make.defs
-include notify/Make.defs
+include mnemofs/Make.defs
 include v9fs/Make.defs
+include notify/Make.defs
 endif
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs
@@ -89,8 +87,12 @@ $(BIN): $(OBJS)
 
 context::
 
+makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+	$(call CATFILE, Make.dep, $^)
+	$(call DELFILE, $^)
+
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make.dep
+	$(Q) $(MAKE) makedepfile
 	$(Q) touch $@
 
 depend: .depend
