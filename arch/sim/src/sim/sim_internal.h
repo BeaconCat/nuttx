@@ -180,6 +180,7 @@
  ****************************************************************************/
 
 typedef int pid_t;
+typedef size_t xcpt_reg_t;
 
 /****************************************************************************
  * Public Type Definitions
@@ -203,7 +204,7 @@ extern char **g_argv;
 
 /* Context switching */
 
-void sim_copyfullstate(unsigned long *dest, unsigned long *src);
+void sim_copyfullstate(xcpt_reg_t *dest, xcpt_reg_t *src);
 void *sim_doirq(int irq, void *regs);
 
 /* sim_hostmisc.c ***********************************************************/
@@ -224,7 +225,7 @@ int   host_waitpid(pid_t pid);
 
 void *host_allocheap(size_t size, bool exec);
 void  host_freeheap(void *mem);
-void *host_allocshmem(const char *name, size_t size, int master);
+void *host_allocshmem(const char *name, size_t size);
 void  host_freeshmem(void *mem);
 
 size_t host_mallocsize(void *mem);
@@ -407,6 +408,13 @@ void sim_netdriver_loop(void);
 
 #ifdef CONFIG_RPTUN
 int sim_rptun_init(const char *shmemname, const char *cpuname, int master);
+#endif
+
+/* sim_rpmsg_virtio.c *******************************************************/
+
+#ifdef CONFIG_RPMSG_VIRTIO
+int sim_rpmsg_virtio_init(const char *shmemname, const char *cpuname,
+                          bool master);
 #endif
 
 /* sim_hcisocket.c **********************************************************/

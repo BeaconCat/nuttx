@@ -87,6 +87,8 @@
 #define uart_txempty(dev)        dev->ops->txempty(dev)
 #define uart_send(dev,ch)        dev->ops->send(dev,ch)
 #define uart_receive(dev,s)      dev->ops->receive(dev,s)
+#define uart_recvbuf(dev,b,l)    dev->ops->recvbuf(dev,b,l)
+#define uart_sendbuf(dev,b,l)    dev->ops->sendbuf(dev,b,l)
 
 #define uart_release(dev)      \
   ((dev)->ops->release ? (dev)->ops->release(dev) : -ENOSYS)
@@ -263,6 +265,20 @@ struct uart_ops_s
    */
 
   CODE int (*release)(FAR struct uart_dev_s *dev);
+
+  /* Receive multiple bytes.
+   * Returns the actual number of characters received.
+   */
+
+  CODE ssize_t (*recvbuf)(FAR struct uart_dev_s *dev,
+                          FAR void *buf, size_t len);
+
+  /* This method will send multiple bytes.
+   * Returns the actual number of characters sent.
+   */
+
+  CODE ssize_t (*sendbuf)(FAR struct uart_dev_s *dev,
+                          FAR const void *buf, size_t len);
 };
 
 /* This is the device structure used by the driver.  The caller of
@@ -292,6 +308,10 @@ struct uart_dev_s
   pid_t                pid;          /* Thread PID to receive signals (-1 if none) */
 #endif
 
+#ifdef CONFIG_TTY_FORCE_PANIC
+  int                  panic_count;
+#endif
+
   /* Terminal control flags */
 
   tcflag_t             tc_iflag;     /* Input modes */
@@ -303,7 +323,6 @@ struct uart_dev_s
   sem_t                xmitsem;      /* Wakeup user waiting for space in xmit.buffer */
   sem_t                recvsem;      /* Wakeup user waiting for data in recv.buffer */
   mutex_t              closelock;    /* Locks out new open while close is in progress */
-  mutex_t              polllock;     /* Manages exclusive access to fds[] */
 
   /* I/O buffers */
 
@@ -322,7 +341,7 @@ struct uart_dev_s
   /* Driver interface */
 
   FAR const struct uart_ops_s *ops;  /* Arch-specific operations */
-  FAR void                    *priv; /* Used by the arch-specific logic */
+  FAR void            *priv;         /* Used by the arch-specific logic */
 
   /* The following is a list if poll structures of threads waiting for
    * driver events. The 'struct pollfd' reference for each open is also
@@ -335,7 +354,7 @@ struct uart_dev_s
   uint8_t timeout;                   /* c_cc[VTIME] */
 #endif
 
-  FAR struct pollfd *fds[CONFIG_SERIAL_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_SERIAL_NPOLLWAITERS];
 };
 
 typedef struct uart_dev_s uart_dev_t;
@@ -529,8 +548,7 @@ void uart_reset_sem(FAR uart_dev_t *dev);
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
     defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
-int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf,
-                       size_t size);
+int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size);
 #endif
 
 /****************************************************************************
@@ -543,7 +561,7 @@ int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf,
  ****************************************************************************/
 
 #ifdef CONFIG_SERIAL_GDBSTUB
-int uart_gdbstub_register(FAR uart_dev_t *dev);
+int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path);
 #endif
 
 #undef EXTERN
