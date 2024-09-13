@@ -149,6 +149,7 @@ struct coresight_desc_s
 
   uint32_t buffer_size;
   uint32_t burst_size;
+  uint32_t caps;
 
   /* Description of outports of current device. */
 
@@ -276,4 +277,4 @@ int coresight_enable(FAR struct coresight_dev_s *srcdev,
 
 void coresight_disable(FAR struct coresight_dev_s *srcdev);
 
-#endif  /* __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_H */
+#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_H

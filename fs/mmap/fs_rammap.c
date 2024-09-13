@@ -80,7 +80,7 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
   fpos = file_seek(filep, entry->offset + offset, SEEK_SET);
   if (fpos < 0)
     {
-      ferr("ERRORL Seek to position %"PRIdOFF" failed\n", fpos);
+      ferr("ERROR: Seek to position %"PRIdOFF" failed\n", fpos);
       return fpos;
     }
 
@@ -111,7 +111,15 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
 
   /* Restore file pos */
 
-  file_seek(filep, opos, SEEK_SET);
+  fpos = file_seek(filep, opos, SEEK_SET);
+  if (fpos < 0)
+    {
+      /* Ensure that we finally seek back to the current file pos */
+
+      ferr("ERROR: Seek back to position %"PRIdOFF" failed\n", fpos);
+      return fpos;
+    }
+
   return nwrite >= 0 ? 0 : nwrite;
 }
 
@@ -125,7 +133,8 @@ static int unmap_rammap(FAR struct task_group_s *group,
                         size_t length)
 {
   FAR struct file *filep = (FAR void *)((uintptr_t)entry->priv.p & ~3);
-  enum mm_map_type_e type = (uintptr_t)entry->priv.p & 3;
+  enum mm_map_type_e type =
+                    (enum mm_map_type_e)((uintptr_t)entry->priv.p & 3);
   FAR void *newaddr = NULL;
   off_t offset;
   int ret = OK;
