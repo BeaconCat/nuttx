@@ -135,7 +135,7 @@ struct max11802_dev_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  FAR struct pollfd *fds[CONFIG_MAX11802_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_MAX11802_NPOLLWAITERS];
 };
 
 /****************************************************************************
