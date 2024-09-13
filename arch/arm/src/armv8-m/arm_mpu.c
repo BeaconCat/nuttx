@@ -69,8 +69,8 @@ static unsigned int g_mpu_region;
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARM_MPU_RESET) || defined(CONFIG_ARM_MPU_EARLY_RESET)
-static void mpu_reset_internal()
+#if defined(CONFIG_MPU_RESET) || defined(CONFIG_ARM_MPU_EARLY_RESET)
+static void mpu_reset_internal(void)
 {
   int region;
   int regions;
@@ -378,7 +378,7 @@ void mpu_dump_region(void)
  *   None.
  *
  ****************************************************************************/
-#if defined(CONFIG_ARM_MPU_RESET)
+#if defined(CONFIG_MPU_RESET)
 void mpu_reset()
 {
   mpu_reset_internal();
@@ -400,7 +400,7 @@ void mpu_reset()
  *
  ****************************************************************************/
 #if defined(CONFIG_ARM_MPU_EARLY_RESET)
-void mpu_early_reset()
+void mpu_early_reset(void)
 {
   mpu_reset_internal();
 }

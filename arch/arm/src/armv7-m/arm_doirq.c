@@ -35,30 +35,58 @@
 
 #include "arm_internal.h"
 #include "exc_return.h"
+#include "nvic.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
+void exception_direct(void)
+{
+  int irq = getipsr();
+
+  arm_ack_irq(irq);
+  irq_dispatch(irq, NULL);
+
+  if (g_running_tasks[this_cpu()] != this_task())
+    {
+      up_trigger_irq(NVIC_IRQ_PENDSV, 0);
+    }
+}
+
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
+  struct tcb_s *tcb = this_task();
+
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
 #else
 
-  if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
-    {
-      up_set_current_regs(regs);
-    }
-
   /* Acknowledge the interrupt */
 
   arm_ack_irq(irq);
 
-  /* Deliver the IRQ */
+  if (irq == NVIC_IRQ_PENDSV)
+    {
+      up_irq_save();
+      g_running_tasks[this_cpu()]->xcp.regs = regs;
+    }
+  else
+    {
+      /* Set current regs for crash dump */
 
-  irq_dispatch(irq, regs);
+      up_set_current_regs(regs);
+
+      /* Dispatch irq */
+
+      tcb->xcp.regs = regs;
+      irq_dispatch(irq, regs);
+
+      /* Clear current regs */
+
+      up_set_current_regs(NULL);
+    }
 
   /* If a context switch occurred while processing the interrupt then
    * current_regs may have change value.  If we return any value different
@@ -66,25 +94,30 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
-    {
-      /* Restore the cpu lock */
+  tcb = this_task();
 
-      if (regs != up_current_regs())
-        {
-          /* Record the new "running" task when context switch occurred.
-           * g_running_tasks[] is only used by assertion logic for reporting
-           * crashes.
-           */
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Make sure that the address environment for the previously
+   * running task is closed down gracefully (data caches dump,
+   * MMU flushed) and set up the address environment for the new
+   * thread at the head of the ready-to-run list.
+   */
 
-          g_running_tasks[this_cpu()] = this_task();
-          regs = up_current_regs();
-        }
+  addrenv_switch(NULL);
+#endif
 
-      /* Update the current_regs to NULL. */
+  /* Update scheduler parameters */
 
-      up_set_current_regs(NULL);
-    }
+  nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
+  nxsched_resume_scheduler(tcb);
+
+  /* Record the new "running" task when context switch occurred.
+   * g_running_tasks[] is only used by assertion logic for reporting
+   * crashes.
+   */
+
+  g_running_tasks[this_cpu()] = tcb;
+  regs = tcb->xcp.regs;
 #endif
 
   board_autoled_off(LED_INIRQ);
