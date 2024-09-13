@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/icmpv6/icmpv6_advertise.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Send an ICMPv6 Neighbor Advertisement
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
