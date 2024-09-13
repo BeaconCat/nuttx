@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/ieee802154/ieee802154_poll.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Poll for the availability of ougoing IEEE 802.15.4 frames
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
