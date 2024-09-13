@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/signal/sig_notification.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -124,6 +122,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
       info.si_pid    = rtcb->pid;
       info.si_status = OK;
 #endif
+      info.si_user   = NULL;
 
       /* Some compilers (e.g., SDCC), do not permit assignment of aggregates.
        * Use of memcpy() is overkill;  We could just copy the larger of the

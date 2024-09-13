@@ -46,7 +46,6 @@ include netdb/Make.defs
 include obstack/Make.defs
 include pthread/Make.defs
 include pwd/Make.defs
-include queue/Make.defs
 include regex/Make.defs
 include sched/Make.defs
 include search/Make.defs
@@ -178,18 +177,10 @@ endif
 
 # Dependencies
 
-makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
-	$(call CATFILE, bin/Make.dep, $^)
-	$(call DELFILE, $^)
-
-makekdepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
-	$(call CATFILE, kbin/Make.dep, $^)
-	$(call DELFILE, $^)
-
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MAKE) makedepfile OBJPATH="bin"
+	$(Q) $(MKDEP) --obj-path bin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >bin/Make.dep
 ifneq ($(CONFIG_BUILD_FLAT),y)
-	$(Q) $(MAKE) makekdepfile CFLAGS="$(CFLAGS) $(KDEFINE)" OBJPATH="kbin"
+	$(Q) $(MKDEP) --obj-path kbin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) $(KDEFINE) -- $(SRCS) >kbin/Make.dep
 endif
 ifeq ($(CONFIG_LIBC_ZONEINFO_ROMFS),y)
 	$(Q) $(MAKE) -C zoneinfo depend BIN=$(BIN)

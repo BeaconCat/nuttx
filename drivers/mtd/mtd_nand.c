@@ -44,7 +44,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <stdio.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
@@ -78,8 +77,7 @@
 
 static int     nand_markblock(FAR struct nand_dev_s *nand, off_t block);
 static int     nand_checkblock(FAR struct nand_dev_s *nand, off_t block);
-#if defined(CONFIG_MTD_NAND_BLOCKCHECK) && defined(CONFIG_DEBUG_INFO) && \
-    defined(CONFIG_DEBUG_FS)
+#ifdef CONFIG_MTD_NAND_BLOCKCHECK
 static int     nand_devscan(FAR struct nand_dev_s *nand);
 #endif
 

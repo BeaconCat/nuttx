@@ -104,7 +104,7 @@ static int sph_open(struct file *filep)
 {
   /* Exclusive access */
 
-  if (filep->f_inode->i_crefs > 2)
+  if (filep->f_inode->i_crefs > 1)
     {
       return ERROR;
     }
