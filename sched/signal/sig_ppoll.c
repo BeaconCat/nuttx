@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/signal/sig_ppoll.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -68,7 +70,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
           FAR const struct timespec *timeout_ts,
           FAR const sigset_t *sigmask)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   sigset_t saved_sigprocmask;
   irqstate_t flags;
   int ret = ERROR;
@@ -80,7 +82,6 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
    */
 
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -125,6 +126,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
       /* We are running again, restore the original sigprocmask */
 
       rtcb->sigprocmask = saved_sigprocmask;
+      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was received
        * while the task was suspended but (b) restoring the original
@@ -132,7 +134,6 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
        */
 
       nxsig_unmask_pendingsignal();
-      leave_critical_section(flags);
     }
 
   return ret;
