@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/environ/env_setenv.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -73,9 +71,9 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
   FAR struct task_group_s *group;
   FAR char *pvar;
   FAR char **envp;
-  ssize_t envc;
-  ssize_t envpc;
+  ssize_t envc = 0;
   ssize_t ret = OK;
+  irqstate_t flags;
   int varlen;
 
   /* Verify input parameter */
@@ -110,7 +108,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
 
   /* Get a reference to the thread-private environ in the TCB. */
 
-  sched_lock();
+  flags = enter_critical_section();
   rtcb  = this_task();
   group = rtcb->group;
   DEBUGASSERT(group);
@@ -125,7 +123,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
         {
           /* No.. then just return success */
 
-          sched_unlock();
+          leave_critical_section(flags);
           return OK;
         }
 
@@ -156,53 +154,45 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
       goto errout_with_lock;
     }
 
-  envc = group->tg_envc;
-
-  if (group->tg_envp == NULL)
+  if (group->tg_envp)
     {
-      envpc = SCHED_ENVIRON_RESERVED + 2;
-
-      envp = group_malloc(group, sizeof(*envp) * envpc);
+      envc = group->tg_envc;
+      envp = group_realloc(group, group->tg_envp,
+                           sizeof(*envp) * (envc + 2));
       if (envp == NULL)
         {
           ret = ENOMEM;
           goto errout_with_var;
         }
-
-      group->tg_envp  = envp;
-      group->tg_envpc = envpc;
     }
-  else if (envc >= group->tg_envpc - 1)
+  else
     {
-      envpc = envc + SCHED_ENVIRON_RESERVED + 2;
-
-      envp = group_realloc(group, group->tg_envp, sizeof(*envp) * envpc);
+      envp = group_malloc(group, sizeof(*envp) * 2);
       if (envp == NULL)
         {
           ret = ENOMEM;
           goto errout_with_var;
         }
-
-      group->tg_envp  = envp;
-      group->tg_envpc = envpc;
     }
+
+  envp[envc++] = pvar;
+  envp[envc]   = NULL;
 
   /* Save the new buffer and count */
 
-  group->tg_envp[envc++] = pvar;
-  group->tg_envp[envc]   = NULL;
+  group->tg_envp = envp;
   group->tg_envc = envc;
 
   /* Now, put the new name=value string into the environment buffer */
 
   snprintf(pvar, varlen, "%s=%s", name, value);
-  sched_unlock();
+  leave_critical_section(flags);
   return OK;
 
 errout_with_var:
   group_free(group, pvar);
 errout_with_lock:
-  sched_unlock();
+  leave_critical_section(flags);
 errout:
   set_errno(ret);
   return ERROR;

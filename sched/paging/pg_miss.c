@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/paging/pg_miss.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -35,7 +33,7 @@
 #include <nuttx/page.h>
 #include <nuttx/signal.h>
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 #include "sched/sched.h"
 #include "paging/paging.h"
@@ -108,11 +106,9 @@
  *
  ****************************************************************************/
 
-void pg_miss(void)
+void pg_miss(FAR struct tcb_s *ftcb)
 {
-  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
-  bool switch_needed;
 
   /* Sanity checking
    *
@@ -138,21 +134,18 @@ void pg_miss(void)
 
   DEBUGASSERT(!is_idle_task(ftcb));
 
-  /* Remove the tcb task from the ready-to-run list. */
+  /* Remove the tcb task from the running list. */
 
-  switch_needed = nxsched_remove_readytorun(ftcb, true);
+  nxsched_remove_running(ftcb);
 
   /* Add the task to the specified blocked task list */
 
   ftcb->task_state = TSTATE_WAIT_PAGEFILL;
-  nxsched_add_prioritized(ftcb, list_waitingforfill());
+  nxsched_add_prioritized(ftcb, &g_waitingforfill);
 
-  /* Now, perform the context switch if one is needed */
+  /* Now, perform the context switch */
 
-  if (switch_needed)
-    {
-      up_switch_context(this_task(), ftcb);
-    }
+  up_switch_context(this_task(), ftcb);
 
   /* Boost the page fill worker thread priority.
    * - Check the priority of the task at the head of the g_waitingforfill
@@ -185,4 +178,4 @@ void pg_miss(void)
     }
 }
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
