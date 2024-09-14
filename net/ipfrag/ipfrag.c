@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/ipfrag/ipfrag.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Handling incoming IPv4 and IPv6 fragment input
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

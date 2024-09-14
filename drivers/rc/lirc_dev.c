@@ -32,9 +32,10 @@
 #include <poll.h>
 #include <fcntl.h>
 
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/rc/lirc_dev.h>
 
 /****************************************************************************
@@ -256,7 +257,7 @@ static int lirc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct lirc_fh_s *fh = filep->f_priv;
   FAR struct lirc_lowerhalf_s *lower = fh->lower;
   FAR struct lirc_upperhalf_s *upper = lower->priv;
-  FAR unsigned int *val = (FAR unsigned int *)(uintptr_t)arg;
+  FAR unsigned int *val = (unsigned int *)(uintptr_t)arg;
   int ret;
 
   ret = nxmutex_lock(&upper->lock);
