@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_DOUBLE
-double nan(FAR const char *tagp)
+double nan(const char *tagp)
 {
   return (double)NAN;
 }
