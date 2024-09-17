@@ -31,7 +31,6 @@
 
 #include "irq/irq.h"
 #include "sched/sched.h"
-#include "sched/queue.h"
 
 /****************************************************************************
  * Public Functions
@@ -73,20 +72,15 @@ void nxsched_process_delivered(int cpu)
 
   if ((g_cpu_irqset & (1 << cpu)) == 0)
     {
-      while (!spin_trylock_wo_note(&g_cpu_irqlock))
-        {
-          if (up_cpu_pausereq(cpu))
-            {
-              up_cpu_paused(cpu);
-            }
-        }
+      spin_lock_wo_note(&g_cpu_irqlock);
 
       g_cpu_irqset |= (1 << cpu);
     }
 
+  tcb = current_task(cpu);
+
   if (g_delivertasks[cpu] == NULL)
     {
-      tcb = current_task(cpu);
       if (tcb->irqcount <= 0)
         {
           cpu_irqlock_clear();
@@ -95,13 +89,12 @@ void nxsched_process_delivered(int cpu)
       return;
     }
 
-  if (nxsched_islocked_global())
+  if (nxsched_islocked_tcb(tcb))
     {
       btcb = g_delivertasks[cpu];
       g_delivertasks[cpu] = NULL;
       nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
-      tcb = current_task(cpu);
       if (tcb->irqcount <= 0)
         {
           cpu_irqlock_clear();
@@ -111,35 +104,38 @@ void nxsched_process_delivered(int cpu)
     }
 
   btcb = g_delivertasks[cpu];
-  tasklist = &g_assignedtasks[cpu];
 
-  for (next = (FAR struct tcb_s *)tasklist->head;
-      (next && btcb->sched_priority <= next->sched_priority);
+  for (next = tcb; btcb->sched_priority <= next->sched_priority;
       next = next->flink);
+
+  DEBUGASSERT(next);
 
   prev = next->blink;
   if (prev == NULL)
     {
       /* Special case:  Insert at the head of the list */
 
-      dq_addfirst_nonempty((FAR dq_entry_t *)btcb, tasklist);
+      tasklist = &g_assignedtasks[cpu];
+      btcb->flink = next;
+      btcb->blink = NULL;
+      next->blink = btcb;
+      tasklist->head = (FAR dq_entry_t *)btcb;
       btcb->cpu = cpu;
       btcb->task_state = TSTATE_TASK_RUNNING;
+      up_update_task(btcb);
 
       DEBUGASSERT(btcb->flink != NULL);
-      DEBUGASSERT(next == btcb->flink);
+      next = btcb->flink;
       next->task_state = TSTATE_TASK_ASSIGNED;
-
-      if (btcb->lockcount > 0)
-        {
-          g_cpu_lockset |= (1 << cpu);
-        }
     }
   else
     {
       /* Insert in the middle of the list */
 
-      dq_insert_mid(prev, btcb, next);
+      btcb->flink = next;
+      btcb->blink = prev;
+      prev->flink = btcb;
+      next->blink = btcb;
       btcb->cpu = cpu;
       btcb->task_state = TSTATE_TASK_ASSIGNED;
     }

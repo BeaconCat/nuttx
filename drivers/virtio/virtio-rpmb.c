@@ -29,6 +29,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/virtio/virtio.h>
 
@@ -49,6 +50,7 @@ struct virtio_rpmb_priv_s
   /* The virtio device we're associated with */
 
   FAR struct virtio_device *vdev;
+  spinlock_t                lock;
 };
 
 struct virtio_rpmb_cookie_s
@@ -101,12 +103,18 @@ static const struct file_operations g_virtio_rpmb_ops =
 
 static void virtio_rpmb_done(FAR struct virtqueue *vq)
 {
+  FAR struct virtio_rpmb_priv_s *priv = vq->vq_dev->priv;
   FAR struct virtio_rpmb_cookie_s *cookie;
   uint32_t len;
 
-  cookie = virtqueue_get_buffer(vq, &len, NULL);
-  if (cookie != NULL)
+  for (; ; )
     {
+      cookie = virtqueue_get_buffer_lock(vq, &len, NULL, &priv->lock);
+      if (cookie == NULL)
+        {
+          break;
+        }
+
       /* Assign the return length */
 
       cookie->len = len;
@@ -128,6 +136,7 @@ static int virtio_rpmb_transact(FAR struct virtio_rpmb_priv_s *priv,
 {
   FAR struct virtqueue *vq = priv->vdev->vrings_info[0].vq;
   struct virtio_rpmb_cookie_s cookie;
+  irqstate_t flags;
   int ret;
 
   /* Init the cookie */
@@ -139,15 +148,18 @@ static int virtio_rpmb_transact(FAR struct virtio_rpmb_priv_s *priv,
    * cookie. (virtqueue_get_buffer() will return cookie).
    */
 
+  flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, vb, out, in, &cookie);
   if (ret < 0)
     {
+      spin_unlock_irqrestore(&priv->lock, flags);
       return ret;
     }
 
   /* Notify the other side to process the added virtqueue buffer */
 
   virtqueue_kick(vq);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Wait fot completion */
 
@@ -189,6 +201,7 @@ static int virtio_rpmb_init(FAR struct virtio_rpmb_priv_s *priv,
 
   priv->vdev = vdev;
   vdev->priv = priv;
+  spin_lock_init(&priv->lock);
 
   /* Initialize the virtio device */
 
@@ -198,7 +211,7 @@ static int virtio_rpmb_init(FAR struct virtio_rpmb_priv_s *priv,
 
   vqname[0]   = "virtio_rpmb_vq";
   callback[0] = virtio_rpmb_done;
-  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback);
+  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback, NULL);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);
