@@ -149,7 +149,7 @@ struct ads7843e_dev_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  FAR struct pollfd *fds[CONFIG_ADS7843E_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_ADS7843E_NPOLLWAITERS];
 };
 
 /****************************************************************************
