@@ -47,11 +47,10 @@ extern "C"
  * g_default_channel.
  */
 
-EXTERN FAR syslog_channel_t *
-#ifndef CONFIG_SYSLOG_REGISTER
-const
-#endif
-g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS];
+#ifdef CONFIG_SYSLOG
+struct syslog_channel_s; /* Forward reference */
+EXTERN FAR struct syslog_channel_s *g_syslog_channel
+                                                [CONFIG_SYSLOG_MAX_CHANNELS];
 
 /****************************************************************************
  * Public Function Prototypes
@@ -83,8 +82,8 @@ g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS];
  *
  ****************************************************************************/
 
-FAR syslog_channel_t *syslog_dev_initialize(FAR const char *devpath,
-                                            int oflags, int mode);
+FAR struct syslog_channel_s *syslog_dev_initialize(FAR const char *devpath,
+                                                   int oflags, int mode);
 
 /****************************************************************************
  * Name: syslog_dev_uninitialize
@@ -102,7 +101,7 @@ FAR syslog_channel_t *syslog_dev_initialize(FAR const char *devpath,
  *
  ****************************************************************************/
 
-void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
+void syslog_dev_uninitialize(FAR struct syslog_channel_s *channel);
 
 /****************************************************************************
  * Name: syslog_dev_channel
@@ -112,10 +111,9 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
  *   CONFIG_SYSLOG_DEVPATH as the SYSLOG channel.
  *
  *   This tiny function is simply a wrapper around syslog_dev_initialize()
- *   and syslog_channel_register().  It calls syslog_dev_initialize() to
- *   configure the character device at CONFIG_SYSLOG_DEVPATH then calls
- *   syslog_channel_register() to use that device as the SYSLOG output
- *   channel.
+ *   and syslog_channel().  It calls syslog_dev_initialize() to configure
+ *   the character device at CONFIG_SYSLOG_DEVPATH then calls
+ *   syslog_channel() to use that device as the SYSLOG output channel.
  *
  *   NOTE interrupt level SYSLOG output will be lost in this case unless
  *   the interrupt buffer is used.
@@ -129,7 +127,7 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_CHAR
-FAR syslog_channel_t *syslog_dev_channel(void);
+FAR struct syslog_channel_s *syslog_dev_channel(void);
 #endif
 
 /****************************************************************************
@@ -140,10 +138,9 @@ FAR syslog_channel_t *syslog_dev_channel(void);
  *   SYSLOG channel.
  *
  *   This tiny function is simply a wrapper around syslog_dev_initialize()
- *   and syslog_channel_register().  It calls syslog_dev_initialize() to
- *   configure the character device at /dev/console then calls
- *   syslog_channel_register() to use that device as the SYSLOG output
- *   channel.
+ *   and syslog_channel().  It calls syslog_dev_initialize() to configure
+ *   the character device at /dev/console then calls syslog_channel() to
+ *   use that device as the SYSLOG output channel.
  *
  *   NOTE interrupt level SYSLOG output will be lost in the general case
  *   unless the interrupt buffer is used.  As a special case:  If the serial
@@ -160,7 +157,7 @@ FAR syslog_channel_t *syslog_dev_channel(void);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_CONSOLE
-FAR syslog_channel_t *syslog_console_channel(void);
+FAR struct syslog_channel_s *syslog_console_channel(void);
 #endif
 
 /****************************************************************************
@@ -227,6 +224,7 @@ int syslog_add_intbuffer(int ch);
 #ifdef CONFIG_SYSLOG_INTBUFFER
 int syslog_flush_intbuffer(bool force);
 #endif
+#endif /* CONFIG_SYSLOG */
 
 #undef EXTERN
 #ifdef __cplusplus

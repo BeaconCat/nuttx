@@ -91,4 +91,12 @@ if(CONFIG_ARCH_HAVE_FETCHADD)
   list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_fetchadd.S)
 endif()
 
+if(NOT CONFIG_SMP)
+  list(APPEND SRCS arm_cpuindex.c)
+endif()
+
+if(CONFIG_ARCH_TOOLCHAIN_GHS)
+  list(APPEND SRCS ghs/lib_dummy.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

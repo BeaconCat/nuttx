@@ -160,10 +160,6 @@ static ssize_t cpuinfo_read(FAR struct file *filep, FAR char *buffer,
     {
       filep->f_pos += copylen;
     }
-  else
-    {
-      copylen = 0;
-    }
 
   return copylen;
 }

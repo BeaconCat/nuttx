@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/tcp/tcp_send_unbuffered.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -42,6 +40,7 @@
 #include <arch/irq.h>
 
 #include <nuttx/semaphore.h>
+#include <nuttx/tls.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/tcp.h>
@@ -290,7 +289,6 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
                        sndlen, tcpip_hdrsize(conn));
       if (ret <= 0)
         {
-          pstate->snd_sent = ret;
           goto end_wait;
         }
 
@@ -377,7 +375,6 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
                            sndlen, tcpip_hdrsize(conn));
           if (ret <= 0)
             {
-              pstate->snd_sent = ret;
               goto end_wait;
             }
 
@@ -481,6 +478,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
                        FAR const void *buf, size_t len, int flags)
 {
   FAR struct tcp_conn_s *conn;
+  struct tcp_callback_s info;
   struct send_s state;
   int ret = OK;
 
@@ -604,8 +602,18 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
             {
               uint32_t acked = state.snd_acked;
 
+              /* Push a cancellation point onto the stack.  This will be
+               * called if the thread is canceled.
+               */
+
+              info.tc_conn = conn;
+              info.tc_cb   = state.snd_cb;
+              info.tc_sem  = &state.snd_sem;
+              tls_cleanup_push(tls_get_info(), tcp_callback_cleanup, &info);
+
               ret = net_sem_timedwait(&state.snd_sem,
                                   _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+              tls_cleanup_pop(tls_get_info(), 0);
               if (ret != -ETIMEDOUT || acked == state.snd_acked)
                 {
                   if (ret == -ETIMEDOUT)

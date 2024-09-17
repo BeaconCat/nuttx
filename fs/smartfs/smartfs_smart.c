@@ -44,7 +44,6 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/smart.h>
 
-#include "inode/inode.h"
 #include "smartfs.h"
 #include "fs_heap.h"
 
@@ -183,7 +182,6 @@ static int smartfs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct smartfs_mountpt_s *fs;
   int                           ret;
   uint16_t                      parentdirsector;
-  size_t                        pathlen;
   FAR const char               *filename;
   FAR struct smartfs_ofile_s   *sf;
 #ifdef CONFIG_SMARTFS_USE_SECTOR_BUFFER
@@ -213,19 +211,12 @@ static int smartfs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Locate the directory entry for this path */
 
-  pathlen = strlen(relpath) + 1;
-  sf = fs_heap_malloc(sizeof(*sf) + pathlen - 1);
+  sf = fs_heap_malloc(sizeof *sf);
   if (sf == NULL)
     {
       ret = -ENOMEM;
       goto errout_with_lock;
     }
-
-  /* Save the full path to smartfs_ofile_s stuctrue. This is needed
-   * to FIOC_FILEPATH ioctlc all support.
-   */
-
-  memcpy(sf->path, relpath, pathlen);
 
   /* Allocate a sector buffer if CRC enabled in the MTD layer */
 
@@ -1007,39 +998,9 @@ static off_t smartfs_seek(FAR struct file *filep, off_t offset, int whence)
 
 static int smartfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  FAR struct smartfs_ofile_s *priv;
-  FAR struct inode *inode;
-  int ret;
+  /* We don't use any ioctls */
 
-  /* Recover our private data from the struct file instance */
-
-  priv  = filep->f_priv;
-  inode = filep->f_inode;
-
-  switch (cmd)
-    {
-      case FIOC_FILEPATH:
-        {
-          FAR char *path = (FAR char *)(uintptr_t)arg;
-          ret = inode_getpath(inode, path, PATH_MAX);
-          if (ret >= 0)
-            {
-              size_t len = strlen(path);
-              if (path[len - 1] != '/')
-                {
-                  path[len++] = '/';
-                }
-
-              strlcat(path, priv->path, PATH_MAX - len);
-            }
-        }
-        break;
-      default:
-        ret = -ENOSYS;
-        break;
-    }
-
-  return ret;
+  return -ENOSYS;
 }
 
 /****************************************************************************
