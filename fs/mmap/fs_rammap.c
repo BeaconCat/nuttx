@@ -40,6 +40,8 @@
 #include "fs_rammap.h"
 #include "sched/sched.h"
 
+#ifdef CONFIG_FS_RAMMAP
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -78,7 +80,7 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
   fpos = file_seek(filep, entry->offset + offset, SEEK_SET);
   if (fpos < 0)
     {
-      ferr("ERRORL Seek to position %"PRIdOFF" failed\n", fpos);
+      ferr("ERROR: Seek to position %"PRIdOFF" failed\n", fpos);
       return fpos;
     }
 
@@ -109,7 +111,15 @@ static int msync_rammap(FAR struct mm_map_entry_s *entry, FAR void *start,
 
   /* Restore file pos */
 
-  file_seek(filep, opos, SEEK_SET);
+  fpos = file_seek(filep, opos, SEEK_SET);
+  if (fpos < 0)
+    {
+      /* Ensure that we finally seek back to the current file pos */
+
+      ferr("ERROR: Seek back to position %"PRIdOFF" failed\n", fpos);
+      return fpos;
+    }
+
   return nwrite >= 0 ? 0 : nwrite;
 }
 
@@ -345,3 +355,5 @@ errout_with_region:
 
   return ret;
 }
+
+#endif /* CONFIG_FS_RAMMAP */

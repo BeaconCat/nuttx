@@ -34,7 +34,7 @@
 #ifdef CONFIG_HAVE_DOUBLE
 double copysign(double x, double y)
 {
-  if (signbit(y))
+  if (y < 0)
     {
       return -fabs(x);
     }
