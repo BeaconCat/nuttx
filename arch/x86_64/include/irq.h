@@ -50,6 +50,7 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+
 /* CPU private data */
 
 struct intel64_cpu_s
@@ -148,16 +149,11 @@ static inline_function bool up_interrupt_context(void)
 }
 
 /****************************************************************************
- * Name: up_alloc_irq_msi
- * Name: up_release_irq_msi
- *
- * Description:
- *   Reserve/release vector for MSI
- *
+ * Name: up_getusrpc
  ****************************************************************************/
 
-int up_alloc_irq_msi(int *num);
-void up_release_irq_msi(int *irq, int num);
+#define up_getusrpc(regs) \
+    (((uint64_t *)((regs) ? (regs) : up_current_regs()))[REG_RIP])
 
 #undef EXTERN
 #ifdef __cplusplus
