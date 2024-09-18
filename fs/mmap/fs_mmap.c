@@ -47,8 +47,8 @@
  ****************************************************************************/
 
 static int file_mmap_(FAR struct file *filep, FAR void *start,
-                      size_t length, int prot, int flags, off_t offset,
-                      enum mm_map_type_e type, FAR void **mapped)
+                      size_t length, int prot, int flags,
+                      off_t offset, bool kernel, FAR void **mapped)
 {
   int ret = -ENOTTY;
 
@@ -73,7 +73,6 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
    * things.
    */
 
-#ifdef CONFIG_DEBUG_FEATURES
   /* A flags with MAP_PRIVATE and MAP_SHARED is invalid. */
 
   if ((flags & MAP_PRIVATE) && (flags & MAP_SHARED))
@@ -99,7 +98,6 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
       ferr("ERROR: Invalid length, length=%zu\n", length);
       return -EINVAL;
     }
-#endif /* CONFIG_DEBUG_FEATURES */
 
   /* Check if we are just be asked to allocate memory, i.e., MAP_ANONYMOUS
    * set meaning that the memory is not backed up from a file.  The file
@@ -109,7 +107,7 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
 
   if ((flags & MAP_ANONYMOUS) != 0)
     {
-      ret = map_anonymous(&entry, type);
+      ret = map_anonymous(&entry, kernel);
 
       /* According to the mmap(2) specification, anonymous pages should be
        * initialized to zero unless the MAP_UNINITIALIZED is specified.
@@ -163,7 +161,7 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
        * do much better in the KERNEL build using the MMU.
        */
 
-      ret = rammap(filep, &entry, type);
+      ret = rammap(filep, &entry, kernel);
     }
 
   /* Return */
@@ -195,7 +193,7 @@ int file_mmap(FAR struct file *filep, FAR void *start, size_t length,
               int prot, int flags, off_t offset, FAR void **mapped)
 {
   return file_mmap_(filep, start, length,
-                    prot, flags, offset, MAP_KERNEL, mapped);
+                    prot, flags, offset, true, mapped);
 }
 
 /****************************************************************************
@@ -287,8 +285,8 @@ FAR void *mmap(FAR void *start, size_t length, int prot, int flags,
     }
 
   ret = file_mmap_(filep, start, length,
-                   prot, flags, offset, MAP_USER, &mapped);
-  if (filep)
+                   prot, flags, offset, false, &mapped);
+  if (fd != -1)
     {
       fs_putfilep(filep);
     }

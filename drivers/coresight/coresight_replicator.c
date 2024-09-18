@@ -78,7 +78,7 @@ replicator_hw_enable(FAR struct coresight_replicator_dev_s *repdev,
 {
   uint32_t id0val;
   uint32_t id1val;
-  int ret = 0;
+  int ret;
 
   if (port != 0 && port != 1)
     {
