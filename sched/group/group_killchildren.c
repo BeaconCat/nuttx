@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/group/group_killchildren.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -66,7 +68,7 @@ static int group_kill_children_handler(pid_t pid, FAR void *arg)
 
   if (pid != (pid_t)((uintptr_t)arg))
     {
-      tkill(pid, SIGTERM);
+      pthread_kill(pid, SIGTERM);
     }
 
   return OK;
@@ -152,7 +154,6 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
 int group_kill_children(FAR struct tcb_s *tcb)
 {
-  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(tcb->group);
@@ -162,7 +163,19 @@ int group_kill_children(FAR struct tcb_s *tcb)
       return 0;
     }
 
-  flags = enter_critical_section();
+#ifdef CONFIG_SMP
+  /* NOTE: sched_lock() is not enough for SMP
+   * because tcb->group will be accessed from the child tasks
+   */
+
+  irqstate_t flags = enter_critical_section();
+#else
+  /* Lock the scheduler so that there this thread will not lose priority
+   * until all of its children are suspended.
+   */
+
+  sched_lock();
+#endif
 
   /* Tell the children that this group has started exiting */
 
@@ -170,29 +183,34 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
 #if defined(CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS) && \
             CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS != 0
-  /* Send SIGTERM for each first */
 
-  group_foreachchild(tcb->group, group_kill_children_handler,
-                     (FAR void *)((uintptr_t)tcb->pid));
-
-  /* Wait a bit for child exit */
-
-  ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
-  while (1)
+  if ((tcb->flags & TCB_FLAG_FORCED_CANCEL) == 0)
     {
-      if (tcb->group->tg_nmembers <= 1)
-        {
-          break;
-        }
+      /* Send SIGTERM for each first */
 
-      nxsig_usleep(USEC_PER_MSEC);
+      group_foreachchild(tcb->group, group_kill_children_handler,
+                         (FAR void *)((uintptr_t)tcb->pid));
+
+      /* Wait a bit for child exit */
+
+      ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
+      while (1)
+        {
+          if (sq_empty(&tcb->group->tg_members) ||
+              sq_is_singular(&tcb->group->tg_members))
+            {
+              break;
+            }
+
+          nxsig_usleep(USEC_PER_MSEC);
 
 #  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
-      if (--ret < 0)
-        {
-          break;
-        }
+          if (--ret < 0)
+            {
+              break;
+            }
 #  endif
+        }
     }
 #endif
 
@@ -200,8 +218,12 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
   ret = group_foreachchild(tcb->group, group_cancel_children_handler,
                            (FAR void *)((uintptr_t)tcb->pid));
-  leave_critical_section(flags);
 
+#ifdef CONFIG_SMP
+  leave_critical_section(flags);
+#else
+  sched_unlock();
+#endif
   return ret;
 }
 
