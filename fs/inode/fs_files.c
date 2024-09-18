@@ -71,6 +71,7 @@ static FAR struct file *files_fget_by_index(FAR struct filelist *list,
   flags = spin_lock_irqsave(NULL);
 
   filep = &list->fl_files[l1][l2];
+#ifdef CONFIG_FS_REFCOUNT
   if (filep->f_inode != NULL)
     {
       /* When the reference count is zero but the inode has not yet been
@@ -99,6 +100,12 @@ static FAR struct file *files_fget_by_index(FAR struct filelist *list,
       filep->f_refs = 2;
       *new = true;
     }
+#else
+  if (filep->f_inode == NULL && new == NULL)
+    {
+      filep = NULL;
+    }
+#endif
 
   spin_unlock_irqrestore(NULL, flags);
   return filep;
@@ -202,11 +209,6 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
   int j;
 
   list = files_getlist(tcb);
-  if (list == NULL)
-    {
-      return;
-    }
-
   for (i = 0; i < list->fl_rows; i++)
     {
       for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
@@ -370,22 +372,32 @@ void files_initlist(FAR struct filelist *list)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_DUMP_ON_EXIT
 void files_dumplist(FAR struct filelist *list)
 {
   int count = files_countlist(list);
   int i;
 
+  syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s"
+#if CONFIG_FS_BACKTRACE > 0
+        " BACKTRACE"
+#endif
+        "\n",
+        "PID", "FD", "FLAGS", "TYPE", "POS", "PATH"
+        );
+
   for (i = 0; i < count; i++)
     {
       FAR struct file *filep = files_fget(list, i);
       char path[PATH_MAX];
+
 #if CONFIG_FS_BACKTRACE > 0
       char buf[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
 #endif
 
       /* Is there an inode associated with the file descriptor? */
 
-      if (!filep)
+      if (filep == NULL || filep->f_inode == NULL)
         {
           continue;
         }
@@ -400,20 +412,20 @@ void files_dumplist(FAR struct filelist *list)
                        CONFIG_FS_BACKTRACE);
 #endif
 
-      syslog(LOG_INFO, "fd: %-3d, oflags: %-7d type: %-4x pos: %-9ld"
-             "path: %s"
+      syslog(LOG_INFO, "%-4d%-4d%-8d%-5x%-10ld%-14s"
 #if CONFIG_FS_BACKTRACE > 0
-            " BACKTRACE: %s"
+            " %s"
 #endif
-            "\n", i, filep->f_oflags, INODE_GET_TYPE(filep->f_inode),
+            "\n", getpid(), i, filep->f_oflags,
+            INODE_GET_TYPE(filep->f_inode),
             (long)filep->f_pos, path
 #if CONFIG_FS_BACKTRACE > 0
             , buf
 #endif
             );
-      fs_putfilep(filep);
     }
 }
+#endif
 
 /****************************************************************************
  * Name: files_getlist
@@ -428,19 +440,12 @@ void files_dumplist(FAR struct filelist *list)
 
 FAR struct filelist *files_getlist(FAR struct tcb_s *tcb)
 {
-  FAR struct filelist *list;
+  FAR struct filelist *list = &tcb->group->tg_filelist;
 
-  if (tcb->group != NULL)
-    {
-      list = &tcb->group->tg_filelist;
-      if (list->fl_crefs > 0)
-        {
-          list->fl_crefs++;
-          return list;
-        }
-    }
+  DEBUGASSERT(list->fl_crefs >= 1);
+  list->fl_crefs++;
 
-  return NULL;
+  return list;
 }
 
 /****************************************************************************
@@ -465,10 +470,6 @@ void files_putlist(FAR struct filelist *list)
       return;
     }
 
-#ifdef CONFIG_SCHED_DUMP_ON_EXIT
-  files_dumplist(list);
-#endif
-
   /* Close each file descriptor .. Normally, you would need take the list
    * mutex, but it is safe to ignore the mutex in this context
    * because there should not be any references in this context.
@@ -484,7 +485,6 @@ void files_putlist(FAR struct filelist *list)
       if (i != 0)
         {
           kmm_free(list->fl_files[i]);
-          list->fl_rows--;
         }
     }
 
@@ -498,13 +498,16 @@ void files_putlist(FAR struct filelist *list)
  * Name: files_countlist
  *
  * Description:
- *   Get file count from file list.
+ *   Given a file descriptor, return the corresponding instance of struct
+ *   file.
  *
  * Input Parameters:
- *   list - Pointer to the file list structure.
+ *   fd    - The file descriptor
+ *   filep - The location to return the struct file instance
  *
  * Returned Value:
- *   file count of file list.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
@@ -586,16 +589,12 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
           filep = &list->fl_files[i][j];
           if (filep->f_inode == NULL)
             {
-              filep->f_oflags      = oflags;
-              filep->f_pos         = pos;
-              filep->f_inode       = inode;
-              filep->f_priv        = priv;
-              filep->f_refs        = 1;
-#ifdef CONFIG_FDSAN
-              filep->f_tag_fdsan   = 0;
-#endif
-#ifdef CONFIG_FDCHECK
-              filep->f_tag_fdcheck = 0;
+              filep->f_oflags = oflags;
+              filep->f_pos    = pos;
+              filep->f_inode  = inode;
+              filep->f_priv   = priv;
+#ifdef CONFIG_FS_REFCOUNT
+              filep->f_refs   = 1;
 #endif
 
               goto found;
@@ -639,17 +638,6 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
 {
   return file_allocate_from_tcb(this_task(), inode, oflags,
                                 pos, priv, minfd, addref);
-}
-
-FAR char *file_dump_backtrace(FAR struct file *filep, FAR char *buffer,
-                              size_t len)
-{
-#if CONFIG_FS_BACKTRACE > 0
-  backtrace_format(buffer, len, filep->f_backtrace, CONFIG_FS_BACKTRACE);
-#else
-  buffer[0] = '\0';
-#endif
-  return buffer;
 }
 
 /****************************************************************************
@@ -812,32 +800,6 @@ int fs_getfilep(int fd, FAR struct file **filep)
 }
 
 /****************************************************************************
- * Name: fs_reffilep
- *
- * Description:
- *   To specify filep increase the reference count.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void fs_reffilep(FAR struct file *filep)
-{
-  /* This interface is used to increase the reference count of filep */
-
-  irqstate_t flags;
-
-  DEBUGASSERT(filep);
-  flags = spin_lock_irqsave(NULL);
-  filep->f_refs++;
-  spin_unlock_irqrestore(NULL, flags);
-}
-
-/****************************************************************************
  * Name: fs_putfilep
  *
  * Description:
@@ -849,6 +811,7 @@ void fs_reffilep(FAR struct file *filep)
  *            file' instance.
  ****************************************************************************/
 
+#ifdef CONFIG_FS_REFCOUNT
 int fs_putfilep(FAR struct file *filep)
 {
   irqstate_t flags;
@@ -875,6 +838,7 @@ int fs_putfilep(FAR struct file *filep)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nx_dup2_from_tcb
@@ -1003,24 +967,12 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 
   list = nxsched_get_files_from_tcb(tcb);
 
-  /* Check the close file after group release */
-
-  DEBUGASSERT(list);
-
   /* Perform the protected close operation */
 
   if (fd < 0 || fd >= files_countlist(list))
     {
       return -EBADF;
     }
-
-#ifdef CONFIG_DEBUG_FS_WARN
-  if (fd >= 0 && fd <= 2)
-    {
-      fwarn("Attempt to close fd %d\n", fd);
-      sched_dumpstack(gettid());
-    }
-#endif
 
   filep = files_fget(list, fd);
 
@@ -1031,6 +983,8 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
       return -EBADF;
     }
 
+#ifdef CONFIG_FS_REFCOUNT
+
   /* files_fget will increase the reference count, there call fs_putfilep
    * reduce reference count.
    */
@@ -1040,6 +994,9 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
   /* Undo the last reference count from file_allocate_from_tcb */
 
   return fs_putfilep(filep);
+#else
+  return file_close(filep);
+#endif
 }
 
 /****************************************************************************
