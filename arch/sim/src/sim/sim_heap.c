@@ -33,7 +33,6 @@
 #include <nuttx/atomic.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/sched_note.h>
 
 #include "sim_internal.h"
 
@@ -98,12 +97,12 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 #endif
 }
 
-static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
+static bool free_delaylist(struct mm_heap_s *heap, bool force)
 {
+  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -146,8 +145,8 @@ static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-  return ret;
 #endif
+  return ret;
 }
 
 /****************************************************************************
@@ -186,7 +185,6 @@ static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay)
       int size = host_mallocsize(mem);
       atomic_fetch_sub(&heap->aordblks, 1);
       atomic_fetch_sub(&heap->uordblks, size);
-      sched_note_heap(NOTE_HEAP_FREE, heap, mem, size, 0);
       host_free(mem);
     }
 }
@@ -230,35 +228,7 @@ struct mm_heap_s *mm_initialize(const char *name,
   procfs_register_meminfo(&heap->mm_procfs);
 #endif
 
-  sched_note_heap(NOTE_HEAP_ADD, heap, heap_start, heap_size, 0);
   return heap;
-}
-
-/****************************************************************************
- * Name: mm_uninitialize
- *
- * Description:
- *   Uninitialize the selected heap data structures
- *
- * Input Parameters:
- *   heap      - The selected heap
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-void mm_uninitialize(FAR struct mm_heap_s *heap)
-{
-  sched_note_heap(NOTE_HEAP_REMOVE, heap, NULL, 0, 0);
-
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  procfs_unregister_meminfo(&heap->mm_procfs);
-#endif
-  mm_free_delaylist(heap, true);
-  host_free(heap);
 }
 
 /****************************************************************************
@@ -324,6 +294,22 @@ void mm_free(struct mm_heap_s *heap, void *mem)
 }
 
 /****************************************************************************
+ * Name: mm_free_delaylist
+ *
+ * Description:
+ *   force freeing the delaylist of this heap.
+ *
+ ****************************************************************************/
+
+void mm_free_delaylist(struct mm_heap_s *heap)
+{
+  if (heap)
+    {
+       free_delaylist(heap, true);
+    }
+}
+
+/****************************************************************************
  * Name: mm_realloc
  *
  * Description:
@@ -353,27 +339,22 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int uordblks;
   int usmblks;
   int newsize;
-  int oldsize;
 
-  mm_free_delaylist(heap, false);
+  free_delaylist(heap, false);
 
-  oldsize = host_mallocsize(oldmem);
-  atomic_fetch_sub(&heap->uordblks, oldsize);
+  if (size == 0)
+    {
+      mm_free(heap, oldmem);
+      return NULL;
+    }
+
+  atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
   mem = host_realloc(oldmem, size);
 
   atomic_fetch_add(&heap->aordblks, oldmem == NULL && mem != NULL);
   newsize = host_mallocsize(mem ? mem : oldmem);
   atomic_fetch_add(&heap->uordblks, newsize);
   usmblks = atomic_load(&heap->usmblks);
-  if (mem != NULL)
-    {
-      if (oldmem != NULL)
-        {
-          sched_note_heap(NOTE_HEAP_FREE, heap, oldmem, oldsize, 0);
-        }
-
-      sched_note_heap(NOTE_HEAP_ALLOC, heap, mem, newsize, 0);
-    }
 
   do
     {
@@ -386,7 +367,7 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
+  if (mem == NULL && free_delaylist(heap, true))
     {
       return mm_realloc(heap, oldmem, size);
     }
@@ -455,7 +436,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   int uordblks;
   int usmblks;
 
-  mm_free_delaylist(heap, false);
+  free_delaylist(heap, false);
   mem = host_memalign(alignment, size);
 
   if (mem == NULL)
@@ -464,7 +445,6 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
     }
 
   size = host_mallocsize(mem);
-  sched_note_heap(NOTE_HEAP_ALLOC, heap, mem, size, 0);
   atomic_fetch_add(&heap->aordblks, 1);
   atomic_fetch_add(&heap->uordblks, size);
   usmblks = atomic_load(&heap->usmblks);
@@ -480,7 +460,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
+  if (mem == NULL && free_delaylist(heap, true))
     {
       return mm_memalign(heap, alignment, size);
     }

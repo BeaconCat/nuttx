@@ -108,7 +108,12 @@ static void allsyms_relocate(void)
  ****************************************************************************/
 
 #ifdef CONFIG_SIM_ASAN
-noprofile_function const char *__asan_default_options(void)
+const char *__asan_default_suppressions(void)
+{
+  return "interceptor_via_lib:libasan.so";
+}
+
+const char *__asan_default_options(void)
 {
   return "abort_on_error=1"
          " alloc_dealloc_mismatch=0"
@@ -119,7 +124,7 @@ noprofile_function const char *__asan_default_options(void)
          " detect_stack_use_after_return=0";
 }
 
-noprofile_function const char *__lsan_default_options(void)
+const char *__lsan_default_options(void)
 {
   /* The fast-unwind implementation of leak-sanitizer will obtain the
    * current stack top/bottom and frame address(Stack Pointer) for
@@ -141,7 +146,7 @@ noprofile_function const char *__lsan_default_options(void)
 #endif
 
 #ifdef CONFIG_SIM_UBSAN
-noprofile_function const char *__ubsan_default_options(void)
+const char *__ubsan_default_options(void)
 {
 #ifdef CONFIG_SIM_UBSAN_DUMMY
   return "";

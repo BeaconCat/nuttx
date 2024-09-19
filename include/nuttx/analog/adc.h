@@ -140,9 +140,9 @@ struct adc_fifo_s
   uint16_t     af_head;                  /* Index to the head [IN] index in the circular buffer */
   uint16_t     af_tail;                  /* Index to the tail [OUT] index in the circular buffer */
                                          /* Circular buffer of ADC messages */
-  FAR uint8_t  *af_channel;
-  FAR uint32_t *af_data;
-  uint16_t     af_fifosize;
+  uint8_t      af_channel[CONFIG_ADC_FIFOSIZE];
+  int32_t      af_data[CONFIG_ADC_FIFOSIZE];
+  struct adc_msg_s af_buffer[CONFIG_ADC_FIFOSIZE];
 };
 
 /* This structure defines all of the operations provided by the architecture
@@ -221,7 +221,7 @@ struct adc_dev_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  struct pollfd *fds[CONFIG_ADC_NPOLLWAITERS];
+  FAR struct pollfd          *fds[CONFIG_ADC_NPOLLWAITERS];
 #endif /* CONFIG_ADC */
 };
 
@@ -267,15 +267,15 @@ int adc_register(FAR const char *path, FAR struct adc_dev_s *dev);
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ads1255_initialize
+ * Name: up_ads1255initialize
  *
  * Description:
  *   Initialize the TI ADS 125X lower half driver
  *
  ****************************************************************************/
 
-FAR struct adc_dev_s *ads1255_initialize(FAR struct spi_dev_s *spi,
-                                         unsigned int devno);
+FAR struct adc_dev_s *up_ads1255initialize(FAR struct spi_dev_s *spi,
+                                           unsigned int devno);
 
 /****************************************************************************
  * Name: lmp92001_adc_initialize
@@ -311,7 +311,7 @@ FAR struct adc_dev_s *lmp92001_adc_initialize(FAR struct i2c_master_s *i2c,
  ****************************************************************************/
 
 FAR struct adc_dev_s *ads7828_initialize(FAR struct i2c_master_s *i2c,
-                                         uint8_t addr);
+                                               uint8_t addr);
 
 /****************************************************************************
  * Name: max1161x_initialize

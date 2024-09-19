@@ -29,6 +29,7 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/pci/pci.h>
 #include <nuttx/pci/pci_ecam.h>
+#include <nuttx/nuttx.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -65,8 +66,8 @@ static int pci_ecam_get_irq(FAR struct pci_bus_s *bus, uint32_t devfn,
                             uint8_t line, uint8_t pin);
 
 #ifdef CONFIG_PCI_MSIX
-static int pci_ecam_alloc_irq(FAR struct pci_bus_s *bus, uint32_t devfn,
-                              FAR int *irq, int num);
+static int pci_ecam_alloc_irq(FAR struct pci_bus_s *bus, FAR int *irq,
+                              int num);
 
 static void pci_ecam_release_irq(FAR struct pci_bus_s *bus, FAR int *irq,
                                  int num);
@@ -119,6 +120,7 @@ static const struct pci_ops_s g_pci_ecam_ops =
  *
  * Returned Value:
  *   Return the struct pci_ecam_pcie s address
+ *
  ****************************************************************************/
 
 static inline FAR struct pci_ecam_s *
@@ -168,6 +170,7 @@ static FAR void *pci_ecam_conf_address(FAR const struct pci_bus_s *bus,
  *
  * Returned Value:
  *   True if success, false if failed
+ *
  ****************************************************************************/
 
 static bool pci_ecam_addr_valid(FAR const struct pci_bus_s *bus,
@@ -194,6 +197,7 @@ static bool pci_ecam_addr_valid(FAR const struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Return the specify enum result of operation
+ *
  ****************************************************************************/
 
 static int pci_ecam_read_config(FAR struct pci_bus_s *bus,
@@ -251,6 +255,7 @@ static int pci_ecam_read_config(FAR struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Return the specify enum result of operation
+ *
  ****************************************************************************/
 
 static int pci_ecam_write_config(FAR struct pci_bus_s *bus,
@@ -386,10 +391,11 @@ static int pci_ecam_write_io(FAR struct pci_bus_s *bus, uintptr_t addr,
 }
 
 #ifdef CONFIG_PCI_MSIX
-static int pci_ecam_alloc_irq(FAR struct pci_bus_s *bus, uint32_t devfn,
-                              FAR int *irq, int num)
+static int pci_ecam_alloc_irq(FAR struct pci_bus_s *bus, FAR int *irq,
+                              int num)
 {
-  return up_alloc_irq_msi(bus->ctrl->busno, devfn, irq, num);
+  *irq = up_alloc_irq_msi(&num);
+  return num;
 }
 
 static void pci_ecam_release_irq(FAR struct pci_bus_s *bus, FAR int *irq,
@@ -449,6 +455,7 @@ static int pci_ecam_get_irq(FAR struct pci_bus_s *bus, uint32_t devfn,
  *
  * Returned Value:
  *   Return 0 if success, nageative if failed
+ *
  ****************************************************************************/
 
 int pci_ecam_register(FAR const struct pci_resource_s *cfg,
