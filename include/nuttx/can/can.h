@@ -42,10 +42,6 @@
 #  include <nuttx/wqueue.h>
 #endif
 
-#ifdef CONFIG_CAN_TIMESTAMP
-#include <sys/time.h>
-#endif
-
 #ifdef CONFIG_CAN
 
 /****************************************************************************
@@ -63,11 +59,7 @@
  * CONFIG_CAN_FD - Enable support for CAN FD mode.
  *   For the upper half driver, this just means handling encoded DLC values
  *   (for values of DLC > 9).
- * CONFIG_CAN_TXFIFOSIZE - The size of the circular tx buffer
- *   of CAN messages.
- *   Default: 8
- * CONFIG_CAN_RXFIFOSIZE - The size of the circular rx buffer
- *   of CAN messages.
+ * CONFIG_CAN_FIFOSIZE - The size of the circular buffer of CAN messages.
  *   Default: 8
  * CONFIG_CAN_NPENDINGRTR - The size of the list of pending RTR requests.
  *   Default: 4
@@ -89,18 +81,11 @@
  * The configured size is limited to 255 to fit into a uint8_t.
  */
 
-#if !defined(CONFIG_CAN_TXFIFOSIZE)
-#  define CONFIG_CAN_TXFIFOSIZE 8
-#elif CONFIG_CAN_TXFIFOSIZE > 255
-#  undef  CONFIG_CAN_TXFIFOSIZE
-#  define CONFIG_CAN_TXFIFOSIZE 255
-#endif
-
-#if !defined(CONFIG_CAN_RXFIFOSIZE)
-#  define CONFIG_CAN_RXFIFOSIZE 8
-#elif CONFIG_CAN_RXFIFOSIZE > 255
-#  undef  CONFIG_CAN_RXFIFOSIZE
-#  define CONFIG_CAN_RXFIFOSIZE 255
+#if !defined(CONFIG_CAN_FIFOSIZE)
+#  define CONFIG_CAN_FIFOSIZE 8
+#elif CONFIG_CAN_FIFOSIZE > 255
+#  undef  CONFIG_CAN_FIFOSIZE
+#  define CONFIG_CAN_FIFOSIZE 255
 #endif
 
 #if !defined(CONFIG_CAN_NPENDINGRTR)
@@ -261,46 +246,6 @@
  *                   is returned with the errno variable set to indicate the
  *                   nature of the error.
  *   Dependencies:   None
- *
- * CANIOC_SET_STATE
- *   Description:    Set specfic can controller state
- *
- *   Argument:       A pointer to an int type that describes the CAN
- *                   controller state.
- *   returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
- *                   is returned with the errno variable set to indicate the
- *                   nature of the error.
- *   Dependencies:   None
- *
- * CANIOC_GET_STATE
- *   Description:    Get specfic can controller state
- *
- *   Argument:       A pointer to an int type that describes the CAN
- *                   controller state.
- *   returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
- *                   is returned with the errno variable set to indicate the
- *                   nature of the error.
- *   Dependencies:   None
- *
- * CANIOC_SET_TRANSV_STATE
- *   Description:    Set specfic can transceiver state
- *
- *   Argument:       A pointer to an int type that describes the CAN
- *                   transceiver state.
- *   returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
- *                   is returned with the errno variable set to indicate the
- *                   nature of the error.
- *   Dependencies:   None
- *
- * CANIOC_GET_TRANSV_STATE
- *   Description:    Get specfic can transceiver state
- *
- *   Argument:       A pointer to an int type that describes the CAN
- *                   transceiver state.
- *   returned Value: Zero (OK) is returned on success.  Otherwise -1 (ERROR)
- *                   is returned with the errno variable set to indicate the
- *                   nature of the error.
- *   Dependencies:   None
  */
 
 #define CANIOC_RTR                _CANIOC(1)
@@ -318,10 +263,6 @@
 #define CANIOC_IFLUSH             _CANIOC(13)
 #define CANIOC_OFLUSH             _CANIOC(14)
 #define CANIOC_IOFLUSH            _CANIOC(15)
-#define CANIOC_SET_STATE          _CANIOC(16)
-#define CANIOC_GET_STATE          _CANIOC(17)
-#define CANIOC_SET_TRANSVSTATE    _CANIOC(18)
-#define CANIOC_GET_TRANSVSTATE    _CANIOC(19)
 
 #define CAN_FIRST                 0x0001         /* First common command */
 #define CAN_NCMDS                 15             /* 16 common commands   */
@@ -497,29 +438,10 @@
 #define CAN_FILTER_DUAL           1  /* Dual address match */
 #define CAN_FILTER_RANGE          2  /* Match a range of addresses */
 
-/* the state is default state. Indicates that the can controller is closed */
+/* CAN bit timing support ***************************************************/
 
-#define CAN_STATE_STOP            0
-
-/* Indicates that the can controller is in the awake state */
-
-#define CAN_STATE_START           1
-
-/* Indicates that the can transceiver is in the sleep state */
-
-#define CAN_TRANSVSTATE_SLEEP     0
-
-/* Indicates that the can transceiver is in the standby state just called
- * first-level power saving mode.
- */
-
-#define CAN_TRANSVSTATE_STANDBY   1
-
-/* Indicates that the can transceiver is in the awake state
- * the transceiver can transmit and receive data.
- */
-
-#define CAN_TRANSVSTATE_NORMAL    2
+#define CAN_BITTIMING_NOMINAL     0  /* Specifies nominal bittiming */
+#define CAN_BITTIMING_DATA        1  /* Specifies data bittiming */
 
 /****************************************************************************
  * Public Types
@@ -588,10 +510,7 @@ begin_packed_struct struct can_hdr_s
   uint8_t      ch_brs    : 1; /* Bit Rate Switch */
   uint8_t      ch_esi    : 1; /* Error State Indicator */
 #endif
-  uint8_t      ch_tcf    : 1; /* Tx confirmation flag */
-#ifdef CONFIG_CAN_TIMESTAMP
-  struct timeval ch_ts;       /* record the timestamp of each frame */
-#endif
+  uint8_t      ch_unused : 1; /* FIXME: This field is useless, kept for backward compatibility */
 } end_packed_struct;
 
 #else
@@ -608,10 +527,7 @@ begin_packed_struct struct can_hdr_s
   uint8_t      ch_brs    : 1; /* Bit Rate Switch */
   uint8_t      ch_esi    : 1; /* Error State Indicator */
 #endif
-  uint8_t      ch_tcf    : 1; /* Tx confirmation flag */
-#ifdef CONFIG_CAN_TIMESTAMP
-  struct timeval ch_ts;       /* record the timestamp of each frame */
-#endif
+  uint8_t      ch_unused : 1; /* FIXME: This field is useless, kept for backward compatibility */
 } end_packed_struct;
 #endif
 
@@ -638,7 +554,7 @@ struct can_rxfifo_s
   uint8_t       rx_head;                 /* Index to the head [IN] in the circular buffer */
   uint8_t       rx_tail;                 /* Index to the tail [OUT] in the circular buffer */
                                          /* Circular buffer of CAN messages */
-  struct can_msg_s rx_buffer[CONFIG_CAN_RXFIFOSIZE];
+  struct can_msg_s rx_buffer[CONFIG_CAN_FIFOSIZE];
 };
 
 struct can_txfifo_s
@@ -648,7 +564,7 @@ struct can_txfifo_s
   uint8_t       tx_queue;                /* Index to next message to send */
   uint8_t       tx_tail;                 /* Index to the tail [OUT] in the circular buffer */
                                          /* Circular buffer of CAN messages */
-  struct can_msg_s tx_buffer[CONFIG_CAN_TXFIFOSIZE];
+  struct can_msg_s tx_buffer[CONFIG_CAN_FIFOSIZE];
 };
 
 /* The following structure define the logic to handle
@@ -667,21 +583,6 @@ struct can_rtrwait_s
  */
 
 struct can_dev_s;
-
-/* This is the device structure as struct can_dev_s's subdevice
- * used by the driver.
- */
-
-struct can_transv_s;
-
-struct can_transv_ops_s
-{
-  CODE int (*ct_setstate)(FAR struct can_transv_s *transv, int state);
-
-  CODE int (*ct_getstate)(FAR struct can_transv_s *transv,
-                          FAR int *state);
-};
-
 struct can_ops_s
 {
   /* Reset the CAN device.  Called early to initialize the hardware. This
@@ -760,11 +661,6 @@ struct can_reader_s
   struct can_rxfifo_s  fifo;             /* Describes receive FIFO */
 };
 
-struct can_transv_s
-{
-  FAR const struct can_transv_ops_s *ct_ops;    /* Arch-specific operations */
-};
-
 struct can_dev_s
 {
   uint8_t              cd_crefs;         /* References counts on number of opens */
@@ -781,7 +677,7 @@ struct can_dev_s
   struct can_rtrwait_s cd_rtr[CONFIG_CAN_NPENDINGRTR];
   FAR const struct can_ops_s *cd_ops;    /* Arch-specific operations */
   FAR void            *cd_priv;          /* Used by the arch-specific logic */
-  FAR struct can_transv_s *cd_transv;    /* Describes CAN transceiver */
+
   FAR struct pollfd   *cd_fds[CONFIG_CAN_NPOLLWAITERS];
 };
 
@@ -819,6 +715,13 @@ struct canioc_rtr_s
 
 struct canioc_bittiming_s
 {
+#ifdef CONFIG_CAN_FD
+  uint8_t               type;            /* Nominal/Data bit timing. This is
+                                          * used to specify which bit timing
+                                          * should be set/obtained. Applies
+                                          * only if CAN FD is configured.
+                                          */
+#endif
   uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
   uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
   uint8_t               bt_tseg2;        /* TSEG2 in time quanta */

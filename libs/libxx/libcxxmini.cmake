@@ -20,9 +20,11 @@
 
 nuttx_add_system_library(libcxxmini)
 
-if(NOT CONFIG_XTENSA_TOOLCHAIN_XCC)
-  add_compile_options(-Wno-missing-exception-spec)
-endif()
+set_source_files_properties(
+  libcxxmini/libxx_new.cxx PROPERTIES COMPILE_FLAGS -Wno-missing-exception-spec)
+set_source_files_properties(
+  libcxxmini/libxx_newa.cxx PROPERTIES COMPILE_FLAGS
+                                       -Wno-missing-exception-spec)
 
 target_sources(
   libcxxmini
