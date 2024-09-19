@@ -37,10 +37,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/mm.h>
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
-#  include <nuttx/perf.h>
-#endif
-
 #include "sched/sched.h"
 #include "group/group.h"
 #include "signal/signal.h"
@@ -276,11 +272,20 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
 #ifdef HAVE_GROUP_MEMBERS
   DEBUGASSERT(ctcb && ctcb->group);
 
+  /* Keep things stationary throughout the following */
+
+  sched_lock();
+
   /* Send SIGCHLD to all members of the parent's task group */
 
   nxtask_sigchild(ctcb->group->tg_ppid, ctcb, status);
+  sched_unlock();
 #else
   FAR struct tcb_s *ptcb;
+
+  /* Keep things stationary throughout the following */
+
+  sched_lock();
 
   /* Get the TCB of the receiving, parent task.  We do this early to
    * handle multiple calls to nxtask_signalparent.
@@ -291,6 +296,7 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
     {
       /* The parent no longer exists... bail */
 
+      sched_unlock();
       return;
     }
 
@@ -301,6 +307,7 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
    */
 
   nxtask_sigchild(ptcb, ctcb, status);
+  sched_unlock();
 #endif
 }
 #else
@@ -424,15 +431,13 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 
   DEBUGASSERT((tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0);
 
+  nxsched_dumponexit();
+
   /* If the task was terminated by another task, it may be in an unknown
    * state.  Make some feeble effort to recover the state.
    */
 
   nxtask_recover(tcb);
-
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  perf_event_task_exit(tcb);
-#endif
 
   /* Disable the scheduling function to prevent other tasks from
    * being deleted after they are awakened
@@ -449,10 +454,6 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
   nxtask_exitwakeup(tcb, status);
 
   sched_unlock();
-
-  /* dump thread information when the thread exits */
-
-  nxsched_dumponexit();
 
   /* Leave the task group.  Perhaps discarding any un-reaped child
    * status (no zombies here!)
