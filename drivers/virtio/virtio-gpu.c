@@ -63,6 +63,7 @@ struct virtio_gpu_priv_s
   fb_coord_t yres;                  /* Vertical resolution in pixel rows */
   fb_coord_t stride;                /* Width of a row in bytes */
   uint8_t display;                  /* Display number */
+  spinlock_t lock;                  /* Lock */
 };
 
 struct virtio_gpu_cookie_s
@@ -133,14 +134,14 @@ static FAR struct virtio_gpu_priv_s *g_virtio_gpu[VIRTIO_GPU_MAX_DISP];
 
 /****************************************************************************
  * Name: virtio_gpu_send_cmd
- * Note: the caller should not touch `buf` after calling this, as it will be
- *       freed either here or in virtio_gpu_done().
  ****************************************************************************/
 
 static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
                                FAR struct virtqueue_buf *buf_list,
                                int readable, int writable, FAR void *buf)
 {
+  FAR struct virtio_gpu_priv_s *priv = vq->vq_dev->priv;
+  irqstate_t flags;
   int ret;
 
   if (writable > 0)
@@ -148,15 +149,20 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
       sem_t sem;
       struct virtio_gpu_cookie_s cookie;
 
-      virtio_free_buf(vq->vq_dev, buf);
       nxsem_init(&sem, 0, 0);
       cookie.blocking = true;
       cookie.p = &sem;
+      flags = spin_lock_irqsave(&priv->lock);
       ret = virtqueue_add_buffer(vq, buf_list, readable, writable, &cookie);
       if (ret >= 0)
         {
           virtqueue_kick(vq);
+          spin_unlock_irqrestore(&priv->lock, flags);
           nxsem_wait(&sem);
+        }
+      else
+        {
+          spin_unlock_irqrestore(&priv->lock, flags);
         }
 
       nxsem_destroy(&sem);
@@ -175,21 +181,20 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
         {
           cookie->blocking = false;
           cookie->p = buf;
+          flags = spin_lock_irqsave(&priv->lock);
           ret = virtqueue_add_buffer(vq, buf_list, readable, writable,
                                      cookie);
           if (ret >= 0)
             {
               virtqueue_kick(vq);
+              spin_unlock_irqrestore(&priv->lock, flags);
             }
           else
             {
+              spin_unlock_irqrestore(&priv->lock, flags);
+              virtio_free_buf(vq->vq_dev, buf);
               kmm_free(cookie);
             }
-        }
-
-      if (buf && ret < 0)
-        {
-          virtio_free_buf(vq->vq_dev, buf);
         }
     }
 
@@ -202,9 +207,11 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
 
 static void virtio_gpu_done(FAR struct virtqueue *vq)
 {
+  FAR struct virtio_gpu_priv_s *priv = vq->vq_dev->priv;
   FAR struct virtio_gpu_cookie_s *cookie;
 
-  while ((cookie = virtqueue_get_buffer(vq, NULL, NULL)) != NULL)
+  while ((cookie =
+          virtqueue_get_buffer_lock(vq, NULL, NULL, &priv->lock)) != NULL)
     {
       if (cookie->blocking)
         {
@@ -229,6 +236,7 @@ static int virtio_gpu_init(FAR struct virtio_gpu_priv_s *priv,
   vq_callback callbacks[VIRTIO_GPU_NUM];
   int ret;
 
+  spin_lock_init(&priv->lock);
   priv->vdev = vdev;
   vdev->priv = priv;
 
@@ -241,7 +249,7 @@ static int virtio_gpu_init(FAR struct virtio_gpu_priv_s *priv,
   vqnames[VIRTIO_GPU_CTL]   = "virtio_gpu_ctl";
   callbacks[VIRTIO_GPU_CTL] = virtio_gpu_done;
   ret = virtio_create_virtqueues(vdev, 0, VIRTIO_GPU_NUM, vqnames,
-                                 callbacks);
+                                 callbacks, NULL);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d", ret);
