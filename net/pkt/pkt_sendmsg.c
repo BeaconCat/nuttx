@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/pkt/pkt_sendmsg.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -115,7 +113,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               goto end_wait;
             }
 
-          dev->d_len       = dev->d_sndlen;
+          dev->d_len       = dev->d_sndlen -= NET_LL_HDRLEN(dev);
           pstate->snd_sent = pstate->snd_buflen;
 
           /* Make sure no ARP request overwrites this ARP request.  This
