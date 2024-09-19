@@ -29,7 +29,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/semaphore.h>
 #include <arch/board/board.h>
 
@@ -63,6 +62,13 @@
 /* QSPI memory synchronization */
 
 #define MEMORY_SYNC()     do { ARM_DSB(); ARM_ISB(); } while (0)
+
+/* Ensure that the DMA buffers are word-aligned. */
+
+#define ALIGN_SHIFT       2
+#define ALIGN_MASK        3
+#define ALIGN_UP(n)       (((n)+ALIGN_MASK) & ~ALIGN_MASK)
+#define IS_ALIGNED(n)     (((uint32_t)(n) & ALIGN_MASK) == 0)
 
 /****************************************************************************
  * Private Types
@@ -129,7 +135,7 @@ static const struct qspi_ops_s g_qspi_ops =
   .setbits           = nrf53_qspi_setbits,
 #ifdef CONFIG_QSPI_HWFEATURES
   .hwfeatures        = NULL,
-#endif  
+#endif
   .command           = nrf53_qspi_command,
   .memory            = nrf53_qspi_memory,
   .alloc             = nrf53_qspi_alloc,
@@ -696,9 +702,7 @@ static int nrf53_qspi_memory(struct qspi_dev_s *dev,
 
 static void *nrf53_qspi_alloc(struct qspi_dev_s *dev, size_t buflen)
 {
-  /* Ensure that the DMA buffers are word-aligned. */
-
-  return kmm_malloc(ALIGN_UP(buflen, 4));
+  return kmm_malloc(ALIGN_UP(buflen));
 }
 
 /****************************************************************************
