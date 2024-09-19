@@ -27,6 +27,7 @@
 #include <arch/irq.h>
 
 #include "arm.h"
+#include "cp15.h"
 #include "sctlr.h"
 #include "smp.h"
 #include "chip.h"
