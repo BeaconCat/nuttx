@@ -102,7 +102,12 @@ int nxsem_unlink(FAR const char *name)
    * functioning as a directory and the directory is not empty.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto errout_with_inode;
+    }
+
   if (inode->i_child != NULL)
     {
       ret = -ENOTEMPTY;

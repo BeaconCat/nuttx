@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # tools/gdbserver.py
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -28,7 +30,6 @@ import socket
 import struct
 import subprocess
 import sys
-import traceback
 
 import elftools
 from elftools.elf.elffile import ELFFile
@@ -47,9 +48,16 @@ UINT16_MAX = 65535
 
 DEFAULT_GDB_INIT_CMD = "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
 
-
 logger = logging.getLogger()
 
+# The global register table is dictionary like {arch:{reg:ndx}}
+#
+# where arch is the CPU architecture name;
+#       reg  is the name of the register as used in log file
+#       ndx  is the index of the register in GDB group registers list
+#
+# Registers with multiple convenient names can have multiple entries here, one
+# for each name and with the same index.
 reg_table = {
     "arm": {
         "R0": 0,
@@ -78,11 +86,11 @@ reg_table = {
         "R4": 4,
         "R5": 5,
         "R6": 6,
-        "FP": 7,
+        "R7": 7,
         "R8": 8,
         "SB": 9,
         "SL": 10,
-        "R11": 11,
+        "FP": 11,
         "IP": 12,
         "SP": 13,
         "LR": 14,
@@ -108,6 +116,7 @@ reg_table = {
         "PC": 15,
         "CPSR": 41,
     },
+    # rv64 works with gdb-multiarch on Ubuntu
     "riscv": {
         "ZERO": 0,
         "RA": 1,
@@ -141,6 +150,8 @@ reg_table = {
         "T4": 29,
         "T5": 30,
         "T6": 31,
+        "PC": 32,
+        "S0": 8,
         "EPC": 32,
     },
     # use xtensa-esp32s3-elf-gdb register table
@@ -217,6 +228,9 @@ reg_fix_value = {
         "WINDOWSTART": (1, 585),
         "PS": (0x40000, 742),
     },
+    "riscv": {
+        "ZERO": 0,
+    },
 }
 
 
@@ -242,10 +256,15 @@ class DumpELFFile:
     def __init__(self, elffile: str):
         self.elffile = elffile
         self.__memories = []
+        self.__arch = None
+        self.__xlen = None
+        self.__text = 0
 
-    def parse(self, load_symbol: bool):
+    def parse(self):
         self.__memories = []
         elf = ELFFile.load_from_path(self.elffile)
+        self.__arch = elf.get_machine_arch().lower().replace("-", "")
+        self.__xlen = elf.elfclass
 
         for section in elf.iter_sections():
             # REALLY NEED to match exact type as all other sections
@@ -286,72 +305,62 @@ class DumpELFFile:
 
                 self.__memories.append(memory)
 
-        self.load_symbol = load_symbol
-        if load_symbol:
-            symtab = elf.get_section_by_name(".symtab")
-            self.symbol = {}
-            for symbol in symtab.iter_symbols():
-                if symbol["st_info"]["type"] != "STT_OBJECT":
-                    continue
+        # record first text segment address
+        for segment in elf.iter_segments():
+            if segment.header.p_flags & 1 and not self.__text:
+                self.__text = segment.header.p_vaddr
 
-                if symbol.name in (
-                    "g_tcbinfo",
-                    "g_pidhash",
-                    "g_npidhash",
-                    "g_last_regs",
-                    "g_running_tasks",
-                ):
-                    self.symbol[symbol.name] = symbol
-                    logger.debug(
-                        f"name:{symbol.name} size:{symbol['st_size']} value:{hex(symbol['st_value'])}"
-                    )
+        symtab = elf.get_section_by_name(".symtab")
+        self.symbol = {}
+        for symbol in symtab.iter_symbols():
+            if symbol["st_info"]["type"] != "STT_OBJECT":
+                continue
+
+            if symbol.name in (
+                "g_tcbinfo",
+                "g_pidhash",
+                "g_npidhash",
+                "g_last_regs",
+                "g_running_tasks",
+            ):
+                self.symbol[symbol.name] = symbol
+                logger.debug(
+                    f"name:{symbol.name} size:{symbol['st_size']} value:{hex(symbol['st_value'])}"
+                )
 
         elf.close()
+
         return True
 
-    def _parse_addr2line(self, addr2line: str, args: list, addr: str) -> str:
-        args_string = " ".join(args)
-        cmd = "{} {} {}".format(addr2line, args_string, addr)
-        return subprocess.check_output(cmd, universal_newlines=True, shell=True)
-
-    def parse_addr2line(self, arch: str, addr2line: str, addr_list: list):
-        if addr2line is None:
-            return
-
-        is_audio = False
-        if arch == "xtensa":
-            is_audio = True
-
-        for i in addr_list:
-            addr = int(i, 16)
-            if addr == 0:
-                continue
-
-            if is_audio:
-                addr &= 0x7FFFFFFF
-
-            res = self._parse_addr2line(
-                addr2line, ["-Cfe", self.elffile, "-a"], hex(addr)
-            )
-            matches = re.findall(r"\?\?:", res)
-            if matches:
-                continue
-            print(res)
-        exit(0)
+    def merge(self, other):
+        if other.arch() == self.arch() and other.xlen() == self.xlen():
+            self.__memories += other.get_memories()
+        else:
+            raise TypeError("inconsistent ELF types")
 
     def get_memories(self):
         return self.__memories
+
+    def arch(self):
+        return self.__arch
+
+    def xlen(self):
+        return self.__xlen
+
+    def text(self):
+        return self.__text
 
 
 class DumpLogFile:
     def __init__(self, logfile):
         self.logfile = logfile
         self.registers = []
-        self.stack_data = []
         self.__memories = list()
         self.reg_table = dict()
+        self.reg_len = 32
 
     def _init_register(self):
+        # registers list should be able to hold the max index
         self.registers = [b"x"] * (max(self.reg_table.values()) + 1)
 
     def _parse_register(self, line):
@@ -367,6 +376,8 @@ class DumpLogFile:
             if reg_name in self.reg_table:
                 reg_index = self.reg_table[reg_name]
                 self.registers[reg_index] = int(reg_val, 16)
+                self.reg_len = max(self.reg_len, len(reg_val) * 4)
+
         return True
 
     def _parse_fix_register(self, arch):
@@ -387,8 +398,6 @@ class DumpLogFile:
         if match_res is None:
             return None
 
-        self.stack_data.extend(match_res.string.split(" ")[1:])
-
         addr_start = int(match_res.groupdict()["ADDR_START"], 16)
         if start + len(data) != addr_start:
             # stack is not contiguous
@@ -399,8 +408,9 @@ class DumpLogFile:
                 data = b""
                 start = addr_start
 
+        reg_fmt = "<I" if self.reg_len <= 32 else "<Q"
         for val in match_res.groupdict()["VALS"].split():
-            data = data + struct.pack("<I", int(val, 16))
+            data = data + struct.pack(reg_fmt, int(val, 16))
 
         return start, data
 
@@ -488,7 +498,7 @@ class CoreDumpFile:
                 data = f.read(segment["p_filesz"])
                 self.__memories.append(
                     pack_memory(
-                        segment["p_vaddr"], segment["p_vaddr"] + len(data), data
+                        segment["p_paddr"], segment["p_paddr"] + len(data), data
                     )
                 )
 
@@ -519,33 +529,30 @@ class GDBStub:
             + logfile.get_memories()
             + self.elffile.get_memories()
         )
+        self.reg_digits = elffile.xlen() // 4
+        self.reg_fmt = "<I" if elffile.xlen() <= 32 else "<Q"
 
         self.threadinfo = []
         self.current_thread = 0
-        if elffile.load_symbol:
-            try:
-                self.parse_thread()
-                logger.debug(f"Have {len(self.threadinfo)} threads to debug.")
-                if len(self.threadinfo) == 0:
-                    logger.critical(
-                        "Check if your coredump or raw file matches the ELF file"
-                    )
-                    sys.exit(1)
+        try:
+            self.parse_thread()
+            logger.debug(f"Have {len(self.threadinfo)} threads to debug.")
+            if len(self.threadinfo) == 0:
+                logger.critical(
+                    "Check if your coredump or raw file matches the ELF file"
+                )
+                sys.exit(1)
 
-                if arch in reg_fix_value.keys():
-                    self.regfix = True
-                    logger.info(f"Current arch is {arch}, need reg index fix.")
+            if arch in reg_fix_value.keys():
+                self.regfix = True
+                logger.info(f"Current arch is {arch}, need reg index fix.")
 
-            except TypeError:
-                if not self.registers:
-                    logger.critical(
-                        "Logfile, coredump, or rawfile do not contain register,"
-                        "Please check if the files are correct."
-                    )
-
-                    stack_trace = traceback.format_exc()
-                    logger.debug(stack_trace)
-                    sys.exit(1)
+        except TypeError:
+            if not self.registers:
+                logger.critical(
+                    "Logfile, coredump, or rawfile do not contain register. Please check if the files are correct."
+                )
+                sys.exit(1)
 
     def get_gdb_packet(self):
         socket = self.socket
@@ -617,17 +624,16 @@ class GDBStub:
     def handle_register_group_read_packet(self):
 
         def put_register_packet(regs):
-            reg_fmt = "<I"
             pkt = b""
 
             for reg in regs:
                 if reg != b"x":
-                    bval = struct.pack(reg_fmt, reg)
+                    bval = struct.pack(self.reg_fmt, reg)
                     pkt += binascii.hexlify(bval)
                 else:
                     # Register not in coredump -> unknown value
                     # Send in "xxxxxxxx"
-                    pkt += b"x" * 8
+                    pkt += b"x" * self.reg_digits
 
             self.put_gdb_packet(pkt)
 
@@ -647,10 +653,8 @@ class GDBStub:
 
         def put_one_register_packet(regs):
 
-            reg_fmt = "<I"
-            reg = int(pkt[1:].decode("utf8"), 16)
             regval = None
-
+            reg = int(pkt[1:].decode("utf8"), 16)
             if self.regfix:
                 for reg_name, reg_vals in reg_fix_value[self.arch].items():
                     if reg == reg_vals[1]:
@@ -668,10 +672,10 @@ class GDBStub:
                 regval = regs[reg]
 
             if regval is not None:
-                bval = struct.pack(reg_fmt, regval)
+                bval = struct.pack(self.reg_fmt, regval)
                 self.put_gdb_packet(binascii.hexlify(bval))
             else:
-                self.put_gdb_packet(b"x" * 8)
+                self.put_gdb_packet(b"x" * self.reg_digits)
 
         if not self.threadinfo:
             put_one_register_packet(self.registers)
@@ -919,6 +923,11 @@ class GDBStub:
         else:
             self.put_gdb_packet(b"")
 
+    def handle_vkill_packet(self, pkt):
+        self.put_gdb_packet(b"OK")
+        logger.debug("quit with gdb")
+        sys.exit(0)
+
     def run(self, socket: socket.socket):
         self.socket = socket
 
@@ -950,13 +959,13 @@ class GDBStub:
                 self.handle_memory_write_packet(pkt)
             elif pkt_type == b"q":
                 self.handle_general_query_packet(pkt)
+            elif pkt.startswith(b"vKill") or pkt_type == b"k":
+                # GDB quits
+                self.handle_vkill_packet(pkt)
             elif pkt_type == b"H":
                 self.handle_thread_context(pkt)
             elif pkt_type == b"T":
                 self.handle_is_thread_active(pkt)
-            elif pkt_type == b"k":
-                # GDB quits
-                break
             else:
                 self.put_gdb_packet(b"")
 
@@ -964,26 +973,22 @@ class GDBStub:
 def arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-e", "--elffile", required=True, help="elffile")
+    parser.add_argument(
+        "-e", "--elffile", required=True, action="append", help="elffile"
+    )
     parser.add_argument("-l", "--logfile", help="logfile")
     parser.add_argument(
         "-a",
         "--arch",
-        help="select architecture,if not use this options",
-        required=True,
+        help="Only use if can't be learnt from ELFFILE.",
+        required=False,
         choices=[arch for arch in reg_table.keys()],
-    )
-    parser.add_argument(
-        "-t",
-        "--addr2line",
-        help="Select the appropriate architecture for the addr2line tool",
-        type=str,
     )
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
     parser.add_argument(
         "-g",
         "--gdb",
-        help="provided a custom GDB path, automatically start GDB session and exit minidumpserver when exit GDB. ",
+        help="provided a custom GDB path, automatically start GDB session and exit gdbserver when exit GDB. ",
         type=str,
     )
     parser.add_argument(
@@ -1006,15 +1011,6 @@ def arg_parser():
         "--coredump",
         nargs="?",
         help="coredump file, will prase memory in this file",
-    )
-
-    parser.add_argument(
-        "-s",
-        "--symbol",
-        action="store_true",
-        help="Analyze the symbol table in the ELF file, use in thread awareness"
-        "if use logfile input, this option will is false by default"
-        "if use rawfile or coredump input, this option will is true by default",
     )
 
     parser.add_argument(
@@ -1048,11 +1044,7 @@ def auto_parse_log_file(logfile):
             if len(line) == 0:
                 continue
 
-            if (
-                "up_dump_register" in line
-                or "dump_stack" in line
-                or "stack_dump" in line
-            ):
+            if "up_dump_register" in line or "stack" in line:
                 start = True
             else:
                 if start:
@@ -1088,9 +1080,11 @@ def auto_parse_log_file(logfile):
 
 
 def main(args):
-    if not os.path.isfile(args.elffile):
-        logger.error(f"Cannot find file {args.elffile}, exiting...")
-        sys.exit(1)
+    args.elffile = tuple(set(args.elffile))
+    for name in args.elffile:
+        if not os.path.isfile(name):
+            logger.error(f"Cannot find file {name}, exiting...")
+            sys.exit(1)
 
     if args.logfile:
         if not os.path.isfile(args.logfile):
@@ -1102,24 +1096,29 @@ def main(args):
         sys.exit(1)
 
     config_log(args.debug)
+    elf = DumpELFFile(args.elffile[0])
+    elf.parse()
+    elf_texts = [elf.text()]
+    for name in args.elffile[1:]:
+        other = DumpELFFile(name)
+        other.parse()
+        elf_texts.append(other.text())
+        elf.merge(other)
 
     if args.logfile is not None:
         selected_log = auto_parse_log_file(args.logfile)
-
         log = DumpLogFile(selected_log)
-        log.parse(args.arch)
     else:
         log = DumpLogFile(None)
 
-    elf = DumpELFFile(args.elffile)
-
-    if args.symbol is False:
-        if args.rawfile or args.coredump:
-            args.symbol = True
-
-    elf.parse(args.symbol)
-
     if args.logfile is not None:
+        if args.arch:
+            log.parse(args.arch)
+        elif elf.arch() in reg_table.keys():
+            log.parse(elf.arch())
+        else:
+            logger.error("Architecture unknown, exiting...")
+            sys.exit(2)
         elf.parse_addr2line(args.arch, args.addr2line, log.stack_data)
 
     raw = RawMemoryFile(args.rawfile)
@@ -1152,10 +1151,16 @@ def main(args):
         else:
             gdb_init_cmd = DEFAULT_GDB_INIT_CMD
 
-    gdb_cmd = (
-        f"{gdb_exec} {args.elffile} -ex 'target remote localhost:{args.port}' "
+    gdb_cmd = [
+        f"{gdb_exec} {args.elffile[0]} -ex 'target remote localhost:{args.port}' "
         f"{gdb_init_cmd}"
-    )
+    ]
+    for i in range(len(elf_texts[1:])):
+        name = args.elffile[1 + i]
+        text = hex(elf_texts[1 + i])
+        gdb_cmd.append(f"-ex 'add-symbol-file {name} {text}'")
+    gdb_cmd = "".join(gdb_cmd)
+
     logger.info(f"Waiting GDB connection on port {args.port} ...")
 
     if not args.gdb:
