@@ -1,8 +1,6 @@
 # ##############################################################################
 # cmake/nuttx_add_library.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -52,9 +50,6 @@ function(nuttx_add_library_internal target)
   target_include_directories(
     ${target}
     PRIVATE $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_INCLUDE_DIRECTORIES>>)
-
-  # Set install config for all library
-  install(TARGETS ${target})
 endfunction()
 
 # Auxiliary libraries
@@ -105,6 +100,9 @@ function(nuttx_add_system_library target)
 
   # add to list of libraries to link to final nuttx binary
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+
+  # install to library dir
+  install(TARGETS ${target} DESTINATION lib)
 endfunction()
 
 # Kernel Libraries
@@ -184,6 +182,11 @@ function(nuttx_add_library target)
   add_dependencies(${target} apps_context)
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
 
+  get_target_property(target_type ${target} TYPE)
+  if(${target_type} STREQUAL "STATIC_LIBRARY")
+    install(TARGETS ${target} ARCHIVE DESTINATION ${CMAKE_BINARY_DIR}/staging)
+  endif()
+
   nuttx_add_library_internal(${target})
 endfunction()
 
@@ -203,6 +206,10 @@ function(nuttx_add_extra_library)
     # set the absolute path of the library for the import target
     nuttx_library_import(${extra_target} ${extra_lib})
     set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${extra_target})
+    if(CONFIG_BUILD_PROTECTED)
+      set_property(GLOBAL APPEND PROPERTY NUTTX_USER_EXTRA_LIBRARIES
+                                          ${extra_target})
+    endif()
   endforeach()
 endfunction()
 

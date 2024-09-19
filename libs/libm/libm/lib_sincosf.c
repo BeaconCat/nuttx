@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
 #include <math.h>
@@ -39,7 +40,7 @@
  ****************************************************************************/
 
 nooptimiziation_function
-void sincosf(float x, FAR float *s, FAR float *c)
+void sincosf(float x, float *s, float *c)
 {
   *s = sinf(x);
   *c = cosf(x);
