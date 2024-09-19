@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/umm_heap/umm_initialize.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +26,7 @@
 
 #include <assert.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
 
 #include "umm_heap/umm_heap.h"
