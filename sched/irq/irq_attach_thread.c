@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/irq/irq_attach_thread.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,7 +28,6 @@
 #include <stdio.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/arch.h>
 #include <nuttx/kthread.h>
 
 #include "irq/irq.h"
@@ -49,15 +46,17 @@
 struct irq_thread_info_s
 {
   xcpt_t handler;     /* Address of the interrupt handler */
+  xcpt_t isrthread;   /* Address of the interrupt thread handler */
   FAR void *arg;      /* The argument provided to the interrupt handler. */
-  FAR sem_t *sem;     /* irq sem used to notify irq thread */
+  sem_t sem;          /* irq sem used to notify irq thread */
+  pid_t threadid;     /* irq threadid */
 };
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static pid_t g_irq_thread_pid[NR_IRQS];
+static struct irq_thread_info_s g_irq_thread_vector[NR_IRQS];
 
 /****************************************************************************
  * Private Functions
@@ -69,15 +68,25 @@ static pid_t g_irq_thread_pid[NR_IRQS];
 
 static int irq_default_handler(int irq, FAR void *regs, FAR void *arg)
 {
-  FAR struct irq_thread_info_s *info = arg;
   int ret = IRQ_WAKE_THREAD;
+  int ndx = IRQ_TO_NDX(irq);
+  xcpt_t vector;
 
-  DEBUGASSERT(info->handler != NULL);
-  ret = info->handler(irq, regs, info->arg);
+  if (ndx < 0)
+    {
+      return ndx;
+    }
+
+  vector = g_irq_thread_vector[ndx].handler;
+
+  if (vector)
+    {
+      ret = vector(irq, regs, arg);
+    }
 
   if (ret == IRQ_WAKE_THREAD)
     {
-      nxsem_post(info->sem);
+      sem_post(&g_irq_thread_vector[ndx].sem);
       ret = OK;
     }
 
@@ -86,33 +95,31 @@ static int irq_default_handler(int irq, FAR void *regs, FAR void *arg)
 
 static int isr_thread_main(int argc, FAR char *argv[])
 {
-  int irq = atoi(argv[1]);
-  xcpt_t isr = (xcpt_t)((uintptr_t)strtoul(argv[2], NULL, 16));
-  xcpt_t isrthread = (xcpt_t)((uintptr_t)strtoul(argv[3], NULL, 16));
-  FAR void *arg = (FAR void *)((uintptr_t)strtoul(argv[4], NULL, 16));
-  struct irq_thread_info_s info;
-  sem_t sem;
+  unsigned int irq = atoi(argv[1]);
+  int ndx = IRQ_TO_NDX(irq);
+  xcpt_t vector;
+  FAR void *arg;
+  FAR sem_t *sem;
 
-  info.sem = &sem;
-  info.arg = arg;
-  info.handler = isr;
+  if (ndx < 0)
+    {
+      return ndx;
+    }
 
-  nxsem_init(&sem, 0, 0);
-
-  irq_attach(irq, irq_default_handler, &info);
-
-#if !defined(CONFIG_ARCH_NOINTC)
-  up_enable_irq(irq);
-#endif
+  vector = g_irq_thread_vector[ndx].isrthread;
+  sem = &g_irq_thread_vector[ndx].sem;
+  arg = g_irq_thread_vector[ndx].arg;
 
   for (; ; )
     {
-      if (nxsem_wait_uninterruptible(&sem) < 0)
+      int ret;
+      ret = nxsem_wait(sem);
+      if (ret < 0)
         {
           continue;
         }
 
-      isrthread(irq, NULL, arg);
+      vector(irq, NULL, arg);
     }
 
   return OK;
@@ -127,7 +134,7 @@ static int isr_thread_main(int argc, FAR char *argv[])
  *
  * Description:
  *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
- *   'isrthread' and up_enable_irq will be invoked after isrthread started.
+ *   'isrthread'
  *
  * Input Parameters:
  *   irq - Irq num
@@ -149,11 +156,8 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
                       int priority, int stack_size)
 {
 #if NR_IRQS > 0
-  FAR char *argv[5];
-  char arg1[32];  /* irq */
-  char arg2[32];  /* isr */
-  char arg3[32];  /* isrthread */
-  char arg4[32];  /* arg */
+  FAR char *argv[2];
+  char arg1[32];
   pid_t pid;
   int ndx;
 
@@ -173,28 +177,31 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
   if (isrthread == NULL)
     {
       irq_detach(irq);
-      DEBUGASSERT(g_irq_thread_pid[ndx] != 0);
-      kthread_delete(g_irq_thread_pid[ndx]);
-      g_irq_thread_pid[ndx] = 0;
+      DEBUGASSERT(g_irq_thread_vector[ndx].threadid != 0);
 
+      kthread_delete(g_irq_thread_vector[ndx].threadid);
+
+      g_irq_thread_vector[ndx].isrthread = NULL;
+      g_irq_thread_vector[ndx].threadid  = 0;
+      g_irq_thread_vector[ndx].handler   = NULL;
+      g_irq_thread_vector[ndx].arg       = NULL;
+      nxsem_destroy(&g_irq_thread_vector[ndx].sem);
       return OK;
     }
 
-  if (g_irq_thread_pid[ndx] != 0)
+  if (g_irq_thread_vector[ndx].threadid != 0)
     {
       return -EINVAL;
     }
 
-  snprintf(arg1, sizeof(arg1), "%d", irq);
-  snprintf(arg2, sizeof(arg2), "%p", isr);
-  snprintf(arg3, sizeof(arg3), "%p", isrthread);
-  snprintf(arg4, sizeof(arg4), "%p", arg);
-  argv[0] = arg1;
-  argv[1] = arg2;
-  argv[2] = arg3;
-  argv[3] = arg4;
-  argv[4] = NULL;
+  g_irq_thread_vector[ndx].isrthread = isrthread;
+  g_irq_thread_vector[ndx].handler   = isr;
+  g_irq_thread_vector[ndx].arg       = arg;
 
+  nxsem_init(&g_irq_thread_vector[ndx].sem, 0, 0);
+  snprintf(arg1, sizeof(arg1), "%d", irq);
+  argv[0] = arg1;
+  argv[1] = NULL;
   pid = kthread_create("isr_thread", priority, stack_size,
                         isr_thread_main, argv);
   if (pid < 0)
@@ -202,8 +209,8 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
       return pid;
     }
 
-  g_irq_thread_pid[ndx] = pid;
-
+  g_irq_thread_vector[ndx].threadid = pid;
+  irq_attach(irq, irq_default_handler, arg);
 #endif /* NR_IRQS */
 
   return OK;

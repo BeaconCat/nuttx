@@ -41,13 +41,12 @@
 #include "esp32s3_gpio.h"
 #include "esp32s3_dma.h"
 #include "esp32s3_irq.h"
+#include "esp32s3_periph.h"
 
 #include "xtensa.h"
 #include "hardware/esp32s3_system.h"
 #include "hardware/esp32s3_gpio_sigmap.h"
 #include "hardware/esp32s3_lcd_cam.h"
-
-#include "periph_ctrl.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -136,7 +135,7 @@
                                    ESP32S3_LCD_DATA_WIDTH)
 
 #define ESP32S3_LCD_DMADESC_NUM   (ESP32S3_LCD_FB_SIZE / \
-                                   ESP32S3_DMA_BUFLEN_MAX + 1)
+                                   ESP32S3_DMA_DATALEN_MAX + 1)
 
 #define ESP32S3_LCD_LAYERS        CONFIG_ESP32S3_LCD_BUFFER_LAYERS
 
@@ -246,7 +245,7 @@ static int esp32s3_lcd_base_updatearea(struct fb_vtable_s *vtable,
 
 /* Initialization ***********************************************************/
 
-static int esp32s3_lcd_dmasetup(void);
+static void esp32s3_lcd_dmasetup(void);
 static void esp32s3_lcd_gpio_config(void);
 static void esp32s3_lcd_disable(void);
 static void esp32s3_lcd_enable(void);
@@ -638,22 +637,19 @@ static int IRAM_ATTR lcd_interrupt(int irq, void *context, void *arg)
  *   None
  *
  * Returned Value:
- *   Zero on success; a negated errno on failure
+ *   None
  *
  ****************************************************************************/
 
-static int esp32s3_lcd_dmasetup(void)
+static void esp32s3_lcd_dmasetup(void)
 {
   struct esp32s3_lcd_s *priv = &g_lcd_priv;
 
+  esp32s3_dma_init();
+
   priv->dma_channel = esp32s3_dma_request(ESP32S3_DMA_PERIPH_LCDCAM,
                                           10, 1, true);
-  if (priv->dma_channel < 0)
-    {
-      spierr("Failed to allocate GDMA channel\n");
-      return ERROR;
-    }
-
+  DEBUGASSERT(priv->dma_channel >= 0);
   esp32s3_dma_set_ext_memblk(priv->dma_channel,
                              true,
                              ESP32S3_DMA_EXT_MEMBLK_64B);
@@ -670,10 +666,8 @@ static int esp32s3_lcd_dmasetup(void)
                         ESP32S3_LCD_DMADESC_NUM,
                         layer->framebuffer,
                         ESP32S3_LCD_FB_SIZE,
-                        true, priv->dma_channel);
+                        true);
     }
-
-  return OK;
 }
 
 /****************************************************************************
@@ -741,7 +735,7 @@ static void esp32s3_lcd_enableclk(void)
   lcdinfo("PCLK=%d/(%d + %d/%d)\n", ESP32S3_LCD_CLK_MHZ,
           ESP32S3_LCD_CLK_N, clk_b, clk_a);
 
-  periph_module_enable(PERIPH_LCD_CAM_MODULE);
+  esp32s3_periph_module_enable(PERIPH_LCD_CAM_MODULE);
 
   regval = (1 << LCD_CAM_LCD_CLKCNT_N_S) |
            LCD_CAM_CLK_EN_M |
@@ -763,11 +757,11 @@ static void esp32s3_lcd_enableclk(void)
  *   None
  *
  * Returned Value:
- *   OK on success; A negated errno value on failure.
+ *   None
  *
  ****************************************************************************/
 
-static int esp32s3_lcd_config(void)
+static void esp32s3_lcd_config(void)
 {
   uint32_t regval;
   irqstate_t flags;
@@ -835,10 +829,7 @@ static int esp32s3_lcd_config(void)
 
   /* Set GDMA */
 
-  if (esp32s3_lcd_dmasetup() != OK)
-    {
-      return ERROR;
-    }
+  esp32s3_lcd_dmasetup();
 
   /* Configure interrupt */
 
@@ -859,8 +850,6 @@ static int esp32s3_lcd_config(void)
   spin_unlock_irqrestore(&priv->lock, flags);
 
   up_enable_irq(ESP32S3_IRQ_LCD_CAM);
-
-  return OK;
 }
 
 /****************************************************************************
@@ -975,10 +964,7 @@ int up_fbinitialize(int display)
 
   /* Configure LCD controller */
 
-  if (esp32s3_lcd_config() != OK)
-    {
-      return ERROR;
-    }
+  esp32s3_lcd_config();
 
   /* And turn the LCD on */
 
