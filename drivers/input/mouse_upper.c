@@ -29,7 +29,6 @@
 #include <poll.h>
 
 #include <nuttx/input/mouse.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
