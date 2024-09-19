@@ -33,6 +33,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
 
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
@@ -67,10 +68,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
-#endif
 
 /* IRQ Stack Frame Format.  Each value is a uint32_t register index */
 
@@ -178,12 +175,6 @@ struct xcpt_syscall_s
 
 struct xcptcontext
 {
-  /* The following function pointer is non-zero if there are pending signals
-   * to be processed.
-   */
-
-  void *sigdeliver; /* Actual type is sig_deliver_t */
-
   /* These are saved copies of registers used during signal processing.
    *
    * REVISIT:  Because there is only one copy of these save areas,
@@ -429,12 +420,11 @@ int up_cpu_index(void);
 #  define up_cpu_index() (0)
 #endif
 
-noinstrument_function static inline_function uint32_t *up_current_regs(void)
+static inline_function uint32_t *up_current_regs(void)
 {
   return (uint32_t *)g_current_regs[up_cpu_index()];
 }
 
-noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
   g_current_regs[up_cpu_index()] = regs;
@@ -465,6 +455,13 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
   return ret;
 }
 #endif
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
