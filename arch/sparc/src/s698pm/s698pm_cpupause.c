@@ -226,7 +226,6 @@ int up_cpu_paused_restore(void)
 
 int s698pm_pause_handler(int irq, void *c, void *arg)
 {
-  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   nxsched_smp_call_handler(irq, c, arg);
@@ -257,12 +256,6 @@ int s698pm_pause_handler(int irq, void *c, void *arg)
 
       leave_critical_section(flags);
     }
-
-  tcb = current_task(cpu);
-  sparc_savestate(tcb->xcp.regs);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  sparc_restorestate(tcb->xcp.regs);
 
   return OK;
 }
@@ -368,6 +361,8 @@ int up_cpu_pause(int cpu)
 
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
+
+  /* Execute Pause IRQ to CPU(cpu) */
 
   up_cpu_pause_async(cpu);
 

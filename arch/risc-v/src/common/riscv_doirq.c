@@ -56,10 +56,8 @@
  * Public Functions
  ****************************************************************************/
 
-uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
+uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -70,10 +68,6 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
   if (irq >= RISCV_IRQ_ECALLU && irq <= RISCV_IRQ_ECALLM)
     {
       regs[REG_EPC] += 4;
-    }
-  else
-    {
-      tcb->xcp.regs = regs;
     }
 
   /* Current regs non-zero indicates that we are processing an interrupt;
@@ -88,7 +82,6 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
-  tcb = this_task();
 
   /* Check for a context switch.  If a context switch occurred, then
    * current_regs will have a different value than it did on entry.  If an
@@ -97,7 +90,7 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != tcb->xcp.regs)
+  if (regs != up_current_regs())
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -109,17 +102,12 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
       addrenv_switch(NULL);
 #endif
 
-      /* Update scheduler parameters */
-
-      nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
-      nxsched_resume_scheduler(tcb);
-
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = tcb;
+      g_running_tasks[this_cpu()] = this_task();
 
       /* If a context switch occurred while processing the interrupt then
        * current_regs may have change value.  If we return any value
@@ -127,7 +115,7 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * that a context switch occurred during interrupt processing.
        */
 
-      regs = tcb->xcp.regs;
+      regs = up_current_regs();
     }
 
   /* Set current_regs to NULL to indicate that we are no longer in an
