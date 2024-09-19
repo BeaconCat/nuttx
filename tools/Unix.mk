@@ -1,8 +1,6 @@
 ############################################################################
 # tools/Unix.mk
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -21,9 +19,6 @@
 ############################################################################
 
 export TOPDIR := ${shell echo $(CURDIR) | sed -e 's/ /\\ /g'}
-WSDIR := ${shell cd "${TOPDIR}"/.. && pwd -P}
-
-export NXTMPDIR := $(WSDIR)/nxtmpdir
 
 ifeq ($(V),)
   MAKE := $(MAKE) -s --no-print-directory
@@ -416,7 +411,7 @@ DIRLINKS_FILE += $(DIRLINKS_EXTERNAL_DEP)
 # The symlink subfolders need to be removed before the parent symlinks
 
 .PHONY: clean_dirlinks
-clean_dirlinks:
+clean_dirlinks: tools/incdir$(HOSTEXEEXT)
 	$(Q) $(call DELFILE, $(DIRLINKS_FILE))
 	$(Q) $(call DELFILE, .dirlinks)
 	$(Q) $(DIRUNLINK) drivers/platform
@@ -578,11 +573,6 @@ ifeq ($(CONFIG_UBOOT_UIMAGE),y)
 	fi
 	$(Q) echo "uImage" >> nuttx.manifest
 endif
-ifeq ($(CONFIG_RAW_DISASSEMBLY),y)
-	@echo "CP: nuttx.asm"
-	$(Q) $(OBJDUMP) -d $(BIN) > nuttx.asm
-	$(Q) echo nuttx.bin >> nuttx.asm
-endif
 	$(call POSTBUILD, $(TOPDIR))
 
 # flash (or download : DEPRECATED)
@@ -657,7 +647,9 @@ define kconfig_tweak_disable
 	kconfig-tweak --file $1 -u $2
 endef
 else
-  KCONFIG_WARNING  = 2> >(tee kwarning) | cat && if [ -s kwarning ]; \
+  OVERWRITE_WARNING = "set more than once"
+  KCONFIG_WARNING   = 2> >(grep -v ${OVERWRITE_WARNING} | tee kwarning) | \
+                                                  cat && if [ -s kwarning ]; \
                                                   then rm kwarning; \
                                                   exit 1; \
                                                  else \
@@ -745,8 +737,7 @@ savedefconfig: apps_preconfig
 # that the archiver is 'ar'
 
 export: $(NUTTXLIBS)
-	$(Q) ZIG="${ZIG}" ZIGFLAGS="${ZIGFLAGS}" MAKE="${MAKE}" \
-		$(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
+	$(Q) MAKE="${MAKE}" $(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
 
 # General housekeeping targets:  dependencies, cleaning, etc.
 #
@@ -813,7 +804,7 @@ endif
 # apps_distclean: Perform the distclean operation only in the user application
 #                 directory.
 
-apps_preconfig: .dirlinks
+apps_preconfig: tools/incdir$(HOSTEXEEXT) .dirlinks
 ifneq ($(APPDIR),)
 	$(Q) $(MAKE) -C $(APPDIR) preconfig
 endif
