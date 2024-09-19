@@ -33,7 +33,6 @@
 #include <string.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/clock.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -123,7 +122,7 @@ static struct inode g_epoll_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  1,                      /* i_crefs */
+  ATOMIC_VAR_INIT(1),     /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_epoll_ops          /* u */
@@ -716,7 +715,7 @@ int epoll_pwait(int epfd, FAR struct epoll_event *evs,
   eph = epoll_head_from_fd(epfd, &filep);
   if (eph == NULL)
     {
-      return ERROR;
+      goto out;
     }
 
 retry:
@@ -765,6 +764,8 @@ retry:
 err:
   fs_putfilep(filep);
   set_errno(-ret);
+out:
+  ferr("epoll wait failed:%d, timeout:%d\n", errno, timeout);
   return ERROR;
 }
 
@@ -789,7 +790,7 @@ int epoll_wait(int epfd, FAR struct epoll_event *evs,
   eph = epoll_head_from_fd(epfd, &filep);
   if (eph == NULL)
     {
-      return ERROR;
+      goto out;
     }
 
 retry:
@@ -835,5 +836,7 @@ retry:
 err:
   fs_putfilep(filep);
   set_errno(-ret);
+out:
+  ferr("epoll wait failed:%d, timeout:%d\n", errno, timeout);
   return ERROR;
 }
