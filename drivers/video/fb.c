@@ -35,13 +35,14 @@
 #include <errno.h>
 #include <poll.h>
 
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/video/fb.h>
 #include <nuttx/clock.h>
 #include <nuttx/wdog.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -137,12 +138,6 @@ static int     fb_sem_wait(FAR struct fb_chardev_s *fb,
 static void    fb_sem_post(FAR struct fb_chardev_s *fb, int overlay);
 #endif
 
-#ifdef CONFIG_BUILD_KERNEL
-static int     fb_munmap(FAR struct task_group_s *group,
-                         FAR struct mm_map_entry_s *entry,
-                         FAR void *start, size_t length);
-#endif
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -218,10 +213,6 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
   leave_critical_section(flags);
   return ret <= 0 ? -ENOSPC : OK;
 }
-
-/****************************************************************************
- * Name: fb_clear_paninfo
- ****************************************************************************/
 
 static int fb_clear_paninfo(FAR struct fb_chardev_s *fb,
                             int overlay)
@@ -606,8 +597,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_videoinfo_s *vinfo =
             (FAR struct fb_videoinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(vinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->getvideoinfo != NULL);
+          DEBUGASSERT(vinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->getvideoinfo == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->getvideoinfo(fb->vtable, vinfo);
         }
         break;
@@ -617,7 +613,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_planeinfo_s *pinfo =
             (FAR struct fb_planeinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(pinfo != 0);
+          DEBUGASSERT(pinfo != NULL);
           ret = fb_get_planeinfo(fb, pinfo, pinfo->display);
         }
         break;
@@ -628,8 +624,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_cmap_s *cmap =
             (FAR struct fb_cmap_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(cmap != 0 && fb->vtable != NULL &&
-                      fb->vtable->getcmap != NULL);
+          DEBUGASSERT(cmap != NULL && fb->vtable != NULL);
+          if (fb->vtable->getcmap == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->getcmap(fb->vtable, cmap);
         }
         break;
@@ -639,8 +640,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR const struct fb_cmap_s *cmap =
             (FAR struct fb_cmap_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(cmap != 0 && fb->vtable != NULL &&
-                      fb->vtable->putcmap != NULL);
+          DEBUGASSERT(cmap != NULL && fb->vtable != NULL);
+          if (fb->vtable->putcmap == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->putcmap(fb->vtable, cmap);
         }
         break;
@@ -651,8 +657,12 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_cursorattrib_s *attrib =
             (FAR struct fb_cursorattrib_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(attrib != 0 && fb->vtable != NULL &&
-                      fb->vtable->getcursor != NULL);
+          DEBUGASSERT(attrib != NULL && fb->vtable != NULL);
+          if (fb->vtable->getcursor == NULL)
+            {
+              ret = -ENOTTY;
+            }
+
           ret = fb->vtable->getcursor(fb->vtable, attrib);
         }
         break;
@@ -662,8 +672,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_setcursor_s *cursor =
             (FAR struct fb_setcursor_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(cursor != 0 && fb->vtable != NULL &&
-                      fb->vtable->setcursor != NULL);
+          DEBUGASSERT(cursor != NULL && fb->vtable != NULL);
+          if (fb->vtable->setcursor == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setcursor(fb->vtable, cursor);
         }
         break;
@@ -674,7 +689,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           struct fb_area_s *area = (FAR struct fb_area_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(fb->vtable != NULL && fb->vtable->updatearea != NULL);
+          DEBUGASSERT(fb->vtable != NULL);
+          if (fb->vtable->updatearea == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->updatearea(fb->vtable, area);
         }
         break;
@@ -703,8 +724,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           struct fb_overlayinfo_s oinfo;
           FAR struct fb_priv_s *priv = filep->f_priv;
 
-          DEBUGASSERT(priv != NULL && fb->vtable != NULL &&
-                      fb->vtable->getoverlayinfo != NULL);
+          DEBUGASSERT(priv != NULL && fb->vtable != NULL);
+          if (fb->vtable->getoverlayinfo == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           if (arg != FB_NO_OVERLAY)
             {
               memset(&oinfo, 0, sizeof(oinfo));
@@ -723,8 +749,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->getoverlayinfo != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->getoverlayinfo == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->getoverlayinfo(fb->vtable,
                                            oinfo->overlay, oinfo);
         }
@@ -735,8 +766,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->settransp != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->settransp == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->settransp(fb->vtable, oinfo);
         }
         break;
@@ -746,8 +782,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setchromakey != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->setchromakey == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setchromakey(fb->vtable, oinfo);
         }
         break;
@@ -757,8 +798,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setcolor != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->setcolor == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setcolor(fb->vtable, oinfo);
         }
         break;
@@ -768,8 +814,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setblank != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->setblank == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setblank(fb->vtable, oinfo);
         }
         break;
@@ -779,8 +830,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setarea != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->setarea == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setarea(fb->vtable, oinfo);
         }
         break;
@@ -790,8 +846,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayinfo_s *oinfo =
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setdestarea != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->setdestarea == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setdestarea(fb->vtable, oinfo);
         }
         break;
@@ -802,8 +863,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayblit_s *blit =
             (FAR struct fb_overlayblit_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(blit != 0 && fb->vtable != NULL &&
-                      fb->vtable->blit != NULL);
+          DEBUGASSERT(blit != NULL && fb->vtable != NULL);
+          if (fb->vtable->blit == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->blit(fb->vtable, blit);
         }
         break;
@@ -813,8 +879,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_overlayblend_s *blend =
             (FAR struct fb_overlayblend_s *)((uintptr_t)arg);
 
-          DEBUGASSERT(blend != 0 && fb->vtable != NULL &&
-                      fb->vtable->blend != NULL);
+          DEBUGASSERT(blend != NULL && fb->vtable != NULL);
+          if (fb->vtable->blend == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->blend(fb->vtable, blend);
         }
         break;
@@ -826,7 +897,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
           union fb_paninfo_u paninfo;
 
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL);
+          DEBUGASSERT(oinfo != NULL && fb->vtable != NULL);
 
           memcpy(&paninfo, oinfo, sizeof(*oinfo));
 
@@ -843,8 +914,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case FBIOSET_POWER:
         {
-          DEBUGASSERT(fb->vtable != NULL &&
-                      fb->vtable->setpower != NULL);
+          DEBUGASSERT(fb->vtable != NULL);
+          if (fb->vtable->setpower == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->setpower(fb->vtable, (int)arg);
         }
         break;
@@ -853,9 +929,14 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR int *power = (FAR int *)((uintptr_t)arg);
 
-          DEBUGASSERT(power != NULL && fb->vtable != NULL &&
-                      fb->vtable->getpower != NULL);
-          *(power) = fb->vtable->getpower(fb->vtable);
+          DEBUGASSERT(power != NULL && fb->vtable != NULL);
+          if (fb->vtable->getpower == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
+          *power = fb->vtable->getpower(fb->vtable);
         }
         break;
 
@@ -863,9 +944,14 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR int *rate = (FAR int *)((uintptr_t)arg);
 
-          DEBUGASSERT(rate != NULL && fb->vtable != NULL &&
-                      fb->vtable->getframerate != NULL);
-          *(rate) = fb->vtable->getframerate(fb->vtable);
+          DEBUGASSERT(rate != NULL && fb->vtable != NULL);
+          if (fb->vtable->getframerate == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
+          *rate = fb->vtable->getframerate(fb->vtable);
         }
         break;
 
@@ -915,8 +1001,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_var_screeninfo *varinfo =
             (FAR struct fb_var_screeninfo *)((uintptr_t)arg);
 
-          DEBUGASSERT(varinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->getvideoinfo != NULL);
+          DEBUGASSERT(varinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->getvideoinfo == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->getvideoinfo(fb->vtable, &vinfo);
           if (ret < 0)
             {
@@ -1007,8 +1098,13 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct fb_fix_screeninfo *fixinfo =
             (FAR struct fb_fix_screeninfo *)((uintptr_t)arg);
 
-          DEBUGASSERT(fixinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->getvideoinfo != NULL);
+          DEBUGASSERT(fixinfo != NULL && fb->vtable != NULL);
+          if (fb->vtable->getvideoinfo == NULL)
+            {
+              ret = -ENOTTY;
+              break;
+            }
+
           ret = fb->vtable->getvideoinfo(fb->vtable, &vinfo);
           if (ret < 0)
             {
@@ -1053,22 +1149,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return ret;
 }
 
-#ifdef CONFIG_BUILD_KERNEL
-static int fb_munmap(FAR struct task_group_s *group,
-                     FAR struct mm_map_entry_s *entry,
-                     FAR void *start, size_t length)
-{
-  if (group && entry)
-    {
-      ginfo("%p, len=%zu\n", entry->vaddr, entry->length);
-      vm_unmap_region(entry->vaddr, entry->length);
-      mm_map_remove(get_current_mm(), entry);
-    }
-
-  return OK;
-}
-#endif
-
 static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct inode *inode;
@@ -1099,15 +1179,7 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   if (map->offset >= 0 && map->offset < panelinfo.fblen &&
       map->length && map->offset + map->length <= panelinfo.fblen)
     {
-#ifdef CONFIG_BUILD_KERNEL
-      map->vaddr = vm_map_region((uintptr_t)panelinfo.fbmem + map->offset,
-                                 panelinfo.fblen);
-      map->length = panelinfo.fblen;
-      map->munmap = fb_munmap;
-      mm_map_add(get_current_mm(), map);
-#else
       map->vaddr = (FAR char *)panelinfo.fbmem + map->offset;
-#endif
       return OK;
     }
 
@@ -1687,15 +1759,14 @@ int fb_register_device(int display, int plane,
 
   if (nplanes < 2)
     {
-      snprintf(devname, sizeof(devname), "/dev/fb%d", display);
+      snprintf(devname, 16, "/dev/fb%d", display);
     }
   else
     {
-      snprintf(devname, sizeof(devname), "/dev/fb%d.%d", display, plane);
+      snprintf(devname, 16, "/dev/fb%d.%d", display, plane);
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
-
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);

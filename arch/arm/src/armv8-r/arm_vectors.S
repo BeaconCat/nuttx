@@ -26,6 +26,7 @@
 #include <nuttx/irq.h>
 
 #include "arm.h"
+#include "cp15.h"
 
 	.file	"arm_vectors.S"
 
@@ -754,7 +755,7 @@ g_intstacktop:
  *  Name: g_fiqstackalloc/g_fiqstacktop
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV8R_DECODEFIQ
+#ifdef CONFIG_ARMV7R_DECODEFIQ
 	.globl	g_fiqstackalloc
 	.type	g_fiqstackalloc, object
 	.globl	g_fiqstacktop
