@@ -31,7 +31,6 @@
 #include <fcntl.h>
 #include <sys/param.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -349,19 +348,16 @@ static int pseudofile_munmap(FAR struct task_group_s *group,
                              size_t length)
 {
   FAR struct inode *inode = (FAR struct inode *)map->priv.p;
-  int ret = OK;
 
   /* If the file has been unlinked previously, delete the contents.
    * The inode is released after this call, hence checking if i_crefs <= 1.
    */
 
-  inode_lock();
-  if (inode->i_parent == NULL &&
-      atomic_load(&inode->i_crefs) <= 1)
+  int ret = inode_lock();
+  if (ret >= 0)
     {
-      /* Delete the inode metadata */
-
-      if (inode->i_private)
+      if (inode->i_parent == NULL &&
+          inode->i_crefs <= 1)
         {
           /* Delete the inode metadata */
 
@@ -374,11 +370,8 @@ static int pseudofile_munmap(FAR struct task_group_s *group,
           ret = OK;
         }
 
-      inode->i_private = NULL;
-      ret = OK;
+      inode_unlock();
     }
-
-  inode_unlock();
 
   /* Unkeep the inode when unmapped, decrease refcount */
 
@@ -496,13 +489,19 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
 
   nxmutex_init(&pf->lock);
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      goto lock_err;
+    }
+
   ret = inode_reserve(path, mode, node);
   if (ret < 0)
     {
       goto reserve_err;
     }
 
+  (*node)->i_crefs = 0;
   (*node)->i_flags = 1;
   (*node)->u.i_ops = &g_pseudofile_ops;
   (*node)->i_private = pf;
@@ -515,6 +514,7 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
 
 reserve_err:
   inode_unlock();
+lock_err:
   nxmutex_destroy(&pf->lock);
   fs_heap_free(pf);
   return ret;
