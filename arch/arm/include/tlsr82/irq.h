@@ -158,6 +158,12 @@
 #ifndef __ASSEMBLY__
 struct xcptcontext
 {
+  /* The following function pointer is non-zero if there
+   * are pending signals to be processed.
+   */
+
+  void *sigdeliver; /* Actual type is sig_deliver_t */
+
   /* These are saved register array pointer used during
    * signal processing.
    */
@@ -259,24 +265,35 @@ static inline uint32_t getcontrol(void)
  *
  ****************************************************************************/
 
-int up_cpu_index(void) noinstrument_function;
-
-static inline_function uint32_t *up_current_regs(void)
-{
 #ifdef CONFIG_SMP
-  return (uint32_t *)g_current_regs[up_cpu_index()];
+int up_cpu_index(void) noinstrument_function;
 #else
-  return (uint32_t *)g_current_regs[0];
-#endif
+#  define up_cpu_index() 0
+#endif /* CONFIG_SMP */
+
+static inline_function uint32_t up_getsp(void)
+{
+  register uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "tmov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
 }
 
+noinstrument_function
+static inline_function uint32_t *up_current_regs(void)
+{
+  return (uint32_t *)g_current_regs[up_cpu_index()];
+}
+
+noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-#ifdef CONFIG_SMP
   g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
 }
 
 noinstrument_function
@@ -293,19 +310,6 @@ static inline_function bool up_interrupt_context(void)
 #endif
 
   return ret;
-}
-
-static inline_function uint32_t up_getsp(void)
-{
-  register uint32_t sp;
-
-  __asm__ __volatile__
-  (
-    "tmov %0, sp\n"
-    : "=r" (sp)
-  );
-
-  return sp;
 }
 
 #define up_switch_context(tcb, rtcb)                        \
