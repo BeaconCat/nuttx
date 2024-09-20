@@ -40,7 +40,7 @@
 
 /* Save Corruptible Registers and exception context
  * on the task stack
- * note: allocate stackframe with XCPTCONTEXT_GP_REGS
+ * note: allocate stackframe with ARM64_CONTEXT_REGS
  *     which is ARM64_ESF_REGS + ARM64_CS_REGS
  *     but only save ARM64_ESF_REGS
  */
@@ -69,30 +69,14 @@
     stp    x30, x0,  [sp, #8 * REG_X30]
 
     /* ELR and SPSR */
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-    mrs    x0, elr_el3
-    mrs    x1, spsr_el3
-#else
     mrs    x0, elr_el1
     mrs    x1, spsr_el1
-#endif
     stp    x0, x1,  [sp, #8 * REG_ELR]
-
-    mrs    x0, sp_el0
-    mrs    x1, tpidrro_el0
-    stp    x0, x1,  [sp, #8 * REG_SP_EL0]
-
-    /* Increment exception depth */
-
-    mrs    x0, tpidrro_el0
-    mov    x1, #1
-    add    x0, x0, x1
-    msr    tpidrro_el0, x0
 
     /* Save the FPU registers */
 
-    add    x0, sp, #8 * XCPTCONTEXT_GP_REGS
 #ifdef CONFIG_ARCH_FPU
+    add    x0, sp, #8 * ARM64_CONTEXT_REGS
     bl     arm64_fpu_save
 #endif
 .endm
@@ -250,33 +234,18 @@ GTEXT(arm64_exit_exception)
 SECTION_FUNC(text, arm64_exit_exception)
 
     mov    sp, x0
-    add    x0, x0, #8 * XCPTCONTEXT_GP_REGS
 #ifdef CONFIG_ARCH_FPU
+    add    x0, x0, #8 * ARM64_CONTEXT_REGS
     bl     arm64_fpu_restore
 #endif
 
     /* restore spsr and elr at el1*/
 
     ldp    x0, x1,   [sp, #8 * REG_ELR]
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-    msr    elr_el3,   x0
-    msr    spsr_el3,  x1
-#else
     msr    elr_el1,   x0
     msr    spsr_el1,  x1
-#endif
 
-    ldp    x0, x1,   [sp, #8 * REG_SP_EL0]
-    msr    sp_el0,   x0
-    msr    tpidrro_el0,  x1
-
-    /* decrement exception depth */
-
-    mrs    x0, tpidrro_el0
-    mov    x1, #1
-    sub    x0, x0, x1
-    msr    tpidrro_el0, x0
-
+    ldp    x30, x0,  [sp, #8 * REG_X30]
     ldp    x0,  x1,  [sp, #8 * REG_X0]
     ldp    x2,  x3,  [sp, #8 * REG_X2]
     ldp    x4,  x5,  [sp, #8 * REG_X4]
@@ -292,7 +261,6 @@ SECTION_FUNC(text, arm64_exit_exception)
     ldp    x24, x25, [sp, #8 * REG_X24]
     ldp    x26, x27, [sp, #8 * REG_X26]
     ldp    x28, x29, [sp, #8 * REG_X28]
-    ldp    x30, xzr, [sp, #8 * REG_X30]
 
     add    sp, sp, #8 * XCPTCONTEXT_REGS
 

@@ -29,6 +29,7 @@ LDSCRIPT = ld.script
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
 ARCHCPUFLAGS += -mno-relax
+ARCHCXXFLAGS +=
 ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 
 ifeq ($(CONFIG_STACK_OVERFLOW_CHECK),y)
@@ -46,8 +47,4 @@ AFLAGS += $(CFLAGS) -D__ASSEMBLY__
 
 # ELF module definitions
 
-CELFFLAGS = $(CFLAGS)
-CXXELFFLAGS = $(CXXFLAGS)
-
-LDELFFLAGS = -melf32lriscv -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/binfmt/libelf/gnu-elf.ld)
+LDELFFLAGS += -melf32lriscv
