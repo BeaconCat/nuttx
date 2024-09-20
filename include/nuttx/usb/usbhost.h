@@ -733,8 +733,8 @@ struct usbhost_roothubport_s
    * compatible with usbhost_hubport_s.
    */
 
-  struct usbhost_hubport_s hport;       /* Common hub port definitions */
-  struct usbhost_devaddr_s *pdevgen;    /* Address generation data pointer */
+  struct usbhost_hubport_s hport;        /* Common hub port definitions */
+  FAR struct usbhost_devaddr_s *pdevgen; /* Address generation data pointer */
 };
 
 /* struct usbhost_class_s provides access from the USB host driver to the
@@ -836,7 +836,7 @@ struct usbhost_driver_s
                       FAR const struct usbhost_epdesc_s *epdesc,
                       FAR usbhost_ep_t *ep);
   CODE int (*epfree)(FAR struct usbhost_driver_s *drvr,
-                     FAR usbhost_ep_t ep);
+                     usbhost_ep_t ep);
 
   /* Some hardware supports special memory in which transfer descriptors can
    * be accessed more efficiently.  The following methods provide a mechanism
@@ -880,11 +880,11 @@ struct usbhost_driver_s
    */
 
   CODE int (*ctrlin)(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
-                FAR const struct usb_ctrlreq_s *req,
-                FAR uint8_t *buffer);
+                     FAR const struct usb_ctrlreq_s *req,
+                     FAR uint8_t *buffer);
   CODE int (*ctrlout)(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
-                 FAR const struct usb_ctrlreq_s *req,
-                 FAR const uint8_t *buffer);
+                      FAR const struct usb_ctrlreq_s *req,
+                      FAR const uint8_t *buffer);
 
   /* Process a request to handle a transfer descriptor.  This method will
    * enqueue the transfer request and wait for it to complete.  Only one
@@ -912,8 +912,8 @@ struct usbhost_driver_s
 
 #ifdef CONFIG_USBHOST_ASYNCH
   CODE int (*asynch)(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
-                FAR uint8_t *buffer, size_t buflen,
-                usbhost_asynch_t callback, FAR void *arg);
+                     FAR uint8_t *buffer, size_t buflen,
+                     usbhost_asynch_t callback, FAR void *arg);
 #endif
 
   /* Cancel any pending syncrhonous or asynchronous transfer on an
@@ -929,8 +929,7 @@ struct usbhost_driver_s
    */
 
   CODE int (*connect)(FAR struct usbhost_driver_s *drvr,
-                 FAR struct usbhost_hubport_s *hport,
-                 bool connected);
+                      FAR struct usbhost_hubport_s *hport, bool connected);
 #endif
 
   /* Called by the class when an error occurs and driver has been
@@ -941,7 +940,7 @@ struct usbhost_driver_s
    */
 
   CODE void (*disconnect)(FAR struct usbhost_driver_s *drvr,
-                     FAR struct usbhost_hubport_s *hport);
+                          FAR struct usbhost_hubport_s *hport);
 };
 
 /****************************************************************************
@@ -1004,7 +1003,7 @@ int usbhost_registerclass(FAR struct usbhost_registry_s *devclass);
  *
  ****************************************************************************/
 
-const struct usbhost_registry_s *
+FAR const struct usbhost_registry_s *
   usbhost_findclass(FAR const struct usbhost_id_s *id);
 
 #ifdef CONFIG_USBHOST_HUB
@@ -1013,7 +1012,7 @@ const struct usbhost_registry_s *
  *
  * Description:
  *   Initialize the USB hub class.  This function should be called
- *   be platform-specific code in order to initialize and register support
+ *   by platform-specific code in order to initialize and register support
  *   for the USB host storage class.
  *
  * Input Parameters:
@@ -1034,7 +1033,7 @@ int usbhost_hub_initialize(void);
  *
  * Description:
  *   Initialize the USB host storage class.  This function should be called
- *   be platform-specific code in order to initialize and register support
+ *   by platform-specific code in order to initialize and register support
  *   for the USB host storage class.
  *
  * Input Parameters:
@@ -1076,7 +1075,7 @@ int usbhost_msc_initialize(void);
  ****************************************************************************/
 
 int usbhost_msc_notifier_setup(worker_t worker, uint8_t event, char sdchar,
-    FAR void *arg);
+                               FAR void *arg);
 
 /****************************************************************************
  * Name: usbhost_msc_notifier_teardown
@@ -1126,7 +1125,7 @@ void usbhost_msc_notifier_signal(uint8_t event, char sdchar);
  *
  * Description:
  *   Initialize the USB host CDC/ACM class.  This function should be called
- *   be platform-specific code in order to initialize and register support
+ *   by platform-specific code in order to initialize and register support
  *   for the USB host CDC/ACM class.
  *
  * Input Parameters:
@@ -1147,7 +1146,7 @@ int usbhost_cdcacm_initialize(void);
  *
  * Description:
  *   Initialize the USB FT232R driver.  This function should be called
- *   be platform-specific code in order to initialize and register support
+ *   by platform-specific code in order to initialize and register support
  *   for the FT232R.
  *
  * Input Parameters:
@@ -1168,7 +1167,7 @@ int usbhost_ft232r_initialize(void);
  *
  * Description:
  *   Initialize the USB storage HID keyboard class driver.  This function
- *   should be called be platform-specific code in order to initialize and
+ *   should be called by platform-specific code in order to initialize and
  *   register support for the USB host HID keyboard class device.
  *
  * Input Parameters:
@@ -1189,7 +1188,7 @@ int usbhost_kbdinit(void);
  *
  * Description:
  *   Initialize the USB storage HID mouse class driver.  This function
- *   should be called be platform-specific code in order to initialize and
+ *   should be called by platform-specific code in order to initialize and
  *   register support for the USB host HID mouse class device.
  *
  * Input Parameters:
@@ -1210,7 +1209,7 @@ int usbhost_mouse_init(void);
  *
  * Description:
  *   Initialize the USB XBox controller driver.  This function
- *   should be called be platform-specific code in order to initialize and
+ *   should be called by platform-specific code in order to initialize and
  *   register support for the USB XBox controller.
  *
  * Input Parameters:
@@ -1226,11 +1225,32 @@ int usbhost_xboxcontroller_init(void);
 #endif
 
 /****************************************************************************
+ * Name: usbhost_bthci_initialize
+ *
+ * Description:
+ *   Initialize the USB Bluetooth HCI class driver.  This function should be
+ *   called by platform-specific code in order to initialize and register
+ *   support for the USB host class device.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   On success this function will return zero (OK);  A negated errno value
+ *   will be returned on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_USBHOST_BTHCI
+int usbhost_bthci_initialize(void);
+#endif
+
+/****************************************************************************
  * Name: usbhost_wlaninit
  *
  * Description:
  *   Initialize the USB WLAN class driver.  This function should be called
- *   be platform-specific code in order to initialize and register support
+ *   by platform-specific code in order to initialize and register support
  *   for the USB host class device.
  *
  * Input Parameters:
