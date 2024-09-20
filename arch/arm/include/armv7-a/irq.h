@@ -36,6 +36,8 @@
 #  include <stdint.h>
 #endif
 
+#include <arch/armv7-a/cp15.h>
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
@@ -212,45 +214,6 @@
                                       /* Bits 12-29: Reserved */
 #define MPIDR_U             (1 << 30) /* Bit 30: Multiprocessing Extensions. */
 
-/* PSR bits */
-
-#define PSR_MODE_SHIFT    (0)       /* Bits 0-4: Mode fields */
-#define PSR_MODE_MASK     (31 << PSR_MODE_SHIFT)
-#  define PSR_MODE_USR    (16 << PSR_MODE_SHIFT) /* User mode */
-#  define PSR_MODE_FIQ    (17 << PSR_MODE_SHIFT) /* FIQ mode */
-#  define PSR_MODE_IRQ    (18 << PSR_MODE_SHIFT) /* IRQ mode */
-#  define PSR_MODE_SVC    (19 << PSR_MODE_SHIFT) /* Supervisor mode */
-#  define PSR_MODE_MON    (22 << PSR_MODE_SHIFT) /* Monitor mode */
-#  define PSR_MODE_ABT    (23 << PSR_MODE_SHIFT) /* Abort mode */
-#  define PSR_MODE_HYP    (26 << PSR_MODE_SHIFT) /* Hyp mode */
-#  define PSR_MODE_UND    (27 << PSR_MODE_SHIFT) /* Undefined mode */
-#  define PSR_MODE_SYS    (31 << PSR_MODE_SHIFT) /* System mode */
-
-#define PSR_T_BIT         (1 << 5)  /* Bit 5: Thumb execution state bit */
-#define PSR_MASK_SHIFT    (6)       /* Bits 6-8: Mask Bits */
-#define PSR_MASK_MASK     (7 << PSR_GE_SHIFT)
-#  define PSR_F_BIT       (1 << 6)  /* Bit 6: FIQ mask bit */
-#  define PSR_I_BIT       (1 << 7)  /* Bit 7: IRQ mask bit */
-#  define PSR_A_BIT       (1 << 8)  /* Bit 8: Asynchronous abort mask */
-#define PSR_E_BIT         (1 << 9)  /* Bit 9:  Endianness execution state bit */
-#define PSR_GE_SHIFT      (16)      /* Bits 16-19: Greater than or Equal flags */
-#define PSR_GE_MASK       (15 << PSR_GE_SHIFT)
-                                    /* Bits 20-23: Reserved. RAZ/SBZP */
-#define PSR_J_BIT         (1 << 24) /* Bit 24: Jazelle state bit */
-#define PSR_IT01_SHIFT    (25)      /* Bits 25-26:  If-Then execution state bits IT[0:1] */
-#define PSR_IT01_MASK     (3 << PSR_IT01_SHIFT)
-#define PSR_Q_BIT         (1 << 27) /* Bit 27: Cumulative saturation bit */
-#define PSR_V_BIT         (1 << 28) /* Bit 28: Overflow condition flag */
-#define PSR_C_BIT         (1 << 29) /* Bit 29: Carry condition flag */
-#define PSR_Z_BIT         (1 << 30) /* Bit 30: Zero condition flag */
-#define PSR_N_BIT         (1 << 31) /* Bit 31: Negative condition flag */
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define up_irq_is_disabled(flags) (((flags) & PSR_F_BIT) != 0)
-#else
-#  define up_irq_is_disabled(flags) (((flags) & PSR_I_BIT) != 0)
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -290,6 +253,12 @@ struct xcpt_syscall_s
 
 struct xcptcontext
 {
+  /* The following function pointer is non-zero if there are pending signals
+   * to be processed.
+   */
+
+  void *sigdeliver; /* Actual type is sig_deliver_t */
+
   /* These are saved copies of the context used during
    * signal processing.
    */
@@ -319,7 +288,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -490,46 +459,15 @@ static inline_function int up_cpu_index(void)
 
   /* Read the Multiprocessor Affinity Register (MPIDR) */
 
-  __asm__ __volatile__
-  (
-    "mrc " "p15, " "0" ", %0, " "c0" ", " "c0" ", " "5" "\n"
-    : "=r"(mpidr)
-  );
+  mpidr = CP15_GET(MPIDR);
 
   /* And return the CPU ID field */
 
   return (mpidr & MPIDR_CPUID_MASK) >> MPIDR_CPUID_SHIFT;
 }
 #else
-int up_cpu_index(void);
+#  define up_cpu_index() 0
 #endif /* CONFIG_SMP */
-
-noinstrument_function
-static inline_function uint32_t *up_current_regs(void)
-{
-  uint32_t *regs;
-  __asm__ __volatile__
-  (
-    "mrc " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
-    : "=r"(regs)
-  );
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-  __asm__ __volatile__
-  (
-    "mcr " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
-    :: "r"(regs)
-  );
-}
-
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return up_current_regs() != NULL;
-}
 
 static inline_function uint32_t up_getsp(void)
 {
@@ -542,6 +480,37 @@ static inline_function uint32_t up_getsp(void)
   );
 
   return sp;
+}
+
+/****************************************************************************
+ * Name:
+ *   up_current_regs/up_set_current_regs
+ *
+ * Description:
+ *   We use the following code to manipulate the TPIDRPRW register,
+ *   which exists uniquely for each CPU and is primarily designed to store
+ *   current thread information. Currently, we leverage it to store interrupt
+ *   information, with plans to further optimize its use for storing both
+ *   thread and interrupt information in the future.
+ *
+ ****************************************************************************/
+
+noinstrument_function
+static inline_function uint32_t *up_current_regs(void)
+{
+  return (uint32_t *)CP15_GET(TPIDRPRW);
+}
+
+noinstrument_function
+static inline_function void up_set_current_regs(uint32_t *regs)
+{
+  CP15_SET(TPIDRPRW, regs);
+}
+
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return up_current_regs() != NULL;
 }
 
 /****************************************************************************

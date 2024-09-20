@@ -26,7 +26,6 @@
 #include <debug.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
-#include <nuttx/lib/math32.h>
 #include <nuttx/bits.h>
 
 #include <nuttx/coresight/coresight_stm.h>
@@ -92,6 +91,10 @@
 #define STM_NO_TIMESTAMPED      BIT(3)
 #define STM_NO_MARKED           BIT(4)
 #define STM_NO_GUARANTEED       BIT(7)
+
+/* Bit operation */
+
+#define rounddown_pow_of_two(n) (1 << (fls(n) - 1))
 
 /****************************************************************************
  * Private Types
@@ -352,11 +355,11 @@ int stm_set_channel_options(FAR struct coresight_stm_dev_s *stmdev,
   switch (options)
     {
       case STM_OPTION_GUARANTEED:
-        set_bit(channel, stmdev->guaranteed);
+        __set_bit(channel, stmdev->guaranteed);
         break;
 
       case STM_OPTION_INVARIANT:
-        clear_bit(channel, stmdev->guaranteed);
+        __clear_bit(channel, stmdev->guaranteed);
         break;
 
       default:

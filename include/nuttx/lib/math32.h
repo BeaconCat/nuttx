@@ -29,15 +29,10 @@
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <strings.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define div_round_up(n, d)      (((n) + (d) - 1) / (d))
-#define div_round_closest(n, d) ((((n) < 0) ^ ((d) < 0)) ? \
-                                (((n) - (d)/2)/(d)) : (((n) + (d)/2)/(d)))
 
 /* Returns one plus the index of the most significant 1-bit of n,
  * or if n is zero, returns zero.
@@ -57,16 +52,9 @@
 #define FLS2(n)  ((n) & 0x2        ?  1 + FLS1 ((n) >>  1) : FLS1 (n))
 #define FLS1(n)  ((n) & 0x1        ?  1 : 0)
 
-/** IS_POWER_OF_2() - check if a value is a power of two
- * @n: the value to check
- *
- * Determine whether some value is a power of two, where zero is
- * *not* considered a power of two.
- * Return: true if @n is a power of 2, otherwise false.
- */
+/* Checks if an integer is power of two at compile time */
 
-#define IS_POWER_OF_2(n) \
-  ((n) != 0 && (((n) & ((n) - 1)) == 0))
+#define IS_POWER_OF_2(n)           ((n) > 0 && ((n) & (n - 1)) == 0)
 
 /* Returns round up and round down value of log2(n). Note: it can be used at
  * compile time.
@@ -119,68 +107,6 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-#define is_power_of_2(n) IS_POWER_OF_2(n)
-#define flsx(n) ((sizeof(n) <= sizeof(long)) ? flsl(n) : flsll(n))
-
-/****************************************************************************
- * Name: log2ceil
- *
- * Description:
- *   Calculate the up-rounded power-of-two for input.
- *
- * Input Parameters:
- *   x - Argument to calculate the power-of-two from.
- *
- * Returned Value:
- *   Power-of-two for argument, rounded up.
- *
- ****************************************************************************/
-
-#define log2ceil(n) (is_power_of_2(n) ? (flsx(n) - 1) : flsx(n))
-
-/****************************************************************************
- * Name: log2floor
- *
- * Description:
- *   Calculate the down-rounded (truncated) power-of-two for input.
- *
- * Input Parameters:
- *   x - Argument to calculate the power-of-two from.
- *
- * Returned Value:
- *   Power-of-two for argument, rounded (truncated) down.
- *
- ****************************************************************************/
-
-#define log2floor(n) (flsx(n) - 1)
-
-/* roundup_pow_of_two() - Round up to nearest power of two
- * n: value to round up
- */
-
-#define roundup_pow_of_two(n) (((n) - (n) + 1) << flsx((n) - 1))
-
-/* rounddown_pow_of_two() - Round down to nearest power of two
- * n: value to round down
- */
-
-#define rounddown_pow_of_two(n) (((n) - (n) + 1) << (flsx(n) - 1))
-
-/* order_base_2 - Calculate the (rounded up) base 2 order of the argument
- * n: parameter
- *
- * The first few values calculated by this routine:
- *  ob2(0) = 0
- *  ob2(1) = 0
- *  ob2(2) = 1
- *  ob2(3) = 2
- *  ob2(4) = 2
- *  ob2(5) = 3
- *  ... and so on.
- */
-
-#define order_base_2(n) ((n) > 1 ? log2floor((n) - 1) + 1 : 0)
-
 /* If the divisor happens to be constant, we determine the appropriate
  * inverse at compile time to turn the division into a few inline
  * multiplications which ought to be much faster.
@@ -189,10 +115,10 @@ extern "C"
  */
 
 #ifdef CONFIG_HAVE_LONG_LONG
-/* Default C implementation for umul64_const()
+/* Default C implementation for __umul64_const()
  *
- * Prototype: uint64_t umul64_const(uint64_t retval, uint64_t m,
- *                                  uint64_t n, bool bias);
+ * Prototype: uint64_t __umul64_const(uint64_t retval, uint64_t m,
+ *                                    uint64_t n, bool bias);
  * Semantic:  retval = ((bias ? m : 0) + m * n) >> 64
  *
  * The product is a 128-bit value, scaled down to 64 bits.
@@ -201,10 +127,10 @@ extern "C"
  */
 
 #  ifdef up_umul64_const
-#    define umul64_const(res, m, n, bias) \
+#    define __umul64_const(res, m, n, bias) \
       (res) = up_umul64_const(m, n, bias)
 #  else
-#    define umul64_const(res, m, n, bias) \
+#    define __umul64_const(res, m, n, bias) \
       do \
         { \
           uint32_t __m_lo = (m) & 0xffffffff; \
@@ -304,7 +230,7 @@ extern "C"
               } \
             ___bias = 0; \
           } \
-        umul64_const(___res, ___m, ___n, ___bias); \
+        __umul64_const(___res, ___m, ___n, ___bias); \
         \
         ___res /= ___p; \
         (n) = ___res; \
@@ -492,6 +418,38 @@ void umul32x64(uint32_t factor1, FAR const struct uint64_s *factor2,
 void umul64(FAR const struct uint64_s *factor1,
             FAR const struct uint64_s *factor2,
             FAR struct uint64_s *product);
+
+/****************************************************************************
+ * Name: log2ceil
+ *
+ * Description:
+ *   Calculate the up-rounded power-of-two for input.
+ *
+ * Input Parameters:
+ *   x - Argument to calculate the power-of-two from.
+ *
+ * Returned Value:
+ *   Power-of-two for argument, rounded up.
+ *
+ ****************************************************************************/
+
+uintptr_t log2ceil(uintptr_t x);
+
+/****************************************************************************
+ * Name: log2floor
+ *
+ * Description:
+ *   Calculate the down-rounded (truncated) power-of-two for input.
+ *
+ * Input Parameters:
+ *   x - Argument to calculate the power-of-two from.
+ *
+ * Returned Value:
+ *   Power-of-two for argument, rounded (truncated) down.
+ *
+ ****************************************************************************/
+
+uintptr_t log2floor(uintptr_t x);
 
 #undef EXTERN
 #ifdef __cplusplus
