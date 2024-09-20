@@ -35,7 +35,7 @@
  * Public Functions
  ****************************************************************************/
 
-void *riscv_perform_syscall(uintptr_t *regs)
+void *riscv_perform_syscall(uintreg_t *regs)
 {
   struct tcb_s *tcb;
   int cpu;
@@ -61,9 +61,16 @@ void *riscv_perform_syscall(uintptr_t *regs)
       addrenv_switch(NULL);
 #endif
 
-      /* Restore the cpu lock */
+      /* Record the new "running" task.  g_running_tasks[] is only used by
+       * assertion logic for reporting crashes.
+       */
 
       cpu = this_cpu();
+      tcb = current_task(cpu);
+      g_running_tasks[cpu] = tcb;
+
+      /* Restore the cpu lock */
+
       restore_critical_section(tcb, cpu);
 
       /* If a context switch occurred while processing the interrupt then
