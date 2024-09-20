@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/timer/timer_create.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -191,25 +189,6 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 
   if (evp)
     {
-      FAR struct tcb_s *ntcb;
-
-      /* Check the SIGEV_THREAD_ID and validate the tid */
-
-      if (evp->sigev_notify & SIGEV_THREAD_ID)
-        {
-          /* Make sure that the notified thread is
-           * in same process with current thread.
-           */
-
-          ntcb = nxsched_get_tcb(evp->sigev_notify_thread_id);
-
-          if (ntcb == NULL || tcb->group != ntcb->group)
-            {
-              set_errno(EINVAL);
-              return ERROR;
-            }
-        }
-
       /* Yes, copy the entire struct sigevent content */
 
       memcpy(&ret->pt_event, evp, sizeof(struct sigevent));
