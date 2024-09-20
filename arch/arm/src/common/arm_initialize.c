@@ -150,10 +150,6 @@ void up_initialize(void)
   arm_usbinitialize();
 #endif
 
-#ifdef CONFIG_ARM_COREDUMP_REGION
-  arm_coredump_add_region();
-#endif
-
   /* Initialize the L2 cache if present and selected */
 
   arm_l2ccinitialize();

@@ -28,7 +28,8 @@
 #include <debug.h>
 #include <stdlib.h>
 
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/rptun/openamp.h>
 #include <nuttx/wireless/bluetooth/bt_rpmsghci.h>
 
 #include "bt_rpmsghci.h"
@@ -131,7 +132,6 @@ static int rpmsghci_send(FAR struct rpmsghci_server_s *priv,
   ret = rpmsg_send_nocopy(&priv->ept, msg, len);
   if (ret < 0)
     {
-      rpmsg_release_tx_buffer(&priv->ept, msg);
       goto errout;
     }
 
@@ -398,18 +398,17 @@ static int rpmsghci_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
 }
 
 /****************************************************************************
- * Name: rpmsghci_ept_release
+ * Name: rpmsghci_ns_unbind
  *
  * Description:
- *   Release the rpmsg endpoint.
+ *   Unbind from the rpmsg name service.
  *
  ****************************************************************************/
 
-static void rpmsghci_ept_release(FAR struct rpmsg_endpoint *ept)
+static void rpmsghci_ns_unbind(FAR struct rpmsg_endpoint *ept)
 {
-  FAR struct rpmsghci_server_s *server = ept->priv;
-
-  kmm_free(server);
+  rpmsg_destroy_ept(ept);
+  kmm_free(ept);
 }
 
 /****************************************************************************
@@ -426,11 +425,9 @@ static void rpmsghci_ns_bind(FAR struct rpmsg_device *rdev, FAR void *priv,
   FAR struct rpmsghci_server_s *server = priv;
 
   server->ept.priv = priv;
-  server->ept.release_cb = rpmsghci_ept_release;
-
   rpmsg_create_ept(&server->ept, rdev, name,
                    RPMSG_ADDR_ANY, dest,
-                   rpmsghci_ept_cb, rpmsg_destroy_ept);
+                   rpmsghci_ept_cb, rpmsghci_ns_unbind);
 }
 
 /****************************************************************************

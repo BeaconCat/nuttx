@@ -43,8 +43,6 @@
 
 uint32_t *arm_decodeirq(uint32_t *regs)
 {
-  struct tcb_s *tcb = this_task();
-
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   up_set_current_regs(regs);
   err("ERROR: Unexpected IRQ\n");
@@ -86,12 +84,10 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 
           DEBUGASSERT(up_current_regs() == NULL);
           up_set_current_regs(regs);
-          tcb->xcp.regs = regs;
 
           /* Deliver the IRQ */
 
           irq_dispatch(irq, regs);
-          tcb = this_task();
 
 #ifdef CONFIG_ARCH_ADDRENV
           /* Check for a context switch.  If a context switch occurred, then
@@ -101,7 +97,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
            * from the interrupt.
            */
 
-          if (regs != tcb->xcp.regs)
+          if (regs != up_current_regs())
             {
               /* Make sure that the address environment for the previously
                * running task is closed down gracefully (data caches dump,

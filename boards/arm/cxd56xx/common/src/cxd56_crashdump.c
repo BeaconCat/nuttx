@@ -149,11 +149,18 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
 
   /* Save Context */
 
-  strlcpy(pdump->info.name, get_task_name(tcb), sizeof(pdump->info.name));
+#if CONFIG_TASK_NAME_SIZE > 0
+  strlcpy(pdump->info.name, tcb->name, sizeof(pdump->info.name));
+#endif
 
   pdump->info.pid = tcb->pid;
 
-  if (up_interrupt_context())
+  /* If  current_regs is not NULL then we are in an interrupt context
+   * and the user context is in current_regs else we are running in
+   * the users context
+   */
+
+  if (up_current_regs())
     {
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
       pdump->info.stacks.interrupt.sp = sp;
