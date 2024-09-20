@@ -18,8 +18,6 @@
  *
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 OUTPUT_ARCH(aarch64)
 
 ENTRY(__start)
@@ -32,23 +30,10 @@ PHDRS
 SECTIONS
 {
   . = 0x00000000;  /* load address */
-
-  /* where the global variable out-of-bounds detection information located */
-#ifdef CONFIG_MM_KASAN_GLOBAL
-  .kasan.unused :
-  {
-    *(.data..LASANLOC*)
-  }
-  .kasan.global :
-  {
-    KEEP (*(.data..LASAN0))
-    KEEP (*(.data.rel.local..LASAN0))
-  }
-#endif
-
   _start = .;
   .text : {
         _stext = .;            /* Text section */
+       *(.start .start.*)      /* Place __start here */
        *(.text)
        *(.text.cold)
        *(.text.unlikely)
@@ -97,11 +82,6 @@ SECTIONS
        *(.data.page_aligned)
        *(.data)
        . = ALIGN(8);
-        __start_impls = .;
-        *(.impls)
-        KEEP(*(.impls))
-        . = ALIGN(4);
-        __stop_impls = .;
        *(.data.rel)
        *(.data.rel.*)
        CONSTRUCTORS
