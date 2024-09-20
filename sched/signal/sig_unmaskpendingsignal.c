@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/signal/sig_unmaskpendingsignal.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -54,14 +52,6 @@ bool nxsig_unmask_pendingsignal(void)
   FAR sigpendq_t *pendingsig;
   int signo;
 
-  /* Prohibit any context switches until we are done with this.
-   * We may still be performing signal operations from interrupt
-   * handlers, however, none of the pending signals that we
-   * are concerned with here should be effected.
-   */
-
-  sched_lock();
-
   /* Get the set of pending signals that were just unmasked.  The
    * following operation should be safe because the sigprocmask
    * can only be changed on this thread of execution.
@@ -71,7 +61,6 @@ bool nxsig_unmask_pendingsignal(void)
   nxsig_nandset(&unmaskedset, &unmaskedset, &rtcb->sigprocmask);
   if (sigisemptyset(&unmaskedset))
     {
-      sched_unlock();
       return false;
     }
 
@@ -114,6 +103,5 @@ bool nxsig_unmask_pendingsignal(void)
     }
   while (!sigisemptyset(&unmaskedset));
 
-  sched_unlock();
   return true;
 }

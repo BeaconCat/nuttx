@@ -30,8 +30,8 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/cache.h>
 #include <nuttx/lib/modlib.h>
 #include <nuttx/binfmt/symtab.h>
 #include <nuttx/drivers/ramdisk.h>
@@ -394,6 +394,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_POWEROFF:
         {
           reboot_notifier_call_chain(SYS_POWER_OFF, (FAR void *)arg);
+          up_flush_dcache_all();
           ret = board_power_off((int)arg);
         }
         break;
@@ -410,6 +411,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_RESET:
         {
           reboot_notifier_call_chain(SYS_RESTART, (FAR void *)arg);
+          up_flush_dcache_all();
           ret = board_reset((int)arg);
         }
         break;
@@ -863,25 +865,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
           DEBUGASSERT(cause != NULL);
           ret = board_reset_cause(cause);
-        }
-        break;
-#endif
-
-#ifdef CONFIG_BOARDCTL_IRQ_AFFINITY
-      /* CMD:           BOARDIOC_IRQ_AFFINITY
-       * DESCRIPTION:   Set an IRQ affinity by software.
-       * ARG:           Integer array:
-                        member 0 is the interrupt number
-                        member 1 is the CPU index
-       * CONFIGURATION: CONFIG_BOARDCTL_IRQ_AFFINITY
-       * DEPENDENCIES:  Bound Multi-Processing (CONFIG_BMP)
-       */
-
-      case BOARDIOC_IRQ_AFFINITY:
-        {
-          FAR unsigned int *affinity = (FAR unsigned int *)arg;
-          up_affinity_irq(affinity[0], affinity[1]);
-          ret = OK;
         }
         break;
 #endif
