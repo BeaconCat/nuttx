@@ -148,7 +148,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -175,7 +174,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -202,7 +200,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -229,7 +226,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -256,7 +252,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -283,7 +278,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -309,7 +303,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -335,7 +328,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -361,7 +353,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -387,7 +378,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -413,7 +403,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -439,7 +428,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -465,7 +453,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -492,7 +479,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -519,7 +505,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2, overlapping with SPI2-3 */
 #  define STM32_NUSART                   5   /* USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -554,7 +539,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -584,7 +568,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -617,7 +600,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -648,7 +630,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -675,7 +656,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -704,7 +684,6 @@
 #  define STM32_NSPI                     1   /* SPI1 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   2   /* USART1-2 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* I2C1 */
 #  define STM32_NCAN                     1   /* bxCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -729,7 +708,6 @@
 #  define STM32_NSPI                     1   /* SPI1 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   2   /* USART1-2 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* I2C1 */
 #  define STM32_NCAN                     1   /* bxCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -754,7 +732,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     1   /* bxCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -779,7 +756,6 @@
 #  define STM32_NSPI                     2   /* SPI1-2 */
 #  define STM32_NI2S                     0   /* No I2S */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     1   /* bxCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -811,7 +787,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     0   /* No I2S (?) */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     1   /* CAN1 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -840,7 +815,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     0   /* No I2S (?) */
 #  define STM32_NUSART                   5   /* USART1-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     1   /* bxCAN1 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -869,7 +843,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     0   /* No I2S (?) */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     1   /* CAN1 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -896,7 +869,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -921,7 +893,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* I2C1-2 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -946,7 +917,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* I2C1 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -974,7 +944,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1001,7 +970,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1028,7 +996,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1055,7 +1022,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1095,7 +1061,6 @@
 #  define STM32_NSPI                     2   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   2   /* (2) USART1-2, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1125,7 +1090,6 @@
 #  define STM32_NSPI                     2   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   3   /* (3) USART1-3, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1155,7 +1119,6 @@
 #  define STM32_NSPI                     2   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   3   /* (2) USART1-3, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1185,7 +1148,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   3   /* (3) No UART1-3, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1213,7 +1175,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1241,7 +1202,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1268,7 +1228,6 @@
 #  define STM32_NSPI                     1   /* (1) SPI1 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   2   /* (2) USART1-2, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* (1) I2C1 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1295,7 +1254,6 @@
 #  define STM32_NSPI                     1   /* (1) SPI1 */
 #  define STM32_NI2S                     0   /* (0) No I2S */
 #  define STM32_NUSART                   3   /* (3) USART1-3, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* (1) I2C1 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1322,7 +1280,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   3   /* (3) No UART1-3, no UARTs */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1349,7 +1306,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1376,7 +1332,6 @@
 #  define STM32_NSPI                     4   /* (4) SPI1-4 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (2) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1403,7 +1358,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1429,7 +1383,6 @@
 #  define STM32_NSPI                     4   /* (4) SPI1-4 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1455,7 +1408,6 @@
 #  define STM32_NSPI                     4   /* (4) SPI1-4 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1481,7 +1433,6 @@
 #  define STM32_NSPI                     4   /* (4) SPI1-4 */
 #  define STM32_NI2S                     2   /* (2) I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* (5) USART1-3, UART4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* (3) I2C1-3 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1509,7 +1460,6 @@
 #  define STM32_NSPI                     1   /* (1) SPI1 */
 #  define STM32_NI2S                     0   /* (0) No I2S1 */
 #  define STM32_NUSART                   2   /* (2) USART1-2 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* (1) I2C1 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1539,7 +1489,6 @@
 #  define STM32_NSPI                     1   /* (1) SPI1 */
 #  define STM32_NI2S                     0   /* (0) No I2S1 */
 #  define STM32_NUSART                   3   /* (3) USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* (1) I2C1 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1569,7 +1518,6 @@
 #  define STM32_NSPI                     1   /* (1) SPI1 */
 #  define STM32_NI2S                     0   /* (0) No I2S1 */
 #  define STM32_NUSART                   3   /* (3) USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     1   /* (1) I2C1 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1598,7 +1546,6 @@
 #  define STM32_NSPI                     3   /* (3) SPI1-3 */
 #  define STM32_NI2S                     3   /* (3) I2S1-2 (multiplexed with SPI1-3) */
 #  define STM32_NUSART                   3   /* (3) USART1-3 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     2   /* (2) I2C1-2 */
 #  define STM32_NCAN                     1   /* (1) CAN1 */
 #  define STM32_NSDIO                    0   /* (0) No SDIO */
@@ -1640,8 +1587,7 @@
 #  define STM32_NDMA                     2   /* DMA1-2 with 8 streams each*/
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
-#  define STM32_NUSART                   6   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
+#  define STM32_NUSART                   3   /* USART1, 2 and 6 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  if defined(CONFIG_ARCH_CHIP_STM32F401CB) || defined(CONFIG_ARCH_CHIP_STM32F401CC)
@@ -1685,7 +1631,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  if defined(CONFIG_ARCH_CHIP_STM32F401CD) || defined(CONFIG_ARCH_CHIP_STM32F401CE)
@@ -1715,7 +1660,6 @@
 #  define STM32_NSPI                     3   /* SPI1-4 */
 #  define STM32_NI2S                     0   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   3   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    0   /* One SDIO interface */
@@ -1741,7 +1685,6 @@
 #  define STM32_NSPI                     5   /* SPI1-5 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    1   /* One SDIO interface */
@@ -1767,7 +1710,6 @@
 #  define STM32_NSPI                     5   /* SPI1-5 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    1   /* One SDIO interface */
@@ -1793,7 +1735,6 @@
 #  define STM32_NSPI                     5   /* SPI1-5 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* Actually only 3: USART1, 2 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     0   /* No CAN */
 #  define STM32_NSDIO                    1   /* One SDIO interface */
@@ -1819,7 +1760,6 @@
 #  define STM32_NSPI                     5   /* SPI1-5 */
 #  define STM32_NI2S                     3   /* I2S1-3 */
 #  define STM32_NUSART                   4   /* USART1, 2, 3 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* 2 CAN */
 #  define STM32_NSDIO                    1   /* One SDIO interface */
@@ -1845,7 +1785,6 @@
 #  define STM32_NSPI                     5   /* SPI1-5 */
 #  define STM32_NI2S                     3   /* I2S1-3 */
 #  define STM32_NUSART                   6   /* USART1, 2, 3 and 6 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* 2 CAN */
 #  define STM32_NSDIO                    1   /* One SDIO interface */
@@ -1871,7 +1810,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1897,7 +1835,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1923,7 +1860,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1949,7 +1885,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -1975,7 +1910,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2001,7 +1935,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2027,7 +1960,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2053,7 +1985,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 (?) */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2079,7 +2010,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2105,7 +2035,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2131,7 +2060,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2157,7 +2085,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2183,7 +2110,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2209,7 +2135,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2235,7 +2160,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2261,7 +2185,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2287,7 +2210,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2313,7 +2235,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2339,7 +2260,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   6   /* USART1-3 and 6, UART 4-5 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2365,7 +2285,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2394,7 +2313,6 @@
 #  define STM32_NSPI                     6   /* SPI1-6 */
 #  define STM32_NI2S                     2   /* I2S1-2 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   8   /* USART1-3 and 6, UART 4-5 and 7-8 */
-#  define STM32_NLPUART                  0   /* No LPUART */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     2   /* CAN1-2 */
 #  define STM32_NSDIO                    1   /* SDIO */
@@ -2434,7 +2352,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   2   /* USART1-2 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     1   /* FDCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2462,7 +2379,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     1   /* FDCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2490,7 +2406,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   4   /* USART1-3 and UART4*/
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     1   /* FDCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2518,7 +2433,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   4   /* USART1-3 and UART4*/
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     1   /* FDCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2546,7 +2460,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   4   /* USART1-3 and UART4*/
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     3   /* I2C1-3 */
 #  define STM32_NCAN                     1   /* FDCAN1 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2574,7 +2487,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   3   /* USART1-3 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     4   /* I2C1-4 */
 #  define STM32_NCAN                     3   /* FDCAN1-3 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2602,7 +2514,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3 and UART 4-5 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     4   /* I2C1-4 */
 #  define STM32_NCAN                     3   /* FDCAN1-3 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2630,7 +2541,6 @@
 #  define STM32_NSPI                     3   /* SPI1-3 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3 and UART 4-5 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     4   /* I2C1-4 */
 #  define STM32_NCAN                     3   /* FDCAN1-3 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2658,7 +2568,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3 and UART 4-5 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     4   /* I2C1-4 */
 #  define STM32_NCAN                     3   /* FDCAN1-3 */
 #  define STM32_NSDIO                    0   /* No SDIO */
@@ -2686,7 +2595,6 @@
 #  define STM32_NSPI                     4   /* SPI1-4 */
 #  define STM32_NI2S                     2   /* I2S2-3 (multiplexed with SPI2-3) */
 #  define STM32_NUSART                   5   /* USART1-3 and UART 4-5 */
-#  define STM32_NLPUART                  1   /* LPUART1 */
 #  define STM32_NI2C                     4   /* I2C1-4 */
 #  define STM32_NCAN                     3   /* FDCAN1-3 */
 #  define STM32_NSDIO                    0   /* No SDIO */

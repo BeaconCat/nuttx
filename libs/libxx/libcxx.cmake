@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libxx/libcxx.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -92,6 +90,19 @@ list(APPEND SRCS ${SRCSTMP})
 file(GLOB SRCSTMP ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ryu/*.cpp)
 list(APPEND SRCS ${SRCSTMP})
 
+if(NOT CONFIG_CXX_LOCALIZATION)
+  file(
+    GLOB
+    SRCSTMP
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ios.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ios.instantiations.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/iostream.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/locale.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/regex.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/strstream.cpp)
+  list(REMOVE_ITEM SRCS ${SRCSTMP})
+endif()
+
 set(FLAGS -Wno-attributes -Wno-deprecated-declarations -Wno-shadow
           -Wno-sign-compare)
 
@@ -102,10 +113,6 @@ endif()
 nuttx_add_system_library(libcxx)
 target_sources(libcxx PRIVATE ${SRCS})
 target_compile_options(libcxx PRIVATE ${FLAGS})
-if(CONFIG_LIBCXXABI)
-  target_include_directories(
-    libcxx BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
-endif()
 
 target_include_directories(libcxx BEFORE
                            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)

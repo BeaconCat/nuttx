@@ -77,13 +77,18 @@ int group_setuptaskfiles(FAR struct task_tcb_s *tcb,
 #endif
 
 #ifndef CONFIG_FDCLONE_DISABLE
-  DEBUGASSERT(rtcb->group);
+
+  /* the The file descriptors of kernel threads should be clean and
+   * should not be generated based on user threads. Instead, an idle
+   * thread should be chosen.
+   */
 
   /* Duplicate the parent task's file descriptors */
 
+  DEBUGASSERT(rtcb->group);
   if (group != rtcb->group)
     {
-      files_duplist(&rtcb->group->tg_filelist,
+      ret = files_duplist(&rtcb->group->tg_filelist,
                     &group->tg_filelist, actions, cloexec);
     }
 
