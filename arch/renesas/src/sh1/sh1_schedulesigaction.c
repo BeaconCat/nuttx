@@ -74,35 +74,71 @@
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(struct tcb_s *tcb)
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  sinfo("tcb=%p\n", tcb);
+  sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
 
-  /* First, handle some special cases when the signal is
-   * being delivered to the currently executing task.
-   */
+  /* Refuse to handle nested signal actions */
 
-  sinfo("rtcb=%p current_regs=%p\n",
-        this_task(), up_current_regs());
-
-  if (tcb == this_task())
+  if (!tcb->xcp.sigdeliver)
     {
-      /* CASE 1:  We are not in an interrupt handler and
-       * a task is signalling itself for some reason.
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is
+       * being delivered to the currently executing task.
        */
 
-      if (!up_current_regs())
-        {
-          /* In this case just deliver the signal now. */
+      sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
-          tcb->sigdeliver = NULL;
+      if (tcb == this_task())
+        {
+          /* CASE 1:  We are not in an interrupt handler and
+           * a task is signalling itself for some reason.
+           */
+
+          if (!up_current_regs())
+            {
+              /* In this case just deliver the signal now. */
+
+              sigdeliver(tcb);
+              tcb->xcp.sigdeliver = NULL;
+            }
+
+          /* CASE 2:  We are in an interrupt handler AND the
+           * interrupted task is the same as the one that
+           * must receive the signal, then we will have to modify
+           * the return state as well as the state in the TCB.
+           */
+
+          else
+            {
+              /* Save the return PC and SR and one scratch register
+               * These will be restored by the signal trampoline after
+               * the signals have been delivered.
+               */
+
+              tcb->xcp.saved_pc = up_current_regs()[REG_PC];
+              tcb->xcp.saved_sr = up_current_regs()[REG_SR];
+
+              /* Then set up to vector to the trampoline with interrupts
+               * disabled
+               */
+
+              up_current_regs()[REG_PC]  = (uint32_t)renesas_sigdeliver;
+              up_current_regs()[REG_SR] |= 0x000000f0;
+
+              /* And make sure that the saved context in the TCB
+               * is the same as the interrupt return context.
+               */
+
+              renesas_copystate(tcb->xcp.regs, up_current_regs());
+            }
         }
 
-      /* CASE 2:  We are in an interrupt handler AND the
-       * interrupted task is the same as the one that
-       * must receive the signal, then we will have to modify
-       * the return state as well as the state in the TCB.
+      /* Otherwise, we are (1) signaling a task is not running
+       * from an interrupt handler or (2) we are not in an
+       * interrupt handler and the running task is signalling
+       * some non-running task.
        */
 
       else
@@ -112,45 +148,15 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * the signals have been delivered.
            */
 
-          tcb->xcp.saved_pc = up_current_regs()[REG_PC];
-          tcb->xcp.saved_sr = up_current_regs()[REG_SR];
+          tcb->xcp.saved_pc      = tcb->xcp.regs[REG_PC];
+          tcb->xcp.saved_sr      = tcb->xcp.regs[REG_SR];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled
            */
 
-          up_current_regs()[REG_PC]  = (uint32_t)renesas_sigdeliver;
-          up_current_regs()[REG_SR] |= 0x000000f0;
-
-          /* And make sure that the saved context in the TCB
-           * is the same as the interrupt return context.
-           */
-
-          renesas_copystate(tcb->xcp.regs, up_current_regs());
+          tcb->xcp.regs[REG_PC]  = (uint32_t)renesas_sigdeliver;
+          tcb->xcp.regs[REG_SR] |= 0x000000f0 ;
         }
-    }
-
-  /* Otherwise, we are (1) signaling a task is not running
-   * from an interrupt handler or (2) we are not in an
-   * interrupt handler and the running task is signalling
-   * some non-running task.
-   */
-
-  else
-    {
-      /* Save the return PC and SR and one scratch register
-       * These will be restored by the signal trampoline after
-       * the signals have been delivered.
-       */
-
-      tcb->xcp.saved_pc      = tcb->xcp.regs[REG_PC];
-      tcb->xcp.saved_sr      = tcb->xcp.regs[REG_SR];
-
-      /* Then set up to vector to the trampoline with interrupts
-       * disabled
-       */
-
-      tcb->xcp.regs[REG_PC]  = (uint32_t)renesas_sigdeliver;
-      tcb->xcp.regs[REG_SR] |= 0x000000f0 ;
     }
 }

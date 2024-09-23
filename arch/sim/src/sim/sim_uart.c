@@ -279,29 +279,6 @@ static struct uart_dev_s g_tty3_dev =
 
 #if defined(USE_DEVCONSOLE) || CONFIG_SIM_UART_NUMBER > 0
 /****************************************************************************
- * Name: uart_nputs
- *
- * Description:
- *   Loop to write data to the UART until all the data is sent
- *
- ****************************************************************************/
-
-static void uart_nputs(int fd, const char *buf, size_t size)
-{
-  while (size > 0)
-    {
-      int ret = host_uart_puts(fd, buf, size);
-      if (ret < 0)
-        {
-          continue;
-        }
-
-      buf += ret;
-      size -= ret;
-    }
-}
-
-/****************************************************************************
  * Name: tty_setup
  *
  * Description:
@@ -640,7 +617,7 @@ static void tty_send(struct uart_dev_s *dev, int ch)
   struct tty_priv_s *priv = dev->priv;
   char c = ch;
 
-  uart_nputs(dev->isconsole ? 1 : priv->fd, &c, 1);
+  host_uart_puts(dev->isconsole ? 1 : priv->fd, &c, 1);
 }
 
 /****************************************************************************
@@ -692,10 +669,10 @@ static bool tty_txempty(struct uart_dev_s *dev)
 #endif
 
 #ifdef CONFIG_SIM_RAM_UART
-static int sim_uartram_register(FAR const char *devname, bool slave)
+static int sim_uartram_register(const char *devname, bool slave)
 {
   char name[NAME_MAX];
-  FAR struct uart_rambuf_s *shmem;
+  struct uart_rambuf_s *shmem;
 
   strlcpy(name, strrchr(devname, '/') + 1, NAME_MAX);
   shmem = host_allocshmem(name, sizeof(struct uart_rambuf_s) * 2);
@@ -780,12 +757,12 @@ void up_nputs(const char *str, size_t len)
 #ifdef USE_DEVCONSOLE
   if (str[len - 1] == '\n')
     {
-      uart_nputs(1, str, len - 1);
-      uart_nputs(1, "\r\n", 2);
+      host_uart_puts(1, str, len - 1);
+      host_uart_puts(1, "\r\n", 2);
     }
   else
     {
-      uart_nputs(1, str, len);
+      host_uart_puts(1, str, len);
     }
 #endif
 }

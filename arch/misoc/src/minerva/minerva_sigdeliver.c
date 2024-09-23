@@ -62,8 +62,8 @@ void minerva_sigdeliver(void)
   board_autoled_on(LED_SIGNAL);
 
   sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->sigdeliver != NULL);
+        rtcb, rtcb->xcp.sigdeliver, rtcb->sigpendactionq.head);
+  DEBUGASSERT(rtcb->xcp.sigdeliver != NULL);
 
   /* Save the real return state on the stack. */
 
@@ -76,8 +76,8 @@ void minerva_sigdeliver(void)
    * more signal deliveries while processing the current pending signals.
    */
 
-  sigdeliver       = rtcb->sigdeliver;
-  rtcb->sigdeliver = NULL;
+  sigdeliver = rtcb->xcp.sigdeliver;
+  rtcb->xcp.sigdeliver = NULL;
 
 #  ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* Then make sure that interrupts are enabled.  Signal handlers must always

@@ -43,10 +43,12 @@
 
 int inode_addref(FAR struct inode *inode)
 {
+  int ret = OK;
+
   if (inode)
     {
       atomic_fetch_add(&inode->i_crefs, 1);
     }
 
-  return OK;
+  return ret;
 }

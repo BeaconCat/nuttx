@@ -22,16 +22,23 @@
  * Included Files
  ****************************************************************************/
 
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <string.h>
 
 #include <nuttx/lib/math32.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/pci/pci_epc.h>
 #include <nuttx/pci/pci_epf.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef ALIGN_UP
+#  define ALIGN_UP(s, a)            (((s) + (a) - 1) & ~((a) - 1))
+#endif
 
 /****************************************************************************
  * Private Data
@@ -441,7 +448,7 @@ int pci_epf_register_driver(FAR struct pci_epf_driver_s *drv)
           continue;
         }
 
-      epc = pci_get_epc(epf->epc_name);
+      epc = pci_get_epc(epf->name);
       if (epc == NULL)
         {
           ret = -ENODEV;
