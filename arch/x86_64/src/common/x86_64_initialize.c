@@ -65,33 +65,6 @@ static const struct simple_addrenv_s g_addrenv[] =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_calibratedelay
- *
- * Description:
- *   Delay loops are provided for short timing loops.  This function, if
- *   enabled, will just wait for 100 seconds.  Using a stopwatch, you can
- *   can then determine if the timing loops are properly calibrated.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_CALIBRATION) && defined(CONFIG_DEBUG_FEATURES)
-static void up_calibratedelay(void)
-{
-  int i;
-
-  _warn("Beginning 100s delay\n");
-  for (i = 0; i < 100; i++)
-    {
-      up_mdelay(1000);
-    }
-
-  _warn("End 100s delay\n");
-}
-#else
-#  define up_calibratedelay()
-#endif
-
-/****************************************************************************
  * Name: up_addrenv_init
  *
  * Description:
@@ -99,7 +72,7 @@ static void up_calibratedelay(void)
  *
  ****************************************************************************/
 
-static void up_addrenv_init(void)
+static void x86_64_addrenv_init(void)
 {
 #ifdef CONFIG_DEV_SIMPLE_ADDRENV
   simple_addrenv_initialize(g_addrenv);
@@ -135,7 +108,7 @@ void up_initialize(void)
 
   /* Initialzie addrenv */
 
-  up_addrenv_init();
+  x86_64_addrenv_init();
 
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
