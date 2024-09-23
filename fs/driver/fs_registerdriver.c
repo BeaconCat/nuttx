@@ -73,7 +73,12 @@ int register_driver(FAR const char *path,
    * will have a momentarily bad structure.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = inode_reserve(path, mode, &node);
   if (ret >= 0)
     {
