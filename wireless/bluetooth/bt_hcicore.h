@@ -1,6 +1,8 @@
 /****************************************************************************
  * wireless/bluetooth/bt_hcicore.h
  *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  *   Copyright (c) 2016, Intel Corporation
  *   All rights reserved.
  *
@@ -273,10 +275,10 @@ int bt_initialize(void);
 int bt_deinitialize(void);
 
 /****************************************************************************
- * Name: bt_driver_set
+ * Name: bt_driver_register
  *
  * Description:
- *   Set the Bluetooth low-level driver with the Bluetooth stack.
+ *   Register the Bluetooth low-level driver with the Bluetooth stack.
  *   This is called from the low-level driver and is part of the driver
  *   interface prototyped in include/nuttx/wireless/bluetooth/bt_driver.h
  *
@@ -291,15 +293,16 @@ int bt_deinitialize(void);
  *
  ****************************************************************************/
 
-int bt_driver_set(FAR struct bt_driver_s *btdev);
+int bt_driver_register(FAR struct bt_driver_s *btdev);
 
 /****************************************************************************
- * Name: bt_driver_unset
+ * Name: bt_driver_unregister
  *
  * Description:
- *   Unset a Bluetooth low-level driver previously set with bt_driver_set.
- *   This may be called from the low-level driver and is part of the driver
- *   interface prototyped in include/nuttx/wireless/bluetooth/bt_driver.h
+ *   Unregister a Bluetooth low-level driver previously registered with
+ *   bt_driver_register.  This may be called from the low-level driver and
+ *   is part of the driver interface prototyped in
+ *   include/nuttx/wireless/bluetooth/bt_driver.h
  *
  * Input Parameters:
  *   btdev - An instance of the low-level drivers interface structure.
@@ -309,7 +312,7 @@ int bt_driver_set(FAR struct bt_driver_s *btdev);
  *
  ****************************************************************************/
 
-void bt_driver_unset(FAR struct bt_driver_s *btdev);
+void bt_driver_unregister(FAR struct bt_driver_s *btdev);
 
 /****************************************************************************
  * Name: bt_send

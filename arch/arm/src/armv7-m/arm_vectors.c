@@ -41,17 +41,12 @@
 #include "chip.h"
 #include "arm_internal.h"
 #include "ram_vectors.h"
-#include "nvic.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define IDLE_STACK      (_ebss + CONFIG_IDLETHREAD_STACKSIZE)
-
-#ifndef ARMV7M_PERIPHERAL_INTERRUPTS
-#  error ARMV7M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -76,7 +71,6 @@ static void start(void)
 /* Common exception entrypoint */
 
 extern void exception_common(void);
-extern void exception_direct(void);
 
 /****************************************************************************
  * Public data
@@ -92,7 +86,7 @@ extern void exception_direct(void);
  */
 
 const void * const _vectors[] locate_data(".vectors")
-                              aligned_data(VECTAB_ALIGN) =
+  aligned_data(VECTOR_ALIGN) =
 {
   /* Initial stack */
 
@@ -104,7 +98,5 @@ const void * const _vectors[] locate_data(".vectors")
 
   /* Vectors 2 - n point directly at the generic handler */
 
-  [2 ... NVIC_IRQ_PENDSV] = &exception_common,
-  [(NVIC_IRQ_PENDSV + 1) ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)]
-                          = &exception_direct
+  [2 ... (15 + ARMV7M_PERIPHERAL_INTERRUPTS)] = exception_common
 };

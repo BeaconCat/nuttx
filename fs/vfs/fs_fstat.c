@@ -32,7 +32,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/net/net.h>
 #include "inode/inode.h"
 
 /****************************************************************************
