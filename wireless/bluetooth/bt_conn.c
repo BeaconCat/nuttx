@@ -1,8 +1,6 @@
 /****************************************************************************
  * wireless/bluetooth/bt_conn.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- *
  *   Copyright (c) 2016, Intel Corporation
  *   All rights reserved.
  *
@@ -296,7 +294,7 @@ void bt_conn_receive(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf,
 
         /* First packet */
 
-        hdr = (FAR void *)buf->data;
+        hdr = (void *)buf->data;
         len = BT_LE162HOST(hdr->len);
 
         wlinfo("First, len %u final %u\n", buf->len, len);
@@ -369,7 +367,7 @@ void bt_conn_receive(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf,
         return;
     }
 
-  hdr = (FAR void *)buf->data;
+  hdr = (void *)buf->data;
   len = BT_LE162HOST(hdr->len);
 
   if (sizeof(*hdr) + len != buf->len)

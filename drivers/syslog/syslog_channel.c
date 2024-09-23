@@ -60,19 +60,15 @@
  ****************************************************************************/
 
 #if defined(CONFIG_SYSLOG_DEFAULT)
-static int syslog_default_putc(FAR syslog_channel_t *channel,
+static int syslog_default_putc(FAR struct syslog_channel_s *channel,
                                int ch);
-static ssize_t syslog_default_write(FAR syslog_channel_t *channel,
+static ssize_t syslog_default_write(FAR struct syslog_channel_s *channel,
                                     FAR const char *buffer, size_t buflen);
 #endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-#if defined(CONFIG_SYSLOG_DEFAULT) && defined(CONFIG_ARCH_LOWPUTC)
-static mutex_t g_lowputs_lock = NXMUTEX_INITIALIZER;
-#endif
 
 #if defined(CONFIG_RAMLOG_SYSLOG)
 static const struct syslog_channel_ops_s g_ramlog_channel_ops =
@@ -83,7 +79,7 @@ static const struct syslog_channel_ops_s g_ramlog_channel_ops =
   ramlog_write
 };
 
-static syslog_channel_t g_ramlog_channel =
+static struct syslog_channel_s g_ramlog_channel =
 {
   &g_ramlog_channel_ops
 #  ifdef CONFIG_SYSLOG_IOCTL
@@ -103,7 +99,7 @@ static const struct syslog_channel_ops_s g_rpmsg_channel_ops =
   syslog_rpmsg_write
 };
 
-static syslog_channel_t g_rpmsg_channel =
+static struct syslog_channel_s g_rpmsg_channel =
 {
   &g_rpmsg_channel_ops
 #  ifdef CONFIG_SYSLOG_IOCTL
@@ -123,7 +119,7 @@ static const struct syslog_channel_ops_s g_rtt_channel_ops =
   syslog_rtt_write
 };
 
-static syslog_channel_t g_rtt_channel =
+static struct syslog_channel_s g_rtt_channel =
 {
   &g_rtt_channel_ops
 #  ifdef CONFIG_SYSLOG_IOCTL
@@ -142,7 +138,7 @@ static const struct syslog_channel_ops_s g_default_channel_ops =
   syslog_default_write
 };
 
-static syslog_channel_t g_default_channel =
+static struct syslog_channel_s g_default_channel =
 {
   &g_default_channel_ops
 #  ifdef CONFIG_SYSLOG_IOCTL
@@ -191,11 +187,8 @@ static syslog_channel_t g_default_channel =
 
 /* This is the current syslog channel in use */
 
-FAR syslog_channel_t *
-#ifndef CONFIG_SYSLOG_REGISTER
-const
-#endif
-g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS] =
+FAR struct syslog_channel_s
+*g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS] =
 {
 #if defined(CONFIG_SYSLOG_DEFAULT)
   &g_default_channel,
@@ -228,7 +221,7 @@ g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS] =
  ****************************************************************************/
 
 #if defined(CONFIG_SYSLOG_DEFAULT)
-static int syslog_default_putc(FAR syslog_channel_t *channel, int ch)
+static int syslog_default_putc(FAR struct syslog_channel_s *channel, int ch)
 {
   UNUSED(channel);
 
@@ -239,15 +232,17 @@ static int syslog_default_putc(FAR syslog_channel_t *channel, int ch)
 #endif
 }
 
-static ssize_t syslog_default_write(FAR syslog_channel_t *channel,
+static ssize_t syslog_default_write(FAR struct syslog_channel_s *channel,
                                     FAR const char *buffer, size_t buflen)
 {
 #if defined(CONFIG_ARCH_LOWPUTC)
-  nxmutex_lock(&g_lowputs_lock);
+  static mutex_t lock = NXMUTEX_INITIALIZER;
+
+  nxmutex_lock(&lock);
 
   up_nputs(buffer, buflen);
 
-  nxmutex_unlock(&g_lowputs_lock);
+  nxmutex_unlock(&lock);
 #endif
 
   UNUSED(channel);
@@ -275,8 +270,7 @@ static ssize_t syslog_default_write(FAR syslog_channel_t *channel,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_REGISTER
-int syslog_channel_register(FAR syslog_channel_t *channel)
+int syslog_channel_register(FAR struct syslog_channel_s *channel)
 {
 #if (CONFIG_SYSLOG_MAX_CHANNELS != 1)
   int i;
@@ -332,7 +326,7 @@ int syslog_channel_register(FAR syslog_channel_t *channel)
  *
  ****************************************************************************/
 
-int syslog_channel_unregister(FAR syslog_channel_t *channel)
+int syslog_channel_unregister(FAR struct syslog_channel_s *channel)
 {
   int i;
 
@@ -373,4 +367,3 @@ int syslog_channel_unregister(FAR syslog_channel_t *channel)
 
   return -EINVAL;
 }
-#endif

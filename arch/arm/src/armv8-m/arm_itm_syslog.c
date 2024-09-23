@@ -62,8 +62,8 @@
 
 /* SYSLOG channel methods */
 
-static int itm_putc(syslog_channel_t *channel, int ch);
-static int itm_flush(syslog_channel_t *channel);
+static int itm_putc(struct syslog_channel_s *channel, int ch);
+static int itm_flush(struct syslog_channel_s *channel);
 
 /****************************************************************************
  * Private Data
@@ -80,7 +80,7 @@ static const struct syslog_channel_ops_s g_itm_channel_ops =
 
 /* This structure describes the ITM SYSLOG channel */
 
-static syslog_channel_t g_itm_channel =
+static struct syslog_channel_s g_itm_channel =
 {
   .sc_ops   = &g_itm_channel_ops
 };
@@ -97,7 +97,7 @@ static syslog_channel_t g_itm_channel =
  *
  ****************************************************************************/
 
-static int itm_putc(syslog_channel_t *channel, int ch)
+static int itm_putc(struct syslog_channel_s *channel, int ch)
 {
   UNUSED(channel);
 
@@ -127,7 +127,7 @@ static int itm_putc(syslog_channel_t *channel, int ch)
  *
  ****************************************************************************/
 
-static int itm_flush(syslog_channel_t *channel)
+static int itm_flush(struct syslog_channel_s *channel)
 {
   UNUSED(channel);
   return OK;

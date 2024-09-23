@@ -69,9 +69,9 @@
  *
  ****************************************************************************/
 
-FAR syslog_channel_t *syslog_dev_channel(void)
+FAR struct syslog_channel_s *syslog_dev_channel(void)
 {
-  FAR syslog_channel_t *dev_channel;
+  FAR struct syslog_channel_s *dev_channel;
 
   /* Initialize the character driver interface */
 
