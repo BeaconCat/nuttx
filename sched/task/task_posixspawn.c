@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/task/task_posixspawn.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -218,9 +220,6 @@ int posix_spawn(FAR pid_t *pid, FAR const char *path,
                 FAR const posix_spawnattr_t *attr,
                 FAR char * const argv[], FAR char * const envp[])
 {
-  sinfo("pid=%p path=%s file_actions=%p attr=%p argv=%p\n",
-        pid, path, file_actions, attr, argv);
-
   return nxposix_spawn_exec(pid, path,
                             file_actions != NULL ?
                             *file_actions : NULL, attr, argv, envp);
