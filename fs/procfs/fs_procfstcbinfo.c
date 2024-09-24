@@ -36,12 +36,10 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#include "sched/sched.h"
 #include "fs_heap.h"
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \

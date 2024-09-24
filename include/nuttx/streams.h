@@ -212,7 +212,7 @@ struct lib_rawoutstream_s
 struct lib_fileoutstream_s
 {
   struct lib_outstream_s common;
-  FAR struct file       *file;
+  struct file            *file;
 };
 
 struct lib_rawsistream_s
@@ -264,16 +264,12 @@ struct lib_syslogstream_s
   int priority;
 };
 
-struct iob_s;  /* Forward reference */
-
 struct lib_syslograwstream_s
 {
   struct lib_outstream_s common;
 #ifdef CONFIG_SYSLOG_BUFFER
   char buffer[CONFIG_SYSLOG_BUFSIZE];
-  FAR char *base;
-  int size;
-  int offset;
+  int  offset;
 #endif
   int last_ch;
 };
