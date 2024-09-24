@@ -35,9 +35,7 @@ SECTIONS
 
   .init_array :
     {
-      _sinit = .;
       *(.init_array)
-      _einit = .;
     }
 
   .fini_array :
@@ -77,11 +75,6 @@ SECTIONS
       *(COMMON)
       . = ALIGN(4);
       _ebss = . ;
-    }
-
-  .got :
-    {
-      *(.got*)
     }
 
     /* Stabs debugging sections.    */
