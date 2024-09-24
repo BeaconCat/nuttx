@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/netlink/netlink_route.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -698,10 +696,7 @@ netlink_get_neighbor(FAR const void *neigh, int domain, int type,
 
   if (req == NULL)
     {
-      if (neigh == NULL)
-        {
-          return NULL;
-        }
+      DEBUGASSERT(neigh != NULL);
 
       /* Only one entry need to notify */
 
@@ -809,9 +804,8 @@ netlink_get_ipv4_route(FAR const struct net_route_ipv4_s *route, int type,
 /****************************************************************************
  * Name: netlink_ipv4route_callback
  *
- * Input Parameters:
- *   route - The entry of IPV4 routing table.
- *   arg   - The netlink info of request.
+ * Description:
+ *   Response netlink message from ipv4 route list.
  *
  ****************************************************************************/
 
@@ -927,10 +921,6 @@ netlink_get_ipv6_route(FAR const struct net_route_ipv6_s *route, int type,
  *
  * Description:
  *   Response netlink message from ipv6 route list.
- *
- * Input Parameters:
- *   route - The entry of IPV6 routing table.
- *   arg   - The netlink info of request.
  *
  ****************************************************************************/
 

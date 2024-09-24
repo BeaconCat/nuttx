@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/sixlowpan/sixlowpan_framelist.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- *
  *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
