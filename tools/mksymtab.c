@@ -1,8 +1,6 @@
 /****************************************************************************
  * tools/mksymtab.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -132,7 +130,6 @@ int main(int argc, char **argv, char **envp)
   char *finalterm;
   char *ptr;
   bool cond;
-  bool parm1;
   FILE *instream;
   FILE *outstream;
   int ch;
@@ -271,12 +268,6 @@ int main(int argc, char **argv, char **envp)
     {
       /* Parse the line from the CVS file */
 
-      g_parm[NAME_INDEX][0] = 0;
-      g_parm[HEADER_INDEX][0] = 0;
-      g_parm[COND_INDEX][0] = 0;
-      g_parm[RETTYPE_INDEX][0] = 0;
-      g_parm[PARM1_INDEX][0] = 0;
-
       int nargs = parse_csvline(ptr);
       if (nargs < PARM1_INDEX)
         {
@@ -295,17 +286,8 @@ int main(int argc, char **argv, char **envp)
 
       /* Output the symbol table entry */
 
-      parm1 = strlen(g_parm[PARM1_INDEX]) > 0;
-      if (parm1)
-        {
-          fprintf(outstream, "%s  { \"%s\", (FAR const void *)%s }",
-                  nextterm, g_parm[NAME_INDEX], g_parm[NAME_INDEX]);
-        }
-      else
-        {
-          fprintf(outstream, "%s  { \"%s\", (FAR const void *)&%s }",
-                  nextterm, g_parm[NAME_INDEX], g_parm[NAME_INDEX]);
-        }
+      fprintf(outstream, "%s  { \"%s\", (FAR const void *)%s }",
+              nextterm, g_parm[NAME_INDEX], g_parm[NAME_INDEX]);
 
       if (cond)
         {
