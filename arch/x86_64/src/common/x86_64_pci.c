@@ -27,7 +27,8 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/arch.h>
+#include <arch/irq.h>
+
 #include <nuttx/pci/pci.h>
 
 #include "x86_64_internal.h"
@@ -36,25 +37,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PCI_CFG_ADDR         0xcf8
-#define PCI_DATA_ADDR        0xcfc
-#define PCI_CFG_EN           (1 << 31)
+#define PCI_CFG_ADDR      0xcf8
+#define PCI_DATA_ADDR     0xcfc
+#define PCI_CFG_EN        (1 << 31)
 
-#define X86_64_IO_ADDR_LIMIT 0xffff
-
-#define readb(addr)          ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint8_t *)(addr)) : inb(addr))
-#define readw(addr)          ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint16_t *)(addr)) : inw(addr))
-#define readl(addr)          ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint32_t *)(addr)) : inl(addr))
-
-#define writeb(addr, val)    ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint8_t *)(addr)) = (val) : outb(val, addr))
-#define writew(addr, val)    ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint16_t *)(addr)) = (val) : outw(val, addr))
-#define writel(addr, val)    ((addr) > X86_64_IO_ADDR_LIMIT ? \
-                              *((volatile uint32_t *)(addr)) = (val) : outl(val, addr))
+#define X86_64_MAR_DEST    0xfee00000
+#define X86_64_MDR_TYPE    0x4000
 
 /****************************************************************************
  * Private Functions Definitions
@@ -71,10 +59,9 @@ static int x86_64_pci_read_io(struct pci_bus_s *bus, uintptr_t addr,
 static int x86_64_pci_write_io(struct pci_bus_s *bus, uintptr_t addr,
                                int size, uint32_t val);
 
-static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint32_t devfn,
-                              uint8_t line, uint8_t pin);
+static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint8_t line);
 
-static int x86_64_pci_alloc_irq(struct pci_bus_s *bus, uint32_t devfn,
+static int x86_64_pci_alloc_irq(struct pci_bus_s *bus,
                                 int *irq, int num);
 static void x86_64_pci_release_irq(struct pci_bus_s *bus,
                                    int *irq, int num);
@@ -221,16 +208,18 @@ static int x86_64_pci_read(struct pci_bus_s *bus, unsigned int devfn,
 static int x86_64_pci_read_io(struct pci_bus_s *bus, uintptr_t addr,
                               int size, uint32_t *val)
 {
+  uint16_t portaddr = (uint16_t)addr;
+
   switch (size)
   {
     case 1:
-      *val = readb(addr);
+      *val = (uint32_t)inb(portaddr);
       break;
     case 2:
-      *val = readw(addr);
+      *val = (uint32_t)inw(portaddr);
       break;
     case 4:
-      *val = readl(addr);
+      *val = (uint32_t)inl(portaddr);
       break;
     default:
       *val = 0;
@@ -262,16 +251,18 @@ static int x86_64_pci_read_io(struct pci_bus_s *bus, uintptr_t addr,
 static int x86_64_pci_write_io(struct pci_bus_s *bus, uintptr_t addr,
                                int size, uint32_t val)
 {
+  uint16_t portaddr = (uint16_t)addr;
+
   switch (size)
   {
     case 1:
-      writeb(addr, val);
+      outb((uint8_t)val, portaddr);
       break;
     case 2:
-      writew(addr, val);
+      outw((uint16_t)val, portaddr);
       break;
     case 4:
-      writel(addr, val);
+      outl((uint32_t)val, portaddr);
       break;
     default:
       pcierr("Invalid write size %d\n", size);
@@ -316,22 +307,19 @@ static uintptr_t x86_64_pci_map(struct pci_bus_s *bus, uintptr_t start,
  *  Get interrupt number associated with a given INTx line.
  *
  * Input Parameters:
- *   bus   - Bus that PCI device resides
- *   devfn - The pci device and function number
- *   line  - Activated PCI legacy interrupt line
- *   pin   - Intx pin number
+ *   bus  - Bus that PCI device resides
+ *   line - activated PCI legacy interrupt line
  *
  * Returned Value:
  *   Return interrupt number associated with a given INTx
  *
  ****************************************************************************/
 
-static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint32_t devfn,
-                              uint8_t line, uint8_t pin)
+static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint8_t line)
 {
   UNUSED(bus);
 
-  return up_get_legacy_irq(devfn, line, pin);
+  return IRQ0 + line;
 }
 
 /****************************************************************************
@@ -344,7 +332,6 @@ static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint32_t devfn,
  *   bus - Bus that PCI device resides
  *   irq - allocated vectors array
  *   num - number of vectors to allocate
- *   devfn - The pci device and function number
  *
  * Returned Value:
  *   >0: success, return number of allocated vectors,
@@ -352,10 +339,27 @@ static int x86_64_pci_get_irq(struct pci_bus_s *bus, uint32_t devfn,
  *
  ****************************************************************************/
 
-static int x86_64_pci_alloc_irq(struct pci_bus_s *bus, uint32_t devfn,
-                                int *irq, int num)
+static int x86_64_pci_alloc_irq(struct pci_bus_s *bus, int *irq, int num)
 {
-  return up_alloc_irq_msi(bus->ctrl->busno, devfn, irq, num);
+  int tmp = 0;
+  int i   = 0;
+
+  /* Try to get irq */
+
+  tmp = up_alloc_irq_msi(&num);
+  if (tmp < 0)
+    {
+      return tmp;
+    }
+
+  /* Copy allocated interrupts */
+
+  for (i = 0; i < num; i++)
+    {
+      irq[i] = tmp++;
+    }
+
+  return num;
 }
 
 /****************************************************************************
@@ -400,9 +404,20 @@ static void x86_64_pci_release_irq(struct pci_bus_s *bus, int *irq, int num)
 static int x86_64_pci_connect_irq(struct pci_bus_s *bus, int *irq, int num,
                                   uintptr_t *mar, uint32_t *mdr)
 {
-  UNUSED(bus);
+  UNUSED(num);
 
-  return up_connect_irq(irq, num, mar, mdr);
+  if (mar != NULL)
+    {
+      *mar = X86_64_MAR_DEST |
+        (up_apic_cpu_id() << PCI_MSI_DATA_CPUID_SHIFT);
+    }
+
+  if (mdr != NULL)
+    {
+      *mdr = X86_64_MDR_TYPE | irq[0];
+    }
+
+  return OK;
 }
 
 /****************************************************************************
