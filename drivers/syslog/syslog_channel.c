@@ -70,10 +70,6 @@ static ssize_t syslog_default_write(FAR struct syslog_channel_s *channel,
  * Private Data
  ****************************************************************************/
 
-#if defined(CONFIG_SYSLOG_DEFAULT) && defined(CONFIG_ARCH_LOWPUTC)
-static mutex_t g_lowputs_lock = NXMUTEX_INITIALIZER;
-#endif
-
 #if defined(CONFIG_RAMLOG_SYSLOG)
 static const struct syslog_channel_ops_s g_ramlog_channel_ops =
 {
@@ -240,11 +236,13 @@ static ssize_t syslog_default_write(FAR struct syslog_channel_s *channel,
                                     FAR const char *buffer, size_t buflen)
 {
 #if defined(CONFIG_ARCH_LOWPUTC)
-  nxmutex_lock(&g_lowputs_lock);
+  static mutex_t lock = NXMUTEX_INITIALIZER;
+
+  nxmutex_lock(&lock);
 
   up_nputs(buffer, buflen);
 
-  nxmutex_unlock(&g_lowputs_lock);
+  nxmutex_unlock(&lock);
 #endif
 
   UNUSED(channel);
@@ -272,7 +270,7 @@ static ssize_t syslog_default_write(FAR struct syslog_channel_s *channel,
  *
  ****************************************************************************/
 
-int syslog_channel_register(FAR struct syslog_channel_s *channel)
+int syslog_channel(FAR struct syslog_channel_s *channel)
 {
 #if (CONFIG_SYSLOG_MAX_CHANNELS != 1)
   int i;
@@ -313,7 +311,7 @@ int syslog_channel_register(FAR struct syslog_channel_s *channel)
 }
 
 /****************************************************************************
- * Name: syslog_channel_unregister
+ * Name: syslog_channel_remove
  *
  * Description:
  *   Removes an already configured SYSLOG channel from the list of used
@@ -328,7 +326,7 @@ int syslog_channel_register(FAR struct syslog_channel_s *channel)
  *
  ****************************************************************************/
 
-int syslog_channel_unregister(FAR struct syslog_channel_s *channel)
+int syslog_channel_remove(FAR struct syslog_channel_s *channel)
 {
   int i;
 
