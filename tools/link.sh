@@ -2,8 +2,6 @@
 ############################################################################
 # tools/link.sh
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -84,7 +82,7 @@ ln -s "${src}" "${dest}" || \
 
 # Verify that the link was created
 
-if [ -e ${dest} ] && [ -h ${dest} ]; then
+if [ -e ${dest} ] && [ -h ${desg} ]; then
   # The file exists and is a symlink (i.e. the symlink isn't broken)
 
   exit 0

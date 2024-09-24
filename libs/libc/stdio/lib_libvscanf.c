@@ -189,10 +189,7 @@ doswitch:
     }
 
 doexit:
-
-  /* Default => accept */
-
-  if (v)
+  if (v)                        /* Default => accept */
     {
       for (i = 0; i < 32; i++)  /* Invert all */
         {

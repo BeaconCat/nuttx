@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/pthread/pthread_condwait.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -97,7 +95,7 @@ int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
        * or if the thread is canceled (ECANCELED)
        */
 
-      status = pthread_sem_take(&cond->sem, NULL);
+      status = -nxsem_wait_uninterruptible(&cond->sem);
       if (ret == OK)
         {
           /* Report the first failure that occurs */
