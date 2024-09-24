@@ -56,7 +56,7 @@
  * Public Functions
  ****************************************************************************/
 
-uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
+uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
 {
   struct tcb_s *tcb = this_task();
 
@@ -108,11 +108,6 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
 
       addrenv_switch(NULL);
 #endif
-
-      /* Update scheduler parameters */
-
-      nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
-      nxsched_resume_scheduler(tcb);
 
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting

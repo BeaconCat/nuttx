@@ -139,7 +139,13 @@ int mkdir(const char *pathname, mode_t mode)
        * count of zero.
        */
 
-      inode_lock();
+      ret = inode_lock();
+      if (ret < 0)
+        {
+          errcode = -ret;
+          goto errout_with_search;
+        }
+
       ret = inode_reserve(pathname, mode, &inode);
       inode_unlock();
 
