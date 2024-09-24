@@ -334,6 +334,13 @@ _xtensa_level1_handler:
 	or	a4, a3, a4
 	s32i	a4, a2, (4 * REG_PS)
 
+	/* Set PS.EXCM to 1 */
+
+	movi	a3, PS_EXCM_MASK
+	l32i	a4, a2, (4 * REG_PS)
+	or	a4, a3, a4
+	s32i	a4, a2, (4 * REG_PS)
+
 	/* Restore registers in preparation to return from interrupt */
 
 	call0   _xtensa_context_restore     /* Preserves a2 */
