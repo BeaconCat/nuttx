@@ -207,6 +207,18 @@ FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev)
   return rpmsg ? rpmsg->ops->get_cpuname(rpmsg) : NULL;
 }
 
+int rpmsg_get_tx_buffer_size(FAR struct rpmsg_device *rdev)
+{
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  return rpmsg ? rpmsg->ops->get_tx_buffer_size(rpmsg) : -EINVAL;
+}
+
+int rpmsg_get_rx_buffer_size(FAR struct rpmsg_device *rdev)
+{
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  return rpmsg ? rpmsg->ops->get_rx_buffer_size(rpmsg) : -EINVAL;
+}
+
 int rpmsg_register_callback(FAR void *priv,
                             rpmsg_dev_cb_t device_created,
                             rpmsg_dev_cb_t device_destroy,
@@ -422,7 +434,7 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
 #endif
 
   nxrmutex_lock(&rpmsg->lock);
-  metal_list_for_each_safe(&rpmsg->bind, tmp, node)
+  metal_list_for_each_safe(&rpmsg->bind, node, tmp)
     {
       FAR struct rpmsg_bind_s *bind =
         metal_container_of(node, struct rpmsg_bind_s, node);
