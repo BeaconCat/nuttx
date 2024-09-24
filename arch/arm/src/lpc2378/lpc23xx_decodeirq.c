@@ -56,7 +56,6 @@
 #include "arm_internal.h"
 #include "lpc2378.h"
 #include "lpc23xx_vic.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Public Functions

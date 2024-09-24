@@ -260,14 +260,6 @@ static int pm_close(FAR struct file *filep)
   return OK;
 }
 
-/****************************************************************************
- * Name: pm_read_state
- *
- * Description:
- *   The statistic values about every domain states.
- *
- ****************************************************************************/
-
 static ssize_t pm_read_state(FAR struct file *filep, FAR char *buffer,
                              size_t buflen)
 {
@@ -434,14 +426,6 @@ static ssize_t pm_read_wakelock(FAR struct file *filep, FAR char *buffer,
   filep->f_pos += totalsize;
   return totalsize;
 }
-
-/****************************************************************************
- * Name: pm_read_preparefail
- *
- * Description:
- *   The statistic values about prepare callback failed.
- *
- ****************************************************************************/
 
 static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
                                    size_t buflen)
