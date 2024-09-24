@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/tcp/tcp_conn.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- *
  *   Copyright (C) 2007-2011, 2013-2015, 2018 Gregory Nutt. All rights
  *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
