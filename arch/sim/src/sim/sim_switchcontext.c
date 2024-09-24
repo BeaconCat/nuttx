@@ -76,10 +76,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       nxsched_resume_scheduler(tcb);
 
-      /* Restore the cpu lock */
-
-      restore_critical_section(tcb, this_cpu());
-
       /* Then switch contexts */
 
       sim_restorestate(tcb->xcp.regs);
