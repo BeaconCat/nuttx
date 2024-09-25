@@ -108,7 +108,7 @@ static int f2_frame_rx_fail(FAR bcmf_gspi_dev_t *gbus, bool retry)
  ****************************************************************************/
 
 int process_f2_frame_header(FAR bcmf_interface_dev_t *gbus,
-                            FAR f2_frame_header_t    *header)
+                            f2_frame_header_t        *header)
 {
   if (header->data_offset < sizeof(f2_frame_header_t)
       || header->data_offset > header->size)
@@ -143,14 +143,16 @@ int process_f2_frame_header(FAR bcmf_interface_dev_t *gbus,
  *    OK on success, negated error code on failure.
  ****************************************************************************/
 
-int bcmf_gspi_read_f2_frame(FAR struct bcmf_dev_s *priv, int frame_length)
+int bcmf_gspi_read_f2_frame(FAR struct bcmf_dev_s *priv,
+                            int                    frame_length)
 {
-  FAR bcmf_gspi_dev_t        *gbus = (FAR bcmf_gspi_dev_t *)priv->bus;
-  FAR gspi_dev_t             *gspi = gbus->gspi;
-  FAR bcmf_interface_frame_t *iframe;
-  FAR f2_frame_header_t      *header;
-  int                         ret;
-  uint16_t                    checksum;
+  FAR bcmf_gspi_dev_t *gbus = (FAR bcmf_gspi_dev_t *)priv->bus;
+  FAR gspi_dev_t      *gspi = gbus->gspi;
+
+  bcmf_interface_frame_t   *iframe;
+  f2_frame_header_t        *header;
+  int                       ret;
+  uint16_t                  checksum;
 
   /* Request free frame buffer */
 
@@ -184,7 +186,7 @@ int bcmf_gspi_read_f2_frame(FAR struct bcmf_dev_s *priv, int frame_length)
                    gspi_f2_dma,
                    0,
                    frame_length,
-                   (FAR uint32_t *)iframe->data);
+                   (uint32_t *) iframe->data);
 
   if (ret != OK)
     {
@@ -193,7 +195,7 @@ int bcmf_gspi_read_f2_frame(FAR struct bcmf_dev_s *priv, int frame_length)
       goto exit_abort;
     }
 
-  header = (FAR f2_frame_header_t *)iframe->data;
+  header = (f2_frame_header_t *)iframe->data;
 
   if (header->size == 0)
     {
@@ -209,7 +211,7 @@ int bcmf_gspi_read_f2_frame(FAR struct bcmf_dev_s *priv, int frame_length)
             header->size,
             header->checksum);
 
-      bcmf_hexdump((FAR uint8_t *)header, MIN(header->size, 64), 0);
+      bcmf_hexdump((uint8_t *)header, MIN(header->size, 64), 0);
 
       f2_frame_rx_fail(gbus, false);
       return -EINVAL;
@@ -308,12 +310,12 @@ exit_free_frame:
 
 int bcmf_gspi_send_f2_frame(FAR struct bcmf_dev_s *priv)
 {
-  FAR bcmf_gspi_dev_t        *gbus = (FAR bcmf_gspi_dev_t *)priv->bus;
-  FAR gspi_dev_t             *gspi = gbus->gspi;
-  FAR f2_frame_header_t      *header;
-  FAR bcmf_interface_frame_t *iframe;
-  int                         ret;
-  bool                        is_txframe;
+  FAR bcmf_gspi_dev_t      *gbus = (FAR bcmf_gspi_dev_t *)priv->bus;
+  FAR gspi_dev_t           *gspi = gbus->gspi;
+  f2_frame_header_t       *header;
+  bcmf_interface_frame_t  *iframe;
+  int                      ret;
+  bool                     is_txframe;
 
   if (list_is_empty(&gbus->tx_queue))
     {
@@ -343,7 +345,7 @@ int bcmf_gspi_send_f2_frame(FAR struct bcmf_dev_s *priv)
 
   is_txframe = iframe->tx;
 
-  header = (FAR f2_frame_header_t *)iframe->header.base;
+  header = (f2_frame_header_t *)iframe->header.base;
 
   /* Set frame sequence id */
 
@@ -376,7 +378,7 @@ int bcmf_gspi_send_f2_frame(FAR struct bcmf_dev_s *priv)
                     gspi_f2_dma,
                     0,
                     iframe->header.len,
-                    (FAR uint32_t *)iframe->header.base);
+                    (FAR uint32_t *) iframe->header.base);
 
   /* Free frame buffer */
 
