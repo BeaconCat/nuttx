@@ -103,8 +103,7 @@ static void z180_sigsetup(FAR struct tcb_s *tcb, FAR chipreg_t *regs)
 
 void up_schedule_sigaction(FAR struct tcb_s *tcb)
 {
-  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
-        this_task(), up_current_regs());
+  _info("tcb=%p\n", tcb);
 
   /* First, handle some special cases when the signal is being delivered
    * to the currently executing task.
@@ -120,7 +119,7 @@ void up_schedule_sigaction(FAR struct tcb_s *tcb)
         {
           /* In this case just deliver the signal now. */
 
-          (tcb->sigdeliver)(tcb);
+          ((sig_deliver_t)tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
