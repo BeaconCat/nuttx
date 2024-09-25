@@ -27,7 +27,6 @@
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/sensors/sensor.h>
 
 /****************************************************************************
@@ -228,7 +227,7 @@ static int usensor_get_info(FAR struct sensor_lowerhalf_s *lower,
 {
   FAR struct usensor_lowerhalf_s *ulower = container_of(lower,
                                            struct usensor_lowerhalf_s,
-                                           node);
+                                           driver);
 
   *info = ulower->info;
   return 0;
@@ -240,7 +239,7 @@ static int usensor_control(FAR struct sensor_lowerhalf_s *lower,
 {
   FAR struct usensor_lowerhalf_s *ulower = container_of(lower,
                                            struct usensor_lowerhalf_s,
-                                           node);
+                                           driver);
 
   if (cmd == SNIOC_SET_INFO)
     {

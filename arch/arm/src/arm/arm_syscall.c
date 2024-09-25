@@ -95,7 +95,7 @@ uint32_t *arm_syscall(uint32_t *regs)
            * set will determine the restored context.
            */
 
-          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
+          tcb->xcp.regs = regs[REG_R1];
           DEBUGASSERT(up_current_regs());
         }
         break;
@@ -152,6 +152,12 @@ uint32_t *arm_syscall(uint32_t *regs)
 
       cpu = this_cpu();
       tcb = current_task(cpu);
+
+      /* Update scheduler parameters */
+
+      nxsched_suspend_scheduler(g_running_tasks[cpu]);
+      nxsched_resume_scheduler(tcb);
+
       g_running_tasks[cpu] = tcb;
 
       /* Restore the cpu lock */
