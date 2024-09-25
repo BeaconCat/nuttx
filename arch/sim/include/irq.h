@@ -51,6 +51,7 @@
 
 struct xcptcontext
 {
+  void *sigdeliver; /* Actual type is sig_deliver_t */
   jmp_buf regs;
 };
 
@@ -137,8 +138,9 @@ static inline_function void up_set_current_regs(xcpt_reg_t *regs)
 static inline uintptr_t up_getsp(void)
 {
 #ifdef _MSC_VER
-  uintptr_t tmp;
-  return (uintptr_t)&tmp;
+  uintptr_t regval;
+  __asm mov regval, esp;
+  return regval;
 #else
   return (uintptr_t)__builtin_frame_address(0);
 #endif
@@ -154,7 +156,7 @@ static inline uintptr_t up_getsp(void)
  ****************************************************************************/
 
 noinstrument_function
-static inline_function bool up_interrupt_context(void)
+static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
@@ -168,19 +170,6 @@ static inline_function bool up_interrupt_context(void)
 
   return ret;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- *
- * Description:
- *   Get the PC value, The interrupted context PC register cannot be
- *   correctly obtained in sim It will return the PC of the interrupt
- *   handler function, normally it will return sim_doirq
- *
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((xcpt_reg_t *)((regs) ? (regs) : up_current_regs()))[JB_PC])
 
 #undef EXTERN
 #ifdef __cplusplus

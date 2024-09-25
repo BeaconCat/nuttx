@@ -37,7 +37,6 @@
 #include <sys/signalfd.h>
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -90,7 +89,7 @@ static struct inode g_signalfd_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  ATOMIC_VAR_INIT(1),     /* i_crefs */
+  1,                      /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_signalfd_fileops   /* u */
@@ -155,7 +154,7 @@ static int signalfd_file_close(FAR struct file *filep)
 
   nxmutex_unlock(&dev->mutex);
   nxmutex_destroy(&dev->mutex);
-  fs_heap_free(dev);
+  kmm_free(dev);
 
   return OK;
 }
@@ -341,7 +340,7 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
 
   if (fd == -1)
     {
-      dev = fs_heap_zalloc(sizeof(*dev));
+      dev = kmm_zalloc(sizeof(*dev));
       if (dev == NULL)
         {
           ret = ENOMEM;
@@ -407,7 +406,7 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
 
 errout_with_dev:
   nxmutex_destroy(&dev->mutex);
-  fs_heap_free(dev);
+  kmm_free(dev);
 
 errout:
   set_errno(ret);

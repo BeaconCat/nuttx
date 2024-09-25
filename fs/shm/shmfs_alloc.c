@@ -22,7 +22,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdbool.h>
+
+#include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/pgalloc.h>
 
@@ -63,7 +67,7 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
    * memory in user heap
    */
 
-  object = fs_heap_zalloc(sizeof(struct shmfs_object_s));
+  object = kmm_zalloc(sizeof(struct shmfs_object_s));
   if (object)
     {
       object->paddr = kumm_zalloc(length);
@@ -83,7 +87,7 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
   FAR void **pages;
   size_t n_pages = MM_NPAGES(length);
 
-  object = fs_heap_zalloc(sizeof(struct shmfs_object_s) +
+  object = kmm_zalloc(sizeof(struct shmfs_object_s) +
                       (n_pages - 1) * sizeof(object->paddr));
 
   if (object)
@@ -95,6 +99,12 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
           if (!pages[i])
             {
               break;
+            }
+          else
+            {
+              /* Clear the page memory (requirement for truncate) */
+
+              up_addrenv_page_wipe((uintptr_t)pages[i]);
             }
         }
     }
