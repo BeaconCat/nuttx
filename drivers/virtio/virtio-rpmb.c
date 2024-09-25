@@ -211,7 +211,7 @@ static int virtio_rpmb_init(FAR struct virtio_rpmb_priv_s *priv,
 
   vqname[0]   = "virtio_rpmb_vq";
   callback[0] = virtio_rpmb_done;
-  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback, NULL);
+  ret = virtio_create_virtqueues(vdev, 0, 1, vqname, callback);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);

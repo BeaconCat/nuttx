@@ -33,7 +33,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
 #include "wdog/wdog.h"
@@ -95,9 +94,6 @@ int wd_cancel_irq(FAR struct wdog_s *wdog)
     {
       return -EINVAL;
     }
-
-  sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
-                  (FAR void *)(uintptr_t)wdog->expired);
 
   /* Prohibit timer interactions with the timer queue until the
    * cancellation is complete
