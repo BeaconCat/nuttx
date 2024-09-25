@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/task/task_exit.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -22,11 +24,12 @@
  * Included Files
  ****************************************************************************/
 
-#include  <nuttx/config.h>
+#include <nuttx/config.h>
 
-#include  <sched.h>
+#include <sched.h>
+#include <debug.h>
 
-#include  "sched/sched.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_SMP
 #  include "irq/irq.h"
@@ -88,6 +91,9 @@ int nxtask_exit(void)
   dtcb = this_task();
 #endif
 
+  sinfo("%s pid=%d,TCB=%p\n", get_task_name(dtcb),
+        dtcb->pid, dtcb);
+
   /* Update scheduler parameters */
 
   nxsched_suspend_scheduler(dtcb);
@@ -100,7 +106,7 @@ int nxtask_exit(void)
    * ready-to-run with state == TSTATE_TASK_RUNNING
    */
 
-  nxsched_remove_running(dtcb);
+  nxsched_remove_self(dtcb);
 
   /* Get the new task at the head of the ready to run list */
 
@@ -127,7 +133,22 @@ int nxtask_exit(void)
 
   rtcb->lockcount++;
 
+#ifdef CONFIG_SMP
+  /* Make sure that the system knows about the locked state */
+
+  g_cpu_lockset |= (1 << cpu);
+#endif
+
   rtcb->task_state = TSTATE_TASK_READYTORUN;
+
+  /* Move the TCB to the specified blocked task list and delete it.  Calling
+   * nxtask_terminate with non-blocking true will suppress atexit() and
+   * on-exit() calls and will cause buffered I/O to fail to be flushed.  The
+   * former is required _exit() behavior; the latter is optional _exit()
+   * behavior.
+   */
+
+  nxsched_add_blocked(dtcb, TSTATE_TASK_INACTIVE);
 
 #ifdef CONFIG_SMP
   /* NOTE:
@@ -140,8 +161,7 @@ int nxtask_exit(void)
   rtcb->irqcount++;
 #endif
 
-  dtcb->task_state = TSTATE_TASK_INACTIVE;
-  ret = nxsched_release_tcb(dtcb, dtcb->flags & TCB_FLAG_TTYPE_MASK);
+  ret = nxtask_terminate(dtcb->pid);
 
 #ifdef CONFIG_SMP
   rtcb->irqcount--;
@@ -152,6 +172,15 @@ int nxtask_exit(void)
   /* Decrement the lockcount on rctb. */
 
   rtcb->lockcount--;
+
+#ifdef CONFIG_SMP
+  if (rtcb->lockcount == 0)
+    {
+      /* Make sure that the system knows about the unlocked state */
+
+      g_cpu_lockset &= ~(1 << cpu);
+    }
+#endif
 
   return ret;
 }

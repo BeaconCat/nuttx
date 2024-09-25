@@ -26,7 +26,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/sensors/gnss.h>
 
@@ -591,8 +591,15 @@ static void gnss_parse(FAR struct gnss_upperhalf_s *upper,
         {
           if (*buffer != '\r' && *buffer != '\n')
             {
-              upper->parsebuffer[upper->parsenext++] = *buffer;
-              continue;
+              if (upper->parsenext + 1 < GNSS_PARSE_BUFFERSIZE)
+                {
+                  upper->parsebuffer[upper->parsenext++] = *buffer;
+                  continue;
+                }
+
+              upper->parsebuffer[upper->parsenext] = '\0';
+              snerr("NMEA buffer overflow, invalid statement:%s\n",
+                    upper->parsebuffer);
             }
 
           upper->parsebuffer[upper->parsenext] = '\0';
