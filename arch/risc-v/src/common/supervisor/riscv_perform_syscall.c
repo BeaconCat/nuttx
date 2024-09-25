@@ -35,11 +35,10 @@
  * Public Functions
  ****************************************************************************/
 
-void *riscv_perform_syscall(uintreg_t *regs)
+void *riscv_perform_syscall(uintptr_t *regs)
 {
   struct tcb_s *tcb;
   int cpu;
-  int ret;
 
   /* Set up the interrupt register set needed by swint() */
 
@@ -47,9 +46,10 @@ void *riscv_perform_syscall(uintreg_t *regs)
 
   /* Run the system call handler (swint) */
 
-  ret = riscv_swint(0, regs, NULL);
+  riscv_swint(0, regs, NULL);
+  tcb = this_task();
 
-  if (ret == SWINT_CONTEXT_SWITCH)
+  if (regs != tcb->xcp.regs)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -61,13 +61,10 @@ void *riscv_perform_syscall(uintreg_t *regs)
       addrenv_switch(NULL);
 #endif
 
-      /* Record the new "running" task.  g_running_tasks[] is only used by
-       * assertion logic for reporting crashes.
-       */
+      /* Restore the cpu lock */
 
       cpu = this_cpu();
-      tcb = current_task(cpu);
-      g_running_tasks[cpu] = tcb;
+      restore_critical_section(tcb, cpu);
 
       /* If a context switch occurred while processing the interrupt then
        * current_regs may have change value.  If we return any value

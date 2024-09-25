@@ -74,7 +74,7 @@
 #define BBSRAM_USED            ((4*BBSRAM_HEADER_SIZE)+ \
                                 (BBSRAM_SIZE_FN0+BBSRAM_SIZE_FN1+ \
                                  BBSRAM_SIZE_FN2))
-#define BBSRAM_REAMINING       (STM32_BBSRAM_SIZE-BBSRAM_USED)
+#define BBSRAM_REAMINING       (STM32F4_BBSRAM_SIZE-BBSRAM_USED)
 #if CONFIG_ARCH_INTERRUPTSTACK <= 3
 #  define BBSRAM_NUMBER_STACKS 1
 #else
@@ -136,7 +136,7 @@ typedef struct
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   _stack_t interrupt;
 #endif
-} stacks_t;
+} stack_t;
 
 /* Not Used for reference only */
 
@@ -232,18 +232,16 @@ typedef enum
 
 typedef struct
 {
-  fault_flags_t flags;                  /* What is in the dump */
-  uintptr_t     current_regs;           /* Used to validate the dump */
-  int           lineno;                 /* __LINE__ to up_assert */
-  pid_t         pid;                    /* Process ID */
-  uint32_t      regs[XCPTCONTEXT_REGS]; /* Interrupt register save area */
-  stacks_t      stacks;                 /* Stack info */
-#if CONFIG_TASK_NAME_SIZE > 0
-  char          name[CONFIG_TASK_NAME_SIZE + 1]; /* Task name (with NULL
-                                                  * terminator) */
-#endif
-  char          filename[MAX_FILE_PATH_LENGTH];  /* the Last of chars in
-                                                  * __FILE__ to up_assert */
+  fault_flags_t flags;                            /* What is in the dump */
+  uintptr_t     current_regs;                     /* Used to validate the dump */
+  int           lineno;                           /* __LINE__ to up_assert */
+  pid_t         pid;                              /* Process ID */
+  uint32_t      regs[XCPTCONTEXT_REGS];           /* Interrupt register save area */
+  stack_t       stacks;                           /* Stack info */
+  char          name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NULL
+                                                   * terminator) */
+  char          filename[MAX_FILE_PATH_LENGTH];   /* the Last of chars in
+                                                   * __FILE__ to up_assert */
 } info_t;
 
 typedef struct
@@ -265,7 +263,7 @@ typedef struct
  * Private Data
  ****************************************************************************/
 
-static uint8_t g_sdata[STM32_BBSRAM_SIZE];
+static uint8_t g_sdata[STM32F4_BBSRAM_SIZE];
 
 /****************************************************************************
  * Private Functions
@@ -288,7 +286,7 @@ static int hardfault_get_desc(struct bbsramd_s *desc)
     }
   else
     {
-      ret = file_ioctl(&filestruct, STM32_BBSRAM_GETDESC_IOCTL,
+      ret = file_ioctl(&filestruct, STM32F4_BBSRAM_GETDESC_IOCTL,
                        (unsigned long)((uintptr_t)desc));
       file_close(&filestruct);
 
@@ -420,9 +418,7 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
 
   /* Save Context */
 
-#if CONFIG_TASK_NAME_SIZE > 0
-  strlcpy(pdump->info.name, tcb->name, sizeof(pdump->info.name));
-#endif
+  strlcpy(pdump->info.name, get_task_name(tcb), sizeof(pdump->info.name));
 
   pdump->info.pid = tcb->pid;
 
