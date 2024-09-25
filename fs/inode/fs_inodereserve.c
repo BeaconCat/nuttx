@@ -48,7 +48,7 @@ static ino_t g_ino;
 
 static int inode_namelen(FAR const char *name)
 {
-  FAR const char *tmp = name;
+  const char *tmp = name;
   while (*tmp && *tmp != '/')
     {
       tmp++;
@@ -61,7 +61,7 @@ static int inode_namelen(FAR const char *name)
  * Name: inode_namecpy
  ****************************************************************************/
 
-static void inode_namecpy(FAR char *dest, FAR const char *src)
+static void inode_namecpy(char *dest, const char *src)
 {
   while (*src && *src != '/')
     {
