@@ -26,24 +26,10 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/arch.h>
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
-
-/****************************************************************************
- * Name: pci_dev_register
- *
- * Description:
- *   Create an pci dev driver.
- *
- * Returned Value:
- *   Zero (OK) on success; A negated errno value on failure.
- *
- ****************************************************************************/
-
-int pci_dev_register(void);
 
 /****************************************************************************
  * Name: pci_ivshmem_register
@@ -69,42 +55,6 @@ int pci_ivshmem_register(void);
 int pci_register_uio_ivshmem_driver(void);
 #endif
 
-/****************************************************************************
- * Name: pci_register_qemu_test_driver
- *
- * Description:
- *   Register qemu test device pci driver
- *
- ****************************************************************************/
-
-#ifdef CONFIG_PCI_QEMU_TEST
-int pci_register_qemu_test_driver(void);
-#endif
-
-/****************************************************************************
- * Name: pci_register_qemu_edu_driver
- *
- * Description:
- *   Register qemu edu device pci driver
- *
- ****************************************************************************/
-
-#ifdef CONFIG_PCI_QEMU_EDU
-int pci_register_qemu_edu_driver(void);
-#endif
-
-/****************************************************************************
- * Name: pci_register_ep_test_driver
- *
- * Description:
- *   Register endpoint test device pci driver
- *
- ****************************************************************************/
-
-#ifdef CONFIG_PCI_EP_TEST
-int pci_register_ep_test_driver(void);
-#endif
-
 #ifdef CONFIG_PCI_QEMU_EPC
 /****************************************************************************
  * Name: pci_register_qemu_epc_driver
@@ -127,6 +77,18 @@ int pci_register_qemu_epc_driver(void);
 
 #ifdef CONFIG_PCI_EPF_TEST
 int pci_register_epf_test_driver(void);
+#endif
+
+/****************************************************************************
+ * Name: pci_register_ep_test_driver
+ *
+ * Description:
+ *   Register endpoint test device pci driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI_EP_TEST
+int pci_register_ep_test_driver(void);
 #endif
 
 #endif /* __DRIVERS_PCI_PCI_DRIVERS_H */

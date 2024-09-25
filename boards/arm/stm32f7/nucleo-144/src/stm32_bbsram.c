@@ -136,7 +136,7 @@ typedef struct
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   _stack_t interrupt;
 #endif
-} stack_t;
+} stacks_t;
 
 /* Not Used for reference only */
 
@@ -232,16 +232,18 @@ typedef enum
 
 typedef struct
 {
-  fault_flags_t flags;                            /* What is in the dump */
-  uintptr_t     current_regs;                     /* Used to validate the dump */
-  int           lineno;                           /* __LINE__ to up_assert */
-  int           pid;                              /* Process ID */
-  uint32_t      regs[XCPTCONTEXT_REGS];           /* Interrupt register save area */
-  stack_t       stacks;                           /* Stack info */
-  char          name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NULL
-                                                   * terminator) */
-  char          filename[MAX_FILE_PATH_LENGTH];   /* the Last of chars in
-                                                   * __FILE__ to up_assert */
+  fault_flags_t flags;                  /* What is in the dump */
+  uintptr_t     current_regs;           /* Used to validate the dump */
+  int           lineno;                 /* __LINE__ to up_assert */
+  int           pid;                    /* Process ID */
+  uint32_t      regs[XCPTCONTEXT_REGS]; /* Interrupt register save area */
+  stacks_t      stacks;                 /* Stack info */
+#if CONFIG_TASK_NAME_SIZE > 0
+  char          name[CONFIG_TASK_NAME_SIZE + 1]; /* Task name (with NULL
+                                                  * terminator) */
+#endif
+  char          filename[MAX_FILE_PATH_LENGTH];  /* the Last of chars in
+                                                  * __FILE__ to up_assert */
 } info_t;
 
 typedef struct
@@ -418,7 +420,9 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
 
   /* Save Context */
 
-  strlcpy(pdump->info.name, get_task_name(tcb), sizeof(pdump->info.name));
+#if CONFIG_TASK_NAME_SIZE > 0
+  strlcpy(pdump->info.name, tcb->name, sizeof(pdump->info.name));
+#endif
 
   pdump->info.pid = tcb->pid;
 

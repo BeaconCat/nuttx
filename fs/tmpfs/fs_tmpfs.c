@@ -33,7 +33,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -1825,13 +1824,6 @@ static int tmpfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           return ret;
         }
-    }
-  else if (cmd == FIOC_XIPBASE)
-    {
-      FAR uintptr_t *ptr = (FAR uintptr_t *)arg;
-
-      *ptr = (uintptr_t)tfo->tfo_data;
-      return OK;
     }
 
   return ret;

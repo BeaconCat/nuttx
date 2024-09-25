@@ -34,7 +34,6 @@
 #include <nuttx/mtd/mtd.h>
 
 #include "nxffs.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -62,7 +61,7 @@ struct nxffs_blkinfo_s
 
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_DEBUG_FS)
 static const char g_hdrformat[] = "  BLOCK:OFFS  TYPE  STATE   LENGTH\n";
-static const char g_format[]    = "  %5d:%-5d %s %s %5d\n";
+static const char g_format[]    = "  %5"PRIi32":%-5d %s %s %5"PRIu32"\n";
 #endif
 
 /****************************************************************************
@@ -264,7 +263,8 @@ static inline ssize_t nxffs_analyzedata(FAR struct nxffs_blkinfo_s *blkinfo,
   if (crc != ecrc)
     {
       syslog(LOG_NOTICE, g_format,
-             blkinfo->block, offset, "DATA ", "CRC BAD", datlen);
+             blkinfo->block, offset, "DATA ", "CRC BAD",
+             (long unsigned int)datlen);
       return ERROR;
     }
 
@@ -273,7 +273,8 @@ static inline ssize_t nxffs_analyzedata(FAR struct nxffs_blkinfo_s *blkinfo,
   if (blkinfo->verbose)
     {
       syslog(LOG_NOTICE, g_format,
-             blkinfo->block, offset, "DATA ", "OK     ", datlen);
+             blkinfo->block, offset, "DATA ", "OK     ",
+             (long unsigned int)datlen);
     }
 
   return SIZEOF_NXFFS_DATA_HDR + datlen;
@@ -442,7 +443,7 @@ int nxffs_dump(FAR struct mtd_dev_s *mtd, bool verbose)
 
   /* Allocate a buffer to hold one block */
 
-  blkinfo.buffer = fs_heap_malloc(blkinfo.geo.blocksize);
+  blkinfo.buffer = kmm_malloc(blkinfo.geo.blocksize);
   if (!blkinfo.buffer)
     {
       ferr("ERROR: Failed to allocate block cache\n");
@@ -469,7 +470,7 @@ int nxffs_dump(FAR struct mtd_dev_s *mtd, bool verbose)
           /* Read errors are fatal */
 
           ferr("ERROR: Failed to read block %d\n", blkinfo.block);
-          fs_heap_free(blkinfo.buffer);
+          kmm_free(blkinfo.buffer);
           return ret;
 #else
           /* A read error is probably fatal on all media but NAND.
@@ -490,9 +491,9 @@ int nxffs_dump(FAR struct mtd_dev_s *mtd, bool verbose)
         }
     }
 
-  syslog(LOG_NOTICE, "%d blocks analyzed\n", blkinfo.nblocks);
+  syslog(LOG_NOTICE, "%" PRIi32 " blocks analyzed\n", blkinfo.nblocks);
 
-  fs_heap_free(blkinfo.buffer);
+  kmm_free(blkinfo.buffer);
   return OK;
 
 #else
