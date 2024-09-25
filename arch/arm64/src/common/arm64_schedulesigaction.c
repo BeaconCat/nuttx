@@ -39,33 +39,42 @@
 #include "arm64_fatal.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
-static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
+void arm64_init_signal_process(struct tcb_s *tcb, struct regs_context *regs)
 {
 /****************************************************************************
  * if regs != NULL We are interrupting the context,
  * we should modify the regs
  ****************************************************************************/
 
-  regs = (regs != NULL) ? regs : tcb->xcp.regs;
+  struct regs_context  *pctx = (regs != NULL) ? regs :
+  (struct regs_context *)tcb->xcp.regs;
+  struct regs_context  *psigctx;
+  char *stack_ptr    = (char *)pctx->sp_elx - sizeof(struct regs_context);
 
-  tcb->xcp.regs = (uint64_t *)(regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2);
-  memset(tcb->xcp.regs, 0, XCPTCONTEXT_SIZE);
-
-  tcb->xcp.regs[REG_ELR]    = (uint64_t)arm64_sigdeliver;
+  psigctx            = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
+  memset(psigctx, 0, sizeof(struct regs_context));
+  psigctx->elr       = (uint64_t)arm64_sigdeliver;
 
   /* Keep using SP_EL1 */
 
-  tcb->xcp.regs[REG_SPSR]   = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-  tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
-  tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
-}
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  psigctx->spsr      = SPSR_MODE_EL3H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+#else
+  psigctx->spsr      = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+#endif
+  psigctx->sp_elx    = (uint64_t)stack_ptr;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  psigctx->sp_el0    = (uint64_t)pctx->sp_el0;
+#else
+  psigctx->sp_el0    = (uint64_t)psigctx;
+#endif
+  psigctx->exe_depth = 1;
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+  tcb->xcp.regs      = (uint64_t *)psigctx;
+}
 
 /****************************************************************************
  * Name: up_schedule_sigaction
@@ -105,14 +114,12 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
 
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  sinfo("tcb=%p\n", tcb);
-
-  /* First, handle some special cases when the signal is being delivered
-   * to task that is currently executing on any CPU.
-   */
-
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb, this_task(),
         this_task()->xcp.regs);
+
+  /* First, handle some special cases when the signal is
+   * being delivered to the currently executing task.
+   */
 
   if (tcb == this_task() && !up_interrupt_context())
     {
@@ -120,7 +127,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        * REVISIT:  Signal handler will run in a critical section!
        */
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
+      (tcb->sigdeliver)(tcb);
       tcb->sigdeliver = NULL;
     }
   else

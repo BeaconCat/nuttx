@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/mempool/mempool.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,20 +25,22 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
-#include <execinfo.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#undef  ALIGN_UP
+#define ALIGN_UP(x, a) (((x) + ((a) - 1)) & (~((a) - 1)))
 
 #if CONFIG_MM_BACKTRACE >= 0
 #define MEMPOOL_MAGIC_FREE  0xAAAAAAAA
@@ -172,8 +176,10 @@ static void mempool_info_task_callback(FAR struct mempool_s *pool,
       return;
     }
 
-  if ((MM_DUMP_ASSIGN(task, buf) || MM_DUMP_ALLOC(task, buf) ||
-       MM_DUMP_LEAK(task, buf)) && MM_DUMP_SEQNO(task, buf))
+  if ((MM_DUMP_ASSIGN(task->pid, buf->pid) ||
+       MM_DUMP_ALLOC(task->pid, buf->pid) ||
+       MM_DUMP_LEAK(task->pid, buf->pid)) &&
+      buf->seqno >= task->seqmin && buf->seqno <= task->seqmax)
     {
       info->aordblks++;
       info->uordblks += blocksize;
@@ -192,19 +198,28 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
       return;
     }
 
-  if ((MM_DUMP_ASSIGN(dump, buf) || MM_DUMP_ALLOC(dump, buf) ||
-       MM_DUMP_LEAK(dump, buf)) && MM_DUMP_SEQNO(dump, buf))
+  if ((MM_DUMP_ASSIGN(dump->pid, buf->pid) ||
+       MM_DUMP_ALLOC(dump->pid, buf->pid) ||
+       MM_DUMP_LEAK(dump->pid, buf->pid)) &&
+      buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
     {
-#  if CONFIG_MM_BACKTRACE > 0
-      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
+      char tmp[CONFIG_MM_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
 
-      backtrace_format(tmp, sizeof(tmp), buf->backtrace,
-                       CONFIG_MM_BACKTRACE);
-#  else
-      char *tmp = "";
+#  if CONFIG_MM_BACKTRACE > 0
+      FAR const char *format = " %0*p";
+      int i;
+
+      for (i = 0; i < CONFIG_MM_BACKTRACE &&
+                      buf->backtrace[i]; i++)
+        {
+          snprintf(tmp + i * BACKTRACE_PTR_FMT_WIDTH,
+                   sizeof(tmp) - i * BACKTRACE_PTR_FMT_WIDTH,
+                   format, BACKTRACE_PTR_FMT_WIDTH - 1,
+                   buf->backtrace[i]);
+        }
 #  endif
 
-      syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
+      syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
              buf->pid, blocksize, buf->seqno,
              BACKTRACE_PTR_FMT_WIDTH,
              ((FAR char *)buf - pool->blocksize), tmp);
@@ -310,8 +325,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   mempool_procfs_register(&pool->procfs, name);
 #  ifdef CONFIG_MM_BACKTRACE_DEFAULT
   pool->procfs.backtrace = true;
-#  elif CONFIG_MM_BACKTRACE > 0
-  pool->procfs.backtrace = false;
 #  endif
 #endif
 
@@ -351,7 +364,7 @@ retry:
           if (blk == NULL)
             {
               spin_unlock_irqrestore(&pool->lock, flags);
-              return NULL;
+              return blk;
             }
         }
       else
@@ -392,7 +405,6 @@ retry:
     }
 
   pool->nalloc++;
-
   spin_unlock_irqrestore(&pool->lock, flags);
   blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -411,7 +423,7 @@ retry:
  * Name: mempool_release
  *
  * Description:
- *   Release an memory block to the pool.
+ *   Release a memory block to the pool.
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.

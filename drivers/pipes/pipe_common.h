@@ -27,7 +27,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/mutex.h>
-#include <nuttx/circbuf.h>
+#include <nuttx/mm/circbuf.h>
 #include <sys/types.h>
 
 #include <stdint.h>
@@ -134,7 +134,7 @@ struct pipe_dev_s
    * retained in the f_priv field of the 'struct file'.
    */
 
-  struct pollfd *d_fds[CONFIG_DEV_PIPE_NPOLLWAITERS];
+  FAR struct pollfd *d_fds[CONFIG_DEV_PIPE_NPOLLWAITERS];
 };
 
 /****************************************************************************
