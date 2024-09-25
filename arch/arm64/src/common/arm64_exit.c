@@ -57,8 +57,16 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = this_task();
   UNUSED(status);
+
+  /* Make sure that we are in a critical section with local interrupts.
+   * The IRQ state will be restored when the next task is started.
+   */
+
+  enter_critical_section();
+
+  /* Destroy the task at the head of the ready to run list. */
 
   nxtask_exit();
 
@@ -68,9 +76,11 @@ void up_exit(int status)
 
   tcb = this_task();
 
-  /* Scheduler parameters will update inside syscall */
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
+   * NOTE: the API also adjusts the global IRQ control for SMP
+   */
 
-  g_running_tasks[this_cpu()] = NULL;
+  nxsched_resume_scheduler(tcb);
 
   /* Then switch contexts */
 

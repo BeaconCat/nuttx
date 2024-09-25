@@ -1,6 +1,7 @@
 /****************************************************************************
  * net/devif/ipv4_input.c
- * Device driver IPv4 packet receipt interface
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  *   Copyright (C) 2007-2009, 2013-2015, 2018-2019 Gregory Nutt. All rights
  *     reserved.
@@ -501,6 +502,12 @@ int ipv4_input(FAR struct net_driver_s *dev)
 {
   FAR uint8_t *buf;
   int ret;
+
+  /* Store reception timestamp if enabled and not provided by hardware. */
+
+#if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
+  clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
+#endif
 
   if (dev->d_iob != NULL)
     {

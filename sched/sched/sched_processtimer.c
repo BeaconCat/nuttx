@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_processtimer.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -179,6 +181,14 @@ void nxsched_process_timer(void)
   /* Increment the system time (if in the link) */
 
   clock_timer();
+
+#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
+  /* Perform CPU load measurements (before any timer-initiated context
+   * switches can occur)
+   */
+
+  nxsched_process_cpuload();
+#endif
 
   /* Check if the currently executing task has exceeded its
    * timeslice.
