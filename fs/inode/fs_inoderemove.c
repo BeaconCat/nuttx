@@ -123,18 +123,18 @@ static FAR struct inode *inode_unlink(FAR const char *path)
 
 int inode_remove(FAR const char *path)
 {
-  FAR struct inode *node;
+  FAR struct inode *inode;
 
   /* Find the inode and unlink it from the in-memory inode tree */
 
-  node = inode_unlink(path);
-  if (node)
+  inode = inode_unlink(path);
+  if (inode)
     {
       /* Found it! But we cannot delete the inode if there are references
        * to it
        */
 
-      if (atomic_load(&node->i_crefs))
+      if (atomic_load(&inode->i_crefs))
         {
           return -EBUSY;
         }
@@ -145,8 +145,8 @@ int inode_remove(FAR const char *path)
            * NULL.
            */
 
-          DEBUGASSERT(node->i_peer == NULL);
-          inode_free(node);
+          DEBUGASSERT(inode->i_peer == NULL);
+          inode_free(inode);
           return OK;
         }
     }
