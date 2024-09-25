@@ -392,7 +392,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      lib_free(tmp);
+                      fs_heap_free(tmp);
                     }
 
                   if (ret < 0)
