@@ -153,14 +153,6 @@
 extern void arm_fullcontextrestore(uint32_t *restoreregs);
 #endif
 
-#ifndef arm_switchcontext
-#  define arm_switchcontext(saveregs, restoreregs) \
-    sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs);
-#else
-extern void arm_switchcontext(uint32_t **saveregs,
-                              uint32_t *restoreregs);
-#endif
-
 /* Redefine the linker symbols as armlink style */
 
 #ifdef CONFIG_ARM_TOOLCHAIN_ARMCLANG
@@ -400,12 +392,12 @@ uint32_t *arm_dofiq(int fiq, uint32_t *regs);
 
 /* Paging support */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 #  define arm_pginitialize()
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 
 /* Exception Handlers */
 
@@ -420,14 +412,14 @@ uint32_t *arm_undefinedinsn(uint32_t *regs);
 
 /* Paging support (and exception handlers) */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
 void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr);
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 #  define arm_pginitialize()
 void arm_dataabort(uint32_t *regs);
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 
 /* Exception handlers */
 
@@ -531,6 +523,10 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs);
 
 #if defined(CONFIG_ARMV7M_STACKCHECK) || defined(CONFIG_ARMV8M_STACKCHECK)
 void arm_stack_check_init(void) noinstrument_function;
+#endif
+
+#ifdef CONFIG_ARM_COREDUMP_REGION
+  void arm_coredump_add_region(void);
 #endif
 
 #undef EXTERN

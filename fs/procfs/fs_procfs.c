@@ -47,7 +47,7 @@
 #include <nuttx/fs/procfs.h>
 
 #include "mount/mount.h"
-#include "sched/sched.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * External Definitions
@@ -56,6 +56,7 @@
 extern const struct procfs_operations g_clk_operations;
 extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
+extern const struct procfs_operations g_cpufreq_operations;
 extern const struct procfs_operations g_critmon_operations;
 extern const struct procfs_operations g_fdt_operations;
 extern const struct procfs_operations g_iobinfo_operations;
@@ -82,7 +83,7 @@ extern const struct procfs_operations g_mount_operations;
 extern const struct procfs_operations g_net_operations;
 extern const struct procfs_operations g_netroute_operations;
 extern const struct procfs_operations g_part_operations;
-extern const struct procfs_operations g_smartfs_procfs_operations;
+extern const struct procfs_operations g_smartfs_operations;
 
 /****************************************************************************
  * Private Types
@@ -114,6 +115,10 @@ static const struct procfs_entry_s g_procfs_entries[] =
   { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE   },
 #endif
 
+#if defined(CONFIG_CPUFREQ) && defined(CONFIG_CPUFREQ_PROCFS)
+  { "cpufreq",      &g_cpufreq_operations,  PROCFS_FILE_TYPE   },
+#endif
+
 #ifdef CONFIG_SCHED_CRITMONITOR
   { "critmon",      &g_critmon_operations,  PROCFS_FILE_TYPE   },
 #endif
@@ -131,7 +136,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #endif
 
 #if defined(CONFIG_FS_SMARTFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_SMARTFS)
-  { "fs/smartfs**", &g_smartfs_procfs_operations,  PROCFS_UNKOWN_TYPE },
+  { "fs/smartfs**", &g_smartfs_operations,  PROCFS_UNKOWN_TYPE },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_USAGE
@@ -323,7 +328,7 @@ struct procfs_level0_s
 
   uint8_t lastlen;                       /* length of last reported static dir */
   FAR const char *lastread;              /* Pointer to last static dir read */
-  pid_t pid[1];                          /* Snapshot of all active task IDs */
+  pid_t pid[0];                          /* Snapshot of all active task IDs */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -370,6 +375,15 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   index = dir->base.index;
   dir->pid[index] = tcb->pid;
   dir->base.index = index + 1;
+}
+
+/****************************************************************************
+ * Name: procfs_thread_number
+ ****************************************************************************/
+
+static void procfs_thread_number(FAR struct tcb_s *tcb, FAR void *arg)
+{
+  (*(FAR size_t *)arg)++;
 }
 
 /****************************************************************************
@@ -421,6 +435,11 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 
       if (fnmatch(g_procfs_entries[x].pathpattern, relpath, 0) == 0)
         {
+          if (g_procfs_entries[x].type == PROCFS_DIR_TYPE)
+            {
+              return -EISDIR;
+            }
+
           /* Match found!  Stat using this procfs entry */
 
           DEBUGASSERT(g_procfs_entries[x].ops &&
@@ -463,7 +482,7 @@ static int procfs_close(FAR struct file *filep)
     }
   else
     {
-      kmm_free(attr);
+      fs_heap_free(attr);
     }
 
   filep->f_priv = NULL;
@@ -647,11 +666,11 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-      num = g_npidhash;
+      nxsched_foreach(procfs_thread_number, &num);
 #endif
 
       level0 = (FAR struct procfs_level0_s *)
-         kmm_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
+         fs_heap_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
       if (!level0)
         {
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
@@ -737,7 +756,7 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
                */
 
               level1 = (FAR struct procfs_level1_s *)
-                 kmm_zalloc(sizeof(struct procfs_level1_s));
+                 fs_heap_zalloc(sizeof(struct procfs_level1_s));
               if (!level1)
                 {
                   ferr("ERROR: Failed to allocate the level0 directory "
@@ -778,7 +797,7 @@ static int procfs_closedir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
   DEBUGASSERT(mountpt && dir);
-  kmm_free(dir);
+  fs_heap_free(dir);
   return OK;
 }
 
@@ -1175,7 +1194,7 @@ int procfs_initialize(void)
       /* No.. allocate a modifiable list of entries */
 
       g_procfs_entries = (FAR struct procfs_entry_s *)
-        kmm_malloc(sizeof(g_base_entries));
+        fs_heap_malloc(sizeof(g_base_entries));
       if (g_procfs_entries == NULL)
         {
           return -ENOMEM;
@@ -1241,7 +1260,7 @@ int procfs_register(FAR const struct procfs_entry_s *entry)
   newsize  = newcount * sizeof(struct procfs_entry_s);
 
   newtable = (FAR struct procfs_entry_s *)
-    kmm_realloc(g_procfs_entries, newsize);
+    fs_heap_realloc(g_procfs_entries, newsize);
   if (newtable != NULL)
     {
       /* Copy the new entry at the end of the reallocated table */

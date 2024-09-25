@@ -346,9 +346,18 @@
 #define HPET0_IRQ    IRQ2
 #define HPET1_IRQ    IRQ8
 
-/* Use IRQ15 for SMP */
+/* NuttX custom interrupts configuration starts from here.
+ * IRQ16-IRQ23 are reserved for GOLDFISH so we start from IRQ24.
+ */
 
-#define SMP_IPI_IRQ  IRQ15
+/* Use IRQ24 IRQ25 for SMP */
+
+#define SMP_IPI_CALL_IRQ   IRQ24
+#define SMP_IPI_SCHED_IRQ  IRQ25
+
+/* Use IRQ32 and above for MSI */
+
+#define IRQ_MSI_START      IRQ32
 
 /* Common register save structure created by up_saveusercontext() and by
  * ISR/IRQ interrupt processing.
@@ -486,12 +495,6 @@ enum ioapic_trigger_mode
 
 struct xcptcontext
 {
-  /* The following function pointer is non-zero if there are pending signals
-   * to be processed.
-   */
-
-  void *sigdeliver; /* Actual type is sig_deliver_t */
-
   /* These are saved copies of instruction pointer and EFLAGS used during
    * signal processing.
    */
