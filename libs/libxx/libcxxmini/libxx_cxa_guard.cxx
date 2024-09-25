@@ -44,7 +44,7 @@ typedef int __guard;
 // variable and the first byte contains 0 prior to initialization, and
 // 1 after.
 
-typedef int __guard __attribute__((mode(__DI__)));
+__extension__ typedef int __guard __attribute__((mode(__DI__)));
 #endif
 
 //***************************************************************************
@@ -66,7 +66,7 @@ extern "C"
 #ifdef __ARM_EABI__
     return !(*g & 1);
 #else
-    return !*(char *)g;
+    return !*(FAR char *)g;
 #endif
   }
 
@@ -79,7 +79,7 @@ extern "C"
 #ifdef __ARM_EABI__
     *g = 1;
 #else
-    *(char *)g = 1;
+    *(FAR char *)g = 1;
 #endif
   }
 
