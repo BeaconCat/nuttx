@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libc/obstack/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -19,3 +17,19 @@
 # the License.
 #
 # ##############################################################################
+
+target_sources(
+  c
+  PRIVATE lib_obstack_init.c
+          lib_obstack_alloc.c
+          lib_obstack_copy.c
+          lib_obstack_free.c
+          lib_obstack_make_room.c
+          lib_obstack_blank.c
+          lib_obstack_grow.c
+          lib_obstack_finish.c
+          lib_obstack_object_size.c
+          lib_obstack_room.c
+          lib_obstack_printf.c
+          lib_obstack_vprintf.c
+          lib_obstack_malloc.c)

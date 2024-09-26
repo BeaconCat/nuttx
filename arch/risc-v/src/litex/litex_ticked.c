@@ -81,7 +81,6 @@ void up_timer_initialize(void)
 
   /* Set the timer period */
 
-  putreg32(TICK_COUNT, LITEX_TIMER0_LOAD);
   putreg32(TICK_COUNT, LITEX_TIMER0_RELOAD);
 
   /* Attach timer interrupt handler */

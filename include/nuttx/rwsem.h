@@ -25,15 +25,14 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define RWSEM_NO_HOLDER     ((pid_t)-1)
-#define RWSEM_INITIALIZER   {SEM_INITIALIZER(0), \
+#define RWSEM_INITIALIZER   {NXMUTEX_INITIALIZER, SEM_INITIALIZER(0), \
                              RWSEM_NO_HOLDER, 0, 0, 0}
 
 /****************************************************************************
@@ -42,15 +41,15 @@
 
 typedef struct
 {
-  sem_t   waiting;      /* Reader/writer Waiting queue */
-  pid_t   holder;       /* The write lock holder, this lock still can be
-                         * locked when the holder is same as the current
-                         * task/thread.
-                         */
-  int     waiter;       /* Waiter Count */
-  int     writer;       /* Writer Count */
-  int     reader;       /* Reader Count */
-  spinlock_t protected; /* Protecting Locks for Read/Write Locked Tables */
+  mutex_t protected; /* Protecting Locks for Read/Write Locked Tables */
+  sem_t   waiting;   /* Reader/writer Waiting queue */
+  pid_t   holder;    /* The write lock holder, this lock still can be
+                      * locked when the holder is same as the current
+                      * task/thread.
+                      */
+  int     waiter;    /* Waiter Count */
+  int     writer;    /* Writer Count */
+  int     reader;    /* Reader Count */
 } rw_semaphore_t;
 
 /****************************************************************************

@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/pwd/lib_find_pwdfile.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -289,6 +287,7 @@ static int pwd_foreach(pwd_foreach_match_t match, uintptr_t arg,
 
       *ptr++ = '\0';
       entry->pw_shell = ROOT_SHELL;
+      entry->pw_passwd = ROOT_PASSWD;
 
       /* Check for a match */
 
