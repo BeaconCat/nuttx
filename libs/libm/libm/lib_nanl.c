@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libm/libm/lib_nanl.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,7 +32,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_LONG_DOUBLE
-long double nanl(FAR const char *tagp)
+long double nanl(const char *tagp)
 {
   return (long double)NAN;
 }

@@ -34,4 +34,3 @@ include $(TOPDIR)/arch/arm/src/common/Toolchain.defs
 
 # tlsr82 can not recognize --param=min-pagesize=0, so remove it from ARCHOPTIMIZATION
 ARCHOPTIMIZATION := $(filter-out --param=min-pagesize=0,$(ARCHOPTIMIZATION))
-
