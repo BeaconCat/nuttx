@@ -61,12 +61,13 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(!up_interrupt_context());
+  DEBUGASSERT(up_current_regs() == NULL);
 
-  /* Set irq flag */
+  /* Current regs non-zero indicates that we are processing an interrupt;
+   * current_regs is also used to manage interrupt level context switches.
+   */
 
-  write_sysreg((uintptr_t)tcb | 1, tpidr_el1);
-
+  up_set_current_regs(regs);
   tcb->xcp.regs = regs;
 
   /* Deliver the IRQ */
@@ -95,11 +96,6 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
       addrenv_switch(NULL);
 #endif
 
-      /* Update scheduler parameters */
-
-      nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
-      nxsched_resume_scheduler(tcb);
-
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
@@ -109,9 +105,11 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
       regs = tcb->xcp.regs;
     }
 
-  /* Clear irq flag */
+  /* Set current_regs to NULL to indicate that we are no longer in an
+   * interrupt handler.
+   */
 
-  write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+  up_set_current_regs(NULL);
 
   return regs;
 }

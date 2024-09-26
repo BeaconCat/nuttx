@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/iob/iob_alloc_qentry.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -57,7 +59,7 @@ static FAR struct iob_qentry_s *iob_alloc_qcommitted(void)
    * to protect the committed list:  We disable interrupts very briefly.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_iob_lock);
 
   /* Take the I/O buffer from the head of the committed list */
 
@@ -73,7 +75,7 @@ static FAR struct iob_qentry_s *iob_alloc_qcommitted(void)
       iobq->qe_head = NULL; /* Nothing is contained */
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_iob_lock, flags);
   return iobq;
 }
 
@@ -199,7 +201,7 @@ FAR struct iob_qentry_s *iob_tryalloc_qentry(void)
    * to protect the free list:  We disable interrupts very briefly.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_iob_lock);
   iobq  = g_iob_freeqlist;
   if (iobq)
     {
@@ -225,7 +227,7 @@ FAR struct iob_qentry_s *iob_tryalloc_qentry(void)
       iobq->qe_head = NULL; /* Nothing is contained */
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_iob_lock, flags);
   return iobq;
 }
 

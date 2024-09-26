@@ -49,7 +49,6 @@
 #endif /* CONFIG_FS_AUTOMOUNTER_DRIVER */
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -214,7 +213,7 @@ static int automount_open(FAR struct file *filep)
 
   /* Allocate a new open structure */
 
-  opriv = fs_heap_zalloc(sizeof(struct automounter_open_s));
+  opriv = kmm_zalloc(sizeof(struct automounter_open_s));
   if (opriv == NULL)
     {
       ferr("ERROR: Failed to allocate open structure\n");
@@ -296,7 +295,7 @@ static int automount_close(FAR struct file *filep)
 
   /* And free the open structure */
 
-  fs_heap_free(opriv);
+  kmm_free(opriv);
 
   ret = OK;
 
@@ -402,7 +401,11 @@ static int automount_findinode(FAR const char *path)
 
   /* Get exclusive access to the in-memory inode tree. */
 
-  inode_rlock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   /* Find the inode */
 
@@ -436,7 +439,7 @@ static int automount_findinode(FAR const char *path)
 
   /* Relinquish our exclusive access to the inode try and return the result */
 
-  inode_runlock();
+  inode_unlock();
   RELEASE_SEARCH(&desc);
   return ret;
 }
@@ -815,7 +818,7 @@ FAR void *automount_initialize(FAR const struct automount_lower_s *lower)
 
   /* Allocate an auto-mounter state structure */
 
-  priv = fs_heap_zalloc(sizeof(struct automounter_state_s));
+  priv = kmm_zalloc(sizeof(struct automounter_state_s));
   if (priv == NULL)
     {
       ferr("ERROR: Failed to allocate state structure\n");
@@ -928,5 +931,5 @@ void automount_uninitialize(FAR void *handle)
 
   /* And free the state structure */
 
-  fs_heap_free(priv);
+  kmm_free(priv);
 }
