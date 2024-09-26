@@ -18,13 +18,9 @@
  *
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#define TEXT_ADDR     CONFIG_RAM_START
-
 SECTIONS
 {
-  . = TEXT_ADDR;
+  . = 0x80000000;
 
   /* where the global variable out-of-bounds detection information located */
 
@@ -116,7 +112,6 @@ SECTIONS
       *(.sbss.*)
       *(.gnu.linkonce.b*)
       *(COMMON)
-      . = ALIGN(32);
       _ebss = . ;
     }
 

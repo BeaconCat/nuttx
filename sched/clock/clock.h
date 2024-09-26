@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/clock/clock.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -86,5 +84,9 @@ void clock_timer(void);
  ****************************************************************************/
 
 void perf_init(void);
+
+#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
+void cpuload_init(void);
+#endif
 
 #endif /* __SCHED_CLOCK_CLOCK_H */
