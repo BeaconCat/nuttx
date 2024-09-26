@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/socket/getsockopt.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,8 +31,6 @@
 #include <debug.h>
 #include <assert.h>
 #include <errno.h>
-
-#include <nuttx/fs/fs.h>
 
 #include "socket/socket.h"
 #include "utils/utils.h"
@@ -154,6 +150,9 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
                            * periodic transmission of probes */
       case SO_OOBINLINE:  /* Leaves received out-of-band data inline */
       case SO_REUSEADDR:  /* Allow reuse of local addresses */
+#ifdef CONFIG_NET_TIMESTAMP
+      case SO_TIMESTAMP:  /* Generates a timestamp for each incoming packet */
+#endif
         {
           sockopt_t optionset;
 
