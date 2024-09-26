@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/udp/udp_conn.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- *
  *   Copyright (C) 2007-2009, 2011-2012, 2016, 2018 Gregory Nutt. All rights
  *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -818,10 +816,6 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
     }
 #endif
 
-  /* Interrupts must be disabled while access the UDP connection list */
-
-  net_lock();
-
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
   if (conn->domain == PF_INET)
@@ -934,6 +928,10 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
     }
   else
     {
+      /* Interrupts must be disabled while access the UDP connection list */
+
+      net_lock();
+
       /* Is any other UDP connection already bound to this address
        * and port ?
        */
@@ -960,9 +958,10 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
         {
           ret         = -EADDRINUSE;
         }
+
+      net_unlock();
     }
 
-  net_unlock();
   return ret;
 }
 

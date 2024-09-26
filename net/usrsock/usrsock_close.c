@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/usrsock/usrsock_close.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -185,7 +183,7 @@ int usrsock_close(FAR struct usrsock_conn_s *conn)
 
 close_out:
   conn->state = USRSOCK_CONN_STATE_UNINITIALIZED;
-  conn->usockid = USRSOCK_USOCKID_INVALID;
+  conn->usockid = -1;
 
 errout:
   net_unlock();
