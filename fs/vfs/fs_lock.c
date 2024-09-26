@@ -36,9 +36,8 @@
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
 
-#include "lock.h"
 #include "sched/sched.h"
-#include "fs_heap.h"
+#include "lock.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -220,7 +219,7 @@ static int file_lock_normalize(FAR struct file *filep,
 static void file_lock_delete(FAR struct file_lock_s *file_lock)
 {
   list_delete(&file_lock->fl_node);
-  fs_heap_free(file_lock);
+  kmm_free(file_lock);
 }
 
 /****************************************************************************
@@ -301,7 +300,7 @@ file_lock_find_bucket(FAR const char *filepath)
 static void file_lock_free_entry(FAR ENTRY *entry)
 {
   lib_free(entry->key);
-  fs_heap_free(entry->data);
+  kmm_free(entry->data);
 }
 
 /****************************************************************************
@@ -315,7 +314,7 @@ file_lock_create_bucket(FAR const char *filepath)
   FAR ENTRY *hretvalue;
   ENTRY item;
 
-  bucket = fs_heap_zalloc(sizeof(*bucket));
+  bucket = kmm_zalloc(sizeof(*bucket));
   if (bucket == NULL)
     {
       return NULL;
@@ -326,7 +325,7 @@ file_lock_create_bucket(FAR const char *filepath)
   item.key = strdup(filepath);
   if (item.key == NULL)
     {
-      fs_heap_free(bucket);
+      kmm_free(bucket);
       return NULL;
     }
 
@@ -335,7 +334,7 @@ file_lock_create_bucket(FAR const char *filepath)
   if (hsearch_r(item, ENTER, &hretvalue, &g_file_lock_table) == 0)
     {
       lib_free(item.key);
-      fs_heap_free(bucket);
+      kmm_free(bucket);
       return NULL;
     }
 
@@ -497,7 +496,7 @@ static int file_lock_modify(FAR struct file *filep,
 
       /* insert a new lock */
 
-      new_file_lock = fs_heap_zalloc(sizeof(struct file_lock_s));
+      new_file_lock = kmm_zalloc(sizeof(struct file_lock_s));
       if (new_file_lock == NULL)
         {
           return -ENOMEM;
@@ -515,7 +514,7 @@ static int file_lock_modify(FAR struct file *filep,
         {
           /* Splitting old locks */
 
-          new_file_lock = fs_heap_zalloc(sizeof(struct file_lock_s));
+          new_file_lock = kmm_zalloc(sizeof(struct file_lock_s));
           if (new_file_lock == NULL)
             {
               return -ENOMEM;

@@ -86,8 +86,9 @@ GTEXT(up_fork)
 SECTION_FUNC(text, up_fork)
     /* Create a stack frame */
 
+    mov    x0,  sp            /* Save the value of the stack on entry */
+    stp    x29, x30, [sp]
     sub    sp,  sp, #8 * FORK_REGS_SIZE    /* Allocate the structure on the stack */
-    stp    x29, x30, [sp, #8 * FORK_REG_FP] /* Save the FP, LR */
 
     /* CPU registers, save all register*/
 
@@ -105,12 +106,11 @@ SECTION_FUNC(text, up_fork)
     stp    x22, x23, [sp, #8 * FORK_REG_X22]
     stp    x24, x25, [sp, #8 * FORK_REG_X24]
     stp    x26, x27, [sp, #8 * FORK_REG_X26]
-    str    x28,      [sp, #8 * FORK_REG_X28]
+    stp    x28, x29, [sp, #8 * FORK_REG_X28]
 
-    /* Save the stack pointer */
+    /* Save the LR, stack pointer */
 
-    add    x0, sp, #8 * FORK_REGS_SIZE
-    str    x0, [sp, #8 * FORK_REG_SP]
+    stp    x30, x0, [sp, #8 * FORK_REG_LR]
 
     /* Floating point registers */
 #ifdef CONFIG_ARCH_FPU
@@ -128,7 +128,7 @@ SECTION_FUNC(text, up_fork)
 
     /* Release the stack data and return the value returned by arm64_fork */
 
-    ldp    x29, x30, [sp, #8 * FORK_REG_FP]
     add    sp, sp,  #8 * FORK_REGS_SIZE
+    ldp    x29, x30, [sp]
 
     ret
