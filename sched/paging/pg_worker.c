@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/paging/pg_worker.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,7 +42,7 @@
 #include "sched/sched.h"
 #include "paging/paging.h"
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 /****************************************************************************
  * Public Data
@@ -138,8 +136,7 @@ static void pg_callback(FAR struct tcb_s *tcb, int result)
   pginfo("g_pftcb: %p\n", g_pftcb);
   if (g_pftcb)
     {
-      FAR struct tcb_s *htcb = (FAR struct tcb_s *)
-                               list_waitingforfill()->head;
+      FAR struct tcb_s *htcb = (FAR struct tcb_s *)g_waitingforfill.head;
       FAR struct tcb_s *wtcb = nxsched_get_tcb(g_pgworker);
 
       /* Find the higher priority between the task waiting for the fill to
@@ -216,10 +213,8 @@ static void pg_callback(FAR struct tcb_s *tcb, int result)
  *
  ****************************************************************************/
 
-static inline bool pg_dequeue(void)
+static inline bool pg_dequeue(FAR struct tcb_s *wtcb)
 {
-  FAR struct tcb_s *wtcb = this_task();
-
   /* Loop until either (1) the TCB of a task that requires a fill is found,
    * OR (2) the g_watingforfill list becomes empty.
    */
@@ -228,7 +223,7 @@ static inline bool pg_dequeue(void)
     {
       /* Remove the TCB from the head of the list (if any) */
 
-      g_pftcb = (FAR struct tcb_s *)dq_remfirst(list_waitingforfill());
+      g_pftcb = (FAR struct tcb_s *)dq_remfirst(&g_waitingforfill);
       pginfo("g_pftcb: %p\n", g_pftcb);
       if (g_pftcb != NULL)
         {
@@ -336,7 +331,7 @@ static inline bool pg_dequeue(void)
  *
  ****************************************************************************/
 
-static inline bool pg_startfill(void)
+static inline bool pg_startfill(FAR struct tcb_s *wtcb)
 {
   FAR void *vpage;
   int result;
@@ -347,7 +342,7 @@ static inline bool pg_startfill(void)
    * dequeued.
    */
 
-  if (pg_dequeue())
+  if (pg_dequeue(wtcb))
     {
       /* Call up_allocpage(tcb, &vpage). This architecture-specific function
        * will set aside page in memory and map to virtual address (vpage). If
@@ -445,9 +440,8 @@ static inline bool pg_startfill(void)
  *
  ****************************************************************************/
 
-static inline void pg_alldone(void)
+static inline void pg_alldone(FAR struct tcb_s *wtcb)
 {
-  FAR struct tcb_s *wtcb = this_task();
   g_pftcb = NULL;
   pginfo("New worker priority. %d->%d\n",
          wtcb->sched_priority, CONFIG_PAGING_DEFPRIO);
@@ -479,10 +473,8 @@ static inline void pg_alldone(void)
  *
  ****************************************************************************/
 
-static inline void pg_fillcomplete(void)
+static inline void pg_fillcomplete(FAR struct tcb_s *wtcb)
 {
-  FAR struct tcb_s *wtcb = this_task();
-
   /* Call up_unblocktask(g_pftcb) to make the task that just
    * received the fill ready-to-run.
    */
@@ -528,7 +520,7 @@ static inline void pg_fillcomplete(void)
 
 int pg_worker(int argc, FAR char *argv[])
 {
-  FAR struct tcb_s *wtcb = this_task();
+  FAR struct tcb_s *wtcb;
 
   /* Loop forever -- Notice that interrupts will be disabled at all times
    * that this thread runs.  That is so that we can't lose signals or have
@@ -542,6 +534,8 @@ int pg_worker(int argc, FAR char *argv[])
 
   pginfo("Started\n");
   up_irq_save();
+  wtcb = this_task();
+
   for (; ; )
     {
       /* Wait awhile.  We will wait here until either the configurable
@@ -607,7 +601,7 @@ int pg_worker(int argc, FAR char *argv[])
                */
 
               pginfo("Calling pg_startfill\n");
-              if (!pg_startfill())
+              if (!pg_startfill(wtcb))
                 {
                   /* No fill was started.  This can mean only that all queued
                    * page fill actions have and been completed and there is
@@ -615,7 +609,7 @@ int pg_worker(int argc, FAR char *argv[])
                    */
 
                   pginfo("Call pg_alldone()\n");
-                  pg_alldone();
+                  pg_alldone(wtcb);
                 }
             }
 
@@ -646,7 +640,7 @@ int pg_worker(int argc, FAR char *argv[])
            */
 
           pginfo("Calling pg_startfill\n");
-          pg_startfill();
+          pg_startfill(wtcb);
         }
 #else
       /* Are there tasks blocked and waiting for a fill?  Loop until all
@@ -661,7 +655,7 @@ int pg_worker(int argc, FAR char *argv[])
            */
 
           pginfo("Calling pg_startfill\n");
-          if (!pg_startfill())
+          if (!pg_startfill(wtcb))
             {
               /* Break out of the loop -- there is nothing more to do */
 
@@ -690,10 +684,10 @@ int pg_worker(int argc, FAR char *argv[])
       /* All queued fills have been processed */
 
       pginfo("Call pg_alldone()\n");
-      pg_alldone();
+      pg_alldone(wtcb);
 #endif
     }
 
   return OK; /* To keep some compilers happy */
 }
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */

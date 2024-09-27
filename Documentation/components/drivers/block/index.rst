@@ -2,13 +2,6 @@
 Block Device Drivers
 ====================
 
-.. toctree::
-  :maxdepth: 1
-
-  eeprom.rst
-  ramdisk.rst
-
-
 Block device drivers have these properties:
 
 -  ``include/nuttx/fs/fs.h``. All structures and APIs needed
@@ -44,3 +37,4 @@ Block device drivers have these properties:
 
 -  **Examples**. ``drivers/loop.c``,
    ``drivers/mmcsd/mmcsd_spi.c``, ``drivers/ramdisk.c``, etc.
+

@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/irq/irq_attach.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,7 +34,7 @@
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMINC
 static int g_irqmap_count = 1;
 #endif
 
@@ -44,7 +42,7 @@ static int g_irqmap_count = 1;
  * Public Data
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMINC
 
 /* This is the interrupt vector mapping table.  This must be provided by
  * architecture specific logic if CONFIG_ARCH_MINIMAL_VECTORTABLE is define
@@ -62,7 +60,7 @@ irq_mapped_t g_irqmap[NR_IRQS];
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMINC
 int irq_to_ndx(int irq)
 {
   DEBUGASSERT(g_irqmap_count < CONFIG_ARCH_NUSER_INTERRUPTS);
@@ -141,7 +139,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
       if (is_irqchain(ndx, isr))
         {
           ret = irqchain_attach(ndx, isr, arg);
-          spin_unlock_irqrestore(NULL, flags);
+          leave_critical_section(flags);
           return ret;
         }
 #endif
