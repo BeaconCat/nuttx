@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/arp/arp_table.c
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * Implementation of the ARP Address Resolution Protocol.
  *
  *   Copyright (C) 2007-2009, 2011, 2014, 2018 Gregory Nutt. All rights
  *     reserved.

@@ -300,6 +300,8 @@ static int can_close(FAR struct file *filep)
       return ret;
     }
 
+  flags = enter_critical_section(); /* Disable interrupts */
+
   list_for_every(&dev->cd_readers, node)
     {
       if (((FAR struct can_reader_s *)node) ==
@@ -341,11 +343,10 @@ static int can_close(FAR struct file *filep)
 
   /* Free the IRQ and disable the CAN device */
 
-  flags = enter_critical_section(); /* Disable interrupts */
-  dev_shutdown(dev);                /* Disable the CAN */
-  leave_critical_section(flags);
+  dev_shutdown(dev); /* Disable the CAN */
 
 errout:
+  leave_critical_section(flags);
   nxmutex_unlock(&dev->cd_closelock);
   return ret;
 }
@@ -407,7 +408,7 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
 #ifdef CONFIG_CAN_EXTID
           msg->cm_hdr.ch_extid  = 0;
 #endif
-          msg->cm_hdr.ch_unused = 0;
+          msg->cm_hdr.ch_tcf    = 0;
           memset(&(msg->cm_data), 0, CAN_ERROR_DLC);
           msg->cm_data[5]       = fifo->rx_error;
 
@@ -464,7 +465,7 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
 
           /* Increment the head of the circular message buffer */
 
-          if (++fifo->rx_head >= CONFIG_CAN_FIFOSIZE)
+          if (++fifo->rx_head >= CONFIG_CAN_RXFIFOSIZE)
             {
               fifo->rx_head = 0;
             }
@@ -548,7 +549,7 @@ static int can_xmit(FAR struct can_dev_s *dev)
        */
 
       tmpndx = dev->cd_xmit.tx_queue;
-      if (++dev->cd_xmit.tx_queue >= CONFIG_CAN_FIFOSIZE)
+      if (++dev->cd_xmit.tx_queue >= CONFIG_CAN_TXFIFOSIZE)
         {
           dev->cd_xmit.tx_queue = 0;
         }
@@ -614,7 +615,7 @@ static ssize_t can_write(FAR struct file *filep, FAR const char *buffer,
        */
 
       nexttail = fifo->tx_tail + 1;
-      if (nexttail >= CONFIG_CAN_FIFOSIZE)
+      if (nexttail >= CONFIG_CAN_TXFIFOSIZE)
         {
           nexttail = 0;
         }
@@ -719,14 +720,9 @@ static inline ssize_t can_rtrread(FAR struct file *filep,
 {
   FAR struct can_dev_s     *dev = filep->f_inode->i_private;
   FAR struct can_rtrwait_s *wait = NULL;
-  irqstate_t                flags;
   int                       i;
   int                       sval;
   int                       ret = -ENOMEM;
-
-  /* Disable interrupts through this operation */
-
-  flags = enter_critical_section();
 
   /* Find an available slot in the pending RTR list */
 
@@ -801,7 +797,6 @@ static inline ssize_t can_rtrread(FAR struct file *filep,
         }
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -815,8 +810,13 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct can_dev_s    *dev    = inode->i_private;
   FAR struct can_reader_s *reader = filep->f_priv;
   int                      ret    = OK;
+  irqstate_t               flags;
 
   caninfo("cmd: %d arg: %ld\n", cmd, arg);
+
+  /* Disable interrupts through this operation */
+
+  flags = enter_critical_section();
 
   /* Handle built-in ioctl commands */
 
@@ -885,7 +885,7 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case FIONWRITE:
         {
-          *(FAR uint8_t *)arg = CONFIG_CAN_FIFOSIZE - 1 -
+          *(FAR int *)arg = CONFIG_CAN_TXFIFOSIZE - 1 -
                             (dev->cd_xmit.tx_tail - dev->cd_xmit.tx_head);
         }
         break;
@@ -894,11 +894,58 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case FIONREAD:
         {
-          *(FAR uint8_t *)arg =
+          *(FAR int *)arg =
 #ifdef CONFIG_CAN_ERRORS
                             (reader->fifo.rx_error != 0) +
 #endif
                             reader->fifo.rx_tail - reader->fifo.rx_head;
+        }
+        break;
+
+      /* Set specfic can transceiver state */
+
+      case CANIOC_SET_TRANSVSTATE:
+        {
+          /* if we don't use dev->cd_transv->cts_ops, please initlize
+           * this poniter to NULL in lower board code when Board reset.
+           */
+
+          if (dev->cd_transv && dev->cd_transv->ct_ops
+              && dev->cd_transv->ct_ops->ct_setstate)
+            {
+              FAR const struct can_transv_ops_s *ct_ops =
+                                                dev->cd_transv->ct_ops;
+              ret = ct_ops->ct_setstate(dev->cd_transv, arg);
+            }
+          else
+            {
+              canerr("dev->cd_transv->cts_ops is NULL!");
+              ret = -ENOTTY;
+            }
+        }
+        break;
+
+      /* Get specfic can transceiver state */
+
+      case CANIOC_GET_TRANSVSTATE:
+        {
+          /* if we don't use dev->cd_transv->cts_ops, please initlize
+           * this poniter to NULL in lower board code when Board reset.
+           */
+
+          if (dev->cd_transv && dev->cd_transv->ct_ops
+              && dev->cd_transv->ct_ops->ct_getstate)
+            {
+              int *state = (FAR int *)arg;
+              FAR const struct can_transv_ops_s *ct_ops =
+                                                dev->cd_transv->ct_ops;
+              ret = ct_ops->ct_getstate(dev->cd_transv, state);
+            }
+          else
+            {
+              canerr("dev->cd_transv->cts_ops is NULL!");
+              ret = -ENOTTY;
+            }
         }
         break;
 
@@ -913,6 +960,7 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
+  leave_critical_section(flags);
   return ret;
 }
 
@@ -996,7 +1044,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
        */
 
       ndx = dev->cd_xmit.tx_tail + 1;
-      if (ndx >= CONFIG_CAN_FIFOSIZE)
+      if (ndx >= CONFIG_CAN_TXFIFOSIZE)
         {
           ndx = 0;
         }
@@ -1120,12 +1168,15 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
 {
   FAR struct can_rxfifo_s *fifo;
   FAR struct list_node    *node;
+  irqstate_t               flags;
   int                      nexttail;
   int                      ret = -ENOMEM;
   int                      i;
   int                      sval;
 
   caninfo("ID: %" PRId32 " DLC: %d\n", (uint32_t)hdr->ch_id, hdr->ch_dlc);
+
+  flags = enter_critical_section();
 
   /* Check if adding this new message would over-run the drivers ability to
    * enqueue read data.
@@ -1168,7 +1219,11 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
               memcpy(&waitmsg->cm_hdr, hdr, sizeof(struct can_hdr_s));
 
               nbytes = can_dlc2bytes(hdr->ch_dlc);
-              memcpy(waitmsg->cm_data, data, nbytes);
+              if (nbytes)
+                {
+                  memcpy(waitmsg->cm_data, data, nbytes);
+                }
+
               dev->cd_npendrtr--;
 
               /* Restart the waiting thread and mark the entry unused */
@@ -1184,7 +1239,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
       fifo = &reader->fifo;
 
       nexttail = fifo->rx_tail + 1;
-      if (nexttail >= CONFIG_CAN_FIFOSIZE)
+      if (nexttail >= CONFIG_CAN_RXFIFOSIZE)
         {
           nexttail = 0;
         }
@@ -1209,7 +1264,10 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
                  sizeof(struct can_hdr_s));
 
           nbytes = can_dlc2bytes(hdr->ch_dlc);
-          memcpy(fifo->rx_buffer[fifo->rx_tail].cm_data, data, nbytes);
+          if (nbytes)
+            {
+              memcpy(fifo->rx_buffer[fifo->rx_tail].cm_data, data, nbytes);
+            }
 
           /* Increment the tail of the circular buffer */
 
@@ -1256,6 +1314,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
       poll_notify(dev->cd_fds, CONFIG_CAN_NPOLLWAITERS, POLLIN);
     }
 
+  leave_critical_section(flags);
   return ret;
 }
 
@@ -1332,9 +1391,12 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
 int can_txdone(FAR struct can_dev_s *dev)
 {
   int ret = -ENOENT;
+  irqstate_t flags;
 
   caninfo("xmit head: %d queue: %d tail: %d\n",
           dev->cd_xmit.tx_head, dev->cd_xmit.tx_queue, dev->cd_xmit.tx_tail);
+
+  flags = enter_critical_section();
 
   /* Verify that the xmit FIFO is not empty */
 
@@ -1350,7 +1412,7 @@ int can_txdone(FAR struct can_dev_s *dev)
 
       /* Remove the message at the head of the xmit FIFO */
 
-      if (++dev->cd_xmit.tx_head >= CONFIG_CAN_FIFOSIZE)
+      if (++dev->cd_xmit.tx_head >= CONFIG_CAN_TXFIFOSIZE)
         {
           dev->cd_xmit.tx_head = 0;
         }
@@ -1379,6 +1441,7 @@ int can_txdone(FAR struct can_dev_s *dev)
         }
     }
 
+  leave_critical_section(flags);
   return ret;
 }
 
@@ -1443,10 +1506,13 @@ int can_txdone(FAR struct can_dev_s *dev)
 int can_txready(FAR struct can_dev_s *dev)
 {
   int ret = -ENOENT;
+  irqstate_t flags;
 
   caninfo("xmit head: %d queue: %d tail: %d waiters: %d\n",
           dev->cd_xmit.tx_head, dev->cd_xmit.tx_queue, dev->cd_xmit.tx_tail,
           dev->cd_ntxwaiters);
+
+  flags = enter_critical_section();
 
   /* Verify that the xmit FIFO is not empty.  This is safe because interrupts
    * are always disabled when calling into can_xmit(); this cannot collide
@@ -1495,6 +1561,7 @@ int can_txready(FAR struct can_dev_s *dev)
 #endif
     }
 
+  leave_critical_section(flags);
   return ret;
 }
 #endif /* CONFIG_CAN_TXREADY */
