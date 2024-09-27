@@ -36,6 +36,7 @@
 #include <debug.h>
 
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Private Functions Prototypes
@@ -75,7 +76,7 @@ static struct inode g_sock_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  1,                      /* i_crefs */
+  ATOMIC_VAR_INIT(1),     /* i_crefs */
   FSNODEFLAG_TYPE_SOCKET, /* i_flags */
   {
     &g_sock_fileops       /* u */
@@ -91,7 +92,7 @@ static int sock_file_open(FAR struct file *filep)
   FAR struct socket *psock;
   int ret;
 
-  psock = kmm_zalloc(sizeof(*psock));
+  psock = fs_heap_zalloc(sizeof(*psock));
   if (psock == NULL)
     {
       return -ENOMEM;
@@ -104,7 +105,7 @@ static int sock_file_open(FAR struct file *filep)
     }
   else
     {
-      kmm_free(psock);
+      fs_heap_free(psock);
     }
 
   return ret;
@@ -113,7 +114,7 @@ static int sock_file_open(FAR struct file *filep)
 static int sock_file_close(FAR struct file *filep)
 {
   psock_close(filep->f_priv);
-  kmm_free(filep->f_priv);
+  fs_heap_free(filep->f_priv);
   return 0;
 }
 
@@ -272,7 +273,7 @@ int socket(int domain, int type, int protocol)
       oflags |= O_NONBLOCK;
     }
 
-  psock = kmm_zalloc(sizeof(*psock));
+  psock = fs_heap_zalloc(sizeof(*psock));
   if (psock == NULL)
     {
       ret = -ENOMEM;
@@ -304,7 +305,7 @@ errout_with_psock:
   psock_close(psock);
 
 errout_with_alloc:
-  kmm_free(psock);
+  fs_heap_free(psock);
 
 errout:
   set_errno(-ret);

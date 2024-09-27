@@ -31,6 +31,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Private Data
@@ -48,7 +49,7 @@ static ino_t g_ino;
 
 static int inode_namelen(FAR const char *name)
 {
-  FAR const char *tmp = name;
+  const char *tmp = name;
   while (*tmp && *tmp != '/')
     {
       tmp++;
@@ -61,7 +62,7 @@ static int inode_namelen(FAR const char *name)
  * Name: inode_namecpy
  ****************************************************************************/
 
-static void inode_namecpy(FAR char *dest, FAR const char *src)
+static void inode_namecpy(char *dest, const char *src)
 {
   while (*src && *src != '/')
     {
@@ -81,7 +82,7 @@ static FAR struct inode *inode_alloc(FAR const char *name, mode_t mode)
   int namelen;
 
   namelen = inode_namelen(name);
-  node    = kmm_zalloc(FSNODE_SIZE(namelen));
+  node    = fs_heap_zalloc(FSNODE_SIZE(namelen));
   if (node)
     {
       node->i_ino   = g_ino++;
