@@ -1,8 +1,6 @@
 ############################################################################
 # libs/libc/Makefile
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -48,7 +46,6 @@ include netdb/Make.defs
 include obstack/Make.defs
 include pthread/Make.defs
 include pwd/Make.defs
-include queue/Make.defs
 include regex/Make.defs
 include sched/Make.defs
 include search/Make.defs

@@ -42,7 +42,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/pthread.h>
 
-#include "task/task.h"
 #include "sched/sched.h"
 #include "group/group.h"
 #include "clock/clock.h"
@@ -147,7 +146,9 @@ static void pthread_start(void)
   /* The thread has returned (should never happen) */
 
   DEBUGPANIC();
-  pthread_exit(NULL);
+
+  tls_cleanup_popall(tls_get_info());
+  nx_pthread_exit(NULL);
 }
 
 /****************************************************************************
@@ -180,13 +181,16 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
                       FAR const pthread_attr_t *attr,
                       pthread_startroutine_t entry, pthread_addr_t arg)
 {
-  pthread_attr_t default_attr = g_default_pthread_attr;
   FAR struct pthread_tcb_s *ptcb;
   struct sched_param param;
   FAR struct tcb_s *parent;
+  irqstate_t flags;
   int policy;
   int errcode;
+  pid_t pid;
   int ret;
+  bool group_joined = false;
+  pthread_attr_t default_attr = g_default_pthread_attr;
 
   DEBUGASSERT(trampoline != NULL);
 
@@ -209,7 +213,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Allocate a TCB for the new task. */
 
-  ptcb = kmm_zalloc(sizeof(struct pthread_tcb_s));
+  ptcb = (FAR struct pthread_tcb_s *)
+            kmm_zalloc(sizeof(struct pthread_tcb_s));
   if (!ptcb)
     {
       serr("ERROR: Failed to allocate TCB\n");
@@ -218,20 +223,21 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   ptcb->cmn.flags |= TCB_FLAG_FREE_TCB;
 
-  /* Initialize the task join */
-
-  nxtask_joininit(&ptcb->cmn);
-
   /* Bind the parent's group to the new TCB (we have not yet joined the
    * group).
    */
 
-  group_bind(ptcb);
+  ret = group_bind(ptcb);
+  if (ret < 0)
+    {
+      errcode = ENOMEM;
+      goto errout_with_tcb;
+    }
 
 #ifdef CONFIG_ARCH_ADDRENV
   /* Share the address environment of the parent task group. */
 
-  ret = addrenv_join(this_task(), (FAR struct tcb_s *)ptcb);
+  ret = addrenv_join(parent, (FAR struct tcb_s *)ptcb);
   if (ret < 0)
     {
       errcode = -ret;
@@ -386,7 +392,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   /* Initialize the task control block */
 
   ret = pthread_setup_scheduler(ptcb, param.sched_priority, pthread_start,
-                                entry);
+                                entry, parent);
   if (ret != OK)
     {
       errcode = EBUSY;
@@ -415,7 +421,14 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Join the parent's task group */
 
-  group_join(ptcb);
+  ret = group_join(ptcb);
+  if (ret < 0)
+    {
+      errcode = ENOMEM;
+      goto errout_with_tcb;
+    }
+
+  group_joined = true;
 
   /* Set the appropriate scheduling policy in the TCB */
 
@@ -442,28 +455,45 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 #endif
     }
 
+  /* Get the assigned pid before we start the task (who knows what
+   * could happen to ptcb after this!).
+   */
+
+  pid = ptcb->cmn.pid;
+
   /* Then activate the task */
 
-  sched_lock();
-
-  nxtask_activate((FAR struct tcb_s *)ptcb);
-
-  /* Return the thread information to the caller */
-
-  if (thread != NULL)
+  if (ret == OK)
     {
-      *thread = (pthread_t)ptcb->cmn.pid;
+      /* Return the thread information to the caller and new thread */
+
+      if (thread)
+        {
+          *thread = (pthread_t)pid;
+        }
+
+      nxtask_activate((FAR struct tcb_s *)ptcb);
+    }
+  else
+    {
+      flags = spin_lock_irqsave(NULL);
+      dq_rem((FAR dq_entry_t *)ptcb, &g_inactivetasks);
+      spin_unlock_irqrestore(NULL, flags);
+
+      errcode = EIO;
+      goto errout_with_tcb;
     }
 
-  sched_unlock();
-
-  return OK;
+  return ret;
 
 errout_with_tcb:
 
-  /* Since we do not join the group, assign group to NULL to clear binding */
+  /* Clear group binding */
 
-  ptcb->cmn.group = NULL;
+  if (ptcb && !group_joined)
+    {
+      ptcb->cmn.group = NULL;
+    }
 
   nxsched_release_tcb((FAR struct tcb_s *)ptcb, TCB_FLAG_TTYPE_PTHREAD);
   return errcode;

@@ -35,7 +35,6 @@
 #include <debug.h>
 
 #include <nuttx/cancelpt.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
 #include "socket/socket.h"
