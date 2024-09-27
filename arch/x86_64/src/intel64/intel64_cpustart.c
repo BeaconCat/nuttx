@@ -29,8 +29,8 @@
 
 #include <arch/arch.h>
 #include <arch/irq.h>
+#include <arch/spinlock.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 
 #include "init/init.h"
 
@@ -46,8 +46,8 @@
  ****************************************************************************/
 
 extern void __ap_entry(void);
-extern int up_pause_handler(int irq, void *c, void *arg);
-extern int up_pause_async_handler(int irq, void *c, void *arg);
+extern int x86_64_smp_call_handler(int irq, void *c, void *arg);
+extern int x86_64_smp_sched_handler(int irq, void *c, void *arg);
 
 /****************************************************************************
  * Private Functions
@@ -73,13 +73,14 @@ static int x86_64_ap_startup(int cpu)
 
   dest = MSR_X2APIC_DESTINATION((uint64_t)x86_64_cpu_to_loapic(cpu));
 
-  /* Get the AP trampoline from a fixed address */
+  /* Copy the AP trampoline to a fixed address */
 
   vect = (uint32_t)((uintptr_t)&__ap_entry) >> 12;
 
   /* Send an INIT IPI to the CPU */
 
-  regval = MSR_X2APIC_ICR_INIT | dest;
+  regval = MSR_X2APIC_ICR_INIT | MSR_X2APIC_ICR_ASSERT
+           | MSR_X2APIC_ICR_LEVEL | dest;
   write_msr(MSR_X2APIC_ICR, regval);
 
   /* Wait for 10 ms */
@@ -94,16 +95,13 @@ static int x86_64_ap_startup(int cpu)
 
   /* Wait for AP ready */
 
-  up_udelay(300);
-  SP_DMB();
-
-  /* Check CPU ready flag */
-
-  if (x86_64_cpu_ready_get(cpu) == false)
+  do
     {
-      sinfo("failed to startup cpu=%d\n", cpu);
-      return -EBUSY;
+      up_udelay(300);
+      SP_DMB();
+      sinfo("wait for startup cpu=%d...\n", cpu);
     }
+  while (x86_64_cpu_ready_get(cpu) == false);
 
   return OK;
 }
@@ -134,7 +132,7 @@ void x86_64_ap_boot(void)
 
   x86_64_check_and_enable_capability();
 
-  /* Reload the GDTR with mapped high memory address */
+  /* reload the GDTR with mapped high memory address */
 
   setgdt((void *)g_gdt64, (uintptr_t)(&g_gdt64_low_end - &g_gdt64_low) - 1);
 
@@ -160,10 +158,10 @@ void x86_64_ap_boot(void)
 
   /* Connect Pause IRQ to CPU */
 
-  irq_attach(SMP_IPI_IRQ, up_pause_handler, NULL);
-  irq_attach(SMP_IPI_ASYNC_IRQ, up_pause_async_handler, NULL);
-  up_enable_irq(SMP_IPI_IRQ);
-  up_enable_irq(SMP_IPI_ASYNC_IRQ);
+  irq_attach(SMP_IPI_CALL_IRQ, x86_64_smp_call_handler, NULL);
+  irq_attach(SMP_IPI_SCHED_IRQ, x86_64_smp_sched_handler, NULL);
+  up_enable_irq(SMP_IPI_CALL_IRQ);
+  up_enable_irq(SMP_IPI_SCHED_IRQ);
 
   /* CPU ready */
 

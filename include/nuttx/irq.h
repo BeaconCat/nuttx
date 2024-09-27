@@ -73,23 +73,11 @@
 
 #endif /* __ASSEMBLY__ */
 
-#ifdef CONFIG_SMP
-#  define cpu_irqlock_clear() \
-  do \
-    { \
-      g_cpu_irqset = 0; \
-      SP_DMB(); \
-      g_cpu_irqlock = SP_UNLOCKED; \
-      SP_DSB(); \
-    } \
-  while (0)
-#endif
-
-/* Interrupt was handled by this device */
+/* interrupt was handled by this device */
 
 #define IRQ_HANDLED     0
 
-/* Handler requests to wake the handler thread */
+/* handler requests to wake the handler thread */
 
 #define IRQ_WAKE_THREAD 1
 
@@ -308,16 +296,29 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
+#  define cpu_irqlock_clear() \
+  do \
+    { \
+      g_cpu_irqset = 0; \
+      SP_DMB(); \
+      g_cpu_irqlock = SP_UNLOCKED; \
+      SP_DSB(); \
+      SP_SEV(); \
+    } \
+  while (0)
+
 #  define restore_critical_section(tcb, cpu) \
-   do { \
-       if (tcb->irqcount <= 0) \
-         {\
-           if ((g_cpu_irqset & (1 << cpu)) != 0) \
-             { \
-               cpu_irqlock_clear(); \
-             } \
-         } \
-    } while (0)
+  do \
+    { \
+      if (tcb->irqcount <= 0) \
+        {\
+          if ((g_cpu_irqset & (1 << cpu)) != 0) \
+            { \
+              cpu_irqlock_clear(); \
+            } \
+        } \
+    } \
+  while (0)
 #else
 #  define restore_critical_section(tcb, cpu)
 #endif
