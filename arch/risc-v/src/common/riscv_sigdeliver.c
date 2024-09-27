@@ -55,7 +55,7 @@
 void riscv_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
-  uintreg_t *regs = rtcb->xcp.saved_regs;
+  uintptr_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal
@@ -69,8 +69,8 @@ void riscv_sigdeliver(void)
   board_autoled_on(LED_SIGNAL);
 
   sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->xcp.sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->xcp.sigdeliver != NULL);
+        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
+  DEBUGASSERT(rtcb->sigdeliver != NULL);
 
 retry:
 #ifdef CONFIG_SMP
@@ -102,7 +102,7 @@ retry:
 
   /* Deliver the signals */
 
-  ((sig_deliver_t)rtcb->xcp.sigdeliver)(rtcb);
+  ((sig_deliver_t)rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -147,7 +147,7 @@ retry:
    * could be modified by a hostile program.
    */
 
-  rtcb->xcp.sigdeliver = NULL;  /* Allows next handler to be scheduled */
+  rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
 
   /* Then restore the correct state for this thread of
    * execution.
@@ -161,10 +161,6 @@ retry:
   leave_critical_section(regs[REG_INT_CTX]);
   rtcb->irqcount--;
 #endif
-
-  /* g_running_tasks is not valid now */
-
-  g_running_tasks[this_cpu()] = NULL;
 
   rtcb->xcp.regs = regs;
   riscv_fullcontextrestore(rtcb);
