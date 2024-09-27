@@ -56,7 +56,7 @@
  * Public Functions
  ****************************************************************************/
 
-uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
+uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   struct tcb_s *tcb = this_task();

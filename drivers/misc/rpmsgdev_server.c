@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -346,6 +345,10 @@ static void rpmsgdev_poll_worker(FAR void *arg)
       fds->revents = 0;
 
       rpmsg_send(&server->ept, &msg, sizeof(msg));
+    }
+  else
+    {
+      ferr("ERROR: rpmsgdev_poll_cb() dev->cfd=0\n");
     }
 }
 
