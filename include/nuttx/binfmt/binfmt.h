@@ -29,18 +29,15 @@
 
 #include <spawn.h>
 #include <sys/types.h>
-#include <sys/utsname.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/streams.h>
-#include <nuttx/memoryregion.h>
+#include <nuttx/lib/modlib.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define BINFMT_NALLOC     4
-#define COREDUMP_MAGIC    0x434f5245
 
 /****************************************************************************
  * Public Types
@@ -69,20 +66,8 @@ struct binary_s
 
   main_t entrypt;                      /* Entry point into a program module */
   FAR void *mapped;                    /* Memory-mapped, address space */
-#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-  FAR void **sectalloc;                /* All sections memory allocated */
-  uint16_t nsect;                      /* Number of sections */
-#endif
-  FAR void *alloc[BINFMT_NALLOC];      /* Allocated address spaces */
-
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
-  /* Constructors/destructors */
-
-  FAR binfmt_ctor_t *ctors;            /* Pointer to a list of constructors */
-  FAR binfmt_dtor_t *dtors;            /* Pointer to a list of destructors */
-  uint16_t nctors;                     /* Number of constructors in the list */
-  uint16_t ndtors;                     /* Number of destructors in the list */
-#endif
+  struct module_s mod;                 /* Module context */
+  FAR void *picbase;                   /* Position-independent */
 
 #ifdef CONFIG_ARCH_ADDRENV
   /* Address environment.
@@ -136,22 +121,6 @@ struct binfmt_s
   /* Unload module callback */
 
   CODE int (*unload)(FAR struct binary_s *bin);
-
-  /* Coredump callback */
-
-  CODE int (*coredump)(FAR struct memory_region_s *regions,
-                       FAR struct lib_outstream_s *stream,
-                       pid_t pid);
-};
-
-/* Coredump information for block header */
-
-struct coredump_info_s
-{
-  uint32_t       magic;
-  struct utsname name;
-  time_t         time;
-  size_t         size;
 };
 
 /****************************************************************************
@@ -206,23 +175,6 @@ int register_binfmt(FAR struct binfmt_s *binfmt);
  ****************************************************************************/
 
 int unregister_binfmt(FAR struct binfmt_s *binfmt);
-
-/****************************************************************************
- * Name: core_dump
- *
- * Description:
- *   This function for generating core dump stream.
- *
- * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-int core_dump(FAR struct memory_region_s *regions,
-              FAR struct lib_outstream_s *stream,
-              pid_t pid);
 
 /****************************************************************************
  * Name: load_module

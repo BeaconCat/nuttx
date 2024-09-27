@@ -33,7 +33,6 @@
 #include "chip.h"
 #include "arm_internal.h"
 #include "lpc214x_vic.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Private Data
