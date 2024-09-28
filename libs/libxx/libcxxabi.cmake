@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libxx/libcxxabi.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,7 +20,7 @@
 
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
 
-  set(LIBCXXABI_VERSION ${CONFIG_LIBCXXABI_VERSION})
+  set(LIBCXXABI_VERSION CONFIG_LIBCXXABI_VERSION)
 
   FetchContent_Declare(
     libcxxabi
@@ -41,7 +39,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
         ""
         TEST_COMMAND
         ""
-    PATCH_COMMAND ""
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -51,6 +48,12 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
     FetchContent_Populate(libcxxabi)
   endif()
 endif()
+
+set_property(
+  TARGET nuttx
+  APPEND
+  PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES
+           ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
 
 nuttx_add_system_library(libcxxabi)
 
@@ -77,9 +80,9 @@ list(APPEND SRCS stdlib_exception.cpp stdlib_new_delete.cpp
 # Internal files
 list(APPEND SRCS abort_message.cpp fallback_malloc.cpp private_typeinfo.cpp)
 
-# Always compile libcxxabi with exception
-list(APPEND SRCS cxa_exception.cpp cxa_personality.cpp)
-target_compile_options(libcxxabi PRIVATE -fexceptions)
+if(CONFIG_CXX_EXCEPTION)
+  list(APPEND SRCS cxa_exception.cpp cxa_personality.cpp)
+endif()
 
 if(CONFIG_LIBCXXABI)
   add_compile_definitions(LIBCXX_BUILDING_LIBCXXABI)
@@ -91,9 +94,6 @@ foreach(src ${SRCS})
   string(PREPEND src libcxxabi/src/)
   list(APPEND TARGET_SRCS ${src})
 endforeach()
-
-# RTTI is required for building the libcxxabi library
-target_compile_options(libcxxabi PRIVATE -frtti)
 
 if(CONFIG_SIM_UBSAN OR CONFIG_MM_UBSAN)
   target_compile_options(libcxxabi PRIVATE -fno-sanitize=vptr)
@@ -107,10 +107,11 @@ if(CONFIG_ARCH_ARM)
                              PRIVATE _URC_FATAL_PHASE2_ERROR=_URC_FAILURE)
   target_compile_definitions(libcxxabi
                              PRIVATE _URC_FATAL_PHASE1_ERROR=_URC_FAILURE)
+  target_compile_definitions(libcxxabi
+                             PRIVATE LIBCXXABI_NON_DEMANGLING_TERMINATE)
 endif()
 
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
 target_compile_options(libcxxabi PRIVATE -frtti)
-target_include_directories(
-  libcxxabi BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include
-                           ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
+target_include_directories(libcxxabi BEFORE
+                           PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)

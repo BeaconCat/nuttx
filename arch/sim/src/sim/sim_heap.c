@@ -98,12 +98,12 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 #endif
 }
 
-static bool free_delaylist(struct mm_heap_s *heap, bool force)
+static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
 {
-  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
+  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -146,8 +146,8 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-#endif
   return ret;
+#endif
 }
 
 /****************************************************************************
@@ -250,14 +250,14 @@ struct mm_heap_s *mm_initialize(const char *name,
  *
  ****************************************************************************/
 
-void mm_uninitialize(struct mm_heap_s *heap)
+void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
   sched_note_heap(NOTE_HEAP_REMOVE, heap, NULL, 0, 0);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   procfs_unregister_meminfo(&heap->mm_procfs);
 #endif
-  mm_free_delaylist(heap);
+  mm_free_delaylist(heap, true);
   host_free(heap);
 }
 
@@ -324,22 +324,6 @@ void mm_free(struct mm_heap_s *heap, void *mem)
 }
 
 /****************************************************************************
- * Name: mm_free_delaylist
- *
- * Description:
- *   force freeing the delaylist of this heap.
- *
- ****************************************************************************/
-
-void mm_free_delaylist(struct mm_heap_s *heap)
-{
-  if (heap)
-    {
-       free_delaylist(heap, true);
-    }
-}
-
-/****************************************************************************
  * Name: mm_realloc
  *
  * Description:
@@ -371,13 +355,7 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int newsize;
   int oldsize;
 
-  free_delaylist(heap, false);
-
-  if (size == 0)
-    {
-      mm_free(heap, oldmem);
-      return NULL;
-    }
+  mm_free_delaylist(heap, false);
 
   oldsize = host_mallocsize(oldmem);
   atomic_fetch_sub(&heap->uordblks, oldsize);
@@ -408,7 +386,7 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && free_delaylist(heap, true))
+  if (mem == NULL && mm_free_delaylist(heap, true))
     {
       return mm_realloc(heap, oldmem, size);
     }
@@ -477,7 +455,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   int uordblks;
   int usmblks;
 
-  free_delaylist(heap, false);
+  mm_free_delaylist(heap, false);
   mem = host_memalign(alignment, size);
 
   if (mem == NULL)
@@ -502,7 +480,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && free_delaylist(heap, true))
+  if (mem == NULL && mm_free_delaylist(heap, true))
     {
       return mm_memalign(heap, alignment, size);
     }

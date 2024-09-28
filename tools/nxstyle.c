@@ -1,8 +1,6 @@
 /********************************************************************************
  * tools/nxstyle.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -186,7 +184,6 @@ static const struct file_section_s g_section_info[] =
 static const char *g_white_prefix[] =
 {
   "ASCII_",  /* Ref:  include/nuttx/ascii.h */
-  "Dl_info", /* Ref:  include/dlfcn.h */
   "Elf",     /* Ref:  include/elf.h, include/elf32.h, include/elf64.h */
   "PRId",    /* Ref:  inttypes.h */
   "PRIi",    /* Ref:  inttypes.h */
@@ -211,6 +208,7 @@ static const char *g_white_prefix[] =
   "luaL_",   /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lauxlib.h */
   "V4L2_",   /* Ref:  include/sys/video_controls.h */
   "Ifx",     /* Ref:  arch/tricore/src */
+
   NULL
 };
 
@@ -227,14 +225,8 @@ static const char *g_white_suffix[] =
 
 static const char *g_white_content_list[] =
 {
-  /* Ref:
-   * nuttx-apps/examples/wamr_module/module_hello.c
-   * nuttx-apps/interpreters/wamr/wamr_custom_init.c
-   *
-   * They are from the WAMR project.
-   */
+  /* Ref:  wamr_custom_init.c */
 
-  "NativeSymbol",
   "RuntimeInitArgs",
 
   /* Ref:  gnu_unwind_find_exidx.c */
@@ -472,7 +464,6 @@ static const char *g_white_content_list[] =
   "AsyncBoth",
   "CurrentTime",
   "XUnmapWindow",
-  "XFree",
 
   /* Ref:
    * nuttx/arch/sim/src/sim_hostdecoder.*
@@ -1106,7 +1097,6 @@ int main(int argc, char **argv, char **envp)
   bool bfunctions;      /* True: In private or public functions */
   bool bstatm;          /* True: This line is beginning of a statement */
   bool bfor;            /* True: This line is beginning of a 'for' statement */
-  bool bif;             /* True: This line is beginning of a 'if' statement */
   bool bswitch;         /* True: Within a switch statement */
   bool bstring;         /* True: Within a string */
   bool bquote;          /* True: Backslash quoted character next */
@@ -1246,7 +1236,6 @@ int main(int argc, char **argv, char **envp)
   bswitch        = false;       /* True: Within a switch statement */
   bstring        = false;       /* True: Within a string */
   bexternc       = false;       /* True: Within 'extern "C"' */
-  bif            = false;       /* True: This line is beginning of a 'if' statement */
   ppline         = PPLINE_NONE; /* > 0: The next line the continuation of a
                                  * pre-processor command */
   rhcomment      = 0;           /* Indentation of Comment to the right of code
@@ -1796,10 +1785,7 @@ int main(int argc, char **argv, char **envp)
       /* Check for a single line comment */
 
       linelen = strlen(line);
-
-      /* Minimum is slash, star, star, slash, newline */
-
-      if (linelen >= 5)
+      if (linelen >= 5)      /* Minimum is slash, star, star, slash, newline */
         {
           lptr = strstr(line, "*/");
           if (line[indent] == '/' && line[indent + 1] == '*' &&
@@ -1991,18 +1977,13 @@ int main(int argc, char **argv, char **envp)
                    strncmp(&line[indent], "do ", 3) == 0 ||
                    strncmp(&line[indent], "else ", 5) == 0 ||
                    strncmp(&line[indent], "goto ", 5) == 0 ||
+                   strncmp(&line[indent], "if ", 3) == 0 ||
                    strncmp(&line[indent], "return ", 7) == 0 ||
-    #if 0 /* Doesn't follow pattern */
+    #if 0 /*  Doesn't follow pattern */
                    strncmp(&line[indent], "switch ", 7) == 0 ||
     #endif
                    strncmp(&line[indent], "while ", 6) == 0)
             {
-              bstatm = true;
-            }
-
-          else if(strncmp(&line[indent], "if ", 3) == 0)
-            {
-              bif    = true;
               bstatm = true;
             }
 
@@ -2021,15 +2002,10 @@ int main(int argc, char **argv, char **envp)
           /* Also check for C keywords with missing white space */
 
           else if (strncmp(&line[indent], "do(", 3) == 0 ||
+                   strncmp(&line[indent], "if(", 3) == 0 ||
                    strncmp(&line[indent], "while(", 6) == 0)
             {
               ERROR("Missing whitespace after keyword", lineno, n);
-              bstatm = true;
-            }
-          else if (strncmp(&line[indent], "if(", 3) == 0)
-            {
-              ERROR("Missing whitespace after keyword", lineno, n);
-              bif   = true;
               bstatm = true;
             }
           else if (strncmp(&line[indent], "for(", 4) == 0)
@@ -2279,13 +2255,6 @@ int main(int argc, char **argv, char **envp)
                                   "blank line before comment", lineno, n);
                             }
                         }
-                    }
-
-                  /* Allow comments on the same line as the if statement */
-
-                  if (bif == true)
-                    {
-                      bif = false;
                     }
 
                   n++;
@@ -2628,7 +2597,7 @@ int main(int argc, char **argv, char **envp)
 
                    /* Check for inappropriate space around parentheses */
 
-                    if (line[n + 1] == ' ')
+                    if (line[n + 1] == ' ')  /* && !bfor */
                       {
                          ERROR("Space follows left parenthesis", lineno, n);
                       }
@@ -2640,11 +2609,11 @@ int main(int argc, char **argv, char **envp)
                     /* Decrease the parenthetical nesting level */
 
                     if (pnest < 1)
-                      {
-                        ERROR("Unmatched right parentheses", lineno, n);
-                        pnest = 0;
-                      }
-                    else
+                     {
+                       ERROR("Unmatched right parentheses", lineno, n);
+                       pnest = 0;
+                     }
+                   else
                      {
                        pnest--;
                      }
@@ -2655,14 +2624,7 @@ int main(int argc, char **argv, char **envp)
 
                     if (n > 0 && n != indent && line[n - 1] == ' ' && !bfor)
                       {
-                        ERROR("Space precedes right parenthesis", lineno, n);
-                      }
-
-                    /* Unset bif if last parenthesis is closed */
-
-                    if (bif == true && pnest == 0)
-                      {
-                        bif = false;
+                         ERROR("Space precedes right parenthesis", lineno, n);
                       }
                   }
                   break;
@@ -3135,16 +3097,7 @@ int main(int argc, char **argv, char **envp)
           if (m > 1 && isspace((int)line[m - 1]) &&
               line[m - 1] != '\n' && line[m - 1] != '\r')
             {
-              /* Report warning on if statement only is pnest is 0
-               * This takes into consideration the multiline if statement.
-               */
-
-              if (bif == true && pnest == 0)
-                {
-                  WARN("If statement followed by garbage", lineno, n);
-                }
-
-              ERROR("Dangling whitespace at the end of line", lineno, m);
+               ERROR("Dangling whitespace at the end of line", lineno, m);
             }
 
           /* The line width is determined by the location of the final
@@ -3183,16 +3136,7 @@ int main(int argc, char **argv, char **envp)
 
           if (m > g_maxline && !rhcomment)
             {
-              /* Ignore the line 2 (file path) */
-
-              if (lineno == 2)
-                {
-                  INFO("Skipping checking line 2: path file\n", 2, m);
-                }
-              else
-                {
-                  ERROR("Long line found", lineno, m);
-                }
+              ERROR("Long line found", lineno, m);
             }
         }
 
