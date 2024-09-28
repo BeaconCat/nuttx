@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libm/libm/lib_nanf.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
 #include <math.h>
@@ -32,7 +31,7 @@
  * Public Functions
  ****************************************************************************/
 
-float nanf(FAR const char *tagp)
+float nanf(const char *tagp)
 {
   return (float)NAN;
 }
