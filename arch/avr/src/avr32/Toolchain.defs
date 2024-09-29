@@ -46,14 +46,10 @@ else
 endif
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common
+ARCHCXXFLAGS += -fno-common -nostdinc++
 
 ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
-
-ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
-  ARCHCXXFLAGS += -nostdinc++
-endif
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -109,4 +105,4 @@ CELFFLAGS = $(CFLAGS) -fvisibility=hidden
 CXXELFFLAGS = $(CXXFLAGS) -fvisibility=hidden
 
 LDELFFLAGS = -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)binfmt$(DELIM)libelf$(DELIM)gnu-elf.ld)
+LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)modlib$(DELIM)gnu-elf.ld)

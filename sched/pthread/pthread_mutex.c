@@ -58,7 +58,7 @@
 
 static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
 
   DEBUGASSERT(mutex->flink == NULL);
@@ -66,10 +66,46 @@ static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
   /* Add the mutex to the list of mutexes held by this pthread */
 
   flags        = enter_critical_section();
+  rtcb         = this_task();
   mutex->flink = rtcb->mhead;
   rtcb->mhead  = mutex;
   leave_critical_section(flags);
 }
+
+/****************************************************************************
+ * Name: pthread_mutex_check
+ *
+ * Description:
+ *   Verify that the mutex is not in the list of mutexes held by
+ *   this pthread.
+ *
+ * Input Parameters:
+ *  mutex - The mutex to be locked
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEBUG_ASSERTIONS
+static void pthread_mutex_check(FAR struct pthread_mutex_s *mutex)
+{
+  FAR struct tcb_s *tcb = this_task();
+  irqstate_t flags = enter_critical_section();
+  FAR struct pthread_mutex_s *cur;
+
+  DEBUGASSERT(mutex != NULL);
+  for (cur = tcb->mhead; cur != NULL; cur = cur->flink)
+    {
+      /* The mutex should not be in the list of mutexes held by this task */
+
+      DEBUGASSERT(cur != mutex);
+    }
+
+  leave_critical_section(flags);
+}
+
+#endif
 
 /****************************************************************************
  * Name: pthread_mutex_remove
@@ -87,12 +123,13 @@ static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
 
 static void pthread_mutex_remove(FAR struct pthread_mutex_s *mutex)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   FAR struct pthread_mutex_s *curr;
   FAR struct pthread_mutex_s *prev;
   irqstate_t flags;
 
   flags = enter_critical_section();
+  rtcb = this_task();
 
   /* Remove the mutex from the list of mutexes held by this task */
 
@@ -145,15 +182,8 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
 {
   int ret = EINVAL;
 
-  /* Verify input parameters */
-
-  DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -197,12 +227,13 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
 
               else if (!mutex_is_recursive(&mutex->mutex))
                 {
+#ifdef CONFIG_DEBUG_ASSERTIONS
+                  pthread_mutex_check(mutex);
+#endif
                   pthread_mutex_add(mutex);
                 }
             }
         }
-
-      sched_unlock();
     }
 
   return ret;
@@ -234,10 +265,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
   DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -269,8 +296,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
               pthread_mutex_add(mutex);
             }
         }
-
-      sched_unlock();
     }
 
   return ret;

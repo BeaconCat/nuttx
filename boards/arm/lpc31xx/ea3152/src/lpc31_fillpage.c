@@ -31,7 +31,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/page.h>
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 #ifdef CONFIG_PAGING_BINPATH
 #  include <sys/stat.h>
 #  include <sys/types.h>
@@ -257,8 +257,7 @@ static inline void lpc31_initsrc(void)
 
       /* Now mount the file system */
 
-      snprintf(devname, sizeof(devname), "/dev/mmcsd%d",
-               CONFIG_EA3152_PAGING_MINOR);
+      snprintf(devname, 16, "/dev/mmcsd%d", CONFIG_EA3152_PAGING_MINOR);
       ret = nx_mount(devname, CONFIG_EA3152_PAGING_MOUNTPT, "vfat",
                      MS_RDONLY, NULL);
       DEBUGASSERT(ret == OK);
@@ -524,4 +523,4 @@ void weak_function lpc31_pginitialize(void)
    */
 }
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
