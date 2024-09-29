@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/mm_heap/mm_memalign.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -141,6 +139,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   kasan_poison((FAR void *)rawchunk,
                mm_malloc_size(heap, (FAR void *)rawchunk));
 
+  rawchunk = (uintptr_t)kasan_reset_tag((FAR void *)rawchunk);
+
   /* We need to hold the MM mutex while we muck with the chunks and
    * nodelist.
    */
@@ -275,15 +275,15 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
       heap->mm_maxused = heap->mm_curused;
     }
 
+  sched_note_heap(NOTE_HEAP_ALLOC, heap, (FAR void *)alignedchunk, size,
+                  heap->mm_curused);
+
   mm_unlock(heap);
 
   MM_ADD_BACKTRACE(heap, node);
 
   alignedchunk = (uintptr_t)kasan_unpoison((FAR const void *)alignedchunk,
                                            size - MM_ALLOCNODE_OVERHEAD);
-  sched_note_heap(NOTE_HEAP_ALLOC, heap, (FAR void *)alignedchunk, size,
-                  heap->mm_curused);
-
   DEBUGASSERT(alignedchunk % alignment == 0);
   return (FAR void *)alignedchunk;
 }

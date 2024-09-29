@@ -231,9 +231,11 @@ void modlib_dumpentrypt(FAR struct mod_loadinfo_s *loadinfo)
 
 FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
 {
+  FAR const struct symtab_s *exports;
   struct mod_loadinfo_s loadinfo;
   FAR struct module_s *modp;
   FAR void (**array)(void);
+  int nexports;
   int ret;
   int i;
 
@@ -291,9 +293,13 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
       goto errout_with_registry_entry;
     }
 
+  /* Get the symbol table */
+
+  modlib_getsymtab(&exports, &nexports);
+
   /* Bind the program to the kernel symbol table */
 
-  ret = modlib_bind(modp, &loadinfo);
+  ret = modlib_bind(modp, &loadinfo, exports, nexports);
   if (ret != 0)
     {
       binfo("Failed to bind symbols program binary: %d\n", ret);
@@ -304,6 +310,11 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
 
   modp->textalloc = (FAR void *)loadinfo.textalloc;
   modp->dataalloc = (FAR void *)loadinfo.datastart;
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+  modp->sectalloc = (FAR void **)loadinfo.sectalloc;
+  modp->nsect = loadinfo.ehdr.e_shnum;
+#endif
+
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
   modp->textsize  = loadinfo.textsize;
   modp->datasize  = loadinfo.datasize;
@@ -332,6 +343,8 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
               array[i]();
             }
 
+          modp->initarr = loadinfo.initarr;
+          modp->ninit = loadinfo.ninit;
           modp->finiarr = loadinfo.finiarr;
           modp->nfini = loadinfo.nfini;
           break;

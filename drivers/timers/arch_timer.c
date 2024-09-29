@@ -407,9 +407,9 @@ void up_perf_init(FAR void *arg)
   UNUSED(arg);
 }
 
-unsigned long up_perf_gettime(void)
+clock_t up_perf_gettime(void)
 {
-  unsigned long ret = 0;
+  clock_t ret = 0;
 
   if (g_timer.lower != NULL)
     {
@@ -424,8 +424,7 @@ unsigned long up_perf_getfreq(void)
   return USEC_PER_SEC;
 }
 
-void up_perf_convert(unsigned long elapsed,
-                     FAR struct timespec *ts)
+void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
 {
   clock_usec2time(ts, elapsed);
 }
@@ -465,4 +464,19 @@ void weak_function up_udelay(useconds_t microseconds)
     {
       udelay_coarse(microseconds);
     }
+}
+
+/****************************************************************************
+ * Name: up_ndelay
+ *
+ * Description:
+ *   Delay inline for the requested number of nanoseconds.
+ *
+ *   *** NOT multi-tasking friendly ***
+ *
+ ****************************************************************************/
+
+void weak_function up_ndelay(unsigned long nanoseconds)
+{
+  up_udelay((nanoseconds + NSEC_PER_USEC - 1) / NSEC_PER_USEC);
 }
