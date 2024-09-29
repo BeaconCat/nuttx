@@ -1,8 +1,7 @@
 /****************************************************************************
  * libs/libc/lzf/lzf_c.c
  *
- * SPDX-License-Identifier: BSD-2-Clause
- * SPDX-FileCopyrightText: 2000-2010 Marc Alexander Lehmann <schmorp@schmorp.de>
+ * Copyright (c) 2000-2010 Marc Alexander Lehmann <schmorp@schmorp.de>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -187,7 +186,7 @@ size_t lzf_compress(FAR const void *const in_data,
 #ifdef CONFIG_LIBC_LZF_ALIGN
           && ((ref[1] << 8) | ref[0]) == ((ip[1] << 8) | ip[0])
 #else
-          && *(FAR uint16_t *)ref == *(FAR uint16_t *)ip
+          && *(uint16_t *)ref == *(uint16_t *)ip
 #endif
         )
         {

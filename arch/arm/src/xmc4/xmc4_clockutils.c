@@ -186,20 +186,3 @@ uint32_t xmc4_get_periphclock(void)
 
   return periphclock;
 }
-
-/****************************************************************************
- * Name: xmc4_get_ccuclock
- *
- * Description:
- *   The ccu clock is either fCPU or fCPU/2, depending on the state
- *   of the peripheral divider.
- *
- ****************************************************************************/
-
-uint32_t xmc4_get_ccuclock(void)
-{
-  uint32_t f_cpu = xmc4_get_coreclock();
-  uint32_t f_ccu =
-    f_cpu >> ((uint32_t)(getreg32(XMC4_SCU_CCUCLKCR) & SCU_CCUCLKCR_CCUDIV));
-  return  f_ccu;
-}

@@ -1090,8 +1090,8 @@ static int virtio_snd_init(FAR struct virtio_snd_s *priv)
   callbacks[VIRTIO_SND_VQ_TX] = virtio_snd_pcm_notify_cb;
   callbacks[VIRTIO_SND_VQ_RX] = virtio_snd_pcm_notify_cb;
 
-  ret = virtio_create_virtqueues(priv->vdev, 0,
-                                 VIRTIO_SND_VQ_MAX, vqnames, callbacks);
+  ret = virtio_create_virtqueues(priv->vdev, 0, VIRTIO_SND_VQ_MAX,
+                                 vqnames, callbacks, NULL);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);
@@ -1164,11 +1164,11 @@ virtio_snd_register_audio_driver(FAR struct virtio_snd_s *priv)
       switch (priv->info[i].direction)
         {
           case VIRTIO_SND_D_OUTPUT:
-            snprintf(devname, sizeof(devname), "pcm%dp", tx_minor++);
+            snprintf(devname, 32, "pcm%dp", tx_minor++);
             break;
 
           case VIRTIO_SND_D_INPUT:
-            snprintf(devname, sizeof(devname), "pcm%dc", rx_minor++);
+            snprintf(devname, 32, "pcm%dc", rx_minor++);
             break;
         }
 

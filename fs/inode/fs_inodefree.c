@@ -45,35 +45,35 @@
  *
  ****************************************************************************/
 
-void inode_free(FAR struct inode *inode)
+void inode_free(FAR struct inode *node)
 {
   /* Verify that we were passed valid pointer to an inode */
 
-  if (inode != NULL)
+  if (node != NULL)
     {
 #ifdef CONFIG_PSEUDOFS_SOFTLINKS
       /* Symbol links should never have peers or children */
 
-      DEBUGASSERT(!INODE_IS_SOFTLINK(inode) ||
-                  (inode->i_peer == NULL && inode->i_child == NULL));
+      DEBUGASSERT(!INODE_IS_SOFTLINK(node) ||
+                  (node->i_peer == NULL && node->i_child == NULL));
 #endif
 
       /* Free all peers and children of this i_node */
 
-      inode_free(inode->i_peer);
-      inode_free(inode->i_child);
+      inode_free(node->i_peer);
+      inode_free(node->i_child);
 
 #ifdef CONFIG_PSEUDOFS_SOFTLINKS
       /* If the inode is a symbolic link, the free the path to the linked
        * entity.
        */
 
-      if (INODE_IS_SOFTLINK(inode) && inode->u.i_link != NULL)
+      if (INODE_IS_SOFTLINK(node) && node->u.i_link != NULL)
         {
-          fs_heap_free(inode->u.i_link);
+          fs_heap_free(node->u.i_link);
         }
 #endif
 
-      fs_heap_free(inode);
+      fs_heap_free(node);
     }
 }
