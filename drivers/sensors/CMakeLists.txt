@@ -60,30 +60,12 @@ if(CONFIG_SENSORS)
     list(APPEND SRCS adxl345_base.c)
   endif()
 
-  if(CONFIG_SENSORS_ADXL362)
-    list(APPEND SRCS adxl362_uorb.c)
-  endif()
-
-  if(CONFIG_SENSORS_BH1749NUC)
-    list(APPEND SRCS bh1749nuc_base.c)
-    if(CONFIG_SENSORS_BH1749NUC_UORB)
-      list(APPEND SRCS bh1749nuc_uorb.c)
-    else()
-      list(APPEND SRCS bh1749nuc.c)
-    endif()
-  endif()
-
   if(CONFIG_SENSORS_DHTXX)
     list(APPEND SRCS dhtxx.c)
   endif()
 
   if(CONFIG_SENSORS_BMI270)
-    list(APPEND SRCS bmi270_base.c)
-    if(CONFIG_SENSORS_BMI270_UORB)
-      list(APPEND SRCS bmi270_uorb.c)
-    else()
-      list(APPEND SRCS bmi270.c)
-    endif()
+    list(APPEND SRCS bmi270.c)
   endif()
 
   # These drivers depend on I2C support
@@ -139,12 +121,7 @@ if(CONFIG_SENSORS)
     endif()
 
     if(CONFIG_SENSORS_LSM9DS1)
-      list(APPEND SRCS lsm9ds1_base.c)
-      if(CONFIG_SENSORS_LSM9DS1_UORB)
-        list(APPEND SRCS lsm9ds1_uorb.c)
-      else()
-        list(APPEND SRCS lsm9ds1.c)
-      endif()
+      list(APPEND SRCS lsm9ds1.c)
     endif()
 
     if(CONFIG_SENSORS_MSA301)
@@ -178,6 +155,7 @@ if(CONFIG_SENSORS)
       else()
         list(APPEND SRCS bmi160.c)
       endif()
+
     endif()
 
     if(CONFIG_SENSORS_BMP180)
@@ -234,8 +212,8 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS mlx90614.c)
     endif()
 
-    if(CONFIG_SENSORS_MS56XX)
-      list(APPEND SRCS ms56xx_uorb.c)
+    if(CONFIG_SENSORS_MS5611)
+      list(APPEND SRCS ms5611_uorb.c)
     endif()
 
     if(CONFIG_SENSORS_MS58XX)
@@ -282,10 +260,6 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS sht3x.c)
     endif()
 
-    if(CONFIG_SENSORS_SHT4X)
-      list(APPEND SRCS sht4x.c)
-    endif()
-
     if(CONFIG_SENSORS_SPS30)
       list(APPEND SRCS sps30.c)
     endif()
@@ -296,14 +270,6 @@ if(CONFIG_SENSORS)
 
     if(CONFIG_SENSORS_LTR308)
       list(APPEND SRCS ltr308_uorb.c)
-    endif()
-
-    if(CONFIG_SENSORS_BMM150)
-      list(APPEND SRCS bmm150_uorb.c)
-    endif()
-
-    if(CONFIG_SENSORS_AMG88XX)
-      list(APPEND SRCS amg88xx.c)
     endif()
 
   endif() # CONFIG_I2C
@@ -317,11 +283,7 @@ if(CONFIG_SENSORS)
     endif()
 
     if(CONFIG_SENSORS_ADXL372)
-      if(CONFIG_SENSORS_ADXL372_UORB)
-        list(APPEND SRCS adxl372_uorb.c)
-      else()
-        list(APPEND SRCS adxl372.c)
-      endif()
+      list(APPEND SRCS adxl372.c)
     endif()
 
     if(CONFIG_LIS3DSH)
