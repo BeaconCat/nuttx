@@ -77,15 +77,6 @@
 #  define CONFIG_HAVE_CXX14 1
 #endif
 
-/* Green Hills Software definitions *****************************************/
-
-#if defined(__ghs__)
-
-#  define __extension__
-#  define register
-
-#endif
-
 #undef offsetof
 
 /* GCC-specific definitions *************************************************/
@@ -174,7 +165,7 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
-#undef CONFIG_HAVE_WEAKFUNCTIONS
+#  undef CONFIG_HAVE_WEAKFUNCTIONS
 
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
@@ -208,8 +199,8 @@
 
 /* Branch prediction */
 
-#  define predict_true(x)  __builtin_expect(!!(x), 1)
-#  define predict_false(x) __builtin_expect(!!(x), 0)
+#  define predict_true(x) __builtin_expect(!!(x), 1)
+#  define predict_false(x) __builtin_expect((x), 0)
 
 /* Code locate */
 
@@ -253,21 +244,28 @@
 
 #  define noinstrument_function __attribute__((no_instrument_function))
 
+/* The no_profile_instrument_function attribute on functions is used to
+ * inform the compiler that it should not process any profile feedback
+ * based optimization code instrumentation.
+ */
+
+#  define noprofile_function __attribute__((no_profile_instrument_function))
+
 /* The nooptimiziation_function attribute no optimize */
 
-#  define nooptimiziation_function __attribute__((optimize(0)))
+#  if defined(__clang__)
+#    define nooptimiziation_function __attribute__((optnone))
+#  elif !defined(__ghs__)
+#    define nooptimiziation_function __attribute__((optimize("O0")))
+#  else
+#    define nooptimiziation_function
+#  endif
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
-#  define nosanitize_address __attribute__((no_sanitize_address))
-
-/* the Greenhills compiler do not support the following atttributes */
-
-#  if defined(__ghs__)
-#    undef nooptimiziation_function
-#    define nooptimiziation_function
-
-#    undef nosanitize_address
+#  if !defined(__ghs__)
+#    define nosanitize_address __attribute__((no_sanitize_address))
+#  else
 #    define nosanitize_address
 #  endif
 
@@ -314,7 +312,6 @@
 #    define malloc_like1(a) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
-#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  else
 #    define fopen_like __attribute__((__malloc__))
 #    define popen_like __attribute__((__malloc__))
@@ -322,7 +319,6 @@
 #    define malloc_like1(a) __attribute__((__malloc__)) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__)) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
-#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  endif
 
 /* Some versions of GCC have a separate __syslog__ format.
@@ -339,6 +335,7 @@
 #  define syslog_like(a, b) __attribute__((__format__(__syslog__, a, b)))
 #  define scanf_like(a, b) __attribute__((__format__(__scanf__, a, b)))
 #  define strftime_like(a) __attribute__((__format__(__strftime__, a, 0)))
+#  define object_size(o, t) __builtin_object_size(o, t)
 
 /* GCC does not use storage classes to qualify addressing */
 
@@ -511,9 +508,15 @@
 /* CMSE extention */
 
 #  ifdef CONFIG_ARCH_HAVE_TRUSTZONE
-#    define tz_nonsecure_entry __attribute__((cmse_nonsecure_entry))
-#    define tz_nonsecure_call  __attribute__((cmse_nonsecure_call))
+#    define cmse_nonsecure_entry __attribute__((cmse_nonsecure_entry))
+#    define cmse_nonsecure_call __attribute__((cmse_nonsecure_call))
 #  endif
+
+/* GCC support expression statement, a compound statement enclosed in
+ * parentheses may appear as an expression in GNU C.
+ */
+
+#  define CONFIG_HAVE_EXPRESSION_STATEMENT 1
 
 /* SDCC-specific definitions ************************************************/
 
@@ -583,6 +586,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -599,13 +603,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* The reentrant attribute informs SDCC that the function
  * must be reentrant.  In this case, SDCC will store input
@@ -729,6 +733,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -743,12 +748,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* REVISIT: */
 
@@ -843,6 +848,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -857,12 +863,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -936,6 +942,7 @@
 #  define inline_function __forceinline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -950,7 +957,6 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -1015,10 +1021,10 @@
 #  define end_packed_struct             __attribute__((packed))
 #  define reentrant_function
 #  define naked_function
-#  define always_inline_function        __attribute__((always_inline,no_instrument_function))
-#  define inline_function               __attribute__((always_inline)) inline
+#  define always_inline_function        __attribute__((always_inline))
 #  define noinline_function             __attribute__((noinline))
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function      __attribute__((optimize(0)))
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -1033,7 +1039,6 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -1087,6 +1092,7 @@
 #  define inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -1101,12 +1107,12 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
-#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -1134,6 +1140,12 @@
 
 #ifndef CONFIG_HAVE_LONG_LONG
 #  undef CONFIG_FS_LARGEFILE
+#endif
+
+#ifdef CONFIG_DISABLE_FLOAT
+#  undef CONFIG_HAVE_FLOAT
+#  undef CONFIG_HAVE_DOUBLE
+#  undef CONFIG_HAVE_LONG_DOUBLE
 #endif
 
 /****************************************************************************

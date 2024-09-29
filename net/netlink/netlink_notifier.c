@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/netlink/netlink_notifier.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -97,8 +95,9 @@ int netlink_notifier_setup(worker_t worker, FAR struct netlink_conn_s *conn,
  *
  ****************************************************************************/
 
-void netlink_notifier_teardown(FAR struct netlink_conn_s *conn)
+void netlink_notifier_teardown(FAR void *arg)
 {
+  FAR struct netlink_conn_s *conn = arg;
   DEBUGASSERT(conn != NULL);
 
   /* This is just a simple wrapper around work_notifier_teardown(). */

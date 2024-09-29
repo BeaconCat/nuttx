@@ -1,8 +1,6 @@
 /****************************************************************************
  * sched/wqueue/kwork_cancel.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,6 +38,29 @@
 
 /****************************************************************************
  * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: work_qcancel
+ *
+ * Description:
+ *   Cancel previously queued work.  This removes work from the work queue.
+ *   After work has been cancelled, it may be requeued by calling
+ *   work_queue() again.
+ *
+ * Input Parameters:
+ *   wqueue  - The work queue to use
+ *   sync    - true: synchronous cancel
+ *             false: asynchronous cancel
+ *   work    - The previously queued work structure to cancel
+ *
+ * Returned Value:
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
+ *
+ *   -ENOENT - There is no such work queued.
+ *   -EINVAL - An invalid work queue was specified
+ *
  ****************************************************************************/
 
 static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,

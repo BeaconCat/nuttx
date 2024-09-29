@@ -41,7 +41,9 @@ if(CONFIG_ARCH_BUTTONS)
   list(APPEND SRCS cxd56_buttons.c)
 endif()
 
-list(APPEND SRCS cxd56_gpioif.c)
+if(CONFIG_CXD56_GPIO_IRQ)
+  list(APPEND SRCS cxd56_gpioif.c)
+endif()
 
 if(CONFIG_CXD56_PWM)
   list(APPEND SRCS cxd56_pwm.c)
