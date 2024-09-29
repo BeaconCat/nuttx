@@ -94,13 +94,23 @@ EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
  * Name: up_cpu_index
  *
  * Description:
- *   Return the real core number regardless CONFIG_SMP setting
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
-int up_cpu_index(void) noinstrument_function;
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
+#ifdef CONFIG_SMP
+int up_cpu_index(void);
+#else
+#  define up_cpu_index() (0)
+#endif
 
 /****************************************************************************
  * Inline functions
@@ -108,20 +118,12 @@ int up_cpu_index(void) noinstrument_function;
 
 static inline_function uint32_t *up_current_regs(void)
 {
-#ifdef CONFIG_SMP
   return (uint32_t *)g_current_regs[up_cpu_index()];
-#else
-  return (uint32_t *)g_current_regs[0];
-#endif
 }
 
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-#ifdef CONFIG_SMP
   g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
 }
 
 /****************************************************************************
@@ -133,7 +135,7 @@ static inline_function void up_set_current_regs(uint32_t *regs)
  *
  ****************************************************************************/
 
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();

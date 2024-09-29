@@ -39,13 +39,14 @@ set(SRCS
     fs_rename.c
     fs_rmdir.c
     fs_select.c
-    fs_sendfile.c
     fs_stat.c
+    fs_sendfile.c
     fs_statfs.c
     fs_unlink.c
     fs_write.c
     fs_dir.c
     fs_fsync.c
+    fs_syncfs.c
     fs_truncate.c)
 
 # File lock support

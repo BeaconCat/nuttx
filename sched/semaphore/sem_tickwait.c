@@ -68,7 +68,7 @@
 
 int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int ret;
 
@@ -83,6 +83,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
    */
 
   flags = enter_critical_section();
+  rtcb = this_task();
 
   /* Try to take the semaphore without waiting. */
 
@@ -100,9 +101,8 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 
   if (delay == 0)
     {
-      /* Timed out already before waiting */
+      /* Return the errno from nxsem_trywait() */
 
-      ret = -ETIMEDOUT;
       goto out;
     }
 
@@ -150,7 +150,7 @@ out:
 
 int nxsem_tickwait_uninterruptible(FAR sem_t *sem, uint32_t delay)
 {
-  clock_t end = clock_systime_ticks() + delay + 1;
+  clock_t end = clock_systime_ticks() + delay;
   int ret;
 
   for (; ; )
