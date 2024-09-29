@@ -69,62 +69,57 @@
 int sched_lock(void)
 {
   FAR struct tcb_s *rtcb;
+  irqstate_t flags;
+  int cpu;
+
+  flags = enter_critical_section();
 
   /* If the CPU supports suppression of interprocessor interrupts, then
    * simple disabling interrupts will provide sufficient protection for
    * the following operation.
    */
 
-  rtcb = this_task();
+  cpu = this_cpu();
+  rtcb = current_task(cpu);
+  DEBUGASSERT(rtcb != NULL);
+  DEBUGASSERT(!up_interrupt_context());
 
-  /* Check for some special cases:  (1) rtcb may be NULL only during early
-   * boot-up phases, and (2) sched_lock() should have no effect if called
-   * from the interrupt level.
+  /* Catch attempts to increment the lockcount beyond the range of the
+   * integer type.
    */
 
-  if (rtcb != NULL && !up_interrupt_context())
+  DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
+
+  /* A counter is used to support locking.  This allows nested lock
+   * operations on this thread (on any CPU)
+   */
+
+  rtcb->lockcount++;
+
+  /* Check if we just acquired the lock */
+
+  if (rtcb->lockcount == 1)
     {
-      irqstate_t flags;
+      /* Note that we have pre-emption locked */
 
-      /* Catch attempts to increment the lockcount beyond the range of the
-       * integer type.
-       */
-
-      DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
-
-      flags = enter_critical_section();
-
-      /* A counter is used to support locking.  This allows nested lock
-       * operations on this thread
-       */
-
-      rtcb->lockcount++;
-
-      /* Check if we just acquired the lock */
-
-      if (rtcb->lockcount == 1)
-        {
-          /* Note that we have pre-emption locked */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-          nxsched_critmon_preemption(rtcb, true, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-          sched_note_premption(rtcb, true);
-#endif
-        }
-
-      /* Move any tasks in the ready-to-run list to the pending task list
-       * where they will not be available to run until the scheduler is
-       * unlocked and nxsched_merge_pending() is called.
-       */
-
-      nxsched_merge_prioritized(list_readytorun(),
-                                list_pendingtasks(),
-                                TSTATE_TASK_PENDING);
-
-      leave_critical_section(flags);
+#    if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
+      nxsched_critmon_preemption(rtcb, true, return_address(0));
+#    endif
+#    ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+      sched_note_premption(rtcb, true);
+#    endif
     }
+
+  /* Move any tasks in the ready-to-run list to the pending task list
+   * where they will not be available to run until the scheduler is
+   * unlocked and nxsched_merge_pending() is called.
+   */
+
+  nxsched_merge_prioritized(&g_readytorun,
+                            &g_pendingtasks,
+                            TSTATE_TASK_PENDING);
+
+  leave_critical_section(flags);
 
   return OK;
 }
@@ -135,38 +130,33 @@ int sched_lock(void)
 {
   FAR struct tcb_s *rtcb = this_task();
 
-  /* Check for some special cases:  (1) rtcb may be NULL only during early
-   * boot-up phases, and (2) sched_lock() should have no effect if called
-   * from the interrupt level.
+  DEBUGASSERT(rtcb != NULL);
+  DEBUGASSERT(!up_interrupt_context());
+
+  /* Catch attempts to increment the lockcount beyond the range of the
+   * integer type.
    */
 
-  if (rtcb != NULL && !up_interrupt_context())
+  DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
+
+  /* A counter is used to support locking.  This allows nested lock
+   * operations on this thread (on any CPU)
+   */
+
+  rtcb->lockcount++;
+
+  /* Check if we just acquired the lock */
+
+  if (rtcb->lockcount == 1)
     {
-      /* Catch attempts to increment the lockcount beyond the range of the
-       * integer type.
-       */
+      /* Note that we have pre-emption locked */
 
-      DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
-
-      /* A counter is used to support locking.  This allows nested lock
-       * operations on this thread (on any CPU)
-       */
-
-      rtcb->lockcount++;
-
-      /* Check if we just acquired the lock */
-
-      if (rtcb->lockcount == 1)
-        {
-          /* Note that we have pre-emption locked */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-          nxsched_critmon_preemption(rtcb, true, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
-          sched_note_premption(rtcb, true);
-#endif
-        }
+#    if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
+      nxsched_critmon_preemption(rtcb, true, return_address(0));
+#    endif
+#    ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+      sched_note_premption(rtcb, true);
+#    endif
     }
 
   return OK;
