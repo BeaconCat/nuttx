@@ -1,8 +1,6 @@
 ############################################################################
 # libs/libxx/Makefile
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -35,12 +33,11 @@ ifeq ($(CONFIG_UCLIBCXX),y)
 include uClibc++.defs
 else ifeq ($(CONFIG_LIBCXX),y)
 include libcxx.defs
-else ifeq ($(CONFIG_LIBCXXMINI),y)
+else
 include libcxxmini.defs
-endif
-
 ifeq ($(CONFIG_ETL),y)
 include etl.defs
+endif
 endif
 
 ifeq ($(CONFIG_LIBCXXABI),y)

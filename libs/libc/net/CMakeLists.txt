@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libc/net/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -25,6 +23,7 @@ set(SRCS
     lib_base64.c
     lib_htons.c
     lib_htonl.c
+    lib_htonq.c
     lib_inetaddr.c
     lib_inetaton.c
     lib_inetntoa.c

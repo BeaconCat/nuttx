@@ -272,6 +272,37 @@ static struct max7219_dev_s g_max7219dev =
  ****************************************************************************/
 
 /****************************************************************************
+ * __set_bit - Set a bit in memory
+ *
+ *   nr   - The bit to set
+ *   addr - The address to start counting from
+ *
+ * Unlike set_bit(), this function is non-atomic and may be reordered.
+ * If it's called on the same region of memory simultaneously, the effect
+ * may be that only one operation succeeds.
+ *
+ ****************************************************************************/
+
+static inline void __set_bit(int nr, uint8_t * addr)
+{
+  uint8_t mask = BIT_BYTE_MASK(nr);
+  uint8_t *p = ((uint8_t *) addr) + BIT_BYTE(nr);
+  *p |= mask;
+}
+
+static inline void __clear_bit(int nr, uint8_t * addr)
+{
+  uint8_t mask = BIT_BYTE_MASK(nr);
+  uint8_t *p = ((uint8_t *) addr) + BIT_BYTE(nr);
+  *p &= ~mask;
+}
+
+static inline int __test_bit(int nr, const volatile uint8_t * addr)
+{
+  return 1 & (addr[BIT_BYTE(nr)] >> (nr & (BITS_PER_BYTE - 1)));
+}
+
+/****************************************************************************
  * Name:  max7219_powerstring
  *
  * Description:
@@ -431,11 +462,11 @@ static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
     {
       if ((*buffer & usrmask) != 0)
         {
-          set_bit(col % 8 + i, ptr);
+          __set_bit(col % 8 + i, ptr);
         }
       else
         {
-          clear_bit(col % 8 + i, ptr);
+          __clear_bit(col % 8 + i, ptr);
         }
 
 #ifdef CONFIG_LCD_PACKEDMSFIRST
@@ -544,7 +575,7 @@ static int max7219_getrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
 
   for (i = 0; i < pixlen; i++)
     {
-      if (test_bit(col % 8 + i, ptr))
+      if (__test_bit(col % 8 + i, ptr))
         {
           *buffer |= usrmask;
         }

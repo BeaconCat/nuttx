@@ -30,6 +30,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <rpmsg/rpmsg_internal.h>
@@ -37,10 +38,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(s, a)        (((s) + (a) - 1) & ~((a) - 1))
-#endif
 
 #define RPMSG_VIRTIO_TIMEOUT_MS 20
 #define RPMSG_VIRTIO_NOTIFYID   0
@@ -74,14 +71,13 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg);
 static FAR const char *
 rpmsg_virtio_get_local_cpuname(FAR struct rpmsg_s *rpmsg);
 static FAR const char *rpmsg_virtio_get_cpuname(FAR struct rpmsg_s *rpmsg);
-static int rpmsg_virtio_get_tx_buffer_size(FAR struct rpmsg_s *rpmsg);
-static int rpmsg_virtio_get_rx_buffer_size_(FAR struct rpmsg_s *rpmsg);
 
 static int rpmsg_virtio_create_virtqueues_(FAR struct virtio_device *vdev,
                                            unsigned int flags,
                                            unsigned int nvqs,
                                            FAR const char *names[],
-                                           vq_callback callbacks[]);
+                                           vq_callback callbacks[],
+                                           FAR void *callback_args[]);
 static uint8_t rpmsg_virtio_get_status_(FAR struct virtio_device *dev);
 static void rpmsg_virtio_set_status_(FAR struct virtio_device *dev,
                                      uint8_t status);
@@ -102,8 +98,6 @@ static const struct rpmsg_ops_s g_rpmsg_virtio_ops =
   .dump               = rpmsg_virtio_dump,
   .get_local_cpuname  = rpmsg_virtio_get_local_cpuname,
   .get_cpuname        = rpmsg_virtio_get_cpuname,
-  .get_tx_buffer_size = rpmsg_virtio_get_tx_buffer_size,
-  .get_rx_buffer_size = rpmsg_virtio_get_rx_buffer_size_,
 };
 
 static const struct virtio_dispatch g_rpmsg_virtio_dispatch =
@@ -132,7 +126,8 @@ static int rpmsg_virtio_create_virtqueues_(FAR struct virtio_device *vdev,
                                            unsigned int flags,
                                            unsigned int nvqs,
                                            FAR const char *names[],
-                                           vq_callback callbacks[])
+                                           vq_callback callbacks[],
+                                           FAR void *callback_args[])
 {
   int ret;
   int i;
@@ -429,16 +424,6 @@ static FAR const char *rpmsg_virtio_get_cpuname(FAR struct rpmsg_s *rpmsg)
   return RPMSG_VIRTIO_GET_CPUNAME(priv->dev);
 }
 
-static int rpmsg_virtio_get_tx_buffer_size(FAR struct rpmsg_s *rpmsg)
-{
-  return rpmsg_virtio_get_buffer_size(rpmsg->rdev);
-}
-
-static int rpmsg_virtio_get_rx_buffer_size_(FAR struct rpmsg_s *rpmsg)
-{
-  return rpmsg_virtio_get_rx_buffer_size(rpmsg->rdev);
-}
-
 static void rpmsg_virtio_wakeup_rx(FAR struct rpmsg_virtio_priv_s *priv)
 {
   int semcount;
@@ -450,7 +435,7 @@ static void rpmsg_virtio_wakeup_rx(FAR struct rpmsg_virtio_priv_s *priv)
     }
 }
 
-static void rpmsg_virtio_command(FAR struct rpmsg_virtio_priv_s *priv)
+static void rpmsg_virtio_command(struct rpmsg_virtio_priv_s *priv)
 {
   FAR struct rpmsg_virtio_cmd_s *rpmsg_virtio_cmd =
     RPMSG_VIRTIO_RSC2CMD(priv->rsc);
@@ -471,9 +456,6 @@ static void rpmsg_virtio_command(FAR struct rpmsg_virtio_priv_s *priv)
     {
       case RPMSG_VIRTIO_CMD_PANIC:
         PANIC();
-        break;
-
-      default:
         break;
     }
 }
@@ -597,7 +579,7 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
     }
 
   priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
-  priv->rvdev.rdev.notify_wait_cb = rpmsg_virtio_notify_wait;
+  priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
 
   RPMSG_VIRTIO_REGISTER_CALLBACK(priv->dev, rpmsg_virtio_callback, priv);
 
@@ -619,7 +601,7 @@ err_vq0:
 static int rpmsg_virtio_thread(int argc, FAR char *argv[])
 {
   FAR struct rpmsg_virtio_priv_s *priv = (FAR struct rpmsg_virtio_priv_s *)
-    ((uintptr_t)strtoul(argv[2], NULL, 0));
+    ((uintptr_t)strtoul(argv[2], NULL, 16));
   int ret;
 
   priv->tid = nxsched_gettid();
