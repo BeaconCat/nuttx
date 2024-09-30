@@ -608,13 +608,13 @@ static int rpmsgblk_mmc_multi_cmd_ioctl(FAR struct inode *inode,
         }
     }
 
-  /* When multi cmds are read cmd, it also needs to be split if the rsp
+  /* When multi cmds are read cmd, it also need to be split if the rsp
    * msg is too large.
    */
 
   msglen = sizeof(*msg) + arglen - 1;
   rsplen += sizeof(*msg) - 1;
-  if (MAX(msglen, rsplen) > rpmsg_get_tx_buffer_size(priv->ept.rdev))
+  if (MAX(msglen, rsplen) > rpmsg_get_tx_buffer_size(&priv->ept))
     {
       int ret = 0;
 

@@ -145,28 +145,9 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
       goto errout;
     }
 
-  child->cmn.flags |= TCB_FLAG_FREE_TCB;
-
-#if defined(CONFIG_ARCH_ADDRENV)
-  /* Join the parent address environment (REVISIT: vfork() only) */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = addrenv_join(parent, &child->cmn);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
-  /* Initialize the task join */
-
-  nxtask_joininit(&child->cmn);
-
   /* Allocate a new task group with the same privileges as the parent */
 
-  ret = group_initialize(child, ttype);
+  ret = group_allocate(child, ttype);
   if (ret < 0)
     {
       goto errout_with_tcb;
@@ -204,19 +185,6 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
       goto errout_with_tcb;
     }
 
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = up_addrenv_kstackalloc(&child->cmn);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
   /* Setup thread local storage */
 
   ret = tls_dup_info(&child->cmn, parent);
@@ -237,7 +205,7 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   sinfo("Child priority=%d start=%p\n", priority, retaddr);
   ret = nxtask_setup_scheduler(child, priority, retaddr,
-                               ptcb->entry.main, ttype);
+                               ptcb->entry.main, ttype, ptcb);
   if (ret < OK)
     {
       goto errout_with_tcb;
@@ -253,7 +221,7 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   /* Now we have enough in place that we can join the group */
 
-  group_postinitialize(child);
+  group_initialize(child);
   sinfo("parent=%p, returning child=%p\n", parent, child);
   return child;
 
@@ -320,19 +288,10 @@ pid_t nxtask_start_fork(FAR struct task_tcb_s *child)
 
   pid = child->cmn.pid;
 
-  /* Eliminate a race condition by disabling pre-emption.  The child task
-   * can be instantiated, but cannot run until we call waitpid().  This
-   * assures us that we cannot miss the death-of-child signal (only
-   * needed in the SMP case).
-   */
-
-  sched_lock();
-
   /* Activate the task */
 
   nxtask_activate((FAR struct tcb_s *)child);
 
-  sched_unlock();
   return pid;
 }
 
@@ -351,7 +310,7 @@ void nxtask_abort_fork(FAR struct task_tcb_s *child, int errcode)
 {
   /* The TCB was added to the active task list by nxtask_setup_scheduler() */
 
-  dq_rem((FAR dq_entry_t *)child, list_inactivetasks());
+  dq_rem((FAR dq_entry_t *)child, &g_inactivetasks);
 
   /* Release the TCB */
 

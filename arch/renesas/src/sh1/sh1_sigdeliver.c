@@ -52,7 +52,7 @@
 
 void renesas_sigdeliver(void)
 {
-  struct tcb_s  *rtcb = this_task();
+  struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
 
   board_autoled_on(LED_SIGNAL);
@@ -75,7 +75,7 @@ void renesas_sigdeliver(void)
 
   /* Deliver the signal */
 
-  (rtcb->sigdeliver)(rtcb);
+  ((sig_deliver_t)rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
