@@ -109,15 +109,15 @@ if(CONFIG_MM_KASAN_ALL)
 endif()
 
 if(CONFIG_MM_KASAN_GLOBAL)
-  add_compile_options(--param=asan-globals=1)
+  add_compile_options(--param asan-globals=1)
 endif()
 
 if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
-  add_compile_options(--param=asan-instrument-reads=0)
+  add_compile_options(--param asan-instrument-reads=0)
 endif()
 
 if(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK)
-  add_compile_options(--param=asan-instrument-writes=0)
+  add_compile_options(--param asan-instrument-writes=0)
 endif()
 
 # Instrumentation options
@@ -192,7 +192,7 @@ if(NOT CONFIG_CXX_RTTI)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 endif()
 
-set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P)
+set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P)
 
 # override nuttx_generate_preproces_target
 
@@ -218,7 +218,7 @@ function(nuttx_generate_preproces_target)
 
   add_custom_command(
     OUTPUT ${TARGET_FILE}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
+    COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
             ${SOURCE_FILE} -o ${TARGET_FILE}
     DEPENDS ${SOURCE_FILE} ${DEPENDS})
 

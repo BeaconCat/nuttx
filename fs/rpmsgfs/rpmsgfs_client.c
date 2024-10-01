@@ -27,12 +27,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/uio.h>
-#include <termios.h>
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 #include <nuttx/semaphore.h>
 
 #include "rpmsgfs.h"
@@ -373,11 +372,6 @@ static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
 
   if (ret < 0)
     {
-      if (copy == false)
-        {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
-        }
-
       goto fail;
     }
 
@@ -402,12 +396,6 @@ static ssize_t rpmsgfs_ioctl_arglen(int cmd)
         return sizeof(int);
       case FIOC_FILEPATH:
         return PATH_MAX;
-      case TCDRN:
-      case TCFLSH:
-        return 0;
-      case TCGETS:
-      case TCSETS:
-        return sizeof(struct termios);
       case FIOC_SETLK:
       case FIOC_GETLK:
       case FIOC_SETLKW:
@@ -555,7 +543,6 @@ ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
       ret = rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + space);
       if (ret < 0)
         {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
           goto out;
         }
 
@@ -750,7 +737,6 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return -ENOMEM;
     }
 
-  nxsem_init(&priv->wait, 0, 0);
   strlcpy(priv->cpuname, cpuname, sizeof(priv->cpuname));
   ret = rpmsg_register_callback(priv,
                                 rpmsgfs_device_created,
@@ -763,6 +749,7 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return ret;
     }
 
+  nxsem_init(&priv->wait, 0, 0);
   *handle = priv;
 
   return 0;

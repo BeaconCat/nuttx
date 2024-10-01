@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/machine/sim/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -40,11 +42,7 @@ if(CONFIG_HOST_X86_64)
       list(APPEND SRCS arch_elf64.c)
     endif()
     if(CONFIG_ARCH_SETJMP_H)
-      if(WIN32)
-        list(APPEND SRCS arch_setjmp_x86_64.asm)
-      else()
-        list(APPEND SRCS arch_setjmp_x86_64.S)
-      endif()
+      list(APPEND SRCS arch_setjmp_x86_64.S)
     endif()
   endif()
 

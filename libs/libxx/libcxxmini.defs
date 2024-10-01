@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libxx/libcxxmini.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -22,8 +24,17 @@ CXXSRCS += libxx_cxa_guard.cxx libxx_cxapurevirtual.cxx
 CXXSRCS += libxx_delete.cxx libxx_delete_sized.cxx libxx_deletea.cxx
 CXXSRCS += libxx_deletea_sized.cxx libxx_new.cxx libxx_newa.cxx
 
+# Note: Our implementations of operator new are not conforming to
+# the standard. (no bad_alloc implementation)
+#
+# libxx_new.cxx:64:11: error: 'operator new' is missing exception specification
+#       'throw(std::bad_alloc)' [-Werror,-Wmissing-exception-spec]
+# FAR void *operator new(std::size_t nbytes)
+#           ^
+#                                            throw(std::bad_alloc)
 ifneq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
-  CXXFLAGS += -Wno-missing-exception-spec
+  libxx_new.cxx_CXXFLAGS += -Wno-missing-exception-spec
+  libxx_newa.cxx_CXXFLAGS += -Wno-missing-exception-spec
 endif
 
 DEPPATH += --dep-path libcxxmini
