@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/mqueue/mq_sndinternal.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -123,7 +125,8 @@ static void nxmq_sndtimeout(wdparm_t arg)
  ****************************************************************************/
 
 int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
-                   FAR const struct timespec *abstime)
+                   FAR const struct timespec *abstime,
+                   sclock_t ticks)
 {
   FAR struct tcb_s *rtcb = this_task();
 
@@ -146,6 +149,11 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
     {
       wd_start_realtime(&rtcb->waitdog, abstime,
                         nxmq_sndtimeout, (wdparm_t)rtcb);
+    }
+  else if (ticks >= 0)
+    {
+      wd_start(&rtcb->waitdog, ticks,
+               nxmq_sndtimeout, (wdparm_t)rtcb);
     }
 
   /* Verify that the queue is indeed full as the caller thinks */
@@ -178,7 +186,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_running(rtcb);
+      nxsched_remove_self(rtcb);
 
       /* Add the task to the specified blocked task list */
 
@@ -201,7 +209,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
         }
     }
 
-  if (abstime)
+  if (abstime || ticks >= 0)
     {
       wd_cancel(&rtcb->waitdog);
     }

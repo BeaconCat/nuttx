@@ -90,7 +90,7 @@ extern "C"
  * hardware resources may not yet be available to the OS-internal logic.
  */
 
-EXTERN volatile uint8_t g_nx_initstate;  /* See enum nx_initstate_e */
+EXTERN uint8_t g_nx_initstate;  /* See enum nx_initstate_e */
 
 /****************************************************************************
  * Public Function Prototypes
