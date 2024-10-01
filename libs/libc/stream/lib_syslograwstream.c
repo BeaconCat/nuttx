@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/stream/lib_syslograwstream.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,22 +38,22 @@
  * Name: syslograwstream_flush
  ****************************************************************************/
 
-static int syslograwstream_flush(FAR struct lib_outstream_s *self)
+static int syslograwstream_flush(FAR struct lib_outstream_s *ostream)
 {
-  FAR struct lib_syslograwstream_s *stream = (FAR void *)self;
+  FAR struct lib_syslograwstream_s *stream = (FAR void *)ostream;
   int ret = OK;
 
   DEBUGASSERT(stream != NULL);
 
   /* Do we have an IO buffer? Is there anything buffered? */
 
-  if (stream->offset > 0)
+  if (stream->base != NULL && stream->offset > 0)
     {
       /* Yes write the buffered data */
 
       do
         {
-          ssize_t nbytes = syslog_write(stream->buffer, stream->offset);
+          ssize_t nbytes = syslog_write(stream->base, stream->offset);
           if (nbytes < 0)
             {
               ret = nbytes;
@@ -81,7 +79,7 @@ static void syslograwstream_addchar(FAR struct lib_syslograwstream_s *stream,
 {
   /* Add the incoming character to the buffer */
 
-  stream->buffer[stream->offset] = ch;
+  stream->base[stream->offset] = ch;
   stream->offset++;
 
   /* Increment the total number of bytes buffered. */
@@ -90,7 +88,7 @@ static void syslograwstream_addchar(FAR struct lib_syslograwstream_s *stream,
 
   /* Is the buffer full? */
 
-  if (stream->offset >= CONFIG_SYSLOG_BUFSIZE)
+  if (stream->offset >= stream->size)
     {
       /* Yes.. then flush the buffer */
 
@@ -110,15 +108,15 @@ syslograwstream_addstring(FAR struct lib_syslograwstream_s *stream,
 
   do
     {
-      int remain = CONFIG_SYSLOG_BUFSIZE - stream->offset;
+      int remain = stream->size - stream->offset;
       remain = remain > len - ret ? len - ret : remain;
-      memcpy(stream->buffer + stream->offset, buff + ret, remain);
+      memcpy(stream->base + stream->offset, buff + ret, remain);
       stream->offset += remain;
       ret += remain;
 
       /* Is the buffer enough? */
 
-      if (stream->offset >= CONFIG_SYSLOG_BUFSIZE)
+      if (stream->offset >= stream->size)
         {
           /* Yes.. then flush the buffer */
 
@@ -140,7 +138,8 @@ syslograwstream_addstring(FAR struct lib_syslograwstream_s *stream,
 
 static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
 {
-  FAR struct lib_syslograwstream_s *stream = (FAR void *)self;
+  FAR struct lib_syslograwstream_s *stream =
+                                    (FAR struct lib_syslograwstream_s *)self;
 
   DEBUGASSERT(stream != NULL);
   stream->last_ch = ch;
@@ -149,44 +148,53 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
 
   if (ch != '\r')
     {
-#ifdef CONFIG_SYSLOG_BUFFER
-      /* Add the incoming character to the buffer */
+#  ifdef CONFIG_SYSLOG_BUFFER
+      /* Do we have an IO buffer? */
 
-      syslograwstream_addchar(stream, ch);
-#else
-      int ret;
-
-      /* Try writing until the write was successful or until an
-       * irrecoverable error occurs.
-       */
-
-      do
+      if (stream->base != NULL)
         {
-          /* Write the character to the supported logging device.  On
-           * failure, syslog_putc returns a negated errno value.
-           */
+          /* Add the incoming character to the buffer */
 
-          ret = syslog_putc(ch);
-          if (ret >= 0)
-            {
-              self->nput++;
-              return;
-            }
-
-          /* The special return value -EINTR means that syslog_putc() was
-           * awakened by a signal.  This is not a real error and must be
-           * ignored in this context.
-           */
+          syslograwstream_addchar(stream, ch);
         }
-      while (ret == -EINTR);
-#endif
+      else
+#  endif
+        {
+          int ret;
+
+          /* Try writing until the write was successful or until an
+           * irrecoverable error occurs.
+           */
+
+          do
+            {
+              /* Write the character to the supported logging device.  On
+               * failure, syslog_putc returns a negated errno value.
+               */
+
+              ret = syslog_putc(ch);
+              if (ret >= 0)
+                {
+                  self->nput++;
+                  return;
+                }
+
+              /* The special return value -EINTR means that syslog_putc() was
+               * awakened by a signal.  This is not a real error and must be
+               * ignored in this context.
+               */
+            }
+          while (ret == -EINTR);
+        }
     }
 }
 
 static int syslograwstream_puts(FAR struct lib_outstream_s *self,
                                 FAR const void *buff, int len)
 {
-  FAR struct lib_syslograwstream_s *stream = (FAR void *)self;
+  FAR struct lib_syslograwstream_s *stream =
+                                    (FAR struct lib_syslograwstream_s *)self;
+  int ret;
 
   DEBUGASSERT(stream != NULL);
   if (len <= 0)
@@ -198,39 +206,43 @@ static int syslograwstream_puts(FAR struct lib_outstream_s *self,
 
 #ifdef CONFIG_SYSLOG_BUFFER
 
-  /* Add the incoming string to the buffer */
+  /* Do we have an IO buffer? */
 
-  return syslograwstream_addstring(stream, buff, len);
-#else
-  int ret;
-
-  /* Try writing until the write was successful or until an
-   * irrecoverable error occurs.
-   */
-
-  do
+  if (stream->base != NULL)
     {
-      /* Write the buffer to the supported logging device.  On
-       * failure, syslog_write returns a negated errno value.
-       */
+      /* Add the incoming string to the buffer */
 
-      ret = syslog_write(buff, len);
-      if (ret >= 0)
-        {
-          self->nput += ret;
-          return ret;
-        }
-
-      /* The special return value -EINTR means that syslog_putc() was
-       * awakened by a signal.  This is not a real error and must be
-       * ignored in this context.
-       */
+      ret = syslograwstream_addstring(stream, buff, len);
     }
-  while (ret == -EINTR);
+  else
+#endif
+    {
+      /* Try writing until the write was successful or until an
+       * irrecoverable error occurs.
+       */
+
+      do
+        {
+          /* Write the buffer to the supported logging device.  On
+           * failure, syslog_write returns a negated errno value.
+           */
+
+          ret = syslog_write(buff, len);
+          if (ret >= 0)
+            {
+              self->nput += ret;
+              return ret;
+            }
+
+          /* The special return value -EINTR means that syslog_putc() was
+           * awakened by a signal.  This is not a real error and must be
+           * ignored in this context.
+           */
+        }
+      while (ret == -EINTR);
+    }
 
   return ret;
-
-#endif
 }
 
 /****************************************************************************
@@ -266,7 +278,10 @@ void lib_syslograwstream_open(FAR struct lib_syslograwstream_s *stream)
 
 #ifdef CONFIG_SYSLOG_BUFFER
   stream->common.flush = syslograwstream_flush;
-  stream->offset       = 0;
+
+  stream->base = stream->buffer;
+  stream->size = sizeof(stream->buffer);
+  stream->offset = 0;
 #else
   stream->common.flush = lib_noflush;
 #endif

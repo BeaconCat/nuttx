@@ -35,13 +35,13 @@
  * Public Function Prototypes
  ****************************************************************************/
 
-/* used for ioctl RPMSGIOC_PING */
+/* used for ioctl RPTUNIOC_PING */
 
 struct rpmsg_ping_s
 {
   int  times;
   int  len;
-  int  ack;
+  int  cmd;
   int  sleep; /* unit: ms */
 };
 

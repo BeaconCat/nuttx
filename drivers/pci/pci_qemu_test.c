@@ -22,13 +22,12 @@
  * Included Files
  ****************************************************************************/
 
-#include <assert.h>
-#include <errno.h>
 #include <debug.h>
 #include <stdint.h>
 
 #include <nuttx/pci/pci.h>
-#include <nuttx/pci/pci_qemu_test.h>
+
+#include "pci_drivers.h"
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -316,13 +316,6 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
           buffer    += copysize;
           buflen    -= copysize;
 
-          /* Trigger reclamation of delay list otherwise they will be
-           * counted as used, which often confuses people like memory
-           * leakages. see pull/12817 for more information.
-           */
-
-          mm_free_delaylist(entry->heap);
-
           /* Show heap information */
 
           info      = mm_mallinfo(entry->heap);
@@ -346,7 +339,7 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 #ifdef CONFIG_MM_PGALLOC
   if (buflen > 0)
     {
-      struct pginfo_s pg_info;
+      struct pginfo_s pginfo;
       unsigned long total;
       unsigned long available;
       unsigned long allocated;
@@ -357,12 +350,12 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
       /* Show page allocator information */
 
-      mm_pginfo(&pg_info);
+      mm_pginfo(&pginfo);
 
-      total      = (unsigned long)pg_info.ntotal << MM_PGSHIFT;
-      available  = (unsigned long)pg_info.nfree  << MM_PGSHIFT;
+      total      = (unsigned long)pginfo.ntotal << MM_PGSHIFT;
+      available  = (unsigned long)pginfo.nfree  << MM_PGSHIFT;
       allocated  = total - available;
-      max        = (unsigned long)pg_info.mxfree << MM_PGSHIFT;
+      max        = (unsigned long)pginfo.mxfree << MM_PGSHIFT;
 
       linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
                                    "%11lu%11lu%11lu%11lu %s\n",
