@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/misc/lib_circbuf.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -278,7 +276,7 @@ bool circbuf_is_full(FAR struct circbuf_s *circ)
  * Name: circbuf_peekat
  *
  * Description:
- *   Get data specified position from the circular buffer without removing
+ *   Get data speicified position from the circular buffer without removing
  *
  * Note :
  *   That with only one concurrent reader and one concurrent writer,
@@ -567,19 +565,14 @@ ssize_t circbuf_overwrite(FAR struct circbuf_s *circ,
 FAR void *circbuf_get_writeptr(FAR struct circbuf_s *circ, FAR size_t *size)
 {
   size_t off;
-  size_t pos;
 
   DEBUGASSERT(circ);
 
+  *size = circbuf_space(circ);
   off = circ->head % circ->size;
-  pos = circ->tail % circ->size;
-  if (off >= pos)
+  if (off + *size > circ->size)
     {
       *size = circ->size - off;
-    }
-  else
-    {
-      *size = pos - off;
     }
 
   return (FAR char *)circ->base + off;
@@ -603,22 +596,17 @@ FAR void *circbuf_get_writeptr(FAR struct circbuf_s *circ, FAR size_t *size)
 FAR void *circbuf_get_readptr(FAR struct circbuf_s *circ, size_t *size)
 {
   size_t off;
-  size_t pos;
 
   DEBUGASSERT(circ);
 
-  off = circ->head % circ->size;
-  pos = circ->tail % circ->size;
-  if (pos > off)
+  *size = circbuf_used(circ);
+  off = circ->tail % circ->size;
+  if (off + *size > circ->size)
     {
-      *size = circ->size - pos;
-    }
-  else
-    {
-      *size = off - pos;
+      *size = circ->size - off;
     }
 
-  return (FAR char *)circ->base + pos;
+  return (FAR char *)circ->base + off;
 }
 
 /****************************************************************************
