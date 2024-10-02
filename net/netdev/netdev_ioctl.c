@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/netdev/netdev_ioctl.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -992,7 +990,10 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
             arp_acd_setup(dev);
 #endif /* CONFIG_NET_ARP_ACD */
           }
-        else
+
+        /* Is this a request to take the interface down? */
+
+        else if ((req->ifr_flags & IFF_DOWN) != 0)
           {
             /* Yes.. take the interface down */
 

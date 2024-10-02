@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/netlink/netlink_sockif.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,6 +34,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/wqueue.h>
@@ -744,6 +743,7 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
 static int netlink_close(FAR struct socket *psock)
 {
   FAR struct netlink_conn_s *conn = psock->s_conn;
+  int ret = OK;
 
   /* Perform some pre-close operations for the NETLINK socket type. */
 
@@ -757,6 +757,14 @@ static int netlink_close(FAR struct socket *psock)
 
       conn->crefs = 0;
       netlink_free(psock->s_conn);
+
+      if (ret < 0)
+        {
+          /* Return with error code, but free resources. */
+
+          nerr("ERROR: netlink_close failed: %d\n", ret);
+          return ret;
+        }
     }
   else
     {
@@ -765,7 +773,7 @@ static int netlink_close(FAR struct socket *psock)
       conn->crefs--;
     }
 
-  return OK;
+  return ret;
 }
 
 #endif /* CONFIG_NET_NETLINK */

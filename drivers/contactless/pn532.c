@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <assert.h>
-#include <debug.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -33,7 +32,6 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
-#include <nuttx/power/pm.h>
 
 #include "pn532.h"
 
@@ -96,7 +94,7 @@ int pn532_read(FAR struct pn532_dev_s *dev, FAR uint8_t *buff, uint8_t n);
 #if 0 /* TODO */
 /* IRQ Handling */
 
-static int pn532_irqhandler(int irq, FAR void *context, FAR void *dev);
+static int pn532_irqhandler(FAR int irq, FAR void *context, FAR void *dev);
 static inline int pn532_attachirq(FAR struct pn532_dev_s *dev, xcpt_t isr);
 #endif
 
@@ -346,7 +344,7 @@ static void pn532_writecommand(FAR struct pn532_dev_s *dev, uint8_t cmd)
   pn532_deselect(dev);
   pn532_unlock(dev->spi);
 
-  tracetx("command sent", (FAR uint8_t *)f, FRAME_SIZE(f));
+  tracetx("command sent", (uint8_t *) f, FRAME_SIZE(f));
 }
 #endif
 
@@ -408,7 +406,7 @@ int pn532_read_ack(FAR struct pn532_dev_s *dev)
   int res = 0;
   uint8_t ack[6];
 
-  pn532_read(dev, (FAR uint8_t *) &ack, 6);
+  pn532_read(dev, (uint8_t *) &ack, 6);
 
   if (memcmp(&ack, &pn532ack, 6) == 0x00)
     {
@@ -453,7 +451,7 @@ int pn532_write_frame(FAR struct pn532_dev_s *dev, FAR struct pn532_frame *f)
   SPI_SNDBLOCK(dev->spi, f, FRAME_SIZE(f));
   pn532_deselect(dev);
   pn532_unlock(dev->spi);
-  tracetx("WriteFrame", (FAR uint8_t *)f, FRAME_SIZE(f));
+  tracetx("WriteFrame", (uint8_t *) f, FRAME_SIZE(f));
 
   /* Wait ACK frame */
 
@@ -481,7 +479,7 @@ int pn532_read_frame(FAR struct pn532_dev_s *dev, FAR struct pn532_frame *f,
     {
       /* Read header */
 
-      pn532_read(dev, (FAR uint8_t *)f, sizeof(struct pn532_frame));
+      pn532_read(dev, (uint8_t *) f, sizeof(struct pn532_frame));
       if (pn532_rx_frame_is_valid(f, false))
         {
           if (max_size < f->len)
@@ -521,7 +519,7 @@ bool pn532_set_config(FAR struct pn532_dev_s *dev, uint8_t flags)
 
   if (pn532_write_frame(dev, f) == OK)
     {
-      pn532_read(dev, (FAR uint8_t *)&resp, 9);
+      pn532_read(dev, (uint8_t *) &resp, 9);
       tracerx("set config response", resp, 9);
       res = true;
     }
@@ -555,7 +553,7 @@ int pn532_sam_config(FAR struct pn532_dev_s *dev,
     {
       if (pn532_read_frame(dev, f, 4) == OK)
         {
-          tracerx("sam config response", (FAR uint8_t *)f->data, 3);
+          tracerx("sam config response", (uint8_t *) f->data, 3);
           if (f->data[0] == PN532_COMMAND_SAMCONFIGURATION + 1)
             {
               res = OK;
@@ -798,8 +796,8 @@ bool pn532_set_rf_config(struct pn532_dev_s * dev,
 
   if (pn532_write_frame(dev, f) == OK)
     {
-      pn532_read(dev, (FAR uint8_t *)f, 10);
-      tracerx("rf config response", (FAR uint8_t *)f, 10);
+      pn532_read(dev, (uint8_t *) f, 10);
+      tracerx("rf config response", (uint8_t *) f, 10);
       if (pn532_rx_frame_is_valid(f, true))
         {
           if (f->data[0] == PN532_COMMAND_RFCONFIGURATION + 1)
@@ -990,7 +988,7 @@ static int _ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               }
 
             ret = pn532_read_passive_data(dev, tag_data->address,
-                                          (FAR uint8_t *)&tag_data->data,
+                                          (uint8_t *) &tag_data->data,
                                           sizeof(tag_data->data));
 
             dev->state = PN532_STATE_IDLE;
