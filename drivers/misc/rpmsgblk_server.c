@@ -82,7 +82,6 @@ static bool rpmsgblk_ns_match(FAR struct rpmsg_device *rdev,
 static void rpmsgblk_ns_bind(FAR struct rpmsg_device *rdev,
                              FAR void *priv, FAR const char *name,
                              uint32_t dest);
-static void rpmsgblk_ns_unbind(FAR struct rpmsg_endpoint *ept);
 static int  rpmsgblk_ept_cb(FAR struct rpmsg_endpoint *ept,
                             FAR void *data, size_t len, uint32_t src,
                             FAR void *priv);
@@ -220,8 +219,7 @@ static int rpmsgblk_read_handler(FAR struct rpmsg_endpoint *ept,
           nsectors = msg->nsectors - read;
         }
 
-      ret = server->bops->read(server->blknode,
-                               (FAR unsigned char *)rsp->buf,
+      ret = server->bops->read(server->blknode, (unsigned char *)rsp->buf,
                                msg->startsector, nsectors);
       rsp->header.result = ret;
       if (rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret * msg->sectorsize) +
@@ -498,6 +496,18 @@ static bool rpmsgblk_ns_match(FAR struct rpmsg_device *rdev,
 }
 
 /****************************************************************************
+ * Name: rpmsgblk_ept_release
+ ****************************************************************************/
+
+static void rpmsgblk_ept_release(FAR struct rpmsg_endpoint *ept)
+{
+  FAR struct rpmsgblk_server_s *server = ept->priv;
+
+  inode_release(server->blknode);
+  kmm_free(server);
+}
+
+/****************************************************************************
  * Name: rpmsgblk_ns_bind
  ****************************************************************************/
 
@@ -526,30 +536,18 @@ static void rpmsgblk_ns_bind(FAR struct rpmsg_device *rdev,
     }
 
   server->ept.priv = server;
+  server->ept.release_cb = rpmsgblk_ept_release;
   server->bops = server->blknode->u.i_bops;
 
   ret = rpmsg_create_ept(&server->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
-                         rpmsgblk_ept_cb, rpmsgblk_ns_unbind);
+                         rpmsgblk_ept_cb, rpmsg_destroy_ept);
   if (ret < 0)
     {
       ferr("endpoint create failed, ret=%d\n", ret);
       inode_release(server->blknode);
       kmm_free(server);
     }
-}
-
-/****************************************************************************
- * Name: rpmsgblk_ns_unbind
- ****************************************************************************/
-
-static void rpmsgblk_ns_unbind(FAR struct rpmsg_endpoint *ept)
-{
-  FAR struct rpmsgblk_server_s *server = ept->priv;
-
-  rpmsg_destroy_ept(&server->ept);
-  inode_release(server->blknode);
-  kmm_free(server);
 }
 
 /****************************************************************************

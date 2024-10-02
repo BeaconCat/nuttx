@@ -1,8 +1,6 @@
 /****************************************************************************
  * net/netlink/netlink_conn.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -41,6 +39,7 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netlink.h>
+#include <nuttx/tls.h>
 
 #include "utils/utils.h"
 #include "netlink/netlink.h"
@@ -55,7 +54,7 @@
 
 #if CONFIG_NETLINK_PREALLOC_CONNS > 0
 static struct netlink_conn_s
-g_netlink_connections[CONFIG_NETLINK_PREALLOC_CONNS];
+       g_netlink_connections[CONFIG_NETLINK_PREALLOC_CONNS];
 #endif
 
 /* A list of all free NetLink connections */
@@ -533,7 +532,9 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
         {
           /* Wait for a response to be queued */
 
+          tls_cleanup_push(tls_get_info(), netlink_notifier_teardown, conn);
           ret = net_sem_wait(&waitsem);
+          tls_cleanup_pop(tls_get_info(), 0);
         }
 
       /* Clean-up the semaphore */

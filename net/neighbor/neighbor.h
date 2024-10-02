@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/neighbor/neighbor.h
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Header file for database of link-local neighbors, used by IPv6 code.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
