@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/Make.defs
+include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
 include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_INTEL64),y)
@@ -97,10 +97,6 @@ ifeq ($(CONFIG_LIBSUPCXX),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
 endif
 
-ifeq ($(CONFIG_CXX_EXCEPTION),y)
-  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcc_eh.a}}
-endif
-
 VPATH = chip:common:$(ARCH_SUBDIR)
 
 all: libarch$(LIBEXT)
@@ -167,6 +163,7 @@ else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 endif
+	$(Q) $(call DELFILE, $(addsuffix .tmp,$(ARCHSCRIPT)))
 
 ifeq ($(CONFIG_ARCH_MULTIBOOT1),y)
 	@echo "Generating: nuttx32 in ELF32/multiboot1"

@@ -50,7 +50,7 @@
 
 void ceva_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s  *rtcb = this_task();
   uint32_t *regs = rtcb->xcp.saved_regs;
   sig_deliver_t sigdeliver;
 
@@ -70,7 +70,7 @@ void ceva_sigdeliver(void)
    * more signal deliveries while processing the current pending signals.
    */
 
-  sigdeliver       = (sig_deliver_t)rtcb->sigdeliver;
+  sigdeliver       = rtcb->sigdeliver;
   rtcb->sigdeliver = NULL;
 
   /* Deliver the signal */

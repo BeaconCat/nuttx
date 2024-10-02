@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strrchr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,21 +42,17 @@
 #undef strrchr /* See mm/README.txt */
 FAR char *strrchr(FAR const char *s, int c)
 {
-  FAR const char *last = NULL;
+  FAR const char *r = NULL;
 
-  if (c)
+  do
     {
-      while ((s = strchr(s, c)))
+      if (*s == c)
         {
-          last = s;
-          s++;
+          r = s;
         }
     }
-  else
-    {
-      last = strchr(s, c);
-    }
+  while (*s++ != '\0');
 
-  return (FAR char *)last;
+  return (FAR char *)r;
 }
 #endif
