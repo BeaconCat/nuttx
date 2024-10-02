@@ -93,7 +93,7 @@ int pthread_cond_signal(FAR pthread_cond_t *cond)
           if (sval < 0)
             {
               sinfo("Signalling...\n");
-              ret = -nxsem_post(&cond->sem);
+              ret = pthread_sem_give(&cond->sem);
             }
         }
     }
