@@ -62,17 +62,9 @@ endif()
 # array subscript [0] is outside array bounds:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
 
-execute_process(COMMAND ${CMAKE_C_COMPILER} --version
-                OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
-string(REGEX MATCH "\\+\\+.* ([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
-             "${GCC_VERSION_OUTPUT}")
-set(GCCVER ${CMAKE_MATCH_1})
-
-if(GCCVER EQUAL 12)
-  add_compile_options(--param=min-pagesize=0)
-  if(CONFIG_ARCH_RAMFUNCS)
-    add_link_options(-Wl,--no-warn-rwx-segments)
-  endif()
+add_compile_options(--param=min-pagesize=0)
+if(CONFIG_ARCH_RAMFUNCS)
+  add_link_options(-Wl,--no-warn-rwx-segments)
 endif()
 
 # override the ARCHIVE command
@@ -167,10 +159,6 @@ if(CONFIG_ARCH_INSTRUMENT_ALL)
   add_compile_options(-finstrument-functions)
 endif()
 
-if(CONFIG_SCHED_GPROF_ALL)
-  add_compile_options(-pg)
-endif()
-
 if(CONFIG_UNWINDER_ARM)
   add_compile_options(-funwind-tables -fasynchronous-unwind-tables)
 endif()
@@ -263,4 +251,4 @@ endif()
 
 set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nosys.specs")
 
-set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

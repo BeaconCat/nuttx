@@ -108,8 +108,6 @@ static void *sim_idle_trampoline(void *arg)
 
   host_cpu_started();
 
-  sim_unlock();
-
   /* The idle Loop */
 
   for (; ; )

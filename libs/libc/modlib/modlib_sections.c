@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_sections.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -35,7 +33,7 @@
 #include "modlib/modlib.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -50,8 +48,8 @@
  *
  ****************************************************************************/
 
-static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
-                                  FAR const Elf_Shdr *shdr)
+int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
+                    FAR const Elf_Shdr *shdr)
 {
   FAR Elf_Shdr *shstr;
   off_t  offset;
@@ -119,7 +117,7 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 
       /* Read that number of bytes into the array */
 
-      ret = modlib_read(loadinfo, buffer, readlen, offset);
+      ret = modlib_read(loadinfo, buffer, readlen, offset + bytesread);
       if (ret < 0)
         {
           berr("ERROR: Failed to read section name: %d\n", ret);
@@ -151,10 +149,6 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 
   return OK;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: modlib_findsection

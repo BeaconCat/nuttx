@@ -99,7 +99,6 @@ SECTIONS
 
     .paged : {
         _spaged = ABSOLUTE(.);
-        _stext = _spaged;
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
@@ -111,7 +110,6 @@ SECTIONS
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
         _epaged = ABSOLUTE(.);
-        _etext = _epaged;
     } > paged
 
     .data : {
