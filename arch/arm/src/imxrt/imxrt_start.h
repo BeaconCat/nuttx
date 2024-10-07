@@ -53,14 +53,6 @@
  * Public Data
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_FAMILY_IMXRT117x
-/* Each IMXRT117X board must provide the following initialized structure.
- *  This is needed to establish the initial board clocking.
- */
-
-extern const struct clock_configuration_s g_initial_clkconfig;
-#endif
-
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"
@@ -111,18 +103,6 @@ void imxrt_boardinitialize(void);
 
 #ifdef CONFIG_BOOT_RUNFROMISRAM
 void imxrt_ocram_initialize(void);
-#endif
-
-/****************************************************************************
- * Name: imxrt_flexram_initialize
- *
- * Description:
- *   Sets FlexRAM paritioning
- *
- ****************************************************************************/
-
-#ifdef CONFIG_IMXRT_FLEXRAM_PARTITION
-void imxrt_flexram_partition(void);
 #endif
 
 #undef EXTERN
