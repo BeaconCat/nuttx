@@ -23,7 +23,7 @@
 set(SRCS irq_initialize.c irq_attach.c irq_attach_thread.c irq_attach_wqueue.c
          irq_dispatch.c irq_unexpectedisr.c)
 
-if(CONFIG_SPINLOCK)
+if(CONFIG_SMP)
   list(APPEND SRCS irq_spinlock.c)
 endif()
 

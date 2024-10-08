@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/wchar/lib_wcslcpy.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 1998 Todd C. Miller <Todd.Miller@courtesan.com>
+ *   Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
+ *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
