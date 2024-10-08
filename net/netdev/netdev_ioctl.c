@@ -992,7 +992,10 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
             arp_acd_setup(dev);
 #endif /* CONFIG_NET_ARP_ACD */
           }
-        else
+
+        /* Is this a request to take the interface down? */
+
+        else if ((req->ifr_flags & IFF_DOWN) != 0)
           {
             /* Yes.. take the interface down */
 

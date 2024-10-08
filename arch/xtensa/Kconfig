@@ -52,7 +52,6 @@ config ARCH_CHIP_ESP32S2
 	select XTENSA_HAVE_INTERRUPTS
 	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_RESET
-	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_VECNOTIRQ
 	select LIBC_ARCH_MEMCPY
 	select LIBC_ARCH_MEMCHR
@@ -76,19 +75,14 @@ config ARCH_CHIP_ESP32S3
 	bool "Espressif ESP32-S3"
 	select ARCH_FAMILY_LX7
 	select XTENSA_HAVE_INTERRUPTS
-	select ARCH_HAVE_BOOTLOADER if !ESPRESSIF_SIMPLE_BOOT
-	select ARCH_HAVE_COPY_SECTION
+	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_MULTICPU
 	select ARCH_HAVE_RESET
-	select ARCH_HAVE_TEXT_HEAP
-	select ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS
-	select ARCH_HAVE_TEXT_HEAP_WORD_ALIGNED_READ
 	select ARCH_HAVE_TESTSET
 	select ARCH_VECNOTIRQ
 	select LIBC_PREVENT_STRING_KERNEL
-	select LIBC_ARCH_ATOMIC
 	select LIBC_ARCH_MEMCPY if BUILD_FLAT
 	select LIBC_ARCH_MEMCHR if BUILD_FLAT
 	select LIBC_ARCH_MEMCMP if BUILD_FLAT
@@ -106,6 +100,22 @@ config ARCH_CHIP_ESP32S3
 		Apart from its 512 KB of internal SRAM, it also comes with integrated 2.4 GHz,
 		802.11 b/g/n Wi-Fi and Bluetooth 5 (LE) connectivity that provides long-range
 		support.
+
+config ARCH_CHIP_ISS_HIFI4
+	bool "ISS HIFI4"
+	select ARCH_FAMILY_LX7
+	select XTENSA_HAVE_INTERRUPTS
+	select ARCH_HAVE_RESET
+	---help---
+		hifi4 simulation on Xtensa Instruction Set Simulator (ISS)
+
+config ARCH_CHIP_ISS_HIFI3Z
+	bool "ISS HIFI3Z"
+	select ARCH_FAMILY_LX7
+	select XTENSA_HAVE_INTERRUPTS
+	select ARCH_HAVE_RESET
+	---help---
+		hifi3z simulation on Xtensa Instruction Set Simulator (ISS)
 
 config ARCH_CHIP_XTENSA_CUSTOM
 	bool "Custom XTENSA chip"
@@ -199,6 +209,8 @@ config ARCH_CHIP
 	default "esp32" if ARCH_CHIP_ESP32
 	default "esp32s2" if ARCH_CHIP_ESP32S2
 	default "esp32s3" if ARCH_CHIP_ESP32S3
+	default "iss-hifi4" if ARCH_CHIP_ISS_HIFI4
+	default "iss-hifi3z" if ARCH_CHIP_ISS_HIFI3Z
 
 config XTENSA_CP_LAZY
 	bool "Lazy co-processor state restoration"
@@ -282,10 +294,6 @@ config XTENSA_SEMIHOSTING_HOSTFS
 config XTENSA_TARGET_ISS
 	bool "Target machine is Instruction Set Simulator"
 	default n
-	---help---
-		This setting determines whether the target is Cadence Instruction
-		Set Simulator, which might have some sepecial characteristics such
-		as how to open a file nonblock.
 
 if XTENSA_SEMIHOSTING_HOSTFS
 
@@ -329,6 +337,14 @@ endif
 
 if ARCH_CHIP_ESP32S3
 source "arch/xtensa/src/esp32s3/Kconfig"
+endif
+
+if ARCH_CHIP_ISS_HIFI4
+source "arch/xtensa/src/iss-hifi4/Kconfig"
+endif
+
+if ARCH_CHIP_ISS_HIFI3Z
+source "arch/xtensa/src/iss-hifi3z/Kconfig"
 endif
 
 endif # ARCH_XTENSA
