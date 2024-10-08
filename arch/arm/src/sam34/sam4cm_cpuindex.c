@@ -27,9 +27,8 @@
 #include <nuttx/arch.h>
 
 #include "mpu.h"
-#include "arm_internal.h"
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
+#ifdef CONFIG_SMP
 
 /****************************************************************************
  * Public Functions
@@ -39,7 +38,15 @@
  * Name: up_cpu_index
  *
  * Description:
- *   Return the real core number regardless CONFIG_SMP setting
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
  *
  ****************************************************************************/
 
@@ -50,4 +57,4 @@ int up_cpu_index(void)
   return (getreg32(MPU_TYPE) == 0) ? 1 : 0;
 }
 
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
+#endif /* CONFIG_SMP */

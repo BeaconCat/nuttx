@@ -82,13 +82,7 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
 
   if (mutex != NULL)
     {
-      pid_t pid;
-
-      /* Make sure the mutex is stable while we make the following checks. */
-
-      sched_lock();
-
-      pid = mutex_get_holder(&mutex->mutex);
+      pid_t pid = mutex_get_holder(&mutex->mutex);
 
       /* Is the mutex available? */
 
@@ -133,8 +127,6 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
           mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
           ret = OK;
         }
-
-      sched_unlock();
     }
 
   sinfo("Returning %d\n", ret);

@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm64/src/cmake/platform.cmake
+# ./arch/arm64/src/cmake/platform.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -67,4 +67,4 @@ endif()
 
 nuttx_add_extra_library(${EXTRA_LIB})
 
-set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

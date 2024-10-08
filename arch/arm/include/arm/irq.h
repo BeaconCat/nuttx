@@ -147,7 +147,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   uintptr_t far;
 #endif
 };
@@ -231,13 +231,19 @@ static inline irqstate_t up_irq_enable(void)
  * Name: up_cpu_index
  *
  * Description:
- *   Return the real core number regardless CONFIG_SMP setting
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void) noinstrument_function;
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
@@ -249,7 +255,6 @@ static inline_function uint32_t *up_current_regs(void)
 #endif
 }
 
-noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
 #ifdef CONFIG_SMP
