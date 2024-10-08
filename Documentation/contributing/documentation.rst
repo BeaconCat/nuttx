@@ -12,7 +12,8 @@ Using Sphinx, the RST files are rendered into HTML files that can be read in you
 Building
 ========
 
-To render the Documentation locally, you should clone the NuttX main repository and navigate into it. Then,
+To render the Documentation locally, you should clone the NuttX main repository, and
+go into ``Documentation`` directory. Then,
 
   1. Install Sphinx and other dependencies using pipenv.
      You may also find it helpful on platforms such as Windows and MacOS to use *pyenv*
@@ -20,10 +21,8 @@ To render the Documentation locally, you should clone the NuttX main repository 
      project `site <https://github.com/pyenv/pyenv#installation>`_.
 
     .. code-block:: console
-      
+
       $ pip3 install pipenv
-      $ cd Documentation/
-      $ # install the dependencies into a virtual environment
       $ pipenv install
       $ # activate the virtual environment
       $ pipenv shell
