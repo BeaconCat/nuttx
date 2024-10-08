@@ -28,8 +28,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include <nuttx/nuttx.h>
-
 #include "arm_internal.h"
 #include "hardware/sam_cmcc.h"
 #include "sam_cmcc.h"

@@ -53,10 +53,9 @@
  *   SYSLOG channel.
  *
  *   This tiny function is simply a wrapper around syslog_dev_initialize()
- *   and syslog_channel_register().  It calls syslog_dev_initialize() to
- *   configure the character device at /dev/console then calls
- *   syslog_channel_register() to use that device as the SYSLOG output
- *   channel.
+ *   and syslog_channel().  It calls syslog_dev_initialize() to configure
+ *   the character device at /dev/console then calls syslog_channel() to
+ *   use that device as the SYSLOG output channel.
  *
  *   NOTE interrupt level SYSLOG output will be lost in the general case
  *   unless the interrupt buffer is used.  As a special case:  If the serial
@@ -72,9 +71,9 @@
  *
  ****************************************************************************/
 
-FAR syslog_channel_t *syslog_console_channel(void)
+FAR struct syslog_channel_s *syslog_console_channel(void)
 {
-  FAR syslog_channel_t *console_channel;
+  FAR struct syslog_channel_s *console_channel;
 
   /* Initialize the character driver interface */
 
@@ -87,7 +86,7 @@ FAR syslog_channel_t *syslog_console_channel(void)
 
   /* Use the character driver as the SYSLOG channel */
 
-  if (syslog_channel_register(console_channel) != OK)
+  if (syslog_channel(console_channel) != OK)
     {
       syslog_dev_uninitialize(console_channel);
       console_channel = NULL;

@@ -29,12 +29,6 @@
 #include <shadow.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define BUFFER_EXTRA 100
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -148,7 +142,7 @@ int getspnam_r(FAR const char *name, FAR struct spwd *sp, FAR char *buf,
 
   /* Buffer size must at least be able to hold name, plus some.. */
 
-  if (size < l + BUFFER_EXTRA)
+  if (size < l + 100)
     {
       set_errno(ERANGE);
       return -1;
