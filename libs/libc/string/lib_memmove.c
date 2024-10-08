@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/string/lib_memmove.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,13 +42,7 @@ FAR void *memmove(FAR void *dest, FAR const void *src, size_t count)
 
   if (dest <= src)
     {
-      tmp = (FAR char *) dest;
-      s   = (FAR char *) src;
-
-      while (count--)
-        {
-          *tmp++ = *s++;
-        }
+      memcpy(dest, src, count);
     }
   else
     {
