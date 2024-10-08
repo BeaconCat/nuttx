@@ -22,7 +22,6 @@ set(SRCS
     arm_exception.S
     arm_saveusercontext.S
     arm_busfault.c
-    arm_dbgmonitor.c
     arm_cache.c
     arm_cpuinfo.c
     arm_doirq.c
@@ -41,7 +40,8 @@ set(SRCS
     arm_tcbinfo.c
     arm_trigger_irq.c
     arm_usagefault.c
-    arm_vectors.c)
+    arm_vectors.c
+    arm_dbgmonitor.c)
 
 if(CONFIG_ARMV8M_SYSTICK)
   list(APPEND SRCS arm_systick.c)
@@ -69,6 +69,10 @@ endif()
 
 if(CONFIG_ARCH_TRUSTZONE_SECURE)
   list(APPEND SRCS arm_gen_nonsecfault.c)
+endif()
+
+if(CONFIG_ARM_COREDUMP_REGION)
+  list(APPEND SRCS arm_dumpnvic.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
