@@ -49,7 +49,7 @@ static ino_t g_ino;
 
 static int inode_namelen(FAR const char *name)
 {
-  FAR const char *tmp = name;
+  const char *tmp = name;
   while (*tmp && *tmp != '/')
     {
       tmp++;
@@ -62,7 +62,7 @@ static int inode_namelen(FAR const char *name)
  * Name: inode_namecpy
  ****************************************************************************/
 
-static void inode_namecpy(FAR char *dest, FAR const char *src)
+static void inode_namecpy(char *dest, const char *src)
 {
   while (*src && *src != '/')
     {
@@ -78,32 +78,32 @@ static void inode_namecpy(FAR char *dest, FAR const char *src)
 
 static FAR struct inode *inode_alloc(FAR const char *name, mode_t mode)
 {
-  FAR struct inode *inode;
+  FAR struct inode *node;
   int namelen;
 
   namelen = inode_namelen(name);
-  inode   = fs_heap_zalloc(FSNODE_SIZE(namelen));
-  if (inode)
+  node    = fs_heap_zalloc(FSNODE_SIZE(namelen));
+  if (node)
     {
-      inode->i_ino   = g_ino++;
-      atomic_init(&inode->i_crefs, 1);
+      node->i_ino   = g_ino++;
+      atomic_init(&node->i_crefs, 1);
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
-      inode->i_mode  = mode;
-      clock_gettime(CLOCK_REALTIME, &inode->i_atime);
-      inode->i_mtime = inode->i_atime;
-      inode->i_ctime = inode->i_atime;
+      node->i_mode  = mode;
+      clock_gettime(CLOCK_REALTIME, &node->i_atime);
+      node->i_mtime = node->i_atime;
+      node->i_ctime = node->i_atime;
 #endif
-      inode_namecpy(inode->i_name, name);
+      inode_namecpy(node->i_name, name);
     }
 
-  return inode;
+  return node;
 }
 
 /****************************************************************************
  * Name: inode_insert
  ****************************************************************************/
 
-static void inode_insert(FAR struct inode *inode,
+static void inode_insert(FAR struct inode *node,
                          FAR struct inode *peer,
                          FAR struct inode *parent)
 {
@@ -113,9 +113,9 @@ static void inode_insert(FAR struct inode *inode,
 
   if (peer)
     {
-      inode->i_peer   = peer->i_peer;
-      inode->i_parent = parent;
-      peer->i_peer    = inode;
+      node->i_peer   = peer->i_peer;
+      node->i_parent = parent;
+      peer->i_peer   = node;
     }
 
   /* Then it must go at the head of parent's list of children. */
@@ -123,9 +123,9 @@ static void inode_insert(FAR struct inode *inode,
   else
     {
       DEBUGASSERT(parent != NULL);
-      inode->i_peer   = parent->i_child;
-      inode->i_parent = parent;
-      parent->i_child = inode;
+      node->i_peer    = parent->i_child;
+      node->i_parent  = parent;
+      parent->i_child = node;
     }
 }
 
