@@ -1,7 +1,6 @@
 /****************************************************************************
  * net/icmp/icmp_input.c
- *
- * SPDX-License-Identifier: BSD-3-Clause
+ * Handling incoming ICMP input
  *
  *   Copyright (C) 2007-2009, 2012, 2014-2015, 2017, 2019 Gregory Nutt. All
  *     rights reserved.

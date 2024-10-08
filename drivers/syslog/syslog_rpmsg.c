@@ -168,7 +168,11 @@ static bool syslog_rpmsg_transfer(FAR struct syslog_rpmsg_s *priv, bool wait)
       msg->count          = len;
       priv->tail         += len;
       msg->header.command = SYSLOG_RPMSG_TRANSFER;
-      rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len);
+      if (rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len) < 0)
+        {
+          rpmsg_release_tx_buffer(&priv->ept, msg);
+        }
+
       len                 = SYSLOG_RPMSG_COUNT(priv);
 
       leave_critical_section(flags);
@@ -362,7 +366,7 @@ static ssize_t syslog_rpmsg_file_write(FAR struct file *filep,
  * Public Functions
  ****************************************************************************/
 
-int syslog_rpmsg_putc(FAR syslog_channel_t *channel, int ch)
+int syslog_rpmsg_putc(FAR struct syslog_channel_s *channel, int ch)
 {
   irqstate_t flags;
   char tmp = ch;
@@ -375,7 +379,7 @@ int syslog_rpmsg_putc(FAR syslog_channel_t *channel, int ch)
   return ch;
 }
 
-int syslog_rpmsg_flush(FAR syslog_channel_t *channel)
+int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
   irqstate_t flags;
@@ -401,7 +405,7 @@ int syslog_rpmsg_flush(FAR syslog_channel_t *channel)
   return OK;
 }
 
-ssize_t syslog_rpmsg_write(FAR syslog_channel_t *channel,
+ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
                            FAR const char *buffer, size_t buflen)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;

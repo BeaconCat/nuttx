@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libc/gdbstub/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -19,3 +17,7 @@
 # the License.
 #
 # ##############################################################################
+
+if(CONFIG_LIB_GDBSTUB)
+  target_sources(c PRIVATE lib_gdbstub.c)
+endif()
