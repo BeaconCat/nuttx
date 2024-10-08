@@ -101,7 +101,7 @@ int IRAM_ATTR esp32s3_fromcpu1_interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-int IRAM_ATTR xtensa_intercpu_interrupt(int tocpu, int intcode)
+void IRAM_ATTR xtensa_intercpu_interrupt(int tocpu, int intcode)
 {
   int fromcpu;
 
@@ -121,8 +121,6 @@ int IRAM_ATTR xtensa_intercpu_interrupt(int tocpu, int intcode)
     {
       putreg32(SYSTEM_CPU_INTR_FROM_CPU_1, SYSTEM_CPU_INTR_FROM_CPU_1_REG);
     }
-
-  return OK;
 }
 
 #endif /* CONFIG_SMP */

@@ -128,7 +128,7 @@ static int     uart_unlink(FAR struct inode *inode);
 #ifdef CONFIG_TTY_LAUNCH_ENTRY
 /* Lanch program entry, this must be supplied by the application. */
 
-int CONFIG_TTY_LAUNCH_ENTRYPOINT(int argc, FAR char *argv[]);
+int CONFIG_TTY_LAUNCH_ENTRYPOINT(int argc, char *argv[]);
 #endif
 
 /****************************************************************************
@@ -158,6 +158,45 @@ static struct work_s g_serial_work;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: uart_is_termios_hw_change
+ *
+ * Description:
+ *   Return true if the termios hw change
+ *
+ ****************************************************************************/
+
+static bool uart_is_termios_hw_change(FAR struct file *filep,
+                                      FAR const struct termios *new)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR uart_dev_t *dev = inode->i_private;
+  struct termios old;
+  int ret;
+
+  if (new == NULL)
+    {
+      return false;
+    }
+
+  memset(&old, 0, sizeof(old));
+  ret = dev->ops->ioctl(filep, TCGETS, (unsigned long)&old);
+  if (ret >= 0)
+    {
+      if (old.c_speed != new->c_speed)
+        {
+          return true;
+        }
+
+      if ((old.c_cflag ^ new->c_cflag) & ~(HUPCL | CREAD | CLOCAL))
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
 
 /****************************************************************************
  * Name: uart_poll_notify
@@ -762,10 +801,7 @@ static int uart_close(FAR struct file *filep)
 
   flags = enter_critical_section();  /* Disable interrupts */
   uart_detach(dev);                  /* Detach interrupts */
-
-  /* Check for the serial console UART */
-
-  if (!dev->isconsole)
+  if (!dev->isconsole)               /* Check for the serial console UART */
     {
       uart_shutdown(dev);            /* Disable the UART */
     }
@@ -909,6 +945,29 @@ static ssize_t uart_read(FAR struct file *filep,
                 }
             }
 
+          if ((dev->tc_lflag & ICANON) &&
+              (ch == ASCII_BS || ch == ASCII_DEL))
+            {
+              if (recvd > 0)
+                {
+                  *buffer-- = '\0';
+                  recvd--;
+                  if (dev->tc_lflag & ECHO)
+                    {
+                      uart_putxmitchar(dev, '\b', true);
+                      uart_putxmitchar(dev, ' ', true);
+                      uart_putxmitchar(dev, '\b', true);
+
+#ifdef CONFIG_SERIAL_TXDMA
+                      uart_dmatxavail(dev);
+#endif
+                      uart_enabletxint(dev);
+                    }
+                }
+
+                continue;
+            }
+
           /* Specifically not handled:
            *
            * All of the local modes; echo, line editing, etc.
@@ -964,8 +1023,23 @@ static ssize_t uart_read(FAR struct file *filep,
                    * sequence received, but enable the tx interrupt.
                    */
 
-                  echoed = true;
+                  if (dev->tc_lflag & ICANON)
+                    {
+#ifdef CONFIG_SERIAL_TXDMA
+                      uart_dmatxavail(dev);
+#endif
+                      uart_enabletxint(dev);
+                    }
+                  else
+                    {
+                      echoed = true;
+                    }
                 }
+            }
+
+          if ((dev->tc_lflag & ICANON) && ch == '\n')
+            {
+              break;
             }
         }
 
@@ -993,7 +1067,7 @@ static ssize_t uart_read(FAR struct file *filep,
        * to the caller?
        */
 
-      else if (recvd > 0)
+      else if (recvd > 0 && !(dev->tc_lflag & ICANON))
         {
           /* Yes.. break out of the loop and return the number of bytes
            * received up to the wait condition.
@@ -1095,26 +1169,39 @@ static ssize_t uart_read(FAR struct file *filep,
                    * thread goes to sleep.
                    */
 
+                  if (dev->tc_lflag & ICANON)
+                    {
 #ifdef CONFIG_SERIAL_TERMIOS
-                  dev->minrecv = MIN(buflen - recvd, dev->minread - recvd);
-                  if (dev->timeout)
-                    {
-                      nxmutex_unlock(&dev->recv.lock);
-                      ret = nxsem_tickwait(&dev->recvsem,
-                                           DSEC2TICK(dev->timeout));
-                    }
-                  else
+                      dev->minrecv = 0;
 #endif
-                    {
                       nxmutex_unlock(&dev->recv.lock);
                       ret = nxsem_wait(&dev->recvsem);
+                      nxmutex_lock(&dev->recv.lock);
                     }
+                  else
+                    {
+#ifdef CONFIG_SERIAL_TERMIOS
+                      dev->minrecv = MIN(buflen - recvd,
+                                         dev->minread - recvd);
+                      if (dev->timeout)
+                        {
+                          nxmutex_unlock(&dev->recv.lock);
+                          ret = nxsem_tickwait(&dev->recvsem,
+                                              DSEC2TICK(dev->timeout));
+                        }
+                      else
+#endif
+                        {
+                          nxmutex_unlock(&dev->recv.lock);
+                          ret = nxsem_wait(&dev->recvsem);
+                        }
 
-                  nxmutex_lock(&dev->recv.lock);
+                      nxmutex_lock(&dev->recv.lock);
 
 #ifdef CONFIG_SERIAL_TERMIOS
-                  dev->minrecv = dev->minread;
+                      dev->minrecv = dev->minread;
 #endif
+                    }
                 }
 
               leave_critical_section(flags);
@@ -1407,12 +1494,20 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR uart_dev_t   *dev   = inode->i_private;
+  FAR struct termios *termiosp = (FAR struct termios *)(uintptr_t)arg;
+  int ret = -ENOTTY;
 
   /* Handle TTY-level IOCTLs here */
 
-  /* Let low-level driver handle the call first */
+  /* Let low-level driver handle the call first,
+   * but skip TCSETS if no hardware change.
+   */
 
-  int ret = dev->ops->ioctl ? dev->ops->ioctl(filep, cmd, arg) : -ENOTTY;
+  if (dev->ops->ioctl && (cmd != TCSETS ||
+      uart_is_termios_hw_change(filep, termiosp)))
+    {
+      ret = dev->ops->ioctl(filep, cmd, arg);
+    }
 
   /* The device ioctl() handler returns -ENOTTY when it doesn't know
    * how to handle the command. Check if we can handle it here.
@@ -1592,9 +1687,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           case TCGETS:
             {
-              FAR struct termios *termiosp = (FAR struct termios *)
-                                                (uintptr_t)arg;
-
               if (!termiosp)
                 {
                   ret = -EINVAL;
@@ -1617,9 +1709,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           case TCSETS:
             {
-              FAR struct termios *termiosp = (FAR struct termios *)
-                                                (uintptr_t)arg;
-
               if (!termiosp)
                 {
                   ret = -EINVAL;
@@ -1833,7 +1922,7 @@ static void uart_launch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
   if (!strcmp(get_task_name(tcb), CONFIG_TTY_LAUNCH_FILEPATH))
 #endif
     {
-      *(FAR int *)arg = 1;
+      *(int *)arg = 1;
     }
 }
 
@@ -1924,7 +2013,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
     {
       /* Enable signals and echo by default */
 
-      dev->tc_lflag |= ISIG | ECHO;
+      dev->tc_lflag |= ISIG | ECHO | ICANON;
 
       /* Enable \n -> \r\n translation for the console */
 
@@ -2118,7 +2207,7 @@ void uart_reset_sem(FAR uart_dev_t *dev)
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
     defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
-int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf, size_t size)
+int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size)
 {
   size_t i;
 

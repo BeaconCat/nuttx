@@ -191,6 +191,8 @@ void wd_insert(FAR struct wdog_s *wdog, clock_t expired,
 {
   FAR struct wdog_s *curr;
 
+  DEBUGASSERT(wdog && wdentry);
+
   /* Traverse the watchdog list */
 
   list_for_every_entry(&g_wdactivelist, curr, struct wdog_s, node)
@@ -306,8 +308,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   wd_insert(wdog, ticks, wdentry, arg);
 
-  if (!g_wdtimernested &&
-      (reassess || list_is_head(&g_wdactivelist, &wdog->node)))
+  reassess |= list_is_head(&g_wdactivelist, &wdog->node);
+  if (!g_wdtimernested && reassess)
     {
       /* Resume the interval timer that will generate the next
        * interval event. If the timer at the head of the list changed,
