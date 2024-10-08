@@ -27,6 +27,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/can/can.h>
+#include "hardware/esp32s3_twai.h"
 
 /****************************************************************************
  * Pre-processor Definitions

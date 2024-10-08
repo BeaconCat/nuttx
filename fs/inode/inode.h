@@ -133,7 +133,7 @@ struct inode_search_s
  * file system.
  */
 
-typedef int (*foreach_inode_t)(FAR struct inode *inode,
+typedef int (*foreach_inode_t)(FAR struct inode *node,
                                FAR char dirpath[PATH_MAX],
                                FAR void *arg);
 
@@ -309,7 +309,7 @@ int inode_chstat(FAR struct inode *inode,
  *
  ****************************************************************************/
 
-int inode_getpath(FAR struct inode *inode, FAR char *path, size_t len);
+int inode_getpath(FAR struct inode *node, FAR char *path, size_t len);
 
 /****************************************************************************
  * Name: inode_free
@@ -319,7 +319,7 @@ int inode_getpath(FAR struct inode *inode, FAR char *path, size_t len);
  *
  ****************************************************************************/
 
-void inode_free(FAR struct inode *inode);
+void inode_free(FAR struct inode *node);
 
 /****************************************************************************
  * Name: inode_nextname
@@ -393,7 +393,7 @@ int inode_remove(FAR const char *path);
  *
  ****************************************************************************/
 
-void inode_addref(FAR struct inode *inode);
+int inode_addref(FAR struct inode *inode);
 
 /****************************************************************************
  * Name: inode_release

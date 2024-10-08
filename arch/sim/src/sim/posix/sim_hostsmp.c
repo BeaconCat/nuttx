@@ -106,8 +106,6 @@ static void *sim_idle_trampoline(void *arg)
 
   host_cpu_started();
 
-  sim_unlock();
-
   /* The idle Loop */
 
   for (; ; )
@@ -277,3 +275,4 @@ void host_send_func_call_ipi(int cpu)
   pthread_kill(g_cpu_thread[cpu], SIGUSR2);
 }
 #endif
+

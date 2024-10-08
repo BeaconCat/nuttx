@@ -34,6 +34,7 @@
 #  include <debug.h>
 
 #  include "sctlr.h"
+#  include "cp15.h"
 #endif
 
 /****************************************************************************
@@ -133,7 +134,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARM_MPU_RESET)
+#if defined(CONFIG_MPU_RESET)
 void mpu_reset(void);
 #else
 #  define mpu_reset() do { } while (0)
