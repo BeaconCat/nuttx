@@ -249,15 +249,8 @@ int syslog_add_intbuffer(int ch)
 int syslog_flush_intbuffer(bool force)
 {
   syslog_putc_t putfunc;
-  irqstate_t flags;
   int ch;
   int i;
-
-  /* This logic is performed with the scheduler disabled to protect from
-   * concurrent modification by other tasks.
-   */
-
-  flags = enter_critical_section();
 
   do
     {
@@ -293,8 +286,6 @@ int syslog_flush_intbuffer(bool force)
         }
     }
   while (ch != EOF);
-
-  leave_critical_section(flags);
 
   return ch;
 }

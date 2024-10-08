@@ -135,7 +135,7 @@ static inline_function void up_set_current_regs(uint32_t *regs)
  *
  ****************************************************************************/
 
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
@@ -149,6 +149,13 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
