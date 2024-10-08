@@ -28,7 +28,8 @@ set(SRCS
     group_setuptaskfiles.c
     group_foreachchild.c
     group_killchildren.c
-    group_signal.c)
+    group_signal.c
+    group_argvstr.c)
 
 if(CONFIG_SCHED_HAVE_PARENT)
   if(CONFIG_SCHED_CHILD_STATUS)

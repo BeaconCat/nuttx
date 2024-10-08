@@ -31,7 +31,6 @@ set(SRCS
     intel64_releasestack.c
     intel64_rtc.c
     intel64_restore_auxstate.c
-    intel64_savestate.c
     intel64_stackframe.c
     intel64_schedulesigaction.c
     intel64_sigdeliver.c
@@ -48,7 +47,7 @@ set(SRCS
     intel64_check_capability.c
     intel64_cpu.c)
 
-if(CONFIG_x86_64_UNWINDER_FRAME_POINTER)
+if(CONFIG_X86_64_UNWINDER_FRAME_POINTER)
   list(APPEND SRCS intel64_backtrace_fp.c)
 endif()
 

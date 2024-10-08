@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/machine/arch_atomic.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -755,15 +753,17 @@ SYNC_VAL_CMP_SWAP(4, uint32_t)
 
 SYNC_VAL_CMP_SWAP(8, uint64_t)
 
+#endif /* __clang__ */
+
+#ifdef __ghs__
+
 /****************************************************************************
  * Name: __sync_synchronize
  ****************************************************************************/
 
 void weak_function __sync_synchronize(void)
 {
-#ifdef SP_DMB
-  SP_DMB();
-#endif
+  asm volatile("" ::: "memory");
 }
 
-#endif /* __clang__ */
+#endif
