@@ -31,7 +31,6 @@ set(SRCS
     intel64_releasestack.c
     intel64_rtc.c
     intel64_restore_auxstate.c
-    intel64_savestate.c
     intel64_stackframe.c
     intel64_schedulesigaction.c
     intel64_sigdeliver.c
@@ -56,6 +55,10 @@ if(CONFIG_STACK_COLORATION)
   list(APPEND SRCS intel64_checkstack.c)
 endif()
 
+if(CONFIG_ARCH_PERF_EVENTS)
+  list(APPEND SRCS intel64_perf.c)
+endif()
+
 if(CONFIG_MM_PGALLOC)
   list(APPEND SRCS intel64_pgalloc.c)
 endif()
@@ -78,6 +81,7 @@ if(CONFIG_ARCH_INTEL64_HAVE_TSC)
   else()
     list(APPEND SRCS intel64_tsc_timerisr.c)
   endif()
+  list(APPEND SRCS intel64_tsc_ndelay.c)
 endif()
 
 if(CONFIG_INTEL64_HPET)

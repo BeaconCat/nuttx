@@ -24,9 +24,8 @@
 
 #include <nuttx/config.h>
 
-#include <arch/irq.h>
-
 #include "arm.h"
+#include "cp15.h"
 #include "cp15_cacheops.h"
 #include "sctlr.h"
 #include "arm_internal.h"
@@ -201,7 +200,7 @@ __cpu0_start:
 	mcr		CP15_TPIDRPRW(r0)	/* Initialize percpu reg TPIDRPRW */
 	mcr		CP15_BPIALL(r0)		/* Invalidate entire branch prediction array */
 	mcr		CP15_ICIALLU(r0)	/* Invalidate I-cache */
-	mov		r1, CP15_CACHE_INVALIDATE
+	mov		r0, CP15_CACHE_INVALIDATE
 	bl		cp15_dcache_op_level
 	isb
 

@@ -134,6 +134,20 @@
 #  define IRQ_STACK_SIZE CONFIG_ARCH_INTERRUPTSTACK
 #endif
 
+/* Linker defined section addresses */
+
+#define _START_TEXT  _stext
+#define _END_TEXT    _etext
+#define _START_BSS   _sbss
+#define _END_BSS     _ebss
+#define _DATA_INIT   _eronly
+#define _START_DATA  _sdata
+#define _END_DATA    _edata
+#define _START_TDATA _stdata
+#define _END_TDATA   _etdata
+#define _START_TBSS  _stbss
+#define _END_TBSS    _etbss
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -159,7 +173,7 @@ extern const uintptr_t g_idle_topstack[];
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 extern uint8_t g_intstackalloc[];
-extern uint8_t g_intstackalloc[];
+extern uint8_t g_isrstackalloc[];
 #endif
 
 /* These symbols are setup by the linker script. */
@@ -171,6 +185,10 @@ extern uint8_t _sdata[];           /* Start of .data */
 extern uint8_t _edata[];           /* End+1 of .data */
 extern uint8_t _sbss[];            /* Start of .bss */
 extern uint8_t _ebss[];            /* End+1 of .bss */
+extern uint8_t _stdata[];          /* Start of .tdata */
+extern uint8_t _etdata[];          /* End+1 of .tdata */
+extern uint8_t _stbss[];           /* Start of .tbss */
+extern uint8_t _etbss[];           /* End+1 of .tbss */
 #endif
 
 /****************************************************************************
@@ -202,7 +220,6 @@ void x86_64_boardinitialize(void);
 /* Defined in files with the same name as the function */
 
 void x86_64_copystate(uint64_t *dest, uint64_t *src);
-void x86_64_savestate(uint64_t *regs);
 void x86_64_decodeirq(uint64_t *regs);
 #ifdef CONFIG_ARCH_DMA
 void weak_function x86_64_dmainitialize(void);
