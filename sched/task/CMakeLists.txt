@@ -21,7 +21,6 @@
 # ##############################################################################
 
 set(SRCS
-    task_argvstr.c
     task_create.c
     task_init.c
     task_setup.c
@@ -39,7 +38,6 @@ set(SRCS
     task_cancelpt.c
     task_terminate.c
     task_gettid.c
-    task_join.c
     exit.c)
 
 if(CONFIG_SCHED_HAVE_PARENT)
