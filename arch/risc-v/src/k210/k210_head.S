@@ -28,7 +28,6 @@
 #include "chip.h"
 #include "k210_memorymap.h"
 #include "riscv_internal.h"
-#include "riscv_macros.S"
 
 /****************************************************************************
  * Public Symbols
@@ -45,28 +44,55 @@ __start:
 
   /* Load mhartid (cpuid) */
 
-  csrr a0, CSR_MHARTID
+  csrr a0, mhartid
+
+  /* Set stack pointer to the idle thread stack */
+
+  bnez a0, 1f
+  la   sp, K210_IDLESTACK0_TOP
+  j    2f
+1:
 
   /* In case of single CPU config, stop here */
 
 #if !defined(CONFIG_SMP) || (CONFIG_SMP_NCPUS == 1)
-  beqz a0, 2f
-  csrw CSR_MIE, zero
+  csrw mie, zero
   wfi
 #endif
 
+  /* To get g_cpu_basestack[mhartid], must get g_cpu_basestack first */
+
+  la   t0, g_cpu_basestack
+
+  /* Offset = pointer width * hart id */
+
+  slli t1, a0, 3
+  add  t0, t0, t1
+
+  /* Load idle stack base to sp */
+
+  ld   sp, 0(t0)
+
+  /*
+   * sp (stack top) = sp + idle stack size - XCPTCONTEXT_SIZE
+   *
+   * Note: Reserve some space used by up_initial_state since we are already
+   * running and using the per CPU idle stack.
+   */
+
+  li   t0, STACK_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE - XCPTCONTEXT_SIZE)
+  add  sp, sp, t0
+
 2:
-  /* Set stack pointer to the idle thread stack */
-  riscv_set_inital_sp K210_IDLESTACK_BASE, SMP_STACK_SIZE, a0
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
-  csrw CSR_MIE, zero
+  csrw mie, zero
 
   /* Initialize the Machine Trap Vector */
 
   la   t0, __trap_vec
-  csrw CSR_MTVEC, t0
+  csrw mtvec, t0
 
   /* Jump to __k210_start with mhartid */
 

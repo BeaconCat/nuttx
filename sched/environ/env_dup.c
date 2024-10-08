@@ -91,7 +91,6 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
         }
 
       group->tg_envc = envc;
-      group->tg_envpc = (envc + SCHED_ENVIRON_RESERVED + 1);
 
       /* A special case is that the parent has an "empty" environment
        * allocation, i.e., there is an allocation in place but it
@@ -102,7 +101,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
         {
           /* There is an environment, duplicate it */
 
-          envp = group_malloc(group, sizeof(*envp) * group->tg_envpc);
+          envp = group_malloc(group, sizeof(*envp) * (envc + 1));
           if (envp == NULL)
             {
               /* The parent's environment can not be inherited due to a

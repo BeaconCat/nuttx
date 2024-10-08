@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/machine/risc-v/arch_elf.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -348,8 +346,8 @@ bool up_checkarch(const Elf_Ehdr *ehdr)
 
   if ((ehdr->e_entry & 1) != 0)
     {
-      berr("ERROR: Entry point is not properly aligned: %" PRIxPTR "\n",
-           (uintptr_t)ehdr->e_entry);
+      berr("ERROR: Entry point is not properly aligned: %08lx\n",
+           ehdr->e_entry);
     }
 
   /* TODO:  Check ABI here. */
@@ -420,10 +418,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_64:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           _set_val((uint16_t *)addr,
                    (uint32_t)(sym->st_value + rel->r_addend));
@@ -436,10 +434,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
           long imm_lo;
 
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           offset = _find_hi20(arch_data, sym->st_value);
 
@@ -458,10 +456,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
           long imm_lo;
 
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           offset = _find_hi20(arch_data, sym->st_value);
 
@@ -485,10 +483,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
           long imm_lo;
 
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           offset = (long)sym->st_value + (long)rel->r_addend - (long)addr;
 
@@ -499,8 +497,8 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
 
           if (!_valid_hi20_imm(imm_hi))
             {
-              berr("ERROR: %s at %08" PRIxPTR " bad:%08" PRIxPTR "\n",
-                   _get_rname(relotype), addr, (uintptr_t)imm_hi << 12);
+              berr("ERROR: %s at %08" PRIxPTR " bad:%08lx\n",
+                   _get_rname(relotype), addr, imm_hi << 12);
 
               return -EINVAL;
             }
@@ -522,10 +520,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
           long imm_lo;
 
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           offset = (long)sym->st_value + (long)rel->r_addend - (long)addr;
 
@@ -533,8 +531,8 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
 
           if (!_valid_hi20_imm(imm_hi))
             {
-              berr("ERROR: %s at %08" PRIxPTR " bad:%08" PRIxPTR "\n",
-                   _get_rname(relotype), addr, (uintptr_t)imm_hi << 12);
+              berr("ERROR: %s at %08" PRIxPTR " bad:%08lx\n",
+                   _get_rname(relotype), addr, imm_hi << 12);
 
               return -EINVAL;
             }
@@ -552,10 +550,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_BRANCH:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* P.23 Conditinal Branches : B type (imm=12bit) */
 
@@ -575,10 +573,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_JAL:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* P.21 Unconditinal Jumps : UJ type (imm=20bit) */
 
@@ -598,10 +596,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_HI20:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* P.19 LUI */
 
@@ -616,8 +614,8 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
 
           if (!_valid_hi20_imm(imm_hi))
             {
-              berr("ERROR: %s at %08" PRIxPTR " bad:%08" PRIxPTR "\n",
-                   _get_rname(relotype), addr, (uintptr_t)imm_hi << 12);
+              berr("ERROR: %s at %08" PRIxPTR " bad:%08lx\n",
+                   _get_rname(relotype), addr, imm_hi << 12);
 
               return -EINVAL;
             }
@@ -631,10 +629,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_LO12_I:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* ADDI, FLW, LD, ... : I-type */
 
@@ -653,10 +651,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_LO12_S:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* SW : S-type.
            * not merge with R_RISCV_HI20 since the compiler
@@ -682,10 +680,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_RVC_JUMP:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* P.111 Table 16.6 : Instruction listings for RVC */
 
@@ -702,10 +700,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
       case R_RISCV_RVC_BRANCH:
         {
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           /* P.111 Table 16.6 : Instruction listings for RVC */
 
@@ -727,10 +725,10 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
           /* P.29 https://github.com/riscv-non-isa/riscv-elf-psabi-doc */
 
           binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%" PRIxPTR "\n",
+                "to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
                 addr, _get_val((uint16_t *)addr),
-                sym, (uintptr_t)sym->st_value);
+                sym, sym->st_value);
 
           addr = (long)sym->st_value + (long)rel->r_addend - (long)addr;
         }
@@ -766,8 +764,8 @@ int up_relocateadd(const Elf_Rela *rel, const Elf_Sym *sym,
         }
         break;
       default:
-        berr("ERROR: Unsupported relocation: %" PRIu32 "\n",
-             (uint32_t)ELF_R_TYPE(rel->r_info));
+        berr("ERROR: Unsupported relocation: %ld\n",
+             ELF_R_TYPE(rel->r_info));
         PANIC();
         return -EINVAL;
     }
