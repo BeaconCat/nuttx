@@ -66,36 +66,32 @@ begin_packed_struct struct bcmf_cdc_header
  * Private Function Prototypes
  ****************************************************************************/
 
-static FAR struct bcmf_frame_s *bcmf_cdc_allocate_frame(
-                                FAR struct bcmf_dev_s *priv, FAR char *name,
-                                FAR uint8_t *data, uint32_t len);
+static struct bcmf_frame_s *bcmf_cdc_allocate_frame(
+                                FAR struct bcmf_dev_s *priv, char *name,
+                                uint8_t *data, uint32_t len);
 
 static int bcmf_cdc_sendframe(FAR struct bcmf_dev_s *priv, uint32_t cmd,
-                              int ifidx, bool set,
-                              FAR struct bcmf_frame_s *frame);
+                         int ifidx, bool set, struct bcmf_frame_s *frame);
 
 static int bcmf_cdc_control_request(FAR struct bcmf_dev_s *priv,
-                                    uint32_t ifidx, bool set, uint32_t cmd,
-                                    FAR char *name, FAR uint8_t *data,
-                                    FAR uint32_t *len);
+                               uint32_t ifidx, bool set, uint32_t cmd,
+                               char *name, uint8_t *data, uint32_t *len);
 
 static int bcmf_cdc_control_request_unsafe(FAR struct bcmf_dev_s *priv,
-                                           uint32_t ifidx, bool set,
-                                           uint32_t cmd, FAR char *name,
-                                           FAR uint8_t *data,
-                                           FAR uint32_t *len);
+                               uint32_t ifidx, bool set, uint32_t cmd,
+                               char *name, uint8_t *data, uint32_t *len);
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static FAR struct bcmf_frame_s *
-bcmf_cdc_allocate_frame(FAR struct bcmf_dev_s *priv, FAR char *name,
-                        FAR uint8_t *data, uint32_t len)
+struct bcmf_frame_s *bcmf_cdc_allocate_frame(FAR struct bcmf_dev_s *priv,
+                                             char *name, uint8_t *data,
+                                             uint32_t len)
 {
   uint32_t data_len;
   uint16_t name_len;
-  FAR struct bcmf_frame_s *frame;
+  struct bcmf_frame_s *frame;
 
   if (name)
     {
@@ -136,10 +132,10 @@ bcmf_cdc_allocate_frame(FAR struct bcmf_dev_s *priv, FAR char *name,
 }
 
 int bcmf_cdc_sendframe(FAR struct bcmf_dev_s *priv, uint32_t cmd,
-                       int ifidx, bool set, FAR struct bcmf_frame_s *frame)
+                       int ifidx, bool set, struct bcmf_frame_s *frame)
 {
-  FAR struct bcmf_cdc_header *header =
-      (FAR struct bcmf_cdc_header *)frame->data;
+  struct bcmf_cdc_header *header =
+                  (struct bcmf_cdc_header *)frame->data;
   uint32_t cdc_data_len;
 
   /* Setup control frame header */
@@ -163,9 +159,8 @@ int bcmf_cdc_sendframe(FAR struct bcmf_dev_s *priv, uint32_t cmd,
 }
 
 int bcmf_cdc_control_request(FAR struct bcmf_dev_s *priv,
-                             uint32_t ifidx, bool set, uint32_t cmd,
-                             FAR char *name, FAR uint8_t *data,
-                             FAR uint32_t *len)
+                               uint32_t ifidx, bool set, uint32_t cmd,
+                               char *name, uint8_t *data, uint32_t *len)
 {
   int ret;
 
@@ -184,12 +179,11 @@ int bcmf_cdc_control_request(FAR struct bcmf_dev_s *priv,
 }
 
 int bcmf_cdc_control_request_unsafe(FAR struct bcmf_dev_s *priv,
-                                    uint32_t ifidx, bool set, uint32_t cmd,
-                                    FAR char *name, FAR uint8_t *data,
-                                    FAR uint32_t *len)
+                               uint32_t ifidx, bool set, uint32_t cmd,
+                               char *name, uint8_t *data, uint32_t *len)
 {
   int ret;
-  FAR struct bcmf_frame_s *frame;
+  struct bcmf_frame_s *frame;
   uint32_t out_len = *len;
 
   *len = 0;
@@ -269,8 +263,8 @@ int bcmf_cdc_control_request_unsafe(FAR struct bcmf_dev_s *priv,
  ****************************************************************************/
 
 int bcmf_cdc_iovar_request(FAR struct bcmf_dev_s *priv,
-                           uint32_t ifidx, bool set, FAR char *name,
-                           FAR uint8_t *data, FAR uint32_t *len)
+                             uint32_t ifidx, bool set, char *name,
+                             uint8_t *data, uint32_t *len)
 {
   return bcmf_cdc_control_request(priv, ifidx, set,
                                   set ? WLC_SET_VAR : WLC_GET_VAR, name,
@@ -278,16 +272,17 @@ int bcmf_cdc_iovar_request(FAR struct bcmf_dev_s *priv,
 }
 
 int bcmf_cdc_iovar_request_unsafe(FAR struct bcmf_dev_s *priv,
-                                  uint32_t ifidx, bool set, FAR char *name,
-                                  FAR uint8_t *data, FAR uint32_t *len)
+                             uint32_t ifidx, bool set, char *name,
+                             uint8_t *data, uint32_t *len)
 {
   return bcmf_cdc_control_request_unsafe(priv, ifidx, set,
-                                         set ? WLC_SET_VAR : WLC_GET_VAR,
-                                         name, data, len);
+                                  set ? WLC_SET_VAR : WLC_GET_VAR, name,
+                                  data, len);
 }
 
-int bcmf_cdc_ioctl(FAR struct bcmf_dev_s *priv, uint32_t ifidx, bool set,
-                   uint32_t cmd, FAR uint8_t *data, FAR uint32_t *len)
+int bcmf_cdc_ioctl(FAR struct bcmf_dev_s *priv,
+                     uint32_t ifidx, bool set, uint32_t cmd,
+                     uint8_t *data, uint32_t *len)
 {
   return bcmf_cdc_control_request(priv, ifidx, set, cmd, NULL, data, len);
 }
@@ -297,10 +292,10 @@ int bcmf_cdc_ioctl(FAR struct bcmf_dev_s *priv, uint32_t ifidx, bool set,
  ****************************************************************************/
 
 int bcmf_cdc_process_control_frame(FAR struct bcmf_dev_s *priv,
-                                   FAR struct bcmf_frame_s *frame)
+                   struct bcmf_frame_s *frame)
 {
   unsigned int data_size;
-  FAR struct bcmf_cdc_header *cdc_header;
+  struct bcmf_cdc_header *cdc_header;
 
   /* Check frame */
 
@@ -312,7 +307,7 @@ int bcmf_cdc_process_control_frame(FAR struct bcmf_dev_s *priv,
       return -EINVAL;
     }
 
-  cdc_header = (FAR struct bcmf_cdc_header *)frame->data;
+  cdc_header = (struct bcmf_cdc_header *)frame->data;
 
   if (data_size < cdc_header->len ||
       data_size < sizeof(struct bcmf_cdc_header) + cdc_header->len)
@@ -338,7 +333,7 @@ int bcmf_cdc_process_control_frame(FAR struct bcmf_dev_s *priv,
               priv->control_rxdata_len = cdc_header->len;
             }
 
-          memcpy(priv->control_rxdata, (FAR uint8_t *)&cdc_header[1],
+          memcpy(priv->control_rxdata, (uint8_t *)&cdc_header[1],
                  priv->control_rxdata_len);
         }
 

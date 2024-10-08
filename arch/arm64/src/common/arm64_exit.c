@@ -57,10 +57,8 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
   UNUSED(status);
-
-  /* Destroy the task at the head of the ready to run list. */
 
   nxtask_exit();
 

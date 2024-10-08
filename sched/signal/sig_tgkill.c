@@ -86,8 +86,7 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo)
 
   if (!GOOD_SIGNO(signo))
     {
-      ret = -EINVAL;
-      goto errout;
+      return -EINVAL;
     }
 
   /* Create the siginfo structure */
@@ -106,8 +105,7 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo)
   stcb = nxsched_get_tcb(tid);
   if (!stcb)
     {
-      ret = -ESRCH;
-      goto errout;
+      return -ESRCH;
     }
 
   /* Dispatch the signal to thread, bypassing normal task group thread
@@ -118,13 +116,10 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo)
 
   if (ret < 0)
     {
-      goto errout;
+      return ret;
     }
 
   return OK;
-
-errout:
-  return ret;
 }
 
 /****************************************************************************
