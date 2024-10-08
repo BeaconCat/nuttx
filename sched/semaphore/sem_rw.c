@@ -24,8 +24,10 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/irq.h>
 #include <nuttx/rwsem.h>
 #include <nuttx/sched.h>
+#include <assert.h>
 
 /****************************************************************************
  * Private Functions
@@ -64,11 +66,22 @@ static inline void up_wait(FAR rw_semaphore_t *rwsem)
 
 int down_read_trylock(FAR rw_semaphore_t *rwsem)
 {
-  nxmutex_lock(&rwsem->protected);
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
+
+  /* if the write lock is already held by oneself and since the write lock
+   * can be recursively held, so, this operation can be converted to a write
+   * lock to avoid deadlock.
+   */
+
+  if (rwsem->holder == _SCHED_GETTID())
+    {
+      rwsem->writer++;
+      goto out;
+    }
 
   if (rwsem->writer > 0)
     {
-      nxmutex_unlock(&rwsem->protected);
+      spin_unlock_irqrestore(&rwsem->protected, flags);
       return 0;
     }
 
@@ -78,7 +91,8 @@ int down_read_trylock(FAR rw_semaphore_t *rwsem)
 
   rwsem->reader++;
 
-  nxmutex_unlock(&rwsem->protected);
+out:
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 
   return 1;
 }
@@ -100,14 +114,25 @@ void down_read(FAR rw_semaphore_t *rwsem)
    * block and wait for the write-lock to be unlocked.
    */
 
-  nxmutex_lock(&rwsem->protected);
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
+
+  /* if the write lock is already held by oneself and since the write lock
+   * can be recursively held, so, this operation can be converted to a write
+   * lock to avoid deadlock.
+   */
+
+  if (rwsem->holder == _SCHED_GETTID())
+    {
+      rwsem->writer++;
+      goto out;
+    }
 
   while (rwsem->writer > 0)
     {
       rwsem->waiter++;
-      nxmutex_unlock(&rwsem->protected);
+      spin_unlock_irqrestore(&rwsem->protected, flags);
       nxsem_wait(&rwsem->waiting);
-      nxmutex_lock(&rwsem->protected);
+      flags = spin_lock_irqsave(&rwsem->protected);
       rwsem->waiter--;
     }
 
@@ -117,7 +142,8 @@ void down_read(FAR rw_semaphore_t *rwsem)
 
   rwsem->reader++;
 
-  nxmutex_unlock(&rwsem->protected);
+out:
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 }
 
 /****************************************************************************
@@ -133,7 +159,22 @@ void down_read(FAR rw_semaphore_t *rwsem)
 
 void up_read(FAR rw_semaphore_t *rwsem)
 {
-  nxmutex_lock(&rwsem->protected);
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
+
+  /* when releasing a read lock and holder is oneself, the read lock is a
+   * write lock that has been converted, so it should be released according
+   * to the procedures for releasing a write lock.
+   */
+
+  if (rwsem->holder == _SCHED_GETTID())
+    {
+      if (--rwsem->writer <= 0)
+        {
+          rwsem->holder = RWSEM_NO_HOLDER;
+        }
+
+      goto out;
+    }
 
   DEBUGASSERT(rwsem->reader > 0);
 
@@ -144,7 +185,8 @@ void up_read(FAR rw_semaphore_t *rwsem)
       up_wait(rwsem);
     }
 
-  nxmutex_unlock(&rwsem->protected);
+out:
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 }
 
 /****************************************************************************
@@ -163,13 +205,12 @@ void up_read(FAR rw_semaphore_t *rwsem)
 
 int down_write_trylock(FAR rw_semaphore_t *rwsem)
 {
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
   pid_t tid = _SCHED_GETTID();
-
-  nxmutex_lock(&rwsem->protected);
 
   if (rwsem->reader > 0 || (rwsem->writer > 0 && tid != rwsem->holder))
     {
-      nxmutex_unlock(&rwsem->protected);
+      spin_unlock_irqrestore(&rwsem->protected, flags);
       return 0;
     }
 
@@ -178,7 +219,7 @@ int down_write_trylock(FAR rw_semaphore_t *rwsem)
   rwsem->writer++;
   rwsem->holder = tid;
 
-  nxmutex_unlock(&rwsem->protected);
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 
   return 1;
 }
@@ -196,16 +237,15 @@ int down_write_trylock(FAR rw_semaphore_t *rwsem)
 
 void down_write(FAR rw_semaphore_t *rwsem)
 {
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
   pid_t tid = _SCHED_GETTID();
-
-  nxmutex_lock(&rwsem->protected);
 
   while (rwsem->reader > 0 || (rwsem->writer > 0 && rwsem->holder != tid))
     {
       rwsem->waiter++;
-      nxmutex_unlock(&rwsem->protected);
+      spin_unlock_irqrestore(&rwsem->protected, flags);
       nxsem_wait(&rwsem->waiting);
-      nxmutex_lock(&rwsem->protected);
+      flags = spin_lock_irqsave(&rwsem->protected);
       rwsem->waiter--;
     }
 
@@ -214,7 +254,7 @@ void down_write(FAR rw_semaphore_t *rwsem)
   rwsem->writer++;
   rwsem->holder = tid;
 
-  nxmutex_unlock(&rwsem->protected);
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 }
 
 /****************************************************************************
@@ -230,7 +270,7 @@ void down_write(FAR rw_semaphore_t *rwsem)
 
 void up_write(FAR rw_semaphore_t *rwsem)
 {
-  nxmutex_lock(&rwsem->protected);
+  irqstate_t flags = spin_lock_irqsave(&rwsem->protected);
 
   DEBUGASSERT(rwsem->writer > 0);
   DEBUGASSERT(rwsem->holder == _SCHED_GETTID());
@@ -242,7 +282,7 @@ void up_write(FAR rw_semaphore_t *rwsem)
 
   up_wait(rwsem);
 
-  nxmutex_unlock(&rwsem->protected);
+  spin_unlock_irqrestore(&rwsem->protected, flags);
 }
 
 /****************************************************************************
@@ -266,16 +306,11 @@ int init_rwsem(FAR rw_semaphore_t *rwsem)
 
   /* Initialize structure information */
 
-  ret = nxmutex_init(&rwsem->protected);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  spin_lock_init(&rwsem->protected);
 
   ret = nxsem_init(&rwsem->waiting, 0, 0);
   if (ret < 0)
     {
-      nxmutex_destroy(&rwsem->protected);
       return ret;
     }
 
@@ -306,6 +341,5 @@ void destroy_rwsem(FAR rw_semaphore_t *rwsem)
   DEBUGASSERT(rwsem->waiter == 0 && rwsem->reader == 0 &&
               rwsem->writer == 0 && rwsem->holder == RWSEM_NO_HOLDER);
 
-  nxmutex_destroy(&rwsem->protected);
   nxsem_destroy(&rwsem->waiting);
 }
