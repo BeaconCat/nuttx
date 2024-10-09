@@ -81,7 +81,7 @@ SECTIONS
         *(.gnu.linkonce.b.*)
         *(.gnu.linkonce.sb.*)
         *(COMMON)
-        . = ALIGN(32);
+        . = ALIGN(8);
         _ebss = ABSOLUTE(.);
     } > sram
 

@@ -173,7 +173,7 @@ extern const uintptr_t g_idle_topstack[];
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 extern uint8_t g_intstackalloc[];
-extern uint8_t g_intstackalloc[];
+extern uint8_t g_isrstackalloc[];
 #endif
 
 /* These symbols are setup by the linker script. */
@@ -220,7 +220,6 @@ void x86_64_boardinitialize(void);
 /* Defined in files with the same name as the function */
 
 void x86_64_copystate(uint64_t *dest, uint64_t *src);
-void x86_64_savestate(uint64_t *regs);
 void x86_64_decodeirq(uint64_t *regs);
 #ifdef CONFIG_ARCH_DMA
 void weak_function x86_64_dmainitialize(void);
