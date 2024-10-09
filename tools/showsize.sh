@@ -2,6 +2,8 @@
 ############################################################################
 # tools/showsize.sh
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -33,26 +35,18 @@ if [ ! -x "tools/showsize.sh" ]; then
   exit 1
 fi
 
-# Support pass a NuttX executable
+# On the cywin simulation, the executable will be nuttx.exe
 
-if [ -n "$1" ]; then
-  NUTTX=$1
+if [ -f "nuttx" ]; then
+  NUTTX=nuttx
 else
-  # On the cywin simulation, the executable will be nuttx.exe
-
-  if [ -f "nuttx" ]; then
-    NUTTX=nuttx
+  if [ -x "nuttx.exe" ]; then
+    NUTTX=nuttx.exe
   else
-    if [ -x "nuttx.exe" ]; then
-      NUTTX=nuttx.exe
-    else
-      echo "Cannot find the NuttX executable"
-      exit 1
-    fi
+    echo "Cannot find the NuttX executable"
+    exit 1
   fi
 fi
-
-echo "NuttX executable:" $NUTTX
 
 # Show what we were asked for
 

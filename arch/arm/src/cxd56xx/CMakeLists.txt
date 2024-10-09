@@ -41,12 +41,15 @@ set(SRCS
 
 if(CONFIG_SMP)
   list(APPEND SRCS cxd56_cpuidlestack.c)
-  list(APPEND SRCS cxd56_cpuindex.c)
   list(APPEND SRCS cxd56_smpcall.c)
   list(APPEND SRCS cxd56_cpustart.c)
   if(CONFIG_CXD56_TESTSET)
     list(APPEND SRCS cxd56_testset.c)
   endif()
+endif()
+
+if(CONFIG_ARCH_HAVE_MULTICPU)
+  list(APPEND SRCS cxd56_cpuindex.c)
 endif()
 
 if(CONFIG_ARCH_USE_TEXT_HEAP)
@@ -120,6 +123,13 @@ if(CONFIG_CXD56_CHARGER)
   list(APPEND SRCS cxd56_charger.c)
 endif()
 
+if(CONFIG_AUDIO_CXD56)
+  list(APPEND SRCS cxd56_nxaudio.c)
+  if(CONFIG_AUDIO_CXD56_SRC)
+    list(APPEND SRCS cxd56_nxaudio_src.c)
+  endif()
+endif()
+
 if(CONFIG_CXD56_GE2D)
   list(APPEND SRCS cxd56_ge2d.c)
 endif()
@@ -161,6 +171,10 @@ endif()
 
 if(CONFIG_CXD56_HOSTIF)
   list(APPEND SRCS cxd56_hostif.c)
+endif()
+
+if(CONFIG_CXD56_GNSS_HEAP)
+  list(APPEND SRCS cxd56_gnssheap.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
