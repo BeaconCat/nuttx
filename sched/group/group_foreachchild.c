@@ -27,9 +27,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
-#include <nuttx/queue.h>
 
 #include "group/group.h"
 
@@ -62,27 +60,26 @@
 int group_foreachchild(FAR struct task_group_s *group,
                        foreachchild_t handler, FAR void *arg)
 {
-  FAR sq_entry_t *curr;
-  FAR sq_entry_t *next;
-  int ret = OK;
+  int ret;
+  int i;
 
   DEBUGASSERT(group);
 
   /* Visit the main thread last (if present) */
 
-  sq_for_every_safe(&group->tg_members, curr, next)
+  for (i = group->tg_nmembers - 1; i >= 0; i--)
     {
-      FAR struct tcb_s *mtcb =
-        container_of(curr, struct tcb_s, member);
-
-      ret = handler(mtcb->pid, arg);
-      if (ret != OK)
+      if (group->tg_members[i] != INVALID_PROCESS_ID)
         {
-          break;
+          ret = handler(group->tg_members[i], arg);
+          if (ret != 0)
+            {
+              return ret;
+            }
         }
     }
 
-  return ret;
+  return 0;
 }
 
 #endif /* HAVE_GROUP_MEMBERS */

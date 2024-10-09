@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/pwd/lib_pwd_globals.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,6 +34,7 @@
 
 int g_passwd_index;
 struct passwd g_passwd;
+struct spwd g_spwd;
 char g_passwd_buffer[CONFIG_LIBC_PASSWD_LINESIZE];
 
 /****************************************************************************

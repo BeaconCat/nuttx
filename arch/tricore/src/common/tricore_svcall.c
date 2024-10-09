@@ -57,13 +57,7 @@ void tricore_svcall(volatile void *trap)
   uintptr_t *regs;
   uint32_t cmd;
 
-  regs = (uintptr_t *)__mfcr(CPU_PCXI);
-
-  /* DSYNC instruction should be executed immediately prior to the MTCR */
-
-  __dsync();
-
-  regs = tricore_csa2addr((uintptr_t)regs);
+  regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
   up_set_current_regs(regs);
 
@@ -120,7 +114,7 @@ void tricore_svcall(volatile void *trap)
 
       g_running_tasks[this_cpu()] = this_task();
 
-      regs[REG_UPCXI] = (uintptr_t)up_current_regs();
+      regs[REG_UPCXI] = up_current_regs();
 
       __isync();
     }

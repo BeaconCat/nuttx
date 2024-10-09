@@ -100,7 +100,7 @@ struct udp_poll_s
 {
   FAR struct udp_conn_s *conn;     /* Needed to handle loss of connection */
   FAR struct net_driver_s *dev;    /* Needed to free the callback structure */
-  FAR struct pollfd *fds;          /* Needed to handle poll events */
+  struct pollfd *fds;              /* Needed to handle poll events */
   FAR struct devif_callback_s *cb; /* Needed to teardown the poll */
 };
 
@@ -160,10 +160,6 @@ struct udp_conn_s
    */
 
   struct udp_poll_s pollinfo[CONFIG_NET_UDP_NPOLLWAITERS];
-
-#ifdef CONFIG_NET_TIMESTAMP
-  int timestamp; /* Nonzero when SO_TIMESTAMP is enabled */
-#endif
 };
 
 /* This structure supports UDP write buffering.  It is simply a container
@@ -175,9 +171,17 @@ struct udp_wrbuffer_s
 {
   sq_entry_t wb_node;              /* Supports a singly linked list */
   struct sockaddr_storage wb_dest; /* Destination address */
-  FAR struct iob_s *wb_iob;        /* Head of the I/O buffer chain */
+  struct iob_s *wb_iob;            /* Head of the I/O buffer chain */
 };
 #endif
+
+struct udp_callback_s
+{
+  FAR struct net_driver_s *dev;
+  FAR struct udp_conn_s *conn;
+  FAR struct devif_callback_s *udp_cb;
+  sem_t *sem;
+};
 
 /****************************************************************************
  * Public Data
@@ -728,6 +732,19 @@ uint16_t udp_callback(FAR struct net_driver_s *dev,
                       FAR struct udp_conn_s *conn, uint16_t flags);
 
 /****************************************************************************
+ * Name: udp_callback_cleanup
+ *
+ * Description:
+ *   Cleanup data and cb when thread is canceled.
+ *
+ * Input Parameters:
+ *   arg - A pointer with conn and callback struct.
+ *
+ ****************************************************************************/
+
+void udp_callback_cleanup(FAR void *arg);
+
+/****************************************************************************
  * Name: psock_udp_recvfrom
  *
  * Description:
@@ -897,7 +914,7 @@ int udp_writebuffer_notifier_setup(worker_t worker,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP_NOTIFIER
-void udp_notifier_teardown(int key);
+void udp_notifier_teardown(FAR void *key);
 #endif
 
 /****************************************************************************

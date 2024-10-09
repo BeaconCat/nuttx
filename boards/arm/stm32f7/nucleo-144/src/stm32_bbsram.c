@@ -136,7 +136,7 @@ typedef struct
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   _stack_t interrupt;
 #endif
-} stacks_t;
+} stack_t;
 
 /* Not Used for reference only */
 
