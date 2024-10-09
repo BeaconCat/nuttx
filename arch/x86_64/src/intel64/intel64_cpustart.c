@@ -29,8 +29,8 @@
 
 #include <arch/arch.h>
 #include <arch/irq.h>
-#include <arch/spinlock.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 
 #include "sched/sched.h"
 #include "init/init.h"
@@ -74,14 +74,13 @@ static int x86_64_ap_startup(int cpu)
 
   dest = MSR_X2APIC_DESTINATION((uint64_t)x86_64_cpu_to_loapic(cpu));
 
-  /* Copy the AP trampoline to a fixed address */
+  /* Get the AP trampoline from a fixed address */
 
   vect = (uint32_t)((uintptr_t)&__ap_entry) >> 12;
 
   /* Send an INIT IPI to the CPU */
 
-  regval = MSR_X2APIC_ICR_INIT | MSR_X2APIC_ICR_ASSERT
-           | MSR_X2APIC_ICR_LEVEL | dest;
+  regval = MSR_X2APIC_ICR_INIT | dest;
   write_msr(MSR_X2APIC_ICR, regval);
 
   /* Wait for 10 ms */
@@ -96,13 +95,16 @@ static int x86_64_ap_startup(int cpu)
 
   /* Wait for AP ready */
 
-  do
+  up_udelay(300);
+  SP_DMB();
+
+  /* Check CPU ready flag */
+
+  if (x86_64_cpu_ready_get(cpu) == false)
     {
-      up_udelay(300);
-      SP_DMB();
-      sinfo("wait for startup cpu=%d...\n", cpu);
+      sinfo("failed to startup cpu=%d\n", cpu);
+      return -EBUSY;
     }
-  while (x86_64_cpu_ready_get(cpu) == false);
 
   return OK;
 }
@@ -136,7 +138,7 @@ void x86_64_ap_boot(void)
 
   x86_64_check_and_enable_capability();
 
-  /* reload the GDTR with mapped high memory address */
+  /* Reload the GDTR with mapped high memory address */
 
   setgdt((void *)g_gdt64, (uintptr_t)(&g_gdt64_low_end - &g_gdt64_low) - 1);
 
