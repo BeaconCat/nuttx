@@ -24,7 +24,6 @@
 
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/virtio/virtio.h>
@@ -322,12 +321,12 @@ int virtio_unregister_device(FAR struct virtio_device *device)
         container_of(node, struct virtio_device_item_s, node);
       if (item->device == device)
         {
-          /* Call driver remove */
+          /* Call driver remove and mark item->driver NULL to indicate
+           * the device unmatched
+           */
 
-          if (item->driver)
-            {
-              item->driver->remove(device);
-            }
+          item->driver->remove(device);
+          item->driver = NULL;
 
           /* Remove the device from the device list and free memory */
 

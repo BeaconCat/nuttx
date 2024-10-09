@@ -506,7 +506,8 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo);
  *   This is an internal OS interface and should not be used by applications.
  *   A negated errno value is returned on failure.
  *
- *   EAGAIN - wait time is zero.
+ *   EAGAIN - No signal specified by set was generated within the specified
+ *            timeout period.
  *   EINTR  - The wait was interrupted by an unblocked, caught signal.
  *
  * Notes:

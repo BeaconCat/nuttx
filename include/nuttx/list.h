@@ -45,27 +45,14 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/nuttx.h>
+
 #include <stddef.h>
 #include <stdbool.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Name: list_container_of
- *
- * Description:
- *   Cast a member of a structure out to get the address of the containing
- *   structure
- *
- * Arguments:
- *   ptr    - The pointer to the member.
- *   type   - The type of the container struct this is embedded in.
- *   member - The name of the member within the struct.
- */
-
-#define list_container_of(ptr, type, member) \
-  ((type *)((uintptr_t)(ptr) - offsetof(type, member)))
 
 #define LIST_INITIAL_VALUE(list) { &(list), &(list) }
 #define LIST_INITIAL_CLEARED_VALUE { NULL, NULL }
@@ -106,11 +93,11 @@
   ((item)->next != (list) ? (item)->next : \
    (item)->next->next != (list) ? (item)->next->next : NULL)
 
-#define list_entry(ptr, type, member) list_container_of(ptr, type, member)
-#define list_first_entry(list, type, member) list_container_of((list)->next, type, member)
-#define list_last_entry(list, type, member) list_container_of((list)->prev, type, member)
-#define list_next_entry(list, type, member) list_container_of((list)->member.next, type, member)
-#define list_prev_entry(list, type, member) list_container_of((list)->member.prev, type, member)
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
+#define list_first_entry(list, type, member) container_of((list)->next, type, member)
+#define list_last_entry(list, type, member) container_of((list)->prev, type, member)
+#define list_next_entry(list, type, member) container_of((list)->member.next, type, member)
+#define list_prev_entry(list, type, member) container_of((list)->member.prev, type, member)
 
 #define list_add_after(entry, new_entry) list_add_head(entry, new_entry)
 #define list_add_head(list, item) \
@@ -162,7 +149,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -173,7 +160,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -184,7 +171,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -195,7 +182,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -206,7 +193,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -217,7 +204,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -228,7 +215,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -239,7 +226,7 @@
     FAR type *__t = NULL; \
     if(__node) \
       { \
-        __t = list_container_of(__node, type, member); \
+        __t = container_of(__node, type, member); \
       } \
     __t; \
   })
@@ -260,19 +247,19 @@
 /* iterates over the list, entry should be the container structure type */
 
 #define list_for_every_entry(list, entry, type, member) \
-  for(entry = list_container_of((list)->next, type, member); \
+  for(entry = container_of((list)->next, type, member); \
       &entry->member != (list); \
-      entry = list_container_of(entry->member.next, type, member))
+      entry = container_of(entry->member.next, type, member))
 
 /* iterates over the list in a safe way for deletion of current node
  * entry and temp_entry should be the container structure type *
  */
 
 #define list_for_every_entry_safe(list, entry, temp, type, member) \
-  for(entry = list_container_of((list)->next, type, member), \
-      temp = list_container_of(entry->member.next, type, member); \
+  for(entry = container_of((list)->next, type, member), \
+      temp = container_of(entry->member.next, type, member); \
       &entry->member != (list); entry = temp, \
-      temp = list_container_of(temp->member.next, type, member))
+      temp = container_of(temp->member.next, type, member))
 
 /* Iterate from a given entry node in a safe way */
 
@@ -291,9 +278,9 @@
  */
 
 #define list_for_every_entry_reverse(list, entry, type, member) \
-  for(entry = list_container_of((list)->prev, type, member); \
+  for(entry = container_of((list)->prev, type, member); \
       &entry->member != (list); \
-      entry = list_container_of(entry->member.prev, type, member))
+      entry = container_of(entry->member.prev, type, member))
 
 /****************************************************************************
  * Public Type Definitions
