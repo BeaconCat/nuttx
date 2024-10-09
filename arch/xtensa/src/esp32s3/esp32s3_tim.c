@@ -37,9 +37,6 @@
 #include "esp32s3_irq.h"
 #include "esp32s3_gpio.h"
 
-#include "soc/periph_defs.h"
-#include "esp_private/periph_ctrl.h"
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -970,15 +967,6 @@ struct esp32s3_tim_dev_s *esp32s3_tim_init(int timer)
           tmrerr("Unsupported TIMER %d\n", timer);
           goto errout;
         }
-    }
-
-  if (tim->gid == ESP32S3_TIM_GROUP0)
-    {
-      periph_module_enable(PERIPH_TIMG0_MODULE);
-    }
-  else
-    {
-      periph_module_enable(PERIPH_TIMG1_MODULE);
     }
 
   /* Verify if it is in use */
