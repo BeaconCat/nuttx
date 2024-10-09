@@ -36,6 +36,7 @@
 
 #include "sched/sched.h"
 #include "riscv_internal.h"
+#include "riscv_ipi.h"
 #include "chip.h"
 
 /****************************************************************************
@@ -56,15 +57,20 @@
 
 int riscv_smp_call_handler(int irq, void *c, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   nxsched_smp_call_handler(irq, c, arg);
 
   /* Clear IPI (Inter-Processor-Interrupt) */
 
-  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
+  riscv_ipi_clear(cpu);
 
+  tcb = current_task(cpu);
+  riscv_savecontext(tcb);
   nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  riscv_restorecontext(tcb);
 
   return OK;
 }
@@ -92,7 +98,7 @@ int up_send_smp_sched(int cpu)
 {
   /* Execute Pause IRQ to CPU(cpu) */
 
-  putreg32(1, (uintptr_t)RISCV_IPI + (4 * cpu));
+  riscv_ipi_send(cpu);
 
   return OK;
 }
@@ -121,4 +127,3 @@ void up_send_smp_call(cpu_set_t cpuset)
       up_send_smp_sched(cpu);
     }
 }
-
