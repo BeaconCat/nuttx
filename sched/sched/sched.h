@@ -44,15 +44,32 @@
 
 #define PIDHASH(pid)             ((pid) & (g_npidhash - 1))
 
+/* The state of a task is indicated both by the task_state field of the TCB
+ * and by a series of task lists.  All of these tasks lists are declared
+ * below. Although it is not always necessary, most of these lists are
+ * prioritized so that common list handling logic can be used (only the
+ * g_readytorun, the g_pendingtasks, and the g_waitingforsemaphore lists
+ * need to be prioritized).
+ */
+
+#define list_readytorun()        (&g_readytorun)
+#define list_pendingtasks()      (&g_pendingtasks)
+#define list_waitingforsignal()  (&g_waitingforsignal)
+#define list_waitingforfill()    (&g_waitingforfill)
+#define list_stoppedtasks()      (&g_stoppedtasks)
+#define list_inactivetasks()     (&g_inactivetasks)
+#define list_assignedtasks(cpu)  (&g_assignedtasks[cpu])
+
 /* These are macros to access the current CPU and the current task on a CPU.
  * These macros are intended to support a future SMP implementation.
  * NOTE: this_task() for SMP is implemented in sched_thistask.c
  */
 
 #ifdef CONFIG_SMP
-#  define current_task(cpu)      ((FAR struct tcb_s *)g_assignedtasks[cpu].head)
+#  define current_task(cpu)      ((FAR struct tcb_s *)list_assignedtasks(cpu)->head)
 #else
-#  define current_task(cpu)      ((FAR struct tcb_s *)g_readytorun.head)
+#  define current_task(cpu)      ((FAR struct tcb_s *)list_readytorun()->head)
+#  define this_task()            (current_task(this_cpu()))
 #endif
 
 #define is_idle_task(t)          ((t)->pid < CONFIG_SMP_NCPUS)
@@ -88,30 +105,6 @@
 #else
 #  define TLIST_HEAD(t)          __TLIST_HEAD(t)
 #  define TLIST_BLOCKED(t)       __TLIST_HEAD(t)
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG -1
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR_MAXTIME_PANIC
@@ -219,7 +212,7 @@ extern FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS];
  * bringing up the rest of the system.
  */
 
-extern struct task_tcb_s g_idletcb[CONFIG_SMP_NCPUS];
+extern struct tcb_s g_idletcb[CONFIG_SMP_NCPUS];
 
 /* This is the list of all tasks that are ready-to-run, but cannot be placed
  * in the g_readytorun list because:  (1) They are higher priority than the
@@ -235,7 +228,7 @@ extern dq_queue_t g_waitingforsignal;
 
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 extern dq_queue_t g_waitingforfill;
 #endif
 
@@ -274,7 +267,7 @@ extern volatile int g_npidhash;
  * ordered list or not.
  */
 
-extern const struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
+extern struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
 
 #ifndef CONFIG_SCHED_CPULOAD_NONE
 /* This is the total number of clock tick counts.  Essentially the
@@ -332,8 +325,9 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
 /* Task list manipulation functions */
 
 bool nxsched_add_readytorun(FAR struct tcb_s *rtrtcb);
-bool nxsched_remove_readytorun(FAR struct tcb_s *rtrtcb, bool merge);
+bool nxsched_remove_readytorun(FAR struct tcb_s *rtrtcb);
 void nxsched_remove_self(FAR struct tcb_s *rtrtcb);
+bool nxsched_add_prioritized(FAR struct tcb_s *tcb, DSEG dq_queue_t *list);
 void nxsched_merge_prioritized(FAR dq_queue_t *list1, FAR dq_queue_t *list2,
                                uint8_t task_state);
 bool nxsched_merge_pending(void);
@@ -382,11 +376,7 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 void nxsched_suspend(FAR struct tcb_s *tcb);
 #endif
 
-#if defined(up_this_task)
-#  define this_task()            up_this_task()
-#elif !defined(CONFIG_SMP)
-#  define this_task()            ((FAR struct tcb_s *)g_readytorun.head)
-#else
+#ifdef CONFIG_SMP
 noinstrument_function
 static inline_function FAR struct tcb_s *this_task(void)
 {
@@ -400,7 +390,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   flags = up_irq_save();
 
-  /* Obtain the TCB which is current running on this CPU */
+  /* Obtain the TCB which is currently running on this CPU */
 
   tcb = current_task(this_cpu());
 
@@ -409,9 +399,8 @@ static inline_function FAR struct tcb_s *this_task(void)
   up_irq_restore(flags);
   return tcb;
 }
-#endif
 
-#ifdef CONFIG_SMP
+int  nxsched_select_cpu(cpu_set_t affinity);
 void nxsched_process_delivered(int cpu);
 #else
 #  define nxsched_select_cpu(a)     (0)
@@ -455,132 +444,4 @@ struct tls_info_s; /* Forward declare */
 FAR struct tls_info_s *nxsched_get_tls(FAR struct tcb_s *tcb);
 FAR char **nxsched_get_stackargs(FAR struct tcb_s *tcb);
 
-/****************************************************************************
- * Inline functions
- ****************************************************************************/
-
-static inline_function bool nxsched_add_prioritized(FAR struct tcb_s *tcb,
-                                                    DSEG dq_queue_t *list)
-{
-  FAR struct tcb_s *next;
-  FAR struct tcb_s *prev;
-  uint8_t sched_priority = tcb->sched_priority;
-  bool ret = false;
-
-  /* Lets do a sanity check before we get started. */
-
-  DEBUGASSERT(sched_priority >= SCHED_PRIORITY_MIN);
-
-  /* Search the list to find the location to insert the new Tcb.
-   * Each is list is maintained in descending sched_priority order.
-   */
-
-  for (next = (FAR struct tcb_s *)list->head;
-       (next && sched_priority <= next->sched_priority);
-       next = next->flink);
-
-  /* Add the tcb to the spot found in the list.  Check if the tcb
-   * goes at the end of the list. NOTE:  This could only happen if list
-   * is the g_pendingtasks list!
-   */
-
-  if (next == NULL)
-    {
-      /* The tcb goes at the end of the list. */
-
-      prev = (FAR struct tcb_s *)list->tail;
-      if (prev == NULL)
-        {
-          /* Special case:  The list is empty */
-
-          tcb->flink = NULL;
-          tcb->blink = NULL;
-          list->head = (FAR dq_entry_t *)tcb;
-          list->tail = (FAR dq_entry_t *)tcb;
-          ret = true;
-        }
-      else
-        {
-          /* The tcb goes at the end of a non-empty list */
-
-          tcb->flink = NULL;
-          tcb->blink = prev;
-          prev->flink = tcb;
-          list->tail = (FAR dq_entry_t *)tcb;
-        }
-    }
-  else
-    {
-      /* The tcb goes just before next */
-
-      prev = next->blink;
-      if (prev == NULL)
-        {
-          /* Special case:  Insert at the head of the list */
-
-          tcb->flink  = next;
-          tcb->blink  = NULL;
-          next->blink = tcb;
-          list->head  = (FAR dq_entry_t *)tcb;
-          ret = true;
-        }
-      else
-        {
-          /* Insert in the middle of the list */
-
-          tcb->flink = next;
-          tcb->blink = prev;
-          prev->flink = tcb;
-          next->blink = tcb;
-        }
-    }
-
-  return ret;
-}
-
-#  ifdef CONFIG_SMP
-static inline_function int nxsched_select_cpu(cpu_set_t affinity)
-{
-  uint8_t minprio;
-  int cpu;
-  int i;
-
-  minprio = SCHED_PRIORITY_MAX;
-  cpu     = 0xff;
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      /* Is the thread permitted to run on this CPU? */
-
-      if ((affinity & (1 << i)) != 0)
-        {
-          FAR struct tcb_s *rtcb = (FAR struct tcb_s *)
-                                   g_assignedtasks[i].head;
-
-          /* If this CPU is executing its IDLE task, then use it.  The
-           * IDLE task is always the last task in the assigned task list.
-           */
-
-          if (is_idle_task(rtcb))
-            {
-              /* The IDLE task should always be assigned to this CPU and have
-               * a priority of zero.
-               */
-
-              DEBUGASSERT(rtcb->sched_priority == 0);
-              return i;
-            }
-          else if (rtcb->sched_priority <= minprio)
-            {
-              DEBUGASSERT(rtcb->sched_priority > 0);
-              minprio = rtcb->sched_priority;
-              cpu = i;
-            }
-        }
-    }
-
-  DEBUGASSERT(cpu != 0xff);
-  return cpu;
-}
-#  endif
 #endif /* __SCHED_SCHED_SCHED_H */

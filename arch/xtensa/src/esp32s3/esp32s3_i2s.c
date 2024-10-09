@@ -45,7 +45,6 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mqueue.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/i2s.h>
@@ -112,16 +111,16 @@
 #  define I2S1_RX_ENABLED 0
 #endif
 
+#ifndef ALIGN_UP
+#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
+#endif
+
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_DEBUG_I2S_INFO
 #  define CONFIG_ESP32S3_I2S_DUMPBUFFERS
 #else
 #  undef CONFIG_ESP32S3_I2S_DUMPBUFFERS
-#endif
-
-#ifndef CONFIG_ESP32S3_I2S_MAXINFLIGHT
-#  define CONFIG_ESP32S3_I2S_MAXINFLIGHT 4
 #endif
 
 #define I2S_GPIO_UNUSED -1      /* For signals which are not used */
@@ -892,7 +891,8 @@ static IRAM_ATTR int i2s_txdma_setup(struct esp32s3_i2s_s *priv,
 
   bytes_queued = esp32s3_dma_setup(outlink, I2S_DMADESC_NUM,
                                    bfcontainer->buf,
-                                   bfcontainer->nbytes, I2S_TX);
+                                   bfcontainer->nbytes, I2S_TX,
+                                   priv->dma_channel);
 
   if (bytes_queued != bfcontainer->nbytes)
     {
@@ -953,7 +953,8 @@ static int i2s_rxdma_setup(struct esp32s3_i2s_s *priv,
 
   bytes_queued = esp32s3_dma_setup(inlink, I2S_DMADESC_NUM,
                                    bfcontainer->apb->samp,
-                                   bfcontainer->nbytes, I2S_RX);
+                                   bfcontainer->nbytes, I2S_RX,
+                                   priv->dma_channel);
 
   if (bytes_queued != bfcontainer->nbytes)
     {
@@ -2769,12 +2770,12 @@ static int i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
       nbytes -= (nbytes % (priv->data_width / 8));
 
-      if (nbytes > (ESP32S3_DMA_DATALEN_MAX * I2S_DMADESC_NUM))
+      if (nbytes > (ESP32S3_DMA_BUFLEN_MAX * I2S_DMADESC_NUM))
         {
           i2serr("Required buffer size can't fit into DMA outlink "
                  "(exceeds in %" PRIu32 " bytes). Try to increase the "
                  "number of the DMA descriptors (CONFIG_I2S_DMADESC_NUM).",
-                 nbytes - (ESP32S3_DMA_DATALEN_MAX * I2S_DMADESC_NUM));
+                 nbytes - (ESP32S3_DMA_BUFLEN_MAX * I2S_DMADESC_NUM));
           return -EFBIG;
         }
 
@@ -2877,7 +2878,7 @@ static int i2s_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
       nbytes -= (nbytes % (priv->data_width / 8));
 
-      nbytes = MIN(nbytes, ESP32S3_DMA_DATALEN_MAX);
+      nbytes = MIN(nbytes, ESP32S3_DMA_BUFLEN_MAX);
 
       /* Allocate a buffer container in advance */
 
@@ -3048,10 +3049,6 @@ static int i2s_dma_setup(struct esp32s3_i2s_s *priv)
   int ret;
   int i2s_dma_dev;
 
-  /* Initialize GDMA controller */
-
-  esp32s3_dma_init();
-
   if (priv->config->port == 0)
     {
       i2s_dma_dev = ESP32S3_DMA_PERIPH_I2S0;
@@ -3067,7 +3064,6 @@ static int i2s_dma_setup(struct esp32s3_i2s_s *priv)
   if (priv->dma_channel < 0)
     {
       i2serr("Failed to allocate GDMA channel\n");
-
       return ERROR;
     }
 
@@ -3166,10 +3162,6 @@ struct i2s_dev_s *esp32s3_i2sbus_initialize(int port)
         return NULL;
     }
 
-  flags = spin_lock_irqsave(&priv->slock);
-
-  i2s_configure(priv);
-
   /* Allocate buffer containers */
 
   ret = i2s_buf_initialize(priv);
@@ -3177,6 +3169,10 @@ struct i2s_dev_s *esp32s3_i2sbus_initialize(int port)
     {
       goto err;
     }
+
+  flags = spin_lock_irqsave(&priv->slock);
+
+  i2s_configure(priv);
 
   ret = i2s_dma_setup(priv);
   if (ret < 0)
