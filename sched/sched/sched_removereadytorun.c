@@ -29,10 +29,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include <nuttx/queue.h>
 #include <nuttx/sched_note.h>
 
 #include "irq/irq.h"
+#include "sched/queue.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -86,7 +86,6 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb, bool merge)
       DEBUGASSERT(nxttcb != NULL);
 
       nxttcb->task_state = TSTATE_TASK_RUNNING;
-      up_update_task(nxttcb);
       doswitch = true;
     }
 
@@ -100,7 +99,7 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb, bool merge)
 
   rtcb->task_state = TSTATE_TASK_INVALID;
 
-  if (g_pendingtasks.head && merge)
+  if (list_pendingtasks()->head && merge)
     {
       doswitch |= nxsched_merge_pending();
     }
@@ -257,7 +256,7 @@ void nxsched_remove_running(FAR struct tcb_s *tcb)
        */
 
       dq_rem((FAR dq_entry_t *)rtrtcb, &g_readytorun);
-      dq_addfirst_notempty((FAR dq_entry_t *)rtrtcb, tasklist);
+      dq_addfirst_nonempty((FAR dq_entry_t *)rtrtcb, tasklist);
 
       rtrtcb->cpu = cpu;
       nxttcb = rtrtcb;
@@ -274,8 +273,6 @@ void nxsched_remove_running(FAR struct tcb_s *tcb)
   /* Since the TCB is no longer in any list, it is now invalid */
 
   tcb->task_state = TSTATE_TASK_INVALID;
-
-  up_update_task(nxttcb);
 }
 
 void nxsched_remove_self(FAR struct tcb_s *tcb)
@@ -295,8 +292,7 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *tcb, bool merge)
     {
       DEBUGASSERT(tcb->cpu == this_cpu());
       nxsched_remove_running(tcb);
-      doswitch = true;
-      goto finish;
+      return true;
     }
   else
     {
@@ -332,7 +328,7 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *tcb, bool merge)
     }
 
 finish:
-  if (g_pendingtasks.head && merge)
+  if (list_pendingtasks()->head && merge)
     {
       doswitch |= nxsched_merge_pending();
     }

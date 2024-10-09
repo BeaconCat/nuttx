@@ -135,6 +135,7 @@ static void regulator_rpmsg_client_created(struct rpmsg_device *rdev,
 static void regulator_rpmsg_client_destroy(struct rpmsg_device *rdev,
                                            FAR void *priv);
 
+static void regulator_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept);
 static bool regulator_rpmsg_server_match(FAR struct rpmsg_device *rdev,
                                          FAR void *priv,
                                          FAR const char *name,
@@ -329,16 +330,7 @@ static void regulator_rpmsg_client_destroy(struct rpmsg_device *rdev,
     }
 }
 
-static bool regulator_rpmsg_server_match(FAR struct rpmsg_device *rdev,
-                                         FAR void *priv,
-                                         FAR const char *name,
-                                         uint32_t dest)
-{
-  return strcmp(name, REGULATOR_RPMSG_EPT_NAME) == 0;
-}
-
-static void
-regulator_rpmsg_server_ept_release(FAR struct rpmsg_endpoint *ept)
+static void regulator_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept)
 {
   FAR struct regulator_rpmsg_server_s *server = ept->priv;
   FAR struct regulator_rpmsg_s *reg;
@@ -358,7 +350,16 @@ regulator_rpmsg_server_ept_release(FAR struct rpmsg_endpoint *ept)
     }
 
   nxmutex_destroy(&server->lock);
+  rpmsg_destroy_ept(ept);
   kmm_free(server);
+}
+
+static bool regulator_rpmsg_server_match(FAR struct rpmsg_device *rdev,
+                                         FAR void *priv,
+                                         FAR const char *name,
+                                         uint32_t dest)
+{
+  return strcmp(name, REGULATOR_RPMSG_EPT_NAME) == 0;
 }
 
 static void regulator_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
@@ -375,14 +376,13 @@ static void regulator_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
     }
 
   server->ept.priv = server;
-  server->ept.release_cb = regulator_rpmsg_server_ept_release;
   nxmutex_init(&server->lock);
   list_initialize(&server->regulator_list);
 
   rpmsg_create_ept(&server->ept, rdev, name,
                    RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                    regulator_rpmsg_ept_cb,
-                   rpmsg_destroy_ept);
+                   regulator_rpmsg_server_unbind);
 }
 
 static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
