@@ -1,6 +1,8 @@
 # ##############################################################################
 # openamp/open-amp.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -74,6 +76,8 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/open-amp)
       ${CMAKE_CURRENT_LIST_DIR}/0018-virtio-decoupling-the-transport-layer-and-virtio-dev.patch
       && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
       ${CMAKE_CURRENT_LIST_DIR}/0019-virtio.h-add-version-in-device-id-table.patch
+      && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0020-virtio-Add-the-virtio_negotiate_features-interface.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -95,20 +99,15 @@ endif()
 
 add_compile_definitions(elf_load=remoteproc_elf_load)
 
-if(CONFIG_OPENAMP_VIRTIO_DEVICE_SUPPORT)
-  add_compile_definitions(VIRTIO_DEVICE_SUPPORT=1)
-else()
-  add_compile_definitions(VIRTIO_DEVICE_SUPPORT=0)
+if(CONFIG_OPENAMP_VIRTIO_DEVICE_ONLY)
+  add_compile_definitions(VIRTIO_DEVICE_ONLY)
 endif()
 
-if(CONFIG_OPENAMP_VIRTIO_DRIVER_SUPPORT)
-  add_compile_definitions(VIRTIO_DRIVER_SUPPORT=1)
-else()
-  add_compile_definitions(VIRTIO_DRIVER_SUPPORT=0)
+if(CONFIG_OPENAMP_VIRTIO_DRIVER_ONLY)
+  add_compile_definitions(VIRTIO_DRIVER_ONLY)
 endif()
 
 set(WITH_LIBMETAL_FIND OFF)
-set(WITH_PROXY OFF)
 
 if(NOT CMAKE_SYSTEM_PROCESSOR)
   set(CMAKE_SYSTEM_PROCESSOR ${CONFIG_ARCH})
@@ -116,8 +115,5 @@ endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/open-amp
                  ${CMAKE_CURRENT_BINARY_DIR}/open-amp EXCLUDE_FROM_ALL)
-
-target_include_directories(
-  open_amp-static PRIVATE $<TARGET_PROPERTY:metal-static,INCLUDE_DIRECTORIES>)
 
 nuttx_add_external_library(open_amp-static MODE KERNEL)
