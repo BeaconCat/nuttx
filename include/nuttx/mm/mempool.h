@@ -32,7 +32,6 @@
 #include <nuttx/list.h>
 #include <nuttx/queue.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>

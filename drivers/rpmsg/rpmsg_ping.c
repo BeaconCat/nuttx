@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
-#include <nuttx/lib/lib.h>
 #include <nuttx/signal.h>
 
 #include <inttypes.h>
@@ -40,14 +39,12 @@
  ****************************************************************************/
 
 #define RPMSG_PING_EPT_NAME         "rpmsg-ping"
-
-#define RPMSG_PING_ACK_MASK         0x00000001
-#define RPMSG_PING_CHECK_MASK       0x00000002
-#define RPMSG_PING_RANDOMLEN_MASK   0x00000004
-
-#define RPMSG_PING_CMD_MASK         0x000000f0
-#  define RPMSG_PING_CMD_REQ        0x00000000
-#  define RPMSG_PING_CMD_RSP        0x00000020
+#define RPMSG_PING_SEND             1
+#define RPMSG_PING_SEND_CHECK       2
+#define RPMSG_PING_SEND_NOACK       3
+#define RPMSG_PING_SEND_ACK         4
+#define RPMSG_PING_ACK              5
+#define RPMSG_PING_CHECK_DATA       0xee
 
 /****************************************************************************
  * Private Types
@@ -72,22 +69,12 @@ static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_ping_msg_s *msg = data;
   FAR sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
 
-  /* Handle the ping response */
-
-  if ((msg->cmd & RPMSG_PING_CMD_MASK) == RPMSG_PING_CMD_RSP)
+  if (msg->cmd == RPMSG_PING_SEND)
     {
-      nxsem_post(sem);
-      return 0;
+      msg->cmd = RPMSG_PING_ACK;
+      rpmsg_send(ept, msg, len);
     }
-
-  /* Handle the ping request */
-
-  if ((msg->cmd & RPMSG_PING_ACK_MASK) == 0)
-    {
-      return 0;
-    }
-
-  if ((msg->cmd & RPMSG_PING_CHECK_MASK) != 0)
+  else if (msg->cmd == RPMSG_PING_SEND_CHECK)
     {
       size_t data_len;
       size_t i;
@@ -95,31 +82,34 @@ static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
       data_len = msg->len - sizeof(struct rpmsg_ping_msg_s) + 1;
       for (i = 0; i < data_len; i++)
         {
-          if (msg->data[i] != msg->data[0])
+          if (msg->data[i] != RPMSG_PING_CHECK_DATA)
             {
               syslog(LOG_ERR, "receive data error at %zu of %zu\n",
                      i, data_len);
               break;
             }
+
+          msg->data[i] = 0;
         }
+
+      msg->cmd = RPMSG_PING_ACK;
+      rpmsg_send(ept, msg, len);
+    }
+  else if (msg->cmd == RPMSG_PING_SEND_ACK)
+    {
+      msg->cmd = RPMSG_PING_ACK;
+      rpmsg_send(ept, msg, sizeof(*msg));
+    }
+  else if (msg->cmd == RPMSG_PING_ACK)
+    {
+      nxsem_post(sem);
     }
 
-  if ((msg->cmd & RPMSG_PING_CMD_MASK) == RPMSG_PING_CMD_REQ)
-    {
-      msg->len = len;
-    }
-  else
-    {
-      msg->len = sizeof(*msg);
-    }
-
-  msg->cmd = RPMSG_PING_CMD_RSP;
-  rpmsg_send(ept, msg, msg->len);
   return 0;
 }
 
-static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
-                           int cmd, uint32_t *buf_len, char i)
+static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept,
+                           int len, int ack, uint32_t *buf_len)
 {
   FAR struct rpmsg_ping_msg_s *msg;
   int ret;
@@ -130,37 +120,40 @@ static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
       return -ENOMEM;
     }
 
-  msg->cmd = cmd;
+  len = MAX(len, sizeof(struct rpmsg_ping_msg_s));
+  len = MIN(len, *buf_len);
 
-  if ((msg->cmd & RPMSG_PING_RANDOMLEN_MASK) != 0)
-    {
-      msg->len = nrand(len);
-    }
-  else
-    {
-      msg->len = len;
-    }
+  memset(msg, 0, len);
 
-  msg->len = MAX(msg->len, sizeof(struct rpmsg_ping_msg_s));
-  msg->len = MIN(msg->len, *buf_len);
-
-  if ((msg->cmd & RPMSG_PING_CHECK_MASK) != 0)
-    {
-      memset(msg->data, i, msg->len - sizeof(struct rpmsg_ping_msg_s) + 1);
-    }
-  else
-    {
-      memset(msg->data, 0, msg->len - sizeof(struct rpmsg_ping_msg_s) + 1);
-    }
-
-  if ((msg->cmd & RPMSG_PING_ACK_MASK) != 0)
+  if (ack)
     {
       sem_t sem;
 
+      if (ack == 1)
+        {
+          msg->cmd = RPMSG_PING_SEND;
+        }
+      else if (ack == 2)
+        {
+          msg->cmd = RPMSG_PING_SEND_CHECK;
+        }
+      else
+        {
+          msg->cmd = RPMSG_PING_SEND_ACK;
+        }
+
+      msg->len    = len;
       msg->cookie = (uintptr_t)&sem;
+
+      if (msg->cmd == RPMSG_PING_SEND_CHECK)
+        {
+          memset(msg->data, RPMSG_PING_CHECK_DATA,
+                 len - sizeof(struct rpmsg_ping_msg_s) + 1);
+        }
+
       nxsem_init(&sem, 0, 0);
 
-      ret = rpmsg_send_nocopy(ept, msg, msg->len);
+      ret = rpmsg_send_nocopy(ept, msg, len);
       if (ret >= 0)
         {
           nxsem_wait_uninterruptible(&sem);
@@ -170,7 +163,9 @@ static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept, int len,
     }
   else
     {
-      ret = rpmsg_send_nocopy(ept, msg, msg->len);
+      msg->cmd = RPMSG_PING_SEND_NOACK;
+      msg->len = len;
+      ret = rpmsg_send_nocopy(ept, msg, len);
     }
 
   if (ret < 0)
@@ -188,9 +183,9 @@ static void rpmsg_ping_logout(FAR const char *s, clock_t value)
   perf_convert(value, &ts);
 
 #ifdef CONFIG_SYSTEM_TIME64
-  syslog(LOG_EMERG, "%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  syslog(LOG_INFO, "%s: %" PRIu64 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #else
-  syslog(LOG_EMERG, "%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
+  syslog(LOG_INFO, "%s: %" PRIu32 " s, %ld ns\n", s, ts.tv_sec, ts.tv_nsec);
 #endif
 }
 
@@ -207,7 +202,7 @@ static void rpmsg_ping_logout_rate(uint64_t len, clock_t avg)
   rateint = ratebits / 1000000;
   ratedec = ratebits - rateint * 1000000;
 
-  syslog(LOG_EMERG, "rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
+  syslog(LOG_INFO, "rate: %zu.%06zu Mbits/sec\n", rateint, ratedec);
 }
 
 /****************************************************************************
@@ -233,7 +228,7 @@ int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
     {
       clock_t tm = perf_gettime();
 
-      send_len = rpmsg_ping_once(ept, ping->len, ping->cmd, &buf_len, i);
+      send_len = rpmsg_ping_once(ept, ping->len, ping->ack, &buf_len);
       if (send_len < 0)
         {
           return send_len;
@@ -250,9 +245,7 @@ int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
         }
     }
 
-  syslog(LOG_EMERG, "ping times: %d\n", ping->times);
-  syslog(LOG_EMERG, "buffer_len: %" PRIu32 ", send_len: %d\n",
-                    buf_len, send_len);
+  syslog(LOG_INFO, "ping times: %d\n", ping->times);
 
   rpmsg_ping_logout("avg", total / ping->times);
   rpmsg_ping_logout("min", min);
