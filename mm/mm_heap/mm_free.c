@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/mm_heap/mm_free.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,10 +28,10 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/spinlock.h>
 
 #include "mm_heap/mm.h"
 
@@ -45,18 +43,16 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp = mem;
+  FAR struct mm_freenode_s *node;
   irqstate_t flags;
+
+  node = (FAR struct mm_freenode_s *)
+         ((FAR char *)kasan_reset_tag(mem) - MM_SIZEOF_ALLOCNODE);
+  DEBUGASSERT(MM_NODE_IS_ALLOC(node));
 
   /* Delay the deallocation until a more appropriate time. */
 
   flags = up_irq_save();
-
-#  ifdef CONFIG_DEBUG_ASSERTIONS
-  FAR struct mm_freenode_s *node;
-
-  node = (FAR struct mm_freenode_s *)((FAR char *)mem - MM_SIZEOF_ALLOCNODE);
-  DEBUGASSERT(MM_NODE_IS_ALLOC(node));
-#  endif
 
   tmp->flink = heap->mm_delaylist[this_cpu()];
   heap->mm_delaylist[this_cpu()] = tmp;
@@ -102,7 +98,18 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
 
   nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(mem, MM_FREE_MAGIC, nodesize);
+#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+  /* If delay free is enabled, a memory node will be freed twice.
+   * The first time is to add the node to the delay list, and the second
+   * time is to actually free the node. Therefore, we only colorize the
+   * memory node the first time, when `delay` is set to true.
+   */
+
+  if (delay)
+#endif
+    {
+      memset(mem, MM_FREE_MAGIC, nodesize);
+    }
 #endif
 
   kasan_poison(mem, nodesize);

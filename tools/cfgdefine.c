@@ -1,8 +1,6 @@
 /****************************************************************************
  * tools/cfgdefine.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -64,7 +62,6 @@ static const char *dequote_list[] =
   "CONFIG_PASS1_OBJECT",                  /* Pass1 build object */
   "CONFIG_TTY_LAUNCH_ENTRYPOINT",         /* Name of entry point from tty launch */
   "CONFIG_TTY_LAUNCH_ARGS",               /* Argument list of entry point from tty launch */
-  "CONFIG_BOARD_MEMORY_RANGE",            /* Memory range for board */
 
   /* NxWidgets/NxWM */
 
@@ -91,7 +88,7 @@ static const char *dequote_list[] =
 
 static char *skip_space(char *ptr)
 {
-  while (*ptr && isspace((int)*ptr)) ptr++;
+  while (*ptr && isspace(*ptr)) ptr++;
   return ptr;
 }
 
@@ -99,7 +96,7 @@ static char *skip_space(char *ptr)
 
 static char *find_name_end(char *ptr)
 {
-  while (*ptr && (isalnum((int)*ptr) || *ptr == '_')) ptr++;
+  while (*ptr && (isalnum(*ptr) || *ptr == '_')) ptr++;
   return ptr;
 }
 
@@ -107,7 +104,7 @@ static char *find_name_end(char *ptr)
 
 static char *find_value_end(char *ptr)
 {
-  while (*ptr && !isspace((int)*ptr))
+  while (*ptr && !isspace(*ptr))
     {
       if (*ptr == '"')
         {
@@ -116,7 +113,7 @@ static char *find_value_end(char *ptr)
         }
       else
         {
-          do ptr++; while (*ptr && !isspace((int)*ptr) && *ptr != '"');
+          do ptr++; while (*ptr && !isspace(*ptr) && *ptr != '"');
         }
     }
 

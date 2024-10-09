@@ -29,11 +29,13 @@
 #include <nuttx/wdog.h>
 #include <nuttx/spinlock.h>
 
+#include "sched/sched.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PROFTICK NSEC2TICK(NSEC_PER_SEC / CONFIG_SCHED_PROFILE_TICKSPERSEC)
+#define PROFTICK NSEC2TICK(NSEC_PER_SEC / CONFIG_SCHED_PROFIL_TICKSPERSEC)
 
 /****************************************************************************
  * Private Types
@@ -83,7 +85,7 @@ static int profil_timer_handler_cpu(FAR void *arg)
 
 static void profil_timer_handler(wdparm_t arg)
 {
-  FAR struct profinfo_s *prof = (FAR struct profinfo_s *)(uintptr_t)arg;
+  FAR struct profinfo_s *prof = (FAR struct profinfo_s *)arg;
 
 #ifdef CONFIG_SMP
   cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
@@ -107,7 +109,7 @@ static void profil_timer_handler(wdparm_t arg)
  *   This routine provides a means to find out in what areas your
  *   program spends most of its time.  The argument buf points to
  *   bufsiz bytes of core.  the user's program counter (PC) is
- *   examined SCHED_PROFILE_TICKSPERSEC times in every second:
+ *   examined SCHED_PROFIL_TICKSPERSEC times in every second:
  *   offset is subtracted and the result is multiplied by scale
  *   and divided by 65536.  If the resulting value is less than
  *   bufsiz, then the corresponding entry in buf is incremented.
@@ -154,7 +156,6 @@ int profil(FAR unsigned short *buf, size_t bufsiz,
   prof->scale   = scale;
   spin_unlock_irqrestore(&prof->lock, flags);
 
-  wd_start(&prof->timer, PROFTICK, profil_timer_handler,
-           (wdparm_t)(uintptr_t)prof);
+  wd_start(&prof->timer, PROFTICK, profil_timer_handler, (wdparm_t)prof);
   return OK;
 }
