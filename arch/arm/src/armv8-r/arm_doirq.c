@@ -31,7 +31,6 @@
 
 #include <nuttx/board.h>
 #include <arch/board/board.h>
-#include <sched/sched.h>
 
 #include "arm_internal.h"
 #include "arm_gic.h"
@@ -72,11 +71,10 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
+  tcb = this_task();
 
   if (regs != tcb->xcp.regs)
     {
-      tcb = this_task();
-
       /* Update scheduler parameters */
 
       nxsched_suspend_scheduler(g_running_tasks[this_cpu()]);
@@ -87,7 +85,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = tcb;
+
       regs = tcb->xcp.regs;
     }
 
