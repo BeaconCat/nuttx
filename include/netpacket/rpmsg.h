@@ -34,7 +34,7 @@
  ****************************************************************************/
 
 #define RPMSG_SOCKET_CPU_SIZE           16
-#define RPMSG_SOCKET_NAME_SIZE          108
+#define RPMSG_SOCKET_NAME_SIZE          16
 
 /****************************************************************************
  * Public Type Definitions
