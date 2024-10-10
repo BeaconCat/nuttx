@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libc/dirent/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,15 +20,17 @@
 
 target_sources(
   c
-  PRIVATE lib_alphasort.c
-          lib_closedir.c
-          lib_dirfd.c
+  PRIVATE lib_readdirr.c
+          lib_telldir.c
+          lib_alphasort.c
+          lib_scandir.c
           lib_ftw.c
           lib_nftw.c
           lib_opendir.c
+          lib_fdopendir.c
+          lib_closedir.c
           lib_readdir.c
-          lib_readdirr.c
           lib_rewinddir.c
-          lib_scandir.c
           lib_seekdir.c
-          lib_telldir.c)
+          lib_dirfd.c
+          lib_versionsort.c)
