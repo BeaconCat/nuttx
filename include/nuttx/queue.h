@@ -188,10 +188,6 @@
                 { \
                   (q)->tail = NULL; \
                 } \
-              else \
-                { \
-                  tmp_node->flink = NULL; \
-                } \
             } \
           else \
             { \
