@@ -1,6 +1,7 @@
 /uClibc++
 /libcxx
 /libcxxabi
+/libstdc++
 /libcxx-*.src.tar.xz
 /libcxxabi-*.src.tar.xz
 /etl

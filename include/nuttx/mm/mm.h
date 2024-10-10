@@ -27,7 +27,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/addrenv.h>
 #include <nuttx/config.h>
 #include <nuttx/userspace.h>
 
@@ -420,10 +419,6 @@ struct mallinfo_task kmm_mallinfo_task(FAR const struct malltask *task);
 void mm_memdump(FAR struct mm_heap_s *heap,
                 FAR const struct mm_memdump_s *dump);
 
-/* Functions contained in umm_memdump.c *************************************/
-
-void umm_memdump(FAR const struct mm_memdump_s *dump);
-
 #ifdef CONFIG_DEBUG_MM
 /* Functions contained in mm_checkcorruption.c ******************************/
 
@@ -432,6 +427,10 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap);
 /* Functions contained in umm_checkcorruption.c *****************************/
 
 FAR void umm_checkcorruption(void);
+
+/* Functions contained in umm_memdump.c *************************************/
+
+void umm_memdump(FAR const struct mm_memdump_s *dump);
 
 /* Functions contained in kmm_checkcorruption.c *****************************/
 

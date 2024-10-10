@@ -39,10 +39,6 @@
 
 /* Align definitions */
 
-#ifndef IS_ALIGNED
-#  define IS_ALIGNED(x,a)      (((x) & ((a) - 1)) == 0)
-#endif
-
 #ifndef ALIGN_MASK
 #  define ALIGN_MASK(s)        ((1 << (s)) - 1)
 #endif
@@ -77,10 +73,5 @@
 
 #define container_of(ptr, type, member) \
   ((type *)((uintptr_t)(ptr) - offsetof(type, member)))
-
-/* Stringify the arguments */
-
-#define STRINGIFY_(x) #x
-#define STRINGIFY(x)  STRINGIFY_(x)
 
 #endif /* __INCLUDE_NUTTX_NUTTX_H */
