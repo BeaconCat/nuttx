@@ -1,8 +1,10 @@
 /****************************************************************************
  * libs/libc/regex/regcomp.c
  *
- * SPDX-License-Identifier: BSD-2-Clause
- * SPDX-FileCopyrightText: 2001-2009 Ville Laurikari <vl@iki.fi>
+ * regcomp.c - TRE POSIX compatible regex compilation functions.
+ *
+ * Copyright (c) 2001-2009 Ville Laurikari <vl@iki.fi>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

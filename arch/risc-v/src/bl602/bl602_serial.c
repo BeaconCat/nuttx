@@ -37,7 +37,6 @@
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/tioctl.h>
-#include <nuttx/spinlock.h>
 
 #include "bl602_lowputc.h"
 #include "bl602_gpio.h"
