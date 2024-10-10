@@ -103,11 +103,6 @@ static struct highpri_s g_highpri;
  * Private Functions
  ****************************************************************************/
 
-static inline_function bool is_nesting_interrupt(void)
-{
-  return up_current_regs() != NULL;
-}
-
 /****************************************************************************
  * Name: tim6_handler
  *
@@ -133,7 +128,7 @@ void tim6_handler(void)
 
   /* Check if we are in an interrupt handle */
 
-  if (is_nesting_interrupt())
+  if (up_interrupt_context())
     {
       g_highpri.handler++;
     }
