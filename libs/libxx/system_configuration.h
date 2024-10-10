@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libxx/system_configuration.h
  *
+# SPDX-License-Identifier: Apache-2.0
+#
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -53,7 +55,7 @@
 
 /* String and I/O Stream Support */
 
-#ifdef CONFIG_CXX_WCHAR
+#ifdef CONFIG_UCLIBCXX_WCHAR
 #  define __UCLIBCXX_HAS_WCHAR__ 1
 #endif
 #define __UCLIBCXX_IOSTREAM_BUFSIZE__ CONFIG_UCLIBCXX_BUFSIZE
@@ -63,7 +65,7 @@
 #define __UCLIBCXX_SUPPORT_COUT__ 1
 #define __UCLIBCXX_SUPPORT_CERR__ 1
 #define __UCLIBCXX_SUPPORT_CLOG__ 1
-#ifdef CONFIG_CXX_WCHAR
+#ifdef CONFIG_UCLIBCXX_WCHAR
 #  define __UCLIBCXX_SUPPORT_WCIN__ 1
 #  define __UCLIBCXX_SUPPORT_WCOUT__ 1
 #  define __UCLIBCXX_SUPPORT_WCERR__ 1

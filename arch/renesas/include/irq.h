@@ -59,7 +59,7 @@ extern "C"
  ****************************************************************************/
 
 /* This holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during
+ * register storage structure.  It is non-NULL only during
  * interrupt processing.
  */
 
@@ -68,24 +68,6 @@ EXTERN volatile uint32_t *g_current_regs;
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
-
-/****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- ****************************************************************************/
-
-#define up_cpu_index() (0)
 
 /****************************************************************************
  * Inline functions
