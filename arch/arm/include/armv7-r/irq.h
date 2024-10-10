@@ -36,6 +36,8 @@
 #  include <stdint.h>
 #endif
 
+#include <arch/armv7-r/cp15.h>
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
@@ -279,7 +281,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -351,7 +353,7 @@ static inline irqstate_t irqstate(void)
 
 /* Disable IRQs and return the previous IRQ state */
 
-static inline irqstate_t up_irq_save(void)
+noinstrument_function static inline irqstate_t up_irq_save(void)
 {
   unsigned int cpsr;
 
@@ -411,7 +413,7 @@ static inline irqstate_t up_irq_disable(void)
 
 /* Restore saved IRQ & FIQ state */
 
-static inline void up_irq_restore(irqstate_t flags)
+noinstrument_function static inline void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__
     (
@@ -426,19 +428,11 @@ static inline void up_irq_restore(irqstate_t flags)
  * Name: up_cpu_index
  *
  * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
+ *   Return the real core number regardless CONFIG_SMP setting
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 noinstrument_function
 static inline_function int up_cpu_index(void)
 {
@@ -446,46 +440,13 @@ static inline_function int up_cpu_index(void)
 
   /* Read the Multiprocessor Affinity Register (MPIDR) */
 
-  __asm__ __volatile__
-  (
-    "mrc " "p15, " "0" ", %0, " "c0" ", " "c0" ", " "5" "\n"
-    : "=r"(mpidr)
-  );
+  mpidr = CP15_GET(MPIDR);
 
   /* And return the CPU ID field */
 
   return (mpidr & MPIDR_CPUID_MASK) >> MPIDR_CPUID_SHIFT;
 }
-#else
-int up_cpu_index(void);
-#endif /* CONFIG_SMP */
-
-noinstrument_function
-static inline_function uint32_t *up_current_regs(void)
-{
-  uint32_t *regs;
-  __asm__ __volatile__
-  (
-    "mrc " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
-    : "=r"(regs)
-  );
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-  __asm__ __volatile__
-  (
-    "mcr " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
-    :: "r"(regs)
-  );
-}
-
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return up_current_regs() != NULL;
-}
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 static inline_function uint32_t up_getsp(void)
 {
@@ -498,6 +459,37 @@ static inline_function uint32_t up_getsp(void)
   );
 
   return sp;
+}
+
+/****************************************************************************
+ * Name:
+ *   up_current_regs/up_set_current_regs
+ *
+ * Description:
+ *   We use the following code to manipulate the TPIDRPRW register,
+ *   which exists uniquely for each CPU and is primarily designed to store
+ *   current thread information. Currently, we leverage it to store interrupt
+ *   information, with plans to further optimize its use for storing both
+ *   thread and interrupt information in the future.
+ *
+ ****************************************************************************/
+
+noinstrument_function
+static inline_function uint32_t *up_current_regs(void)
+{
+  return (uint32_t *)CP15_GET(TPIDRPRW);
+}
+
+noinstrument_function
+static inline_function void up_set_current_regs(uint32_t *regs)
+{
+  CP15_SET(TPIDRPRW, regs);
+}
+
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return up_current_regs() != NULL;
 }
 
 /****************************************************************************
