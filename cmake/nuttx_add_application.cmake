@@ -1,8 +1,6 @@
 # ##############################################################################
 # cmake/nuttx_add_application.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -130,16 +128,6 @@ function(nuttx_add_application)
 
       nuttx_add_library_internal(${TARGET})
 
-      # loadable build requires applying ELF flags to all applications
-
-      if(CONFIG_MODULES)
-        target_compile_options(
-          ${TARGET}
-          PRIVATE
-            $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_ELF_APP_COMPILE_OPTIONS>>
-        )
-      endif()
-
       install(TARGETS ${TARGET})
       set_property(
         TARGET nuttx
@@ -165,6 +153,14 @@ function(nuttx_add_application)
       endif()
     endif()
 
+    # loadable build requires applying ELF flags to all applications
+
+    if(CONFIG_MODULES)
+      target_compile_options(
+        ${TARGET}
+        PRIVATE
+          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
+    endif()
   else()
     set(TARGET "apps_${NAME}")
     add_custom_target(${TARGET})
@@ -219,13 +215,6 @@ function(nuttx_add_application)
     # interface include and libraries
     foreach(dep ${DEPENDS})
       nuttx_add_dependencies(TARGET ${TARGET} DEPENDS ${dep})
-      if(TARGET ${dep})
-        get_target_property(dep_type ${dep} TYPE)
-        if(${dep_type} STREQUAL "STATIC_LIBRARY")
-          target_link_libraries(${TARGET} PRIVATE ${dep})
-        endif()
-      endif()
-
     endforeach()
   endif()
 endfunction()
