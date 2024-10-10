@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/misc/lib_getrandom.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -60,6 +58,7 @@
  *
  ****************************************************************************/
 
+#if defined(CONFIG_DEV_URANDOM) || defined(CONFIG_DEV_RANDOM)
 ssize_t getrandom(FAR void *bytes, size_t nbytes, unsigned int flags)
 {
   int oflags = O_RDONLY;
@@ -101,3 +100,4 @@ ssize_t getrandom(FAR void *bytes, size_t nbytes, unsigned int flags)
 
   return ret;
 }
+#endif
