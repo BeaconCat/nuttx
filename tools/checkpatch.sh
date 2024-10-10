@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # tools/checkpatch.sh
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -63,7 +61,7 @@ is_rust_file() {
 
 is_cmake_file() {
   file_name=$(basename $@)
-  if [ "$file_name" == "CMakeLists.txt" ] || [[ "$file_name" =~ \.cmake$ ]]; then
+  if [ "$file_name" == "CMakeLists.txt" ] || [[ "$file_name" =~ "cmake" ]]; then
     echo 1
   else
     echo 0
@@ -83,9 +81,9 @@ check_file() {
   fi
 
   if [ ${@##*.} == 'py' ]; then
-    black --check $@
-    flake8 --config ${TOOLDIR}/../.github/linters/setup.cfg $@
-    isort $@
+    black --check $@ || fail=1
+    flake8 --config ${TOOLDIR}/../.github/linters/setup.cfg $@ || fail=1
+    isort --settings-path ${TOOLDIR}/../.github/linters/setup.cfg $@ || fail=1
   elif [ "$(is_rust_file $@)" == "1" ]; then
     if ! command -v rustfmt &> /dev/null; then
       fail=1
@@ -103,7 +101,7 @@ check_file() {
     elif ! cmake-format --check $@ 2>&1; then
       if [ $cmake_warning_once == 0 ]; then
         echo -e "\ncmake-format check failed, run following command to update the style:"
-        echo -e "  $ cmake-format <src> -o <dst>\n"
+        echo -e "  $ cmake-format -o <src> <dst>\n"
         cmake-format --check $@ 2>&1
         cmake_warning_once=1
       fi
