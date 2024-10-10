@@ -25,7 +25,6 @@
  ****************************************************************************/
 
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/notifier.h>
 #include <nuttx/reboot_notifier.h>
 
