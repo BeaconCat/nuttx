@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
@@ -187,11 +188,8 @@ static int ivshmem_unregister_device(FAR struct ivshmem_device_s *dev)
    * the device unmatched
    */
 
-  if (dev->drv)
-    {
-      dev->drv->remove(dev);
-    }
-
+  dev->drv->remove(dev);
+  dev->drv = NULL;
   return ret;
 }
 
@@ -411,6 +409,19 @@ int ivshmem_control_irq(FAR struct ivshmem_device_s *dev, bool on)
     }
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: ivshmem_support_irq
+ *
+ * Description:
+ *   Judge if support ivshmem interrupt
+ *
+ ****************************************************************************/
+
+bool ivshmem_support_irq(FAR struct ivshmem_device_s *dev)
+{
+  return dev->vmid != IVSHMEM_INVALID_VMID;
 }
 
 /****************************************************************************
