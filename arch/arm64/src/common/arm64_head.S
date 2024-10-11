@@ -89,8 +89,6 @@ label:  .asciz msg;                             \
      * This must be the very first address in the loaded image.
      * It should be loaded at any 4K-aligned address.
      */
-
-    .section .start, "ax"
     .globl __start;
 __start:
 
@@ -249,15 +247,6 @@ switch_el:
 
     bl    arm64_boot_el3_init
 
-#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-    msr   SPSel, #1
-
-    /* Set SP_EL3 (with SPSel = 1) */
-
-    mov   sp, x24
-    b     el3_boot
-#endif
-
     /* Get next EL */
 
     adr   x0, switch_el
@@ -291,8 +280,6 @@ switch_el:
 
     msr   SPSel, #1
     msr   DAIFClr, #(DAIFCLR_ABT_BIT)
-
-el3_boot:
     isb
 
 jump_to_c_entry:

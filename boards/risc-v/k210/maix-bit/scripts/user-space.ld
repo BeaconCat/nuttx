@@ -75,7 +75,7 @@ SECTIONS
         *(.sbss .sbss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
-        . = ALIGN(32);
+        . = ALIGN(8);
         _ebss = ABSOLUTE(.);
     } > usram
 
