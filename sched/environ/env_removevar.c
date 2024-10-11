@@ -88,17 +88,14 @@ void env_removevar(FAR struct task_group_s *group, ssize_t index)
     {
       group_free(group, group->tg_envp);
       group->tg_envp = NULL;
-      group->tg_envpc = 0;
     }
-  else if (group->tg_envc <=
-           (group->tg_envpc - SCHED_ENVIRON_RESERVED * 2))
+  else
     {
       /* Reallocate the environment to reclaim a little memory */
 
-      group->tg_envpc = group->tg_envc + SCHED_ENVIRON_RESERVED + 1;
-
       group->tg_envp = group_realloc(group, group->tg_envp,
-         sizeof(*group->tg_envp) * group->tg_envpc);
+                                     sizeof(*group->tg_envp) *
+                                     (group->tg_envc + 1));
       DEBUGASSERT(group->tg_envp != NULL);
     }
 }

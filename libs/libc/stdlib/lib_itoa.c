@@ -1,11 +1,13 @@
 /****************************************************************************
  * libs/libc/stdlib/lib_itoa.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2010-2011 Gregory Nutt
- * SPDX-FileCopyrightText: 2013 Brooks Automation, Inc. All rights reserved.
- * SPDX-FileContributor: Ryan Sundberg <ryan.sundberg@brooks.com>
- * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2013 Brooks Automation, Inc. All rights reserved.
+ *   Author: Ryan Sundberg <ryan.sundberg@brooks.com>
+ *
+ * This file is a part of NuttX:
+ *
+ *   Copyright (C) 2010-2011 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

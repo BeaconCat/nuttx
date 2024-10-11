@@ -65,7 +65,6 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
   /* Visit each active task */
 
   flags = enter_critical_section();
-  sched_lock();
   for (ndx = 0; ndx < g_npidhash; ndx++)
     {
       /* This test and the function call must be atomic */
@@ -76,6 +75,5 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
         }
     }
 
-  sched_unlock();
   leave_critical_section(flags);
 }
