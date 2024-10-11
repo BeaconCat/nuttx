@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_rawmemchr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -48,8 +50,6 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_LIBC_ARCH_RAWMEMCHR
-#undef rawmemchr /* See mm/README.txt */
 FAR void *rawmemchr(FAR const void *s, int c)
 {
   if (c != '\0')
@@ -59,4 +59,3 @@ FAR void *rawmemchr(FAR const void *s, int c)
 
   return (FAR char *)s + strlen(s);
 }
-#endif

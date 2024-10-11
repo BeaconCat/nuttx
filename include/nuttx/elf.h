@@ -29,7 +29,6 @@
 
 #include <elf.h>
 #include <arch/elf.h>
-#include <stdbool.h>
 
 /****************************************************************************
  * Pre-processor Definitions
