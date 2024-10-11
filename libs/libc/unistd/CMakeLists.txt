@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/unistd/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -62,8 +64,7 @@ set(SRCS
     lib_getpgrp.c
     lib_getpgid.c
     lib_lockf.c
-    lib_flock.c
-    lib_getpass.c)
+    lib_flock.c)
 
 if(NOT CONFIG_SCHED_USER_IDENTITY)
   list(
@@ -93,10 +94,6 @@ endif()
 
 if(CONFIG_ARCH_HAVE_FORK)
   list(APPEND SRCS lib_fork.c)
-endif()
-
-if(CONFIG_CRYPTO)
-  list(APPEND SRCS lib_crypt.c lib_crypt_r.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})
