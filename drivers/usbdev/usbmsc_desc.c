@@ -234,7 +234,7 @@ usbmsc_copy_epcompdesc(enum usbmsc_epdesc_e epid,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;           /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;   /* Descriptor type */
 
-        if (USBMSC_SSBULKMAXBURST >= USB_SS_BULK_EP_MAXBURST)
+        if (USBMSC_SSBULKMAXBURST >= USB_SS_BULK_EP_MAXBURST)  /* Max burst */
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -243,7 +243,7 @@ usbmsc_copy_epcompdesc(enum usbmsc_epdesc_e epid,
             epcompdesc->mxburst = USBMSC_SSBULKMAXBURST;
           }
 
-        if (USBMSC_SSBULKMAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
+        if (USBMSC_SSBULKMAXSTREAM > USB_SS_BULK_EP_MAXSTREAM) /* Max stream */
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
