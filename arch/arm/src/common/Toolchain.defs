@@ -116,18 +116,34 @@ endif
 
 # Link Time Optimization
 
-ifeq ($(CONFIG_LTO_THIN),y)
-  ARCHOPTIMIZATION += -flto=thin
+ifneq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+  ifeq ($(CONFIG_LTO_THIN),y)
+    ARCHOPTIMIZATION += -flto=thin
+  else ifeq ($(CONFIG_LTO_FULL),y)
+    ARCHOPTIMIZATION += -flto
+  else ifeq ($(CONFIG_LTO_FAT), y)
+    ARCHOPTIMIZATION += -flto -ffat-lto-objects
+  endif
+endif
+
+# The arm clang toolchain requires to pass the linker option will
+# gcc tool chain can automatically perform lto at linking time if it
+# found any object files are compiled with flto
+
+ifneq ($(CONFIG_LTO_NONE),y)
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --lto
   endif
-else ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
+
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+    LDFLAGS += -Olink
+  endif
+
+  # For gcc, use the linker plugin to extract objects with GIMPLE
+  # info from the lib archive
+
   ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
     ARCHOPTIMIZATION += -fuse-linker-plugin
-  endif
-  ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
-    LDFLAGS += --lto
   endif
 endif
 
@@ -213,7 +229,7 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
       TOOLCHAIN_CLANG_CONFIG := $(TOOLCHAIN_CLANG_CONFIG)_nosys
     endif
 
-    ifeq "17.0" "$(word 1, $(sort 17.0 $(CLANGVER)))"
+    ifeq ($(CLANGVER),17.0)
       TOOLCHAIN_CLANG_OPTION = -target
       ARCHCPUFLAGS += --target=arm-none-eabi
     else
@@ -296,8 +312,13 @@ else
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
 
-  ifeq ($(CONFIG_LTO_FULL),y)
-    ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+  # For dealing with object files with GIMPLE bytecode
+  # special wrappers prefixed with "gcc-" reuired
+  # such as creating static libraries.
+  # https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+    ifneq ($(CONFIG_LTO_NONE),y)
       LD := $(CROSSDEV)gcc
       AR := $(CROSSDEV)gcc-ar rcs
       NM := $(CROSSDEV)gcc-nm
@@ -306,19 +327,13 @@ else
   endif
 
   # Workaround to skip -Warray-bounds check due to bug of GCC-12:
-   # Wrong warning array subscript [0] is outside array bounds:
-   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
+  # Wrong warning array subscript [0] is outside array bounds:
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
 
-   ifeq ($(GCCVER),)
-     export GCCVER := $(shell $(CC) --version | grep gcc | sed -E "s/.* ([0-9]+\.[0-9]+).*/\1/" | cut -d'.' -f1)
-   endif
-
-   ifeq ($(GCCVER),12)
-     ARCHOPTIMIZATION += --param=min-pagesize=0
-     ifeq ($(CONFIG_ARCH_RAMFUNCS),y)
-       LDFLAGS += --no-warn-rwx-segments
-     endif
-   endif
+  ARCHOPTIMIZATION += --param=min-pagesize=0
+  ifeq ($(CONFIG_ARCH_RAMFUNCS),y)
+    LDFLAGS += --no-warn-rwx-segments
+  endif
 
   LDFLAGS += --entry=__start
 
@@ -326,8 +341,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   ARCHOPTIMIZATION += -fshort-enums
-  ARCHCFLAGS += -Wno-atomic-alignment
-  ARCHCXXFLAGS += -Wno-atomic-alignment
 endif
 
 # Architecture flags
@@ -337,16 +350,12 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
   ARCHCXXFLAGS += --gnu_asm --diag_suppress=540,826
 else
   ARCHCFLAGS += -Wstrict-prototypes -Wno-attributes -Wno-unknown-pragmas
-  ARCHCXXFLAGS += -Wno-attributes -Wno-unknown-pragmas
+  ARCHCXXFLAGS += -nostdinc++ -Wno-attributes -Wno-unknown-pragmas
 endif
 
 # When all C++ code is built using GCC 7.1 or a higher version,
 # we can safely disregard warnings of the type "parameter passing for X changed in GCC 7.1."
 # Refer to : https://stackoverflow.com/questions/48149323/what-does-the-gcc-warning-project-parameter-passing-for-x-changed-in-gcc-7-1-m
-
-ifneq ($(CONFIG_LIBCXXTOOLCHAIN),y)
-  ARCHCXXFLAGS += -nostdinc++
-endif
 
 ifneq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   ifneq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
@@ -401,21 +410,19 @@ endif
 
 ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI) $(ZARCHCPUFLAGS)
 
-# Optimization of unused sections
-
 ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
+  # Optimization of unused sections
   ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
     ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),)
       LDFLAGS          += --gc-sections
       ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
     endif
   endif
-endif
 
-# Debug --whole-archive
-
-ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
-  LDFLAGS += --whole-archive
+  # Debug --whole-archive
+  ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
+    LDFLAGS += --whole-archive
+  endif
 endif
 
 # Debug link map
@@ -495,8 +502,12 @@ ifeq ($(CONFIG_SCHED_GCOV),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcov.a))
 endif
 
-ifeq ($(CONFIG_LIBCXXTOOLCHAIN),y)
-  EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libstdc++.a))
+PICFLAGS = -fpic -fPIE -mno-pic-data-is-text-relative -msingle-pic-base
+
+ifneq ($(CONFIG_BUILD_PIC),)
+  ARCHCFLAGS += $(PICFLAGS) -mpic-register=r9
+  ARCHCXXFLAGS += $(PICFLAGS) -mpic-register=r9
+  LDFLAGS += --emit-relocs
 endif
 
 # Loadable module definitions
@@ -507,10 +518,20 @@ LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
 # ELF module definitions
 
 CELFFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
-CXXELFFLAGS = $(CXXFLAGS) -fvisibility=hidden
+CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
 
-LDELFFLAGS = -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)modlib$(DELIM)gnu-elf.ld)
+ifeq ($(CONFIG_PIC),y)
+  CFLAGS += --fixed-r10
+  CELFFLAGS += $(PICFLAGS) -mpic-register=r10
+  CXXELFFLAGS += $(PICFLAGS) -mpic-register=r10
+
+  # Generate an executable elf, need to ignore undefined symbols
+  LDELFFLAGS += --unresolved-symbols=ignore-in-object-files --emit-relocs
+else
+  LDELFFLAGS += -r
+endif
+
+LDELFFLAGS +=  -e main -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)modlib$(DELIM)gnu-elf.ld)
 
 # Zig toolchain
 
@@ -519,20 +540,3 @@ include $(TOPDIR)/tools/Zig.defs
 # Rust toolchain
 
 include $(TOPDIR)/tools/Rust.defs
-
-# LDC (LLVM D Compiler) toolchain
-
-include $(TOPDIR)/tools/D.defs
-
-# Swift 6 toolchain
-
-include $(TOPDIR)/tools/Swift.defs
-
-# Shared library build flags
-
-SHCCFLAGS = -fPIC -fPIE -fvisibility=default
-SHLDFLAGS = -shared -Bsymbolic -Bdynamic -G
-
-ifeq ($(CONFIG_SIM_M32),y)
-  SHLDFLAGS += -melf_i386
-endif

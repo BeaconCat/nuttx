@@ -263,7 +263,6 @@ static int arm64_tick_start(struct oneshot_lowerhalf_s *lower,
 {
   struct arm64_oneshot_lowerhalf_s *priv =
     (struct arm64_oneshot_lowerhalf_s *)lower;
-  uint64_t next_cycle;
 
   DEBUGASSERT(priv != NULL && callback != NULL);
 
@@ -286,11 +285,10 @@ static int arm64_tick_start(struct oneshot_lowerhalf_s *lower,
 
   priv->running = this_cpu();
 
-  next_cycle =
-    arm64_arch_timer_count() / priv->cycle_per_tick * priv->cycle_per_tick +
-    ticks * priv->cycle_per_tick;
+  /* Set the timeout */
 
-  arm64_arch_timer_set_compare(next_cycle);
+  arm64_arch_timer_set_compare(arm64_arch_timer_count() +
+                               priv->cycle_per_tick * ticks);
   arm64_arch_timer_set_irq_mask(false);
 
   return OK;
@@ -390,3 +388,4 @@ struct oneshot_lowerhalf_s *arm64_oneshot_initialize(void)
 
   return &priv->lh;
 }
+
