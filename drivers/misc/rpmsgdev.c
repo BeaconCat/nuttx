@@ -606,6 +606,10 @@ static ssize_t rpmsgdev_ioctl_arglen(int cmd)
       case FIONSPACE:
       case FBIOSET_POWER:
       case FBIOGET_POWER:
+      case BATIOC_CURRENT:
+      case BATIOC_VOLTAGE:
+      case BATIOC_TEMPERATURE:
+      case BATIOC_INPUT_CURRENT:
       case BATIOC_STATE:
         return sizeof(int);
       case TUNSETIFF:
@@ -683,7 +687,7 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                            msglen, arglen > 0 ? (FAR void *)arg : NULL);
   if (cmd == FIONBIO && ret >= 0)
     {
-      FAR int *nonblock = (FAR int *)(uintptr_t)arg;
+      int *nonblock = (FAR int *)(uintptr_t)arg;
       priv->nonblock = *nonblock;
     }
 
