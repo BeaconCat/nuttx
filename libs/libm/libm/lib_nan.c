@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libm/libm/lib_nan.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,7 +32,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_HAVE_DOUBLE
-double nan(FAR const char *tagp)
+double nan(const char *tagp)
 {
   return (double)NAN;
 }
