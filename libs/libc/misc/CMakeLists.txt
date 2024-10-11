@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libc/misc/CMakeLists.txt
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -48,8 +46,8 @@ list(
   lib_utimensat.c
   lib_mallopt.c
   lib_memoryregion.c
-  lib_getnprocs.c
-  lib_pathbuffer.c)
+  lib_pathbuffer.c
+  lib_getnprocs.c)
 
 # Support for platforms that do not have long long types
 
@@ -117,12 +115,10 @@ if(CONFIG_FDCHECK)
   list(APPEND SRCS lib_fdcheck.c)
 endif()
 
-if(NOT CONFIG_LIBC_UNAME_DISABLE_TIMESTAMP)
-  add_custom_target(
-    always_rebuild_lib_utsname
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/lib_utsname.c)
+add_custom_target(
+  always_rebuild_lib_utsname COMMAND ${CMAKE_COMMAND} -E touch
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/lib_utsname.c)
 
-  add_dependencies(c always_rebuild_lib_utsname)
-endif()
+add_dependencies(c always_rebuild_lib_utsname)
 
 target_sources(c PRIVATE ${SRCS})

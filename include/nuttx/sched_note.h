@@ -267,7 +267,6 @@ enum note_type_e
   NOTE_HEAP_ALLOC,
   NOTE_HEAP_FREE,
   NOTE_DUMP_PRINTF,
-
   NOTE_DUMP_BEGIN,
   NOTE_DUMP_END,
   NOTE_DUMP_MARK,
@@ -305,6 +304,7 @@ enum note_tag_e
   NOTE_TAG_SCHED,
   NOTE_TAG_VIDEO,
   NOTE_TAG_WIRLESS,
+  NOTE_TAG_CPUFREQ,
 
   /* Always last */
 
@@ -463,14 +463,14 @@ struct note_irqhandler_s
 
 struct note_wdog_s
 {
-  struct note_common_s nwd_cmn;      /* Common note parameters */
+  struct note_common_s nmm_cmn;      /* Common note parameters */
   uintptr_t handler;
   uintptr_t arg;
 };
 
 struct note_heap_s
 {
-  struct note_common_s nhp_cmn;      /* Common note parameters */
+  struct note_common_s nmm_cmn;      /* Common note parameters */
   FAR void *heap;
   FAR void *mem;
   size_t size;
@@ -497,7 +497,7 @@ struct note_event_s
 };
 
 #define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
-                             ((n)) * sizeof(uint8_t))
+                             ((n) - 1) * sizeof(uint8_t))
 
 struct note_counter_s
 {

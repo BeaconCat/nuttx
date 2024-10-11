@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/sim/src/cmake/Toolchain.cmake
+# arch/sim/cmake/Toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -32,17 +32,6 @@ find_program(CMAKE_CXX_COMPILER g++)
 
 set(CMAKE_PREPROCESSOR cc -E -P -x c)
 
-# NuttX is sometimes built as a native target. In that case, the __NuttX__ macro
-# is predefined by the compiler. https://github.com/NuttX/buildroot
-#
-# In other cases, __NuttX__ is an ordinary user-definded macro. It's especially
-# the case for NuttX sim, which is a target to run the entire NuttX as a program
-# on the host OS, which can be Linux, macOS, Windows, etc.
-# https://cwiki.apache.org/confluence/display/NUTTX/NuttX+Simulation In that
-# case, the host OS compiler is used to build NuttX. Thus, eg. NuttX sim on
-# macOS is built with __APPLE__. We #undef predefined macros for those possible
-# host OSes here because the OS APIs this library should use are of NuttX, not
-# the host OS.
 add_compile_options(
   -U_AIX
   -U_WIN32
@@ -92,13 +81,20 @@ if(CONFIG_SCHED_GCOV)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
+if(CONFIG_SIM_GCOV_ALL)
+  add_compile_options(-fprofile-generate -ftest-coverage)
+endif()
+
+if(CONFIG_SCHED_GPROF_ALL OR CONFIG_SIM_GPROF)
+  add_compile_options(-pg)
+endif()
+
 if(CONFIG_SIM_ASAN)
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
   add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
-  add_link_options(-fsanitize=address)
 elseif(CONFIG_MM_KASAN_ALL)
   add_compile_options(-fsanitize=kernel-address)
 endif()
@@ -110,7 +106,6 @@ endif()
 if(CONFIG_SIM_UBSAN)
   add_link_options(-fsanitize=undefined)
   add_compile_options(-fsanitize=undefined)
-  add_link_options(-fsanitize=undefined)
 else()
   if(CONFIG_MM_UBSAN_ALL)
     add_compile_options(${CONFIG_MM_UBSAN_OPTION})
@@ -121,41 +116,22 @@ else()
   endif()
 endif()
 
-if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
-  if(APPLE)
-    add_link_options(-Wl,-dead_strip)
-  else()
-    add_link_options(-Wl,--gc-sections)
-  endif()
-  add_compile_options(-ffunction-sections -fdata-sections)
-endif()
-
 if(CONFIG_ARCH_INSTRUMENT_ALL)
   add_compile_options(-finstrument-functions)
 endif()
 
-if(NOT WIN32)
-  # Add -fvisibility=hidden Because we don't want export nuttx's symbols to
-  # shared libraries Add -fno-common because macOS "ld -r" doesn't seem to pick
-  # objects for common symbols.
-  add_compile_options(
-    -fno-common
-    -fvisibility=hidden
-    -ffunction-sections
-    -fdata-sections
-    -Wall
-    -Wshadow
-    -Wundef
-    -Wno-attributes
-    -Wno-unknown-pragmas
-    $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
-else()
-  add_compile_options(/std:c11 /experimental:c11atomics)
-endif()
-
-if(APPLE)
-  add_compile_options(-Wno-deprecated-declarations)
-endif()
+add_compile_options(
+  -fno-common
+  -fvisibility=hidden
+  -ffunction-sections
+  -fdata-sections
+  -Wall
+  -Wshadow
+  -Wundef
+  -Wno-attributes
+  -Wno-unknown-pragmas
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
@@ -168,10 +144,6 @@ endif()
 
 if(NOT CONFIG_CXX_RTTI)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
-endif()
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()
 
 if(CONFIG_SIM_M32)
@@ -190,5 +162,6 @@ endif()
 if(APPLE)
   add_link_options(-Wl,-dead_strip)
 else()
+  add_link_options(-Wl,--gc-sections)
   add_link_options(-Wl,-Ttext-segment=0x40000000)
 endif()

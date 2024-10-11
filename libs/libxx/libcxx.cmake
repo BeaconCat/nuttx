@@ -1,8 +1,6 @@
 # ##############################################################################
 # libs/libxx/libcxx.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -45,11 +43,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxx)
       patch -p1 -d ${CMAKE_CURRENT_LIST_DIR}/libcxx <
       ${CMAKE_CURRENT_LIST_DIR}/0001_fix_stdatomic_h_miss_typedef.patch && patch
       -p3 -d ${CMAKE_CURRENT_LIST_DIR}/libcxx <
-      ${CMAKE_CURRENT_LIST_DIR}/mbstate_t.patch && patch -p1 -d
-      ${CMAKE_CURRENT_LIST_DIR}/libcxx <
-      ${CMAKE_CURRENT_LIST_DIR}/0001-libcxx-remove-mach-time-h.patch && patch
-      -p1 -d ${CMAKE_CURRENT_LIST_DIR}/libcxx <
-      ${CMAKE_CURRENT_LIST_DIR}/0001-libcxx-fix-ld-errors.patch
+      ${CMAKE_CURRENT_LIST_DIR}/mbstate_t.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -92,20 +86,29 @@ list(APPEND SRCS ${SRCSTMP})
 file(GLOB SRCSTMP ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ryu/*.cpp)
 list(APPEND SRCS ${SRCSTMP})
 
+if(NOT CONFIG_CXX_LOCALIZATION)
+  file(
+    GLOB
+    SRCSTMP
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ios.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/ios.instantiations.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/iostream.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/locale.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/regex.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/libcxx/src/strstream.cpp)
+  list(REMOVE_ITEM SRCS ${SRCSTMP})
+endif()
+
 set(FLAGS -Wno-attributes -Wno-deprecated-declarations -Wno-shadow
           -Wno-sign-compare)
 
-if(GCCVER EQUAL 12)
+if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   list(APPEND FLAGS -Wno-maybe-uninitialized -Wno-alloc-size-larger-than)
 endif()
 
 nuttx_add_system_library(libcxx)
 target_sources(libcxx PRIVATE ${SRCS})
 target_compile_options(libcxx PRIVATE ${FLAGS})
-if(CONFIG_LIBCXXABI)
-  target_include_directories(
-    libcxx BEFORE PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
-endif()
 
 target_include_directories(libcxx BEFORE
                            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
