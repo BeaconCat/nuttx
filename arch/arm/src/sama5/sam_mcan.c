@@ -878,17 +878,17 @@ struct sam_mcan_s
 
   const struct sam_config_s *config;
 
-  enum can_state_s state;          /* See enum can_state_s                  */
+  enum can_state_s state;   /* See enum can_state_s */
 #ifdef CONFIG_CAN_EXTID
-  uint8_t          nextalloc;      /* Number of allocated extended filters  */
+  uint8_t nextalloc;        /* Number of allocated extended filters */
 #endif
-  uint8_t          nstdalloc;      /* Number of allocated standard filters  */
-  mutex_t          lock;           /* Enforces mutually exclusive access    */
-  sem_t            txfsem;         /* Used to wait for TX FIFO availability */
-  uint32_t         btp;            /* Current bit timing                    */
-  uint32_t         fbtp;           /* Current fast bit timing               */
-  uint32_t         rxints;         /* Configured RX interrupts              */
-  uint32_t         txints;         /* Configured TX interrupts              */
+  uint8_t nstdalloc;        /* Number of allocated standard filters */
+  mutex_t lock;             /* Enforces mutually exclusive access */
+  sem_t txfsem;             /* Used to wait for TX FIFO availability */
+  uint32_t btp;             /* Current bit timing */
+  uint32_t fbtp;            /* Current fast bit timing */
+  uint32_t rxints;          /* Configured RX interrupts */
+  uint32_t txints;          /* Configured TX interrupts */
 
 #ifdef CONFIG_CAN_EXTID
   uint32_t extfilters[2];   /* Extended filter bit allocator.  2*32=64 */
@@ -935,10 +935,6 @@ static int mcan_del_extfilter(struct sam_mcan_s *priv, int ndx);
 static int mcan_add_stdfilter(struct sam_mcan_s *priv,
                               struct canioc_stdfilter_s *stdconfig);
 static int mcan_del_stdfilter(struct sam_mcan_s *priv, int ndx);
-
-static int mcan_set_nart(struct sam_mcan_s *priv, bool enable);
-static int mcan_cancel_tx_buffers(struct sam_mcan_s *priv);
-static int mcan_cancel_rx_fifos(struct sam_mcan_s *priv);
 
 /* CAN driver methods */
 
@@ -1425,7 +1421,7 @@ static void mcan_buffer_reserve(struct sam_mcan_s *priv)
   int tffl;
 #endif
   int sval;
-  int ret = 0;
+  int ret;
 
   /* Wait until we successfully get the semaphore.  EINTR is the only
    * expected 'failure' (meaning that the wait for the semaphore was
@@ -2652,39 +2648,18 @@ static int mcan_ioctl(struct can_dev_s *dev, int cmd, unsigned long arg)
 
           DEBUGASSERT(bt != NULL);
 
-#ifdef CONFIG_CAN_FD
-          if (bt->type == CAN_BITTIMING_DATA)
-            {
-              regval       = mcan_getreg(priv, SAM_MCAN_FBTP_OFFSET);
-              bt->bt_sjw   = ((regval & MCAN_FBTP_FSJW_MASK) >>
-                              MCAN_FBTP_FSJW_SHIFT) + 1;
-              bt->bt_tseg1 = ((regval & MCAN_FBTP_FTSEG1_MASK) >>
-                              MCAN_FBTP_FTSEG1_SHIFT) + 1;
-              bt->bt_tseg2 = ((regval & MCAN_FBTP_FTSEG2_MASK) >>
-                              MCAN_FBTP_FTSEG2_SHIFT) + 1;
+          regval       = mcan_getreg(priv, SAM_MCAN_BTP_OFFSET);
+          bt->bt_sjw   = ((regval & MCAN_BTP_SJW_MASK) >>
+                          MCAN_BTP_SJW_SHIFT) + 1;
+          bt->bt_tseg1 = ((regval & MCAN_BTP_TSEG1_MASK) >>
+                          MCAN_BTP_TSEG1_SHIFT) + 1;
+          bt->bt_tseg2 = ((regval & MCAN_BTP_TSEG2_MASK) >>
+                          MCAN_BTP_TSEG2_SHIFT) + 1;
 
-              brp          = ((regval & MCAN_FBTP_FBRP_MASK) >>
-                              MCAN_FBTP_FBRP_SHIFT) + 1;
-              bt->bt_baud  = SAMA5_MCANCLK_FREQUENCY / brp /
-                            (bt->bt_tseg1 + bt->bt_tseg2 + 1);
-            }
-          else
-#endif
-            {
-              regval       = mcan_getreg(priv, SAM_MCAN_BTP_OFFSET);
-              bt->bt_sjw   = ((regval & MCAN_BTP_SJW_MASK) >>
-                              MCAN_BTP_SJW_SHIFT) + 1;
-              bt->bt_tseg1 = ((regval & MCAN_BTP_TSEG1_MASK) >>
-                              MCAN_BTP_TSEG1_SHIFT) + 1;
-              bt->bt_tseg2 = ((regval & MCAN_BTP_TSEG2_MASK) >>
-                              MCAN_BTP_TSEG2_SHIFT) + 1;
-
-              brp          = ((regval & MCAN_BTP_BRP_MASK) >>
-                              MCAN_BTP_BRP_SHIFT) + 1;
-              bt->bt_baud  = SAMA5_MCANCLK_FREQUENCY / brp /
-                            (bt->bt_tseg1 + bt->bt_tseg2 + 1);
-            }
-
+          brp          = ((regval & MCAN_BTP_BRP_MASK) >>
+                          MCAN_BTP_BRP_SHIFT) + 1;
+          bt->bt_baud  = SAMA5_MCANCLK_FREQUENCY / brp /
+                         (bt->bt_tseg1 + bt->bt_tseg2 + 1);
           ret = OK;
         }
         break;
@@ -2737,18 +2712,8 @@ static int mcan_ioctl(struct can_dev_s *dev, int cmd, unsigned long arg)
           /* Save the value of the new bit timing register */
 
           flags = enter_critical_section();
-#ifdef CONFIG_CAN_FD
-          if (bt->type == CAN_BITTIMING_DATA)
-            {
-              priv->fbtp = MCAN_FBTP_FBRP(brp) | MCAN_FBTP_FTSEG1(tseg1) |
-                           MCAN_FBTP_FTSEG2(tseg2) | MCAN_FBTP_FSJW(sjw);
-            }
-          else
-#endif
-            {
-              priv->btp = MCAN_BTP_BRP(brp) | MCAN_BTP_TSEG1(tseg1) |
-                          MCAN_BTP_TSEG2(tseg2) | MCAN_BTP_SJW(sjw);
-            }
+          priv->btp = MCAN_BTP_BRP(brp) | MCAN_BTP_TSEG1(tseg1) |
+                      MCAN_BTP_TSEG2(tseg2) | MCAN_BTP_SJW(sjw);
 
           /* We need to reset to instantiate the new timing.  Save
            * current state information so that recover to this
@@ -2873,69 +2838,6 @@ static int mcan_ioctl(struct can_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
-        /* CANIOC_SET_NART:
-         *   Description:    Enable/Disable NART (No Automatic Retry)
-         *   Argument:       Set to 1 to enable NART, 0 to disable.
-         *                   Default is disabled.
-         *   Returned Value: Zero (OK) is returned on success. Otherwise -1
-         *                   (ERROR) is returned with the errno variable set
-         *                   to indicate the nature of the error.
-         *   Dependencies:   None
-         */
-
-      case CANIOC_SET_NART:
-        {
-          ret = mcan_set_nart(priv, (bool)arg);
-        }
-        break;
-
-      /* CANIOC_IFLUSH
-       *   Description:    Flush data received but not read
-       *   Argument:       None
-       *   Returned Value: Zero (OK) is returned on success.  Otherwise -1
-       *                   (ERROR) is returned with the errno variable set
-       *                   to indicate the nature of the error.
-       *   Dependencies:   None
-       */
-
-      case CANIOC_IFLUSH:
-        {
-          ret = mcan_cancel_rx_fifos(priv);
-        }
-        break;
-
-      /* CANIOC_OFLUSH
-       *   Description:    Flush data queued but not transmitted
-       *   Argument:       None
-       *   Returned Value: Zero (OK) is returned on success.  Otherwise -1
-       *                   (ERROR) is returned with the errno variable set
-       *                   to indicate the nature of the error.
-       *   Dependencies:   None
-       */
-
-      case CANIOC_OFLUSH:
-        {
-          ret = mcan_cancel_tx_buffers(priv);
-        }
-        break;
-
-      /* CANIOC_IOFLUSH
-       *   Description:    Flush data received but not read, and data queued
-                           but not transmitted
-       *   Argument:       None
-       *   Returned Value: Zero (OK) is returned on success.  Otherwise -1
-       *                   (ERROR) is returned with the errno variable set
-       *                   to indicate the nature of the error.
-       *   Dependencies:   None
-       */
-
-      case CANIOC_IOFLUSH:
-        {
-          ret = mcan_cancel_tx_buffers(priv);
-          ret = mcan_cancel_rx_fifos(priv);
-        }
-        break;
-
       /* Unsupported/unrecognized command */
 
       default:
@@ -2974,8 +2876,7 @@ static int mcan_remoterequest(struct can_dev_s *dev, uint16_t id)
  *    Send one can message.
  *
  *    One CAN-message consists of a maximum of 10 bytes.  A message is
- *    composed of at least the  && priv->config != NULLfirst 2 bytes
- *    (when there are no data bytes).
+ *    composed of at least the first 2 bytes (when there are no data bytes).
  *
  *    Byte 0:      Bits 0-7: Bits 3-10 of the 11-bit CAN identifier
  *    Byte 1:      Bits 5-7: Bits 0-2 of the 11-bit CAN identifier
@@ -3476,114 +3377,6 @@ static void mcan_error(struct can_dev_s *dev, uint32_t status)
 #endif /* CONFIG_CAN_ERRORS */
 
 /****************************************************************************
- * Name: mcan_set_nart
- *
- * Description:
- *   Enable/Disable NART (No Automatic Retry),
- *   AKA "DAR" - Disable Automatic Retry
- *
- * Input Parameters:
- *   priv      - An instance of the MCAN driver state structure.
- *   enable - enable or disable.
- *
- * Returned Value:
- *   Zero on success; a negated errno on failure
- *
- ****************************************************************************/
-
-static int mcan_set_nart(struct sam_mcan_s *priv, bool enable)
-{
-  uint32_t regval;
-
-  DEBUGASSERT(priv != NULL);
-
-  regval = mcan_getreg(priv, SAM_MCAN_CCCR_OFFSET);
-  if (enable)
-    {
-      regval |= MCAN_CCCR_DAR;
-    }
-  else
-    {
-      regval &= ~MCAN_CCCR_DAR;
-    }
-
-  mcan_putreg(priv, SAM_MCAN_CCCR_OFFSET, regval);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: mcan_cancel_tx_buffers
- *
- * Description:
- *   Cancel all pending, buffered, transmissions
- *
- * Input Parameters:
- *   priv      - An instance of the MCAN driver state structure.
- *
- * Returned Value:
- *   Success
- *
- ****************************************************************************/
-
-static int mcan_cancel_tx_buffers(struct sam_mcan_s *priv)
-{
-  uint32_t regval;
-
-  DEBUGASSERT(priv != NULL);
-
-  mcan_putreg(priv, SAM_MCAN_TXBCR_OFFSET, 0xffff);
-
-  do
-    {
-      regval = mcan_getreg(priv, SAM_MCAN_TXBRP_OFFSET);
-    }
-  while (regval != 0);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: mcan_cancel_rx_fifos
- *
- * Description:
- *   Cancel all queued/received messages
- *
- * Input Parameters:
- *   priv      - An instance of the MCAN driver state structure.
- *
- * Returned Value:
- *   Success
- *
- ****************************************************************************/
-
-static int mcan_cancel_rx_fifos(struct sam_mcan_s *priv)
-{
-  uint32_t ir;
-  uint32_t ie;
-  uint32_t pending;
-
-  DEBUGASSERT(priv != NULL);
-
-  mcan_putreg(priv, SAM_MCAN_RXF0A_OFFSET, 0);
-  mcan_putreg(priv, SAM_MCAN_RXF1A_OFFSET, 0);
-
-  /* Clear RX interrupts */
-
-  ir = mcan_getreg(priv, SAM_MCAN_IR_OFFSET);
-  ie = mcan_getreg(priv, SAM_MCAN_IE_OFFSET);
-
-  pending = (ir & ie);
-
-  if ((pending & priv->rxints) != 0)
-    {
-      mcan_putreg(priv, SAM_MCAN_IR_OFFSET, priv->rxints);
-    }
-
-  return OK;
-}
-
-/****************************************************************************
  * Name: mcan_receive
  *
  * Description:
@@ -3916,7 +3709,7 @@ static int mcan_interrupt(int irq, void *context, void *arg)
           /* Check if there is anything in RX FIFO1 */
 
           regval = mcan_getreg(priv, SAM_MCAN_RXF1S_OFFSET);
-          nelem  = (regval & MCAN_RXF1S_F1FL_MASK) >> MCAN_RXF1S_F1FL_SHIFT;
+          nelem  = (regval & MCAN_RXF0S_F0FL_MASK) >> MCAN_RXF0S_F0FL_SHIFT;
           if (nelem == 0)
             {
               /* Break out of the loop if RX FIFO1 is empty */
@@ -3932,7 +3725,7 @@ static int mcan_interrupt(int irq, void *context, void *arg)
 
           ndx = (regval & MCAN_RXF1S_F1GI_MASK) >> MCAN_RXF1S_F1GI_SHIFT;
 
-          if ((regval & MCAN_RXF1S_RF1L) != 0)
+          if ((regval & MCAN_RXF0S_RF0L) != 0)
             {
               canerr("ERROR: Message lost: %08" PRIx32 "\n", regval);
             }

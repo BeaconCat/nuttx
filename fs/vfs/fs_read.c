@@ -65,7 +65,7 @@
 ssize_t file_read(FAR struct file *filep, FAR void *buf, size_t nbytes)
 {
   FAR struct inode *inode;
-  ssize_t ret = -EBADF;
+  int ret = -EBADF;
 
   DEBUGASSERT(filep);
   inode = filep->f_inode;
@@ -90,9 +90,9 @@ ssize_t file_read(FAR struct file *filep, FAR void *buf, size_t nbytes)
        * signature and position in the operations vtable.
        */
 
-      ret = inode->u.i_ops->read(filep,
-                                 (FAR char *)buf,
-                                 (size_t)nbytes);
+      ret = (int)inode->u.i_ops->read(filep,
+                                     (FAR char *)buf,
+                                     (size_t)nbytes);
     }
 
   /* Return the number of bytes read (or possibly an error code) */
