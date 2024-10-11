@@ -1,11 +1,14 @@
 /****************************************************************************
  * libs/libc/misc/lib_fnmatch.c
  *
- * SPDX-License-Identifier: BSD-2-Clause
- * SPDX-FileCopyrightText: 1995, 2000 by Jef Poskanzer <jef@mail.acme.com>.
- * SPDX-FileContributor: with extensions by Ken Pettit
+ * Simple shell-style filename pattern matcher written by Jef Poskanzer
+ * This pattern matcher only handles '?', '*' and '**', and  multiple
+ * patterns separated by '|'.
  *
- * All rights reserved.
+ *   Copyright 1995, 2000 by Jef Poskanzer <jef@mail.acme.com>.
+ *   All rights reserved.
+ *
+ * With extensions by Ken Pettit.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
