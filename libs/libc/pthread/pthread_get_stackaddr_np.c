@@ -1,9 +1,8 @@
 /****************************************************************************
  * libs/libc/pthread/pthread_get_stackaddr_np.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2018 Geoff Norton. All rights reserved.
- * SPDX-FileContributor: Geoff Norton <grompf@gmail.com>
+ *   Copyright (C) 2018 Geoff Norton. All rights reserved.
+ *   Author: Geoff Norton <grompf@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
