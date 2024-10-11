@@ -112,7 +112,6 @@ void up_irq_enable(void);
  * Inline functions
  ****************************************************************************/
 
-noinstrument_function
 static inline_function xcpt_reg_t *up_current_regs(void)
 {
 #ifdef CONFIG_SMP
@@ -153,7 +152,7 @@ static inline uintptr_t up_getsp(void)
  ****************************************************************************/
 
 noinstrument_function
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();

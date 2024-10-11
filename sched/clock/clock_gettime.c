@@ -36,6 +36,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/queue.h>
 
 #include "clock/clock.h"
 #include "sched/sched.h"
@@ -51,26 +52,24 @@
 static clock_t clock_process_runtime(FAR struct tcb_s *tcb)
 {
 # ifdef HAVE_GROUP_MEMBERS
-  FAR struct task_group_s *group;
-  FAR sq_entry_t *curr;
+  FAR struct task_group_s *group = tcb->group;
   clock_t runtime = 0;
+  FAR sq_entry_t *curr;
+  FAR sq_entry_t *next;
   irqstate_t flags;
 
-  group = tcb->group;
-
   flags = spin_lock_irqsave(NULL);
-  sq_for_every(&group->tg_members, curr)
+  sq_for_every_safe(&group->tg_members, curr, next)
     {
       tcb = container_of(curr, struct tcb_s, member);
-
       runtime += tcb->run_time;
     }
 
   spin_unlock_irqrestore(NULL, flags);
-  return runtime;
 # else  /* HAVE_GROUP_MEMBERS */
-  return tcb->run_time;
+  runtime = tcb->run_time;
 # endif /* HAVE_GROUP_MEMBERS */
+  return runtime;
 }
 #endif
 
@@ -86,7 +85,7 @@ static clock_t clock_process_runtime(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-void nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
+void nxclock_gettime(clockid_t clock_id, struct timespec *tp)
 {
   if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_BOOTTIME)
     {
@@ -136,11 +135,11 @@ void nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
         {
           if (clock_type == CLOCK_PROCESS_CPUTIME_ID)
             {
-              up_perf_convert(clock_process_runtime(tcb), tp);
+              perf_convert(clock_process_runtime(tcb), tp);
             }
           else if (clock_type == CLOCK_THREAD_CPUTIME_ID)
             {
-              up_perf_convert(tcb->run_time, tp);
+              perf_convert(tcb->run_time, tp);
             }
         }
 #endif
@@ -171,7 +170,7 @@ void nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
  *
  ****************************************************************************/
 
-int clock_gettime(clockid_t clock_id, FAR struct timespec *tp)
+int clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
   if (tp == NULL || clock_id < 0 || clock_id > CLOCK_BOOTTIME)
     {

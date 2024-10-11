@@ -34,7 +34,7 @@
 
 #include "mpfs.h"
 
-#if defined(CONFIG_USBDEV_COMPOSITE)
+#if defined(CONFIG_BOARDCTL_USBDEVCTRL) && defined(CONFIG_USBDEV_COMPOSITE)
 
 /****************************************************************************
  * Private Data
@@ -175,28 +175,6 @@ int board_composite_initialize(int port)
 #endif
 
 /****************************************************************************
- * Name: board_composite_uninitialize
- *
- * Description:
- *   Perform architecture specific initialization of a composite USB device.
- *
- * Input Parameters:
- *   port   - port number, unused
- *
- * Returned Value:
- *   OK always
- *
- ****************************************************************************/
-
-#ifdef CONFIG_USBMSC_COMPOSITE
-int board_composite_uninitialize(int port)
-{
-  board_mscuninitialize(NULL);
-  return OK;
-}
-#endif
-
-/****************************************************************************
  * Name: board_usbmsc_initialize
  *
  * Description:
@@ -240,95 +218,91 @@ void *board_composite_connect(int port, int configid)
    * The standard is to use one CDC/ACM and one USB mass storage device.
    */
 
-  struct composite_devdesc_s dev[2];
-  int devs = 0;
-  int ifnobase = 0;
-  int strbase  = COMPOSITE_NSTRIDS;
-
-  if (configid == 0 || configid == 1)
+  if (configid == 0)
     {
-#ifdef CONFIG_CDCACM_COMPOSITE
+#ifdef CONFIG_USBMSC_COMPOSITE
+      struct composite_devdesc_s dev[2];
+      int ifnobase = 0;
+      int strbase  = COMPOSITE_NSTRIDS;
+
       /* Configure the CDC/ACM device */
 
       /* Ask the cdcacm driver to fill in the constants we didn't
        * know here.
        */
 
-      cdcacm_get_composite_devdesc(&dev[devs]);
+      cdcacm_get_composite_devdesc(&dev[0]);
 
       /* Overwrite and correct some values... */
 
       /* The callback functions for the CDC/ACM class */
 
-      dev[devs].classobject  = cdcacm_classobject;
-      dev[devs].uninitialize = cdcacm_uninitialize;
+      dev[0].classobject  = cdcacm_classobject;
+      dev[0].uninitialize = cdcacm_uninitialize;
 
       /* Interfaces */
 
-      dev[devs].devinfo.ifnobase = ifnobase;    /* Offset to Interface-IDs */
-      dev[devs].minor = 0;                      /* The minor interface number */
+      dev[0].devinfo.ifnobase = ifnobase;    /* Offset to Interface-IDs */
+      dev[0].minor = 0;                      /* The minor interface number */
 
       /* Strings */
 
-      dev[devs].devinfo.strbase = strbase;      /* Offset to String Numbers */
+      dev[0].devinfo.strbase = strbase;      /* Offset to String Numbers */
 
       /* Endpoints */
 
-      dev[devs].devinfo.epno[CDCACM_EP_BULKIN_IDX]  = 3;
-      dev[devs].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 3;
-      dev[devs].devinfo.epno[CDCACM_EP_INTIN_IDX]   = 4;
+      dev[0].devinfo.epno[CDCACM_EP_BULKIN_IDX]  = 3;
+      dev[0].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 3;
+      dev[0].devinfo.epno[CDCACM_EP_INTIN_IDX]   = 4;
 
       /* Count up the base numbers */
 
-      ifnobase += dev[devs].devinfo.ninterfaces;
-      strbase  += dev[devs].devinfo.nstrings;
+      ifnobase += dev[0].devinfo.ninterfaces;
+      strbase  += dev[0].devinfo.nstrings;
 
-      devs++;
-#endif
-    }
-
-  if (configid == 1)
-    {
-#ifdef CONFIG_USBMSC_COMPOSITE
       /* Configure the mass storage device device */
 
       /* Ask the usbmsc driver to fill in the constants we didn't
        * know here.
        */
 
-      usbmsc_get_composite_devdesc(&dev[devs]);
+      usbmsc_get_composite_devdesc(&dev[1]);
 
       /* Overwrite and correct some values... */
 
       /* The callback functions for the USBMSC class */
 
-      dev[devs].classobject  = board_mscclassobject;
-      dev[devs].uninitialize = board_mscuninitialize;
+      dev[1].classobject  = board_mscclassobject;
+      dev[1].uninitialize = board_mscuninitialize;
 
       /* Interfaces */
 
-      dev[devs].devinfo.ifnobase = ifnobase;               /* Offset to Interface-IDs */
-      dev[devs].minor = 0;                                 /* The minor interface number */
+      dev[1].devinfo.ifnobase = ifnobase;               /* Offset to Interface-IDs */
+      dev[1].minor = 0;                                 /* The minor interface number */
 
       /* Strings */
 
-      dev[devs].devinfo.strbase = strbase;                 /* Offset to String Numbers */
+      dev[1].devinfo.strbase = strbase;                 /* Offset to String Numbers */
 
       /* Endpoints */
 
-      dev[devs].devinfo.epno[USBMSC_EP_BULKIN_IDX]  = 1;
-      dev[devs].devinfo.epno[USBMSC_EP_BULKOUT_IDX] = 2;
+      dev[1].devinfo.epno[USBMSC_EP_BULKIN_IDX]  = 1;
+      dev[1].devinfo.epno[USBMSC_EP_BULKOUT_IDX] = 2;
 
       /* Count up the base numbers */
 
-      ifnobase += dev[devs].devinfo.ninterfaces;
-      strbase  += dev[devs].devinfo.nstrings;
+      ifnobase += dev[1].devinfo.ninterfaces;
+      strbase  += dev[1].devinfo.nstrings;
 
-      devs++;
+      return composite_initialize(composite_getdevdescs(), dev, 2);
+#else
+      return NULL;
 #endif
     }
-
-  return composite_initialize(composite_getdevdescs(), dev, devs);
+  else
+    {
+      return NULL;
+    }
 }
 
-#endif /* CONFIG_USBDEV_COMPOSITE */
+#endif /* CONFIG_BOARDCTL_USBDEVCTRL && CONFIG_USBDEV_COMPOSITE */

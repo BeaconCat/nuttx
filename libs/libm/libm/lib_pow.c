@@ -1,9 +1,10 @@
 /****************************************************************************
  * libs/libm/libm/lib_pow.c
  *
- * SPDX-License-Identifier: ISC
- * SPDX-FileCopyrightText: Copyright (C) 2012 Gregory Nutt.
- * SPDX-FileContributor: Ported by: Darcy Gong
+ * This file is a part of NuttX:
+ *
+ *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Ported by: Darcy Gong
  *
  * It derives from the Rhombus OS math library by Nick Johnson which has
  * a compatible, MIT-style license:
@@ -40,11 +41,11 @@
 #ifdef CONFIG_HAVE_DOUBLE
 double pow(double b, double e)
 {
-  if (b > 0.0)
+  if (b > 0)
     {
       return exp(e * log(b));
     }
-  else if (b < 0.0 && e == (int)e)
+  else if (b < 0 && e == (int)e)
     {
       if ((int)e % 2 == 0)
         {
@@ -56,6 +57,6 @@ double pow(double b, double e)
         }
     }
 
-  return 0.0;
+  return 0;
 }
 #endif

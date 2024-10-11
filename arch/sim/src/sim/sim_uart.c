@@ -692,10 +692,10 @@ static bool tty_txempty(struct uart_dev_s *dev)
 #endif
 
 #ifdef CONFIG_SIM_RAM_UART
-static int sim_uartram_register(const char *devname, bool slave)
+static int sim_uartram_register(FAR const char *devname, bool slave)
 {
   char name[NAME_MAX];
-  struct uart_rambuf_s *shmem;
+  FAR struct uart_rambuf_s *shmem;
 
   strlcpy(name, strrchr(devname, '/') + 1, NAME_MAX);
   shmem = host_allocshmem(name, sizeof(struct uart_rambuf_s) * 2);

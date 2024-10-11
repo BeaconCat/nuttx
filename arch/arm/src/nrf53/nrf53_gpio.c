@@ -468,14 +468,7 @@ bool nrf53_gpio_read(nrf53_pinset_t pinset)
 
   /* Get register address */
 
-  if ((pinset & GPIO_FUNC_MASK) == GPIO_OUTPUT)
-    {
-      offset = nrf53_gpio_regget(port, NRF53_GPIO_OUTSET_OFFSET);
-    }
-  else
-    {
-      offset = nrf53_gpio_regget(port, NRF53_GPIO_IN_OFFSET);
-    }
+  offset = nrf53_gpio_regget(port, NRF53_GPIO_IN_OFFSET);
 
   /* Get register value */
 
