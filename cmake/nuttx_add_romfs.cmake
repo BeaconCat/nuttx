@@ -1,8 +1,6 @@
 # ##############################################################################
 # cmake/nuttx_add_romfs.cmake
 #
-# SPDX-License-Identifier: Apache-2.0
-#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -86,21 +84,6 @@ function(nuttx_add_romfs)
     list(APPEND RCRAWS ${board_rcraws})
   endif()
 
-  get_directory_property(TOOLCHAIN_DIR_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
-                                                       COMPILE_OPTIONS)
-
-  set(ROMFS_CMAKE_C_FLAGS "")
-  foreach(FLAG ${TOOLCHAIN_DIR_FLAGS})
-    if(NOT FLAG MATCHES "^\\$<.*>$")
-      list(APPEND ROMFS_CMAKE_C_FLAGS ${FLAG})
-    else()
-      string(REGEX MATCH "\\$<\\$<COMPILE_LANGUAGE:C>:(.*)>" matched ${FLAG})
-      if(matched)
-        list(APPEND ROMFS_CMAKE_C_FLAGS ${CMAKE_MATCH_1})
-      endif()
-    endif()
-  endforeach()
-
   foreach(rcsrc ${RCSRCS})
     if(IS_ABSOLUTE ${rcsrc})
       string(REGEX REPLACE "^(.*)/etc(/.*)?$" "\\1" SOURCE_ETC_PREFIX
@@ -171,8 +154,6 @@ function(nuttx_add_romfs)
             copy_directory ${PATH} romfs_${NAME} \; fi
     COMMAND genromfs -f ${IMGNAME} -d romfs_${NAME} -V ${NAME}
     COMMAND xxd -i ${IMGNAME} romfs_${NAME}.${EXTENSION}
-    COMMAND ${CMAKE_COMMAND} -E remove ${IMGNAME}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory romfs_${NAME}
     COMMAND if ! [ -z "${NONCONST}" ]\; then sed -E -i'' -e
             "s/^unsigned/const unsigned/g" romfs_${NAME}.${EXTENSION} \; fi
     DEPENDS ${DEPENDS})

@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/iob/iob_initialize.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -107,8 +105,6 @@ sem_t g_throttle_sem = SEM_INITIALIZER(CONFIG_IOB_NBUFFERS -
 
 sem_t g_qentry_sem = SEM_INITIALIZER(CONFIG_IOB_NCHAINS);
 #endif
-
-spinlock_t g_iob_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Functions
