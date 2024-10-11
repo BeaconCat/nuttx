@@ -26,9 +26,12 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/map.h>
+
+#if defined (CONFIG_BUILD_KERNEL)
 #include <nuttx/arch.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/sched.h>
+#endif
 
 #include "shm/shmfs.h"
 #include "inode/inode.h"
@@ -182,14 +185,12 @@ static int shmfs_release(FAR struct inode *inode)
    * The inode is released after this call, hence checking if i_crefs <= 1.
    */
 
-  inode_lock();
   if (inode->i_parent == NULL && atomic_load(&inode->i_crefs) <= 1)
     {
       shmfs_free_object(inode->i_private);
       inode->i_private = NULL;
     }
 
-  inode_unlock();
   return OK;
 }
 
@@ -228,7 +229,12 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
       filep->f_inode->i_private = shmfs_alloc_object(length);
       if (!filep->f_inode->i_private)
         {
+          filep->f_inode->i_size = 0;
           ret = -EFAULT;
+        }
+      else
+        {
+          filep->f_inode->i_size = length;
         }
     }
   else if (object->length != length)
@@ -249,14 +255,12 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int shmfs_unlink(FAR struct inode *inode)
 {
-  inode_lock();
   if (atomic_load(&inode->i_crefs) <= 1)
     {
       shmfs_free_object(inode->i_private);
       inode->i_private = NULL;
     }
 
-  inode_unlock();
   return OK;
 }
 #endif
@@ -346,24 +350,17 @@ static int shmfs_mmap(FAR struct file *filep,
 
   /* Keep the inode when mmapped, increase refcount */
 
-  ret = inode_addref(filep->f_inode);
-  if (ret >= 0)
+  inode_addref(filep->f_inode);
+  object = filep->f_inode->i_private;
+  if (object)
     {
-      object = filep->f_inode->i_private;
-      if (object)
-        {
-          ret = shmfs_map_object(object, &entry->vaddr);
-        }
-      else
-        {
-          ret = -EINVAL;
-        }
+      ret = shmfs_map_object(object, &entry->vaddr);
+    }
 
-      if (ret < 0 ||
-          (ret = shmfs_add_map(entry, filep->f_inode)) < 0)
-        {
-          inode_release(filep->f_inode);
-        }
+  if (ret < 0 ||
+      (ret = shmfs_add_map(entry, filep->f_inode)) < 0)
+    {
+      inode_release(filep->f_inode);
     }
 
   return ret;
