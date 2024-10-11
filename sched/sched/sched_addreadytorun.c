@@ -83,14 +83,14 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * g_pendingtasks task list for now.
        */
 
-      nxsched_add_prioritized(btcb, list_pendingtasks());
+      nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
       ret = false;
     }
 
   /* Otherwise, add the new task to the ready-to-run task list */
 
-  else if (nxsched_add_prioritized(btcb, list_readytorun()))
+  else if (nxsched_add_prioritized(btcb, &g_readytorun))
     {
       /* The new btcb was added at the head of the ready-to-run list.  It
        * is now the new active task!
@@ -100,6 +100,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
       btcb->task_state = TSTATE_TASK_RUNNING;
       btcb->flink->task_state = TSTATE_TASK_READYTORUN;
+      up_update_task(btcb);
       ret = true;
     }
   else
@@ -200,7 +201,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * now.
        */
 
-      nxsched_add_prioritized(btcb, list_pendingtasks());
+      nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
       doswitch         = false;
     }
@@ -214,7 +215,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * Add the task to the ready-to-run (but not running) task list
        */
 
-      nxsched_add_prioritized(btcb, list_readytorun());
+      nxsched_add_prioritized(btcb, &g_readytorun);
 
       btcb->task_state = TSTATE_TASK_READYTORUN;
       doswitch         = false;
@@ -269,6 +270,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        */
 
       dq_addfirst_nonempty((FAR dq_entry_t *)btcb, tasklist);
+      up_update_task(btcb);
 
       DEBUGASSERT(task_state == TSTATE_TASK_RUNNING);
       btcb->cpu        = cpu;
