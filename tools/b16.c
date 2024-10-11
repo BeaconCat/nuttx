@@ -1,7 +1,6 @@
 /****************************************************************************
  * tools/b16.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * Convert b16 fixed precision value to float or vice versa
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

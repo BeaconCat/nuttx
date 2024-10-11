@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_bind.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,6 +30,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/cache.h>
 #include <nuttx/elf.h>
 #include <nuttx/lib/modlib.h>
 
@@ -292,8 +291,8 @@ static int modlib_relocate(FAR struct module_s *modp,
           /* Get the value of the symbol (in sym.st_value) */
 
           ret = modlib_symvalue(modp, loadinfo, sym,
-                           loadinfo->shdr[loadinfo->strtabidx].sh_offset,
-                            exports, nexports);
+                  loadinfo->shdr[loadinfo->strtabidx].sh_offset,
+                  exports, nexports);
           if (ret < 0)
             {
               /* The special error -ESRCH is returned only in one condition:
@@ -333,18 +332,75 @@ static int modlib_relocate(FAR struct module_s *modp,
 
       /* Calculate the relocation address. */
 
-      if (rel->r_offset + sizeof(uint32_t) > dstsec->sh_size)
+      if (loadinfo->gotindex >= 0)
         {
-          berr("ERROR: Section %d reloc %d: "
-               "Relocation address out of range, "
-               "offset %" PRIuPTR " size %ju\n",
-               relidx, i, (uintptr_t)rel->r_offset,
-               (uintmax_t)dstsec->sh_size);
-          ret = -EINVAL;
-          break;
-        }
+          if (sym->st_shndx == SHN_UNDEF)
+            {
+              /* Symbol type is undefined, we need to set the address
+               * to the value of the symbol.
+               */
 
-      addr = dstsec->sh_addr + rel->r_offset;
+              FAR Elf_Shdr *gotsec = &loadinfo->shdr[loadinfo->gotindex];
+              FAR uintptr_t *gotaddr = (FAR uintptr_t *)(gotsec->sh_addr +
+                *((FAR uintptr_t *)(dstsec->sh_addr + rel->r_offset)));
+
+              *gotaddr = sym->st_value;
+              continue;
+            }
+
+          if ((dstsec->sh_flags & SHF_WRITE) == 0)
+            {
+              /* Skip relocations for read-only sections */
+
+              continue;
+            }
+
+          /* Use the GOT to store the address */
+
+          if (rel->r_offset - dstsec->sh_offset >
+              dstsec->sh_size - sizeof(uint32_t))
+            {
+              berr("ERROR: Section %d reloc %d: "
+                   "Relocation address out of range, "
+                   "offset %" PRIuPTR " size %ju\n",
+                   relidx, i, (uintptr_t)rel->r_offset,
+                   (uintmax_t)dstsec->sh_size);
+              ret = -EINVAL;
+              break;
+            }
+
+          addr = dstsec->sh_addr + rel->r_offset - dstsec->sh_offset;
+          if (ELF_ST_TYPE(sym->st_info) == STT_SECTION)
+            {
+              /* Symbol type is section, we need clear the address
+               * and keep the original value.
+               */
+
+              *(FAR uintptr_t *)addr -=
+                 loadinfo->shdr[sym->st_shndx].sh_offset;
+            }
+          else
+            {
+              /* Normal symbol, just keep it zero */
+
+              *(FAR uintptr_t *)addr = 0;
+            }
+        }
+      else
+        {
+          if (rel->r_offset > dstsec->sh_size - sizeof(uint32_t))
+            {
+              berr("ERROR: Section %d reloc %d: "
+                   "Relocation address out of range, "
+                   "offset %" PRIuPTR " size %ju\n",
+                   relidx, i, (uintptr_t)rel->r_offset,
+                   (uintmax_t)dstsec->sh_size);
+              ret = -EINVAL;
+              break;
+            }
+
+          addr = dstsec->sh_addr + rel->r_offset;
+        }
 
       /* Now perform the architecture-specific relocation */
 
@@ -622,7 +678,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
       return -ENOMEM;
     }
 
-  memset((FAR void *)&reldata, 0, sizeof(reldata));
+  memset((void *)&reldata, 0, sizeof(reldata));
   relas = (FAR Elf_Rela *)rels;
 
   for (i = 0; dyn[i].d_tag != DT_NULL; i++)
@@ -749,9 +805,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
 
           if ((idx_sym = ELF_R_SYM(rel->r_info)) != 0)
             {
-              /* We have an external reference */
-
-              if (sym[idx_sym].st_shndx == SHN_UNDEF)
+              if (sym[idx_sym].st_shndx == SHN_UNDEF) /* We have an external reference */
                 {
                     FAR void *ep;
 
@@ -939,22 +993,17 @@ int modlib_bind(FAR struct module_s *modp,
         {
           modp->dynamic = 0;
 
-          /* Make sure that the section is allocated.  We can't
-           * relocate sections that were not loaded into memory.
-           */
-
-          if ((loadinfo->shdr[i].sh_flags & SHF_ALLOC) == 0 &&
-              (loadinfo->shdr[i].sh_flags & SHF_INFO_LINK) == 0)
-            {
-              continue;
-            }
-
           /* Process the relocations by type */
 
           switch (loadinfo->shdr[i].sh_type)
             {
+              /* Make sure that the section is allocated.  We can't
+               * relocate sections that were not loaded into memory.
+               */
+
               case SHT_REL:
-                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
+                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0 ||
+                    loadinfo->shdr[infosec].sh_addr == 0)
                   {
                     continue;
                   }
@@ -989,6 +1038,7 @@ int modlib_bind(FAR struct module_s *modp,
         }
     }
 
+  modp->xipbase = loadinfo->xipbase;
   symhdr = &loadinfo->shdr[loadinfo->symtabidx];
   sym = lib_malloc(symhdr->sh_size);
 
@@ -1004,10 +1054,11 @@ int modlib_bind(FAR struct module_s *modp,
 
   for (i = 0; i < symhdr->sh_size / sizeof(Elf_Sym); i++)
     {
-      FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
-
-      if (sym[i].st_shndx != SHN_UNDEF)
+      if (sym[i].st_shndx != SHN_UNDEF &&
+          sym[i].st_shndx < loadinfo->ehdr.e_shnum)
         {
+          FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
+
           sym[i].st_value = sym[i].st_value + s->sh_addr;
         }
     }

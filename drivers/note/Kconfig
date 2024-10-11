@@ -73,6 +73,7 @@ config DRIVERS_NOTERAM_BUFSIZE
 
 config DRIVERS_NOTERAM_SECTION
 	string "Note RAM section"
+	default ".bss.noteram"
 	---help---
 		Enable section information.
 
@@ -106,19 +107,19 @@ config DRIVERS_NOTELOWEROUT
 config DRIVERS_NOTEFILE
 	bool "Note file driver"
 	---help---
-		The Note driver output to file.
+		The note driver output to file.
 
 config DRIVERS_NOTEFILE_PATH
 	string "Note file path"
 	depends on DRIVERS_NOTEFILE
 	default "/dev/ttyS1"
 	---help---
-		The Note driver output to file path.
+		The note driver output to file path.
 
 config DRIVERS_NOTELOG
 	bool "Note syslog driver"
 	---help---
-		The Note driver output to syslog.
+		The note driver output to syslog.
 
 config DRIVERS_NOTESNAP
 	bool "Last scheduling information"
