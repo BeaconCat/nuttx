@@ -52,7 +52,7 @@
 
 void z80_sigdeliver(void)
 {
-  FAR struct tcb_s  *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task();
   chipreg_t regs[XCPTCONTEXT_REGS];
 
   board_autoled_on(LED_SIGNAL);
@@ -75,7 +75,7 @@ void z80_sigdeliver(void)
 
   /* Deliver the signals */
 
-  (rtcb->sigdeliver)(rtcb);
+  ((sig_deliver_t)rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original

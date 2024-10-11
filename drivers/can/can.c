@@ -885,7 +885,7 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case FIONWRITE:
         {
-          *(FAR uint8_t *)arg = CONFIG_CAN_TXFIFOSIZE - 1 -
+          *(FAR int *)arg = CONFIG_CAN_TXFIFOSIZE - 1 -
                             (dev->cd_xmit.tx_tail - dev->cd_xmit.tx_head);
         }
         break;
@@ -894,7 +894,7 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case FIONREAD:
         {
-          *(FAR uint8_t *)arg =
+          *(FAR int *)arg =
 #ifdef CONFIG_CAN_ERRORS
                             (reader->fifo.rx_error != 0) +
 #endif

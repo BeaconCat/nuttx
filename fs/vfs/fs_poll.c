@@ -348,6 +348,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
                    inode->u.i_ops->poll, setup, ret);
             }
         }
+
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
                inode->u.i_mops->poll != NULL)

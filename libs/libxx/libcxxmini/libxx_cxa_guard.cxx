@@ -1,8 +1,6 @@
 //***************************************************************************
 // libs/libxx/libcxxmini/libxx_cxa_guard.cxx
 //
-// SPDX-License-Identifier: Apache-2.0
-//
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
 // this work for additional information regarding copyright ownership.  The
@@ -46,7 +44,7 @@ typedef int __guard;
 // variable and the first byte contains 0 prior to initialization, and
 // 1 after.
 
-__extension__ typedef int __guard __attribute__((mode(__DI__)));
+typedef int __guard __attribute__((mode(__DI__)));
 #endif
 
 //***************************************************************************
@@ -68,7 +66,7 @@ extern "C"
 #ifdef __ARM_EABI__
     return !(*g & 1);
 #else
-    return !*(FAR char *)g;
+    return !*(char *)g;
 #endif
   }
 
@@ -81,7 +79,7 @@ extern "C"
 #ifdef __ARM_EABI__
     *g = 1;
 #else
-    *(FAR char *)g = 1;
+    *(char *)g = 1;
 #endif
   }
 
