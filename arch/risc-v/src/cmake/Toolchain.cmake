@@ -24,29 +24,21 @@ set(CMAKE_SYSTEM_VERSION 1)
 set(CMAKE_C_COMPILER_FORCED TRUE)
 set(CMAKE_CXX_COMPILER_FORCED TRUE)
 
-if(CONFIG_RISCV_TOOLCHAIN_GNU_RV32
-   OR CONFIG_RISCV_TOOLCHAIN_GNU_RV64
-   OR CONFIG_RISCV_TOOLCHAIN_GNU_RV64ILP32
-   OR CONFIG_RISCV_TOOLCHAIN_CLANG)
+if(CONFIG_RISCV_TOOLCHAIN_GNU_RV32 OR CONFIG_RISCV_TOOLCHAIN_GNU_RV64)
   if(NOT CONFIG_RISCV_TOOLCHAIN)
     set(CONFIG_RISCV_TOOLCHAIN GNU_RVG)
   endif()
 endif()
 
 # Default toolchain
-
-if(CONFIG_ARCH_TOOLCHAIN_CLANG)
-  set(TOOLCHAIN_PREFIX riscv64-unknown-elf)
+find_program(RV_COMPILER riscv-none-elf-gcc)
+if(RV_COMPILER)
+  set(TOOLCHAIN_PREFIX riscv-none-elf)
 else()
-  find_program(RV_COMPILER riscv-none-elf-gcc)
-  if(RV_COMPILER)
-    set(TOOLCHAIN_PREFIX riscv-none-elf)
+  if(CONFIG_RISCV_TOOLCHAIN_GNU_RV32)
+    set(TOOLCHAIN_PREFIX riscv32-unknown-elf)
   else()
-    if(CONFIG_RISCV_TOOLCHAIN_GNU_RV32)
-      set(TOOLCHAIN_PREFIX riscv32-unknown-elf)
-    else()
-      set(TOOLCHAIN_PREFIX riscv64-unknown-elf)
-    endif()
+    set(TOOLCHAIN_PREFIX riscv64-unknown-elf)
   endif()
 endif()
 
@@ -54,56 +46,27 @@ set(CMAKE_LIBRARY_ARCHITECTURE ${TOOLCHAIN_PREFIX})
 set(CMAKE_C_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
 set(CMAKE_CXX_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
 
-if(CONFIG_ARCH_TOOLCHAIN_CLANG)
-  set(CMAKE_ASM_COMPILER ${TOOLCHAIN_PREFIX}-clang)
-  set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-clang)
-  set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-clang++)
-  set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-llvm-strip --strip-unneeded)
-  set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-llvm-objcopy)
-  set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-llvm-objdump)
-  set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-ld)
-  set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
-  set(CMAKE_AR ${TOOLCHAIN_PREFIX}-llvm-ar)
-  set(CMAKE_NM ${TOOLCHAIN_PREFIX}-llvm-nm)
-  set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-llvm-ranlib)
+set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
+set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}-gcc -E -P -x c)
+set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strip-unneeded)
+set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
+set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
+set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
+set(CMAKE_AR ${TOOLCHAIN_PREFIX}-ar)
+set(CMAKE_NM ${TOOLCHAIN_PREFIX}-nm)
+set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-gcc-ranlib)
 
-  # Since the no_builtin attribute is not fully supported on Clang disable the
-  # built-in functions, refer:
-  # https://github.com/apache/incubator-nuttx/pull/5971
-
-  add_compile_options(-fno-builtin)
-else()
-  set(CMAKE_ASM_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
-  set(CMAKE_C_COMPILER ${CMAKE_ASM_COMPILER})
-  set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
-  set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strip-unneeded)
-  set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
-  set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
-
-  if(CONFIG_LTO_FULL AND CONFIG_ARCH_TOOLCHAIN_GNU)
-    set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-gcc)
+if(CONFIG_LTO_FULL)
+  add_compile_options(-flto)
+  if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL "GNU_RVG")
     set(CMAKE_LD ${TOOLCHAIN_PREFIX}-gcc)
     set(CMAKE_AR ${TOOLCHAIN_PREFIX}-gcc-ar)
     set(CMAKE_NM ${TOOLCHAIN_PREFIX}-gcc-nm)
-    set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-gcc-ranlib)
-  else()
-    set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-ld)
-    set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
-    set(CMAKE_AR ${TOOLCHAIN_PREFIX}-ar)
-    set(CMAKE_NM ${TOOLCHAIN_PREFIX}-nm)
-    set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
-  endif()
-endif()
-
-# Link Time Optimization
-
-if(CONFIG_LTO_THIN)
-  add_compile_options(-flto=thin)
-elseif(CONFIG_LTO_FULL)
-  add_compile_options(-flto)
-  if(CONFIG_ARCH_TOOLCHAIN_GNU)
-    add_compile_options(-fno-builtin)
     add_compile_options(-fuse-linker-plugin)
+    add_compile_options(-fno-builtin)
   endif()
 endif()
 
@@ -127,11 +90,7 @@ set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
 elseif(CONFIG_DEBUG_FULLOPT)
-  if(CONFIG_ARCH_TOOLCHAIN_CLANG)
-    add_compile_options(-Oz)
-  else()
-    add_compile_options(-Os)
-  endif()
+  add_compile_options(-Os)
 endif()
 
 if(NOT CONFIG_DEBUG_NOOPT)
@@ -169,11 +128,8 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-endif()
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 
 if(NOT ${CONFIG_ARCH_TOOLCHAIN_CLANG})
   add_compile_options(-Wno-psabi)
@@ -196,11 +152,7 @@ if(CONFIG_ARCH_RV32)
   add_link_options(-Wl,-melf32lriscv)
 elseif(CONFIG_ARCH_RV64)
   add_compile_options(-mcmodel=medany)
-  if(CONFIG_ARCH_RV64ILP32)
-    add_link_options(-Wl,-melf32lriscv)
-  else()
-    add_link_options(-Wl,-melf64lriscv)
-  endif()
+  add_link_options(-Wl,-melf64lriscv)
 endif()
 
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
@@ -209,7 +161,6 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
 endif()
 
 # Debug --whole-archive
-
 if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
   add_link_options(-Wl,--whole-archive)
 endif()
@@ -226,7 +177,16 @@ if(CONFIG_DEBUG_SYMBOLS)
 endif()
 
 # Generic GNU RVG toolchain
-if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
+if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL GNU_RVG)
+
+  execute_process(COMMAND ${TOOLCHAIN_PREFIX}-gcc --version
+                  OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
+  string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" GCC_VERSION
+               ${GCC_VERSION_OUTPUT})
+  string(REGEX MATCH "^[0-9]+" GCC_VERSION_MAJOR ${GCC_VERSION})
+  if(GCC_VERSION GREATER_EQUAL 12)
+    set(ARCHRVISAZ "_zicsr_zifencei")
+  endif()
 
   set(ARCHCPUEXTFLAGS i)
 
@@ -262,12 +222,6 @@ if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
     set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicsr_zifencei)
   endif()
 
-  if(CONFIG_ARCH_RV_EXPERIMENTAL_EXTENSIONS)
-    set(ARCHCPUEXTFLAGS
-        ${ARCHCPUEXTFLAGS}_${CONFIG_ARCH_RV_EXPERIMENTAL_EXTENSIONS})
-    add_compile_options(-menable-experimental-extensions)
-  endif()
-
   if(CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS)
     set(ARCHCPUEXTFLAGS
         ${ARCHCPUEXTFLAGS}_${CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS})
@@ -281,11 +235,7 @@ if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
     set(LLVM_ARCHTYPE "riscv32")
   elseif(CONFIG_ARCH_RV64)
     set(ARCHTYPE "rv64")
-    if(CONFIG_ARCH_RV64ILP32)
-      set(ARCHABITYPE "ilp32")
-    else()
-      set(ARCHABITYPE "lp64")
-    endif()
+    set(ARCHABITYPE "lp64")
     set(LLVM_ARCHTYPE "riscv64")
   endif()
 
@@ -316,21 +266,21 @@ if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
   # These models can't cover all implementation of RISCV, but it's enough for
   # most cases.
 
-  set(LLVM_CPUFLAGS)
+  set(PLATFORM_FLAGS)
 
   if(CONFIG_ARCH_RV32)
     if(${ARCHCPUEXTFLAGS} STREQUAL imc)
-      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e20)
+      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e20)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imac)
-      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e31)
+      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e31)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imafc)
-      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-e76)
+      list(APPEND PLATFORM_FLAGS -mcpu=sifive-e76)
     endif()
   else()
     if(${ARCHCPUEXTFLAGS} STREQUAL imac)
-      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-s51)
+      list(APPEND PLATFORM_FLAGS -mcpu=sifive-s51)
     elseif(${ARCHCPUEXTFLAGS} STREQUAL imafdc)
-      list(APPEND LLVM_CPUFLAGS -mcpu=sifive-u54)
+      list(APPEND PLATFORM_FLAGS -mcpu=sifive-u54)
     endif()
   endif()
 
@@ -342,6 +292,10 @@ endif()
 
 if(CONFIG_MM_KASAN_ALL)
   add_compile_options(-fsanitize=kernel-address)
+endif()
+
+if(CONFIG_MM_KASAN_GLOBAL)
+  add_compile_options(--param=asan-globals=1)
 endif()
 
 if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
@@ -358,4 +312,10 @@ endif()
 
 if(CONFIG_MM_UBSAN_TRAP_ON_ERROR)
   add_compile_options(-fsanitize-undefined-trap-on-error)
+endif()
+
+# Instrumentation options
+
+if(CONFIG_ARCH_INSTRUMENT_ALL)
+  add_compile_options(-finstrument-functions)
 endif()

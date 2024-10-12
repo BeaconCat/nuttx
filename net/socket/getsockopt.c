@@ -34,8 +34,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/fs/fs.h>
-
 #include "socket/socket.h"
 #include "utils/utils.h"
 

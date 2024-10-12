@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/inttypes/lib_strtoumax.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -97,7 +95,7 @@ uintmax_t strtoumax(FAR const char *nptr, FAR char **endptr, int base)
 
       if (endptr)
         {
-          *endptr = (FAR char *)nptr;
+          *endptr = (char *)nptr;
         }
     }
 
