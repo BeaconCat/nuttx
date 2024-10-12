@@ -80,7 +80,7 @@ struct fork_s
   uint64_t lr;
   uint64_t sp;
 #ifdef CONFIG_ARCH_FPU
-  uint64_t fpu[FPU_CONTEXT_REGS];
+  struct fpu_reg fpu;
 #endif
 };
 
