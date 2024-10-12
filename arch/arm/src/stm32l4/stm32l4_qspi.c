@@ -41,7 +41,6 @@
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/spi/qspi.h>
 
 #include "arm_internal.h"
@@ -1967,7 +1966,7 @@ static int qspi_command(struct qspi_dev_s *dev,
   if (QSPICMD_ISDATA(cmdinfo->flags))
     {
       DEBUGASSERT(cmdinfo->buffer != NULL && cmdinfo->buflen > 0);
-      DEBUGASSERT(IS_ALIGNED((uintptr_t)cmdinfo->buffer, 4));
+      DEBUGASSERT(IS_ALIGNED(cmdinfo->buffer));
 
       if (QSPICMD_ISWRITE(cmdinfo->flags))
         {
@@ -2060,7 +2059,7 @@ static int qspi_command(struct qspi_dev_s *dev,
   if (QSPICMD_ISDATA(cmdinfo->flags))
     {
       DEBUGASSERT(cmdinfo->buffer != NULL && cmdinfo->buflen > 0);
-      DEBUGASSERT(IS_ALIGNED((uintptr_t)cmdinfo->buffer, 4));
+      DEBUGASSERT(IS_ALIGNED(cmdinfo->buffer));
 
       if (QSPICMD_ISWRITE(cmdinfo->flags))
         {
@@ -2147,7 +2146,7 @@ static int qspi_memory(struct qspi_dev_s *dev,
   priv->xctn = &xctn;
 
   DEBUGASSERT(meminfo->buffer != NULL && meminfo->buflen > 0);
-  DEBUGASSERT(IS_ALIGNED((uintptr_t)meminfo->buffer, 4));
+  DEBUGASSERT(IS_ALIGNED(meminfo->buffer));
 
   if (QSPIMEM_ISWRITE(meminfo->flags))
     {
@@ -2207,8 +2206,8 @@ static int qspi_memory(struct qspi_dev_s *dev,
 
   if (priv->candma &&
       meminfo->buflen > CONFIG_STM32L4_QSPI_DMATHRESHOLD &&
-      IS_ALIGNED((uintptr_t)meminfo->buffer, 4) &&
-      IS_ALIGNED(meminfo->buflen, 4))
+      IS_ALIGNED((uintptr_t)meminfo->buffer) &&
+      IS_ALIGNED(meminfo->buflen))
     {
       ret = qspi_memory_dma(priv, meminfo, &xctn);
     }
@@ -2227,7 +2226,7 @@ static int qspi_memory(struct qspi_dev_s *dev,
       /* Transfer data */
 
       DEBUGASSERT(meminfo->buffer != NULL && meminfo->buflen > 0);
-      DEBUGASSERT(IS_ALIGNED((uintptr_t)meminfo->buffer, 4));
+      DEBUGASSERT(IS_ALIGNED(meminfo->buffer));
 
       if (QSPIMEM_ISWRITE(meminfo->flags))
         {
@@ -2258,7 +2257,7 @@ static int qspi_memory(struct qspi_dev_s *dev,
   /* Transfer data */
 
   DEBUGASSERT(meminfo->buffer != NULL && meminfo->buflen > 0);
-  DEBUGASSERT(IS_ALIGNED((uintptr_t)meminfo->buffer, 4));
+  DEBUGASSERT(IS_ALIGNED(meminfo->buffer));
 
   if (QSPIMEM_ISWRITE(meminfo->flags))
     {

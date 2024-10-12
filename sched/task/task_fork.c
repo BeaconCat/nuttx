@@ -147,19 +147,6 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   child->cmn.flags |= TCB_FLAG_FREE_TCB;
 
-#if defined(CONFIG_ARCH_ADDRENV)
-  /* Join the parent address environment (REVISIT: vfork() only) */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = addrenv_join(parent, &child->cmn);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
   /* Initialize the task join */
 
   nxtask_joininit(&child->cmn);
@@ -204,19 +191,6 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
       goto errout_with_tcb;
     }
 
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = up_addrenv_kstackalloc(&child->cmn);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
   /* Setup thread local storage */
 
   ret = tls_dup_info(&child->cmn, parent);
@@ -237,7 +211,7 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   sinfo("Child priority=%d start=%p\n", priority, retaddr);
   ret = nxtask_setup_scheduler(child, priority, retaddr,
-                               ptcb->entry.main, ttype);
+                               ptcb->entry.main, ttype, ptcb);
   if (ret < OK)
     {
       goto errout_with_tcb;
@@ -342,7 +316,7 @@ void nxtask_abort_fork(FAR struct task_tcb_s *child, int errcode)
 {
   /* The TCB was added to the active task list by nxtask_setup_scheduler() */
 
-  dq_rem((FAR dq_entry_t *)child, list_inactivetasks());
+  dq_rem((FAR dq_entry_t *)child, &g_inactivetasks);
 
   /* Release the TCB */
 

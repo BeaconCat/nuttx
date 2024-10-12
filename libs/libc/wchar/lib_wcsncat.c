@@ -1,8 +1,7 @@
 /****************************************************************************
  * libs/libc/wchar/lib_wcsncat.c
  *
- * SPDX-License-Identifier: MIT
- * SPDX-FileCopyrightText: 2005-2014 Rich Felker, et al.
+ * Copyright © 2005-2014 Rich Felker, et al.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
