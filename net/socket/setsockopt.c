@@ -35,6 +35,7 @@
 #include <assert.h>
 #include <arch/irq.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <netdev/netdev.h>
@@ -136,9 +137,6 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
                            * periodic transmission of probes */
       case SO_OOBINLINE:  /* Leaves received out-of-band data inline */
       case SO_REUSEADDR:  /* Allow reuse of local addresses */
-#ifdef CONFIG_NET_TIMESTAMP
-      case SO_TIMESTAMP:  /* Generates a timestamp for each incoming packet */
-#endif
         {
           int setting;
 
