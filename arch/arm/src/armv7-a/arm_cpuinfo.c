@@ -26,10 +26,9 @@
 #include <nuttx/config.h>
 #include <nuttx/fs/procfs.h>
 
-#include <arch/irq.h>
-
 #include "arm_internal.h"
 #include "hwcap.h"
+#include "cp15.h"
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CPUINFO)
 

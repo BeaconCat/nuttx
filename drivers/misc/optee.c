@@ -38,14 +38,6 @@
 #include "optee_msg.h"
 
 /****************************************************************************
- *   The driver's main purpose is to support the porting of the open source
- * component optee_client (https://github.com/OP-TEE/optee_client) to NuttX.
- *   The basic function of the driver module is to convert
- * the REE application layer data and send it to the TEE through rpmsg.
- * TEE implementation is optee_os(https://github.com/OP-TEE/optee_os).
- ****************************************************************************/
-
-/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
@@ -61,7 +53,7 @@
 
 #define TEE_ORIGIN_COMMS               0x00000002
 
-#define TEE_IOCTL_PARAM_SIZE(x)        (sizeof(struct tee_ioctl_param) * (x))
+#define TEE_IOCTL_PARAM_SIZE(x)         (sizeof(struct tee_ioctl_param) * (x))
 
 #define OPTEE_MAX_IOVEC_NUM             7
 #define OPTEE_MAX_PARAM_NUM             6
@@ -82,7 +74,7 @@
 static int optee_open(FAR struct file *filep);
 static int optee_close(FAR struct file *filep);
 static int optee_ioctl(FAR struct file *filep, int cmd,
-                       unsigned long arg);
+                          unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -455,7 +447,7 @@ static int optee_ioctl_open_session(FAR struct socket *psocket,
     }
 
   ret = optee_from_msg_param(arg->params, arg->num_params,
-                             msg->params + 2);
+                                msg->params + 2);
   if (ret < 0)
     {
       return ret;
@@ -572,20 +564,20 @@ optee_ioctl_shm_alloc(FAR struct tee_ioctl_shm_alloc_data *data)
 
   if (memfd < 0)
     {
-      return get_errno();
+      return -errno;
     }
 
   if (ftruncate(memfd, data->size) < 0)
     {
       close(memfd);
-      return get_errno();
+      return -errno;
     }
 
   data->id = (uintptr_t)mmap(NULL, data->size, PROT_READ | PROT_WRITE,
                              MAP_SHARED, memfd, 0);
   if (data->id == (uintptr_t)MAP_FAILED)
     {
-      return get_errno();
+      return -errno;
     }
 
   return memfd;

@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_load.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -75,7 +73,7 @@ static int modlib_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
       /* Allocate memory info for all sections */
 
       loadinfo->sectalloc = lib_zalloc(sizeof(uintptr_t) *
-                                       loadinfo->ehdr.e_shnum);
+                                      loadinfo->ehdr.e_shnum);
       if (loadinfo->sectalloc == NULL)
         {
           return -ENOMEM;
@@ -192,11 +190,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
                * able
                */
 
-              if ((shdr->sh_flags & SHF_WRITE) != 0
-#ifdef CONFIG_ARCH_HAVE_TEXT_HEAP_WORD_ALIGNED_READ
-                  || (shdr->sh_flags & SHF_EXECINSTR) == 0
-#endif
-                  )
+              if ((shdr->sh_flags & SHF_WRITE) != 0)
                 {
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
                   if (alloc && modlib_section_alloc(loadinfo, shdr, i) >= 0)
@@ -355,6 +349,14 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
               loadinfo->ehdr.e_type == ET_EXEC)
             {
               pptr = (FAR uint8_t **)&loadinfo->sectalloc[i];
+              if (*pptr == NULL)
+                {
+                  /* Mark the section as not loaded */
+
+                  shdr->sh_offset = (uintptr_t)shdr->sh_addr;
+                  shdr->sh_addr = 0;
+                  continue;
+                }
             }
 #endif
 
@@ -364,11 +366,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
                * writeable
                */
 
-              if ((shdr->sh_flags & SHF_WRITE) != 0
-#ifdef CONFIG_ARCH_HAVE_TEXT_HEAP_WORD_ALIGNED_READ
-                  || (shdr->sh_flags & SHF_EXECINSTR) == 0
-#endif
-                  )
+              if ((shdr->sh_flags & SHF_WRITE) != 0)
                 {
                   pptr = &data;
                 }

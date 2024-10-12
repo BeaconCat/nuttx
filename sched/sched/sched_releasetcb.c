@@ -172,9 +172,9 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 
       nxtask_joindestroy(tcb);
 
-      /* Task still referenced by pthread */
+      /* Kernel thread and group still reference by pthread */
 
-      if (ttype == TCB_FLAG_TTYPE_TASK)
+      if (ttype != TCB_FLAG_TTYPE_PTHREAD)
         {
           ttcb = (FAR struct task_tcb_s *)tcb;
           if (!sq_empty(&ttcb->group.tg_members)

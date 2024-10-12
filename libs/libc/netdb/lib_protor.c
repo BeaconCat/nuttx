@@ -1,8 +1,7 @@
 /****************************************************************************
  * libs/libc/netdb/lib_protor.c
  *
- * SPDX-License-Identifier: MIT
- * SPDX-FileCopyrightText: 2005-2020 Rich Felker, et al.
+ * Copyright © 2005-2020 Rich Felker, et al.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -79,7 +78,7 @@ static const unsigned char g_protos[] =
   "\377raw"
 };
 
-static FAR const char *g_aliases;
+static const char *g_aliases;
 
 /****************************************************************************
  * Public Functions
@@ -106,8 +105,8 @@ int getprotoent_r(FAR struct protoent *result_buf, FAR char *buf,
     }
 
   result_buf->p_proto = g_protos[idx];
-  result_buf->p_name = (FAR char *)&g_protos[idx + 1];
-  result_buf->p_aliases = (FAR char **)&g_aliases;
+  result_buf->p_name = (char *)&g_protos[idx + 1];
+  result_buf->p_aliases = (char **)&g_aliases;
   idx += strlen(result_buf->p_name) + 2;
   result_buf->idx = idx;
   *result = result_buf;

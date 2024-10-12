@@ -34,7 +34,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Function Prototypes
@@ -349,12 +348,12 @@ static int _inode_search(FAR struct inode_search_s *desc)
                                 {
                                   FAR char *buffer = NULL;
 
-                                  ret = fs_heap_asprintf(&buffer, "%s/%s",
-                                                         desc->relpath,
-                                                         name);
+                                  ret = asprintf(&buffer,
+                                                 "%s/%s", desc->relpath,
+                                                 name);
                                   if (ret > 0)
                                     {
-                                      fs_heap_free(desc->buffer);
+                                      lib_free(desc->buffer);
                                       desc->buffer = buffer;
                                       relpath = buffer;
                                       ret = OK;
@@ -479,8 +478,7 @@ int inode_search(FAR struct inode_search_s *desc)
 
   if (*desc->path != '/')
     {
-      ret = fs_heap_asprintf(&desc->buffer, "%s/%s",
-                             _inode_getcwd(), desc->path);
+      ret = asprintf(&desc->buffer, "%s/%s", _inode_getcwd(), desc->path);
       if (ret < 0)
         {
           return -ENOMEM;

@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/qemu/qemu-armv7a/scripts/dramboot_armv7a.ld
+ * boards/arm/qemu/qemu-armv7a/scripts/dramboot.ld
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -32,19 +32,19 @@ MEMORY
 SECTIONS
 {
 
-  /* where the global variable out-of-bounds detection information located */
+  /* Where the global variable out-of-bounds detection information located */
 
 #ifdef CONFIG_MM_KASAN_GLOBAL
   .kasan.unused : {
     *(.data..LASANLOC*)
-  }
+  } > ROM
   .kasan.global : {
     KEEP (*(.data..LASAN0))
     KEEP (*(.data.rel.local..LASAN0))
-  }
+  } > ROM
   .kasan.shadows : {
     *(.kasan.shadows)
-  }
+  } > ROM
 #endif
 
   .text : {
@@ -63,21 +63,19 @@ SECTIONS
       KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
       KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
       _einit = ABSOLUTE(.);
-      . = ALIGN(4096);
+      . = ALIGN(8);
       _etext = .; /* End_1 of .text */
       _sztext = _etext - _stext;
   } > ROM
 
-  .ARM.extab :
-  {
+  .ARM.extab : {
       *(.ARM.extab*)
   } > ROM
 
   /* .ARM.exidx is sorted, so has to go in its own output section.  */
 
   PROVIDE_HIDDEN (__exidx_start = .);
-  .ARM.exidx :
-  {
+  .ARM.exidx : {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } > ROM
   PROVIDE_HIDDEN (__exidx_end = .);
@@ -87,7 +85,7 @@ SECTIONS
       *(.rodata*)
       *(.data.rel.ro*)
       KEEP(*(SORT(.scattered_array*)));
-      . = ALIGN(4096);
+      . = ALIGN(8);
       _erodata = .;
   } > ROM
 
@@ -113,7 +111,7 @@ SECTIONS
   .bss : {                     /* BSS */
        _sbss = .;
        *(.bss*)
-       . = ALIGN(4096);
+       . = ALIGN(8);
        _ebss = .;
   } > RAM
 
