@@ -759,7 +759,6 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
                                 NULL);
   if (ret < 0)
     {
-      nxsem_destroy(&priv->wait);
       fs_heap_free(priv);
       return ret;
     }
