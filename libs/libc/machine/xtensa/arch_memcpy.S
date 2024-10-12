@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/machine/xtensa/arch_memcpy.S
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -55,9 +53,9 @@
   .local  .Lbytecopy
 
   .align  4
-  .global memcpy
-  .type memcpy, @function
-memcpy:
+  .global ARCH_LIBCFUN(memcpy)
+  .type ARCH_LIBCFUN(memcpy), @function
+ARCH_LIBCFUN(memcpy):
   ENTRY(16)
   /* a2 = dst, a3 = src, a4 = len */
 
@@ -281,6 +279,6 @@ __memcpy_aux:
 
   .end schedule
 
-  .size memcpy, . - memcpy
+  .size ARCH_LIBCFUN(memcpy), . - ARCH_LIBCFUN(memcpy)
 
 #endif

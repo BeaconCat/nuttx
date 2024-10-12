@@ -115,9 +115,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * have been delivered.
            */
 
-          tcb->xcp.saved_rip            = up_current_regs()[REG_RIP];
-          tcb->xcp.saved_rsp            = up_current_regs()[REG_RSP];
-          tcb->xcp.saved_rflags         = up_current_regs()[REG_RFLAGS];
+          tcb->xcp.saved_rip    = up_current_regs()[REG_RIP];
+          tcb->xcp.saved_rsp    = up_current_regs()[REG_RSP];
+          tcb->xcp.saved_rflags = up_current_regs()[REG_RFLAGS];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled
@@ -126,12 +126,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
           up_current_regs()[REG_RIP]    = (uint64_t)x86_64_sigdeliver;
           up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
           up_current_regs()[REG_RFLAGS] = 0;
-
-          /* And make sure that the saved context in the TCB
-           * is the same as the interrupt return context.
-           */
-
-          x86_64_savestate(tcb->xcp.regs);
         }
     }
 
@@ -210,9 +204,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * the signals have been delivered.
            */
 
-          tcb->xcp.saved_rip            = up_current_regs()[REG_RIP];
-          tcb->xcp.saved_rsp            = up_current_regs()[REG_RSP];
-          tcb->xcp.saved_rflags         = up_current_regs()[REG_RFLAGS];
+          tcb->xcp.saved_rip         = up_current_regs()[REG_RIP];
+          tcb->xcp.saved_rsp         = up_current_regs()[REG_RSP];
+          tcb->xcp.saved_rflags      = up_current_regs()[REG_RFLAGS];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled
@@ -226,7 +220,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * is the same as the interrupt return context.
            */
 
-          x86_64_savestate(tcb->xcp.regs);
+          tcb->xcp.regs[REG_AUX] = REG_AUX_FULLCONTEXT;
         }
     }
 
