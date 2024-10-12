@@ -67,14 +67,9 @@ void weak_function stm32_spidev_initialize(void)
   stm32_configgpio(GPIO_W5500_INTR);
 #endif
 
-#if defined(CONFIG_STM32_SPI1) && defined(CONFIG_SENSORS_LIS3MDL)
+#ifdef CONFIG_STM32_SPI1
   stm32_configgpio(GPIO_CS_MEMS);    /* MEMS chip select */
 #endif
-
-#if defined(CONFIG_STM32_SPI1) && defined(CONFIG_CL_MFRC522)
-  stm32_configgpio(GPIO_CS_MFRC522);  /* MFRC522 chip select */
-#endif
-
 #if defined(CONFIG_STM32_SPI2) && defined(CONFIG_SENSORS_MAX31855)
   stm32_configgpio(GPIO_MAX31855_CS); /* MAX31855 chip select */
 #endif
@@ -181,21 +176,11 @@ void stm32_spi1select(struct spi_dev_s *dev, uint32_t devid,
     {
       stm32_gpiowrite(GPIO_OLED_CS, !selected);
     }
+  else
 #endif
-
-#if defined (CONFIG_SENSORS_LIS3MDL)
-  if (devid == SPIDEV_ACCELEROMETER(0))
     {
       stm32_gpiowrite(GPIO_CS_MEMS, !selected);
     }
-#endif
-
-#if defined(CONFIG_CL_MFRC522)
-  if (devid == SPIDEV_CONTACTLESS(0))
-    {
-      stm32_gpiowrite(GPIO_CS_MFRC522, !selected);
-    }
-#endif
 }
 
 uint8_t stm32_spi1status(struct spi_dev_s *dev, uint32_t devid)

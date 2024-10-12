@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/machine/arm/gnu/arm_setjmp.S
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -170,7 +168,21 @@ longjmp:
 	vmsr		fpscr, r2			/* Restore the FPSCR */
 #endif /* CONFIG_ARCH_FPU */
 
-	mov		r0, r1				/* return val */
+	/* Check and substitute the given return value to 1 if it's 0 */
+
+	movs		r0, r1
+#ifdef CONFIG_ARCH_ARMV6M
+	/* ARMv6-M only supports branching with condition
+	 * So we fall back to not use IT blocks in that case
+	 */
+
+	bne		1f
+	movs		r0, #1
+1:
+#else
+	it		eq
+	moveq		r0, #1
+#endif
 	bx		lr
 
 	.size	longjmp, .-longjmp

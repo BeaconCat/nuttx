@@ -1,11 +1,11 @@
 /****************************************************************************
  * libs/libc/stdio/lib_libvsprintf.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2002, Alexander Popov (sasho@vip.bg)
- * SPDX-FileCopyrightText: 2002,2004,2005 Joerg Wunsch
- * SPDX-FileCopyrightText: 2005, Helmut Wallner
- * SPDX-FileCopyrightText: 2007, Dmitry Xmelkov
+ *   Copyright (c) 2002, Alexander Popov (sasho@vip.bg)
+ *   Copyright (c) 2002,2004,2005 Joerg Wunsch
+ *   Copyright (c) 2005, Helmut Wallner
+ *   Copyright (c) 2007, Dmitry Xmelkov
+ *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,7 +125,9 @@ union arg_u
 #ifdef CONFIG_HAVE_LONG_LONG
   unsigned long long ull;
 #endif
+#ifdef CONFIG_HAVE_DOUBLE
   double d;
+#endif
   FAR char *cp;
 };
 struct arg_s
@@ -483,13 +485,13 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
           flags &= ~(FL_LONG | FL_REPD_TYPE);
 
 #ifdef CONFIG_HAVE_LONG_LONG
-          if (sizeof(FAR void *) == sizeof(unsigned long long))
+          if (sizeof(void *) == sizeof(unsigned long long))
             {
               flags |= (FL_LONG | FL_REPD_TYPE);
             }
           else
 #endif
-          if (sizeof(FAR void *) == sizeof(unsigned long))
+          if (sizeof(void *) == sizeof(unsigned long))
             {
               flags |= FL_LONG;
             }
@@ -1018,7 +1020,11 @@ str_lpad:
           flags &= ~(FL_NEGATIVE | FL_ALT);
           if (x < 0)
             {
-              x = -x;
+#ifndef CONFIG_HAVE_LONG_LONG
+              x = -(unsigned long)x;
+#else
+              x = -(unsigned long long)x;
+#endif
               flags |= FL_NEGATIVE;
             }
 
@@ -1115,28 +1121,37 @@ str_lpad:
               break;
 
             case 'p':
+#ifdef CONFIG_LIBC_PRINT_EXTENSION
               c = fmt_char(fmt);
               switch (c)
                 {
+                  case 'B':
+                    {
+                      FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
+
+                      lib_bsprintf(stream, vaf->fmt, vaf->va);
+                      continue;
+                    }
+
                   case 'V':
                     {
                       FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
-#ifdef va_copy
+#  ifdef va_copy
                       va_list copy;
 
                       va_copy(copy, *vaf->va);
                       lib_vsprintf(stream, vaf->fmt, copy);
                       va_end(copy);
-#else
+#  else
                       lib_vsprintf(stream, vaf->fmt, *vaf->va);
-#endif
+#  endif
                       continue;
                     }
 
                   case 'S':
                   case 's':
                     {
-#ifdef CONFIG_ALLSYMS
+#  ifdef CONFIG_ALLSYMS
                       FAR const struct symtab_s *symbol;
                       FAR void *addr = (FAR void *)(uintptr_t)x;
                       size_t symbolsize;
@@ -1161,7 +1176,7 @@ str_lpad:
 
                           continue;
                         }
-#endif
+#  endif
                       break;
                     }
 
@@ -1169,6 +1184,7 @@ str_lpad:
                     fmt_ungetc(fmt);
                     break;
                 }
+#endif
 
               flags |= FL_ALT;
 
