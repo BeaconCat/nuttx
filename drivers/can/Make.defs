@@ -22,14 +22,10 @@
 
 ifeq ($(CONFIG_CAN),y)
 
-CSRCS += can.c can_sender.c
+CSRCS += can.c
 
 ifeq ($(CONFIG_CAN_MCP2515),y)
 CSRCS += mcp2515.c
-endif
-
-ifeq ($(CONFIG_CAN_SJA1000),y)
-  CSRCS += sja1000.c
 endif
 
 # Include CAN device driver build support

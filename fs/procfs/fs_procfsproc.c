@@ -44,7 +44,6 @@
 #  include <time.h>
 #endif
 
-#include <nuttx/arch.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
