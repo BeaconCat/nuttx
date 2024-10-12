@@ -255,20 +255,6 @@ static inline uint32_t getcontrol(void)
 int up_cpu_index(void) noinstrument_function;
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
-static inline_function uint32_t up_getsp(void)
-{
-  register uint32_t sp;
-
-  __asm__ __volatile__
-  (
-    "tmov %0, sp\n"
-    : "=r" (sp)
-  );
-
-  return sp;
-}
-
-noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
 {
 #ifdef CONFIG_SMP
@@ -278,7 +264,6 @@ static inline_function uint32_t *up_current_regs(void)
 #endif
 }
 
-noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
 #ifdef CONFIG_SMP
@@ -302,6 +287,19 @@ static inline_function bool up_interrupt_context(void)
 #endif
 
   return ret;
+}
+
+static inline_function uint32_t up_getsp(void)
+{
+  register uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "tmov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
 }
 
 #define up_switch_context(tcb, rtcb)                        \
