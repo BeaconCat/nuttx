@@ -48,10 +48,6 @@ if(CONFIG_RPMSG_UART)
   list(APPEND SRCS uart_rpmsg.c)
 endif()
 
-if(CONFIG_UART_HOSTFS)
-  list(APPEND SRCS uart_hostfs.c)
-endif()
-
 # Pseudo-terminal support
 
 if(CONFIG_PSEUDOTERM)
@@ -71,6 +67,18 @@ endif()
 
 if(CONFIG_16550_PCI_UART)
   list(APPEND SRCS uart_pci_16550.c)
+endif()
+
+# Bluetooth H:5 UART driver
+
+if(CONFIG_UART_BTH5)
+  list(APPEND SRCS uart_bth5.c)
+endif()
+
+# RAM uart support
+
+if(CONFIG_RAM_UART)
+  list(APPEND SRCS uart_ram.c)
 endif()
 
 target_sources(drivers PRIVATE ${SRCS})
