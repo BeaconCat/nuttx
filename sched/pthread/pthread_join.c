@@ -160,14 +160,6 @@ errout:
 
   leave_cancellation_point();
 
-  if (pexit_value)
-    {
-      sinfo("Returning %d, exit_value %p\n", ret, *pexit_value);
-    }
-  else
-    {
-      sinfo("Returning %d\n", ret);
-    }
-
+  sinfo("Returning %d, exit_value %p\n", ret, *pexit_value);
   return ret;
 }
