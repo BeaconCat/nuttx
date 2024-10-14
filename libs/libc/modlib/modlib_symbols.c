@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_symbols.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -443,10 +445,6 @@ int modlib_symvalue(FAR struct module_s *modp,
               (uintptr_t)(sym->st_value + secbase));
 
         sym->st_value += secbase;
-        if (loadinfo->gotindex >= 0)
-          {
-            sym->st_value -= loadinfo->shdr[sym->st_shndx].sh_offset;
-          }
       }
       break;
     }

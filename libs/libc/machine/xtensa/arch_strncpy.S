@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/xtensa/arch_strncpy.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -71,9 +73,9 @@ __strncpy_aux:
   RET(16)
 
   .align  4
-  .global ARCH_LIBCFUN(strncpy)
-  .type ARCH_LIBCFUN(strncpy), @function
-ARCH_LIBCFUN(strncpy):
+  .global strncpy
+  .type strncpy, @function
+strncpy:
   ENTRY(16)
   /* a2 = dst, a3 = src */
 
@@ -264,6 +266,6 @@ ARCH_LIBCFUN(strncpy):
 3:  RET(16)
 .end schedule
 
-  .size ARCH_LIBCFUN(strncpy), . - ARCH_LIBCFUN(strncpy)
+  .size strncpy, . - strncpy
 
 #endif
