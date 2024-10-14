@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/mm_heap/mm.h
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -123,10 +121,8 @@
 #define MM_ALIGN_UP(a)   (((a) + MM_GRAN_MASK) & ~MM_GRAN_MASK)
 #define MM_ALIGN_DOWN(a) ((a) & ~MM_GRAN_MASK)
 
-/* Due to alignment, the lowest two bits of valid chunk size are always
- * zero, thus the two bits are reused to depict allocation status: bit
- * 0 depicts the allocation state of current chunk, and bit 1 depicts that
- * of the physically preceding chunk.
+/* An allocated chunk is distinguished from a free chunk by bit 0
+ * of the 'preceding' chunk size.  If set, then this is an allocated chunk.
  */
 
 #define MM_ALLOC_BIT     0x1
@@ -173,11 +169,14 @@ typedef uint16_t mmsize_t;
 typedef size_t mmsize_t;
 #endif
 
-/* This describes an allocated chunk */
+/* This describes an allocated chunk.  An allocated chunk is
+ * distinguished from a free chunk by bit 15/31 of the 'preceding' chunk
+ * size.  If set, then this is an allocated chunk.
+ */
 
 struct mm_allocnode_s
 {
-  mmsize_t preceding;                       /* Physical preceding chunk size */
+  mmsize_t preceding;                       /* Size of the preceding chunk */
   mmsize_t size;                            /* Size of this chunk */
 #if CONFIG_MM_BACKTRACE >= 0
   pid_t pid;                                /* The pid for caller */
@@ -192,7 +191,7 @@ struct mm_allocnode_s
 
 struct mm_freenode_s
 {
-  mmsize_t preceding;                       /* Physical preceding chunk size */
+  mmsize_t preceding;                       /* Size of the preceding chunk */
   mmsize_t size;                            /* Size of this chunk */
 #if CONFIG_MM_BACKTRACE >= 0
   pid_t pid;                                /* The pid for caller */
@@ -210,7 +209,7 @@ static_assert(MM_SIZEOF_ALLOCNODE <= MM_MIN_CHUNK,
 
 static_assert(MM_ALIGN >= sizeof(uintptr_t) &&
               (MM_ALIGN & MM_GRAN_MASK) == 0,
-              "Error memory alignment\n");
+              "Error memory aligment\n");
 
 struct mm_delaynode_s
 {
@@ -221,7 +220,9 @@ struct mm_delaynode_s
 
 struct mm_heap_s
 {
-  /* Mutex for controling access to this heap */
+  /* Mutually exclusive access to this data set is enforced with
+   * the following un-named mutex.
+   */
 
   mutex_t mm_lock;
 
@@ -237,7 +238,7 @@ struct mm_heap_s
 
   size_t mm_curused;
 
-  /* The first and last allocated nodes of each region */
+  /* This is the first and last nodes of the heap */
 
   FAR struct mm_allocnode_s *mm_heapstart[CONFIG_MM_REGIONS];
   FAR struct mm_allocnode_s *mm_heapend[CONFIG_MM_REGIONS];
@@ -248,12 +249,14 @@ struct mm_heap_s
 
   /* All free nodes are maintained in a doubly linked list.  This
    * array provides some hooks into the list at various points to
-   * speed up searching of free nodes.
+   * speed searches for free nodes.
    */
 
   struct mm_freenode_s mm_nodelist[MM_NNODES];
 
-  /* Free delay list, as sometimes we can't do free immdiately. */
+  /* Free delay list, for some situations where we can't do free
+   * immdiately.
+   */
 
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
 
@@ -292,15 +295,6 @@ void mm_unlock(FAR struct mm_heap_s *heap);
 void mm_shrinkchunk(FAR struct mm_heap_s *heap,
                     FAR struct mm_allocnode_s *node, size_t size);
 
-/* Functions contained in mm_addfreechunk.c *********************************/
-
-void mm_addfreechunk(FAR struct mm_heap_s *heap,
-                     FAR struct mm_freenode_s *node);
-
-/* Functions contained in mm_size2ndx.c *************************************/
-
-int mm_size2ndx(size_t size);
-
 /* Functions contained in mm_foreach.c **************************************/
 
 void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
@@ -309,5 +303,57 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
 /* Functions contained in mm_free.c *****************************************/
 
 void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay);
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+static inline_function int mm_size2ndx(size_t size)
+{
+  DEBUGASSERT(size >= MM_MIN_CHUNK);
+  if (size >= MM_MAX_CHUNK)
+    {
+      return MM_NNODES - 1;
+    }
+
+  size >>= MM_MIN_SHIFT;
+  return flsl(size) - 1;
+}
+
+static inline_function void mm_addfreechunk(FAR struct mm_heap_s *heap,
+                                            FAR struct mm_freenode_s *node)
+{
+  FAR struct mm_freenode_s *next;
+  FAR struct mm_freenode_s *prev;
+  size_t nodesize = MM_SIZEOF_NODE(node);
+  int ndx;
+
+  DEBUGASSERT(nodesize >= MM_MIN_CHUNK);
+  DEBUGASSERT(MM_NODE_IS_FREE(node));
+
+  /* Convert the size to a nodelist index */
+
+  ndx = mm_size2ndx(nodesize);
+
+  /* Now put the new node into the next */
+
+  for (prev = &heap->mm_nodelist[ndx],
+       next = heap->mm_nodelist[ndx].flink;
+       next && next->size && MM_SIZEOF_NODE(next) < nodesize;
+       prev = next, next = next->flink);
+
+  /* Does it go in mid next or at the end? */
+
+  prev->flink = node;
+  node->blink = prev;
+  node->flink = next;
+
+  if (next)
+    {
+      /* The new node goes between prev and next */
+
+      next->blink = node;
+    }
+}
 
 #endif /* __MM_MM_HEAP_MM_H */
