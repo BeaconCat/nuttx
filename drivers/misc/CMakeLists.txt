@@ -65,10 +65,9 @@ if(CONFIG_BLK_RPMSG)
 endif()
 
 if(CONFIG_BLK_RPMSG_SERVER)
-  target_include_directories(drivers PRIVATE ${NUTTX_DIR}/fs/inode
-                                             ${NUTTX_DIR}/fs)
-  set_source_files_properties(rpmsgblk_server.c DIRECTORY
-                              ${CMAKE_CURRENT_LIST_DIR}/..)
+  set_source_files_properties(
+    rpmsgblk_server.c DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/..
+    PROPERTIES INCLUDE_DIRECTORIES ${NUTTX_DIR}/fs/inode)
   list(APPEND SRCS rpmsgblk_server.c)
 endif()
 

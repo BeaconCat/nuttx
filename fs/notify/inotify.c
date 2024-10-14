@@ -746,7 +746,7 @@ inotify_alloc_watch_list(FAR const char *path)
     }
 
   list_initialize(&list->watches);
-  list->path = fs_heap_strdup(path);
+  list->path = strdup(path);
   if (list->path == NULL)
     {
       fs_heap_free(list);
@@ -757,7 +757,7 @@ inotify_alloc_watch_list(FAR const char *path)
   item.data = list;
   if (hsearch_r(item, ENTER, &result, &g_inotify.hash) == 0)
     {
-      fs_heap_free(list->path);
+      lib_free(list->path);
       fs_heap_free(list);
       return NULL;
     }
@@ -1022,7 +1022,7 @@ static void notify_free_entry(FAR ENTRY *entry)
 {
   /* Key is alloced by lib_malloc, value is alloced by fs_heap_malloc */
 
-  fs_heap_free(entry->key);
+  lib_free(entry->key);
   fs_heap_free(entry->data);
 }
 
@@ -1150,7 +1150,7 @@ out:
 
 out_free:
   fs_putfilep(filep);
-  fs_heap_free(abspath);
+  lib_free(abspath);
   if (ret < 0)
     {
       set_errno(-ret);

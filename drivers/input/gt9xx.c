@@ -76,12 +76,12 @@ struct gt9xx_dev_s
 {
   /* I2C bus and address for device */
 
-  FAR struct i2c_master_s *i2c;
+  struct i2c_master_s *i2c;
   uint8_t addr;
 
   /* Callback for Board-Specific Operations */
 
-  FAR const struct gt9xx_board_s *board;
+  const struct gt9xx_board_s *board;
 
   /* Device State */
 
@@ -94,7 +94,7 @@ struct gt9xx_dev_s
 
   /* Poll Waiters for device */
 
-  FAR struct pollfd *fds[CONFIG_INPUT_GT9XX_NPOLLWAITERS];
+  struct pollfd *fds[CONFIG_INPUT_GT9XX_NPOLLWAITERS];
 };
 
 /****************************************************************************
