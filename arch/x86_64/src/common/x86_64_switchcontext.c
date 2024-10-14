@@ -63,11 +63,17 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   if (up_interrupt_context())
     {
-      /* Restore addition x86_64 state */
+      /* Yes, then we have to do things differently.
+       * Just copy the g_current_regs into the OLD rtcb.
+       */
+
+      x86_64_savestate(rtcb->xcp.regs);
 
       x86_64_restore_auxstate(tcb);
 
-      /* Update current regs to signal that we need context switch */
+      /* Then switch contexts.  Any necessary address environment
+       * changes will be made when the interrupt returns.
+       */
 
       x86_64_restorestate(tcb->xcp.regs);
     }
