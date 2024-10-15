@@ -1214,18 +1214,15 @@ found:
                   return;
                 }
             }
-          else
+          else if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
             {
 #ifdef CONFIG_NET_TCP_OUT_OF_ORDER
               /* Queue out-of-order segments. */
 
               tcp_input_ofosegs(dev, conn, iplen);
 #endif
-              if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
-                {
-                  tcp_send(dev, conn, TCP_ACK, tcpiplen);
-                  return;
-                }
+              tcp_send(dev, conn, TCP_ACK, tcpiplen);
+              return;
             }
         }
     }
