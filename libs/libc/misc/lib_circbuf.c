@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/misc/lib_circbuf.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -278,7 +276,7 @@ bool circbuf_is_full(FAR struct circbuf_s *circ)
  * Name: circbuf_peekat
  *
  * Description:
- *   Get data specified position from the circular buffer without removing
+ *   Get data speicified position from the circular buffer without removing
  *
  * Note :
  *   That with only one concurrent reader and one concurrent writer,

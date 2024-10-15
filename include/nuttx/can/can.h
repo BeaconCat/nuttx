@@ -326,7 +326,7 @@
 #define CANIOC_GET_TRANSVSTATE    _CANIOC(19)
 
 #define CAN_FIRST                 0x0001         /* First common command */
-#define CAN_NCMDS                 19             /* 20 common commands   */
+#define CAN_NCMDS                 15             /* 16 common commands   */
 
 /* User defined ioctl commands are also supported. These will be forwarded
  * by the upper-half CAN driver to the lower-half CAN driver via the
@@ -525,8 +525,8 @@
 
 /* CAN bit timing support ***************************************************/
 
-#define CAN_BITTIMING_NOMINAL     0  /* Specifies nominal bittiming */
-#define CAN_BITTIMING_DATA        1  /* Specifies data bittiming */
+#define CAN_BITTIMING_DATA        0  /* Specifies nominal bittiming */
+#define CAN_BITTIMING_NOMINAL     1  /* Specifies data bittiming */
 
 /****************************************************************************
  * Public Types
@@ -826,17 +826,17 @@ struct canioc_rtr_s
 
 struct canioc_bittiming_s
 {
+  uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
+  uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
+  uint8_t               bt_tseg2;        /* TSEG2 in time quanta */
+  uint8_t               bt_sjw;          /* Synchronization Jump Width in time quanta */
 #ifdef CONFIG_CAN_FD
-  uint8_t               type;            /* Nominal/Data bit timing. This is
+  uint8_t               bt_type;         /* Nominal/Data bit timing. This is
                                           * used to specify which bit timing
                                           * should be set/obtained. Applies
                                           * only if CAN FD is configured.
                                           */
 #endif
-  uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
-  uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
-  uint8_t               bt_tseg2;        /* TSEG2 in time quanta */
-  uint8_t               bt_sjw;          /* Synchronization Jump Width in time quanta */
 };
 
 /* CANIOC_GET_CONNMODES/CANIOC_SET_CONNMODES:
