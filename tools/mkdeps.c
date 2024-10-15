@@ -1,8 +1,6 @@
 /****************************************************************************
  * tools/mkdeps.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -46,9 +44,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MAX_BUFFER  (16384)
-#define MAX_EXPAND  (16384)
-#define MAX_SHQUOTE (16384)
+#define MAX_BUFFER  (65536)
+#define MAX_EXPAND  (65536)
+#define MAX_SHQUOTE (65536)
 
 /* MAX_PATH might be defined in stdlib.h */
 

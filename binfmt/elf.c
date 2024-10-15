@@ -33,6 +33,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/binfmt/binfmt.h>
+#include <nuttx/kmalloc.h>
 
 #ifdef CONFIG_ELF
 
@@ -119,7 +120,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 
   /* Bind the program to the exported symbol table */
 
-  if (loadinfo.ehdr.e_type == ET_REL)
+  if (loadinfo.ehdr.e_type == ET_REL || loadinfo.gotindex >= 0)
     {
       ret = modlib_bind(&binp->mod, &loadinfo, exports, nexports);
       if (ret != 0)
@@ -184,7 +185,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->mod.dataalloc = (FAR void *)loadinfo.datastart;
 #  ifdef CONFIG_BINFMT_CONSTRUCTORS
   binp->mod.initarr = loadinfo.initarr;
-  binp->mod.finiarr = loadinfo.finiarr;
+  binp->mod.fniarr = loadinfo.finiarr;
 #  endif
 #endif
 
@@ -194,8 +195,8 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->mod.initarr = loadinfo.initarr;
   binp->mod.ninit   = loadinfo.ninit;
 
-  binp->mod.finiarr = loadinfo.finiarr;
-  binp->mod.nfini   = loadinfo.nfini;
+  binp->mod.fniarr = loadinfo.finiarr;
+  binp->mod.fini   = loadinfo.fini;
 #endif
 
 #ifdef CONFIG_SCHED_USER_IDENTITY
@@ -207,6 +208,23 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 #endif
 
   modlib_dumpentrypt(&loadinfo);
+#ifdef CONFIG_PIC
+  if (loadinfo.gotindex >= 0)
+    {
+      FAR struct dspace_s *dspaces = kmm_zalloc(sizeof(struct dspace_s));
+
+      if (dspaces == NULL)
+        {
+          ret = -ENOMEM;
+          goto errout_with_load;
+        }
+
+      dspaces->region = (FAR void *)loadinfo.shdr[loadinfo.gotindex].sh_addr;
+      dspaces->crefs = 1;
+      binp->picbase = (FAR void *)dspaces;
+    }
+#endif
+
   modlib_uninitialize(&loadinfo);
   return OK;
 

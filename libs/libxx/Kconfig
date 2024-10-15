@@ -26,13 +26,6 @@ choice
 	prompt "C++ Library"
 	default LIBCXXMINI
 
-config LIBCXXTOOLCHAIN
-	bool "Toolchain C++ support"
-	select HAVE_CXXINITIALIZE
-	select LIBC_LOCALE
-	---help---
-		Use Standard C++ library from toolchain.
-
 config LIBCXXMINI
 	bool "Basic C++ support"
 	---help---
@@ -43,9 +36,7 @@ config LIBCXXMINI
 config LIBCXX
 	bool "LLVM libc++ C++ Standard Library"
 	select HAVE_CXXINITIALIZE
-	select LIBC_LOCALE
 	select PTHREAD_MUTEX_TYPES
-	depends on TLS_NELEM > 0
 	---help---
 		LLVM "libc++" C++ Standard Library
 		https://libcxx.llvm.org/
@@ -71,7 +62,6 @@ if LIBCXX || UCLIBCXX
 
 choice
 	prompt "C++ low level library select"
-	default LIBCXXABI if LIBCXX
 	default LIBSUPCXX
 
 config LIBCXXABI
@@ -111,11 +101,14 @@ config CXX_EXCEPTION
 config CXX_RTTI
 	bool "Enable RTTI Support"
 
-if UCLIBCXX
+config CXX_WCHAR
+	bool "Enable Wide Character Support"
 
-config UCLIBCXX_WCHAR
-	bool "Enable Wide Stream Support"
-	default n
+config CXX_LOCALIZATION
+	bool "Enable Locale and Stream Support"
+	depends on LIBC_LOCALE
+
+if UCLIBCXX
 
 config UCLIBCXX_BUFSIZE
 	int "IO Stream/Container Buffer Size"
