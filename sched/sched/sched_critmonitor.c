@@ -154,59 +154,6 @@ static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
 #endif
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxsched_critmon_cpuload
- *
- * Description:
- *   Update the running time of all running threads when switching threads
- *
- * Input Parameters:
- *   tcb   - The task that we are performing the load operations on.
- *   current - The current time
- *   tick - The ticks that we process in this cpuload.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
-                                    clock_t tick)
-{
-  int i;
-  UNUSED(i);
-
-  /* Update the cpuload of the thread ready to be suspended */
-
-  nxsched_process_taskload_ticks(tcb, tick);
-
-  /* Update the cpuload of threads running on other CPUs */
-
-#  ifdef CONFIG_SMP
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      FAR struct tcb_s *rtcb = current_task(i);
-
-      if (tcb->cpu == rtcb->cpu)
-        {
-          continue;
-        }
-
-      nxsched_process_taskload_ticks(rtcb, tick);
-
-      /* Update start time, avoid repeated statistics when the next call */
-
-      rtcb->run_start = current;
-    }
-#  endif
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -444,28 +391,4 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
         }
     }
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION */
-}
-
-void nxsched_update_critmon(FAR struct tcb_s *tcb)
-{
-  clock_t current = perf_gettime();
-  clock_t elapsed = current - tcb->run_start;
-
-  if (tcb->task_state != TSTATE_TASK_RUNNING)
-    {
-      return;
-    }
-
-#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  clock_t tick = elapsed * CLOCKS_PER_SEC / perf_getfreq();
-  nxsched_process_taskload_ticks(tcb, tick);
-#endif
-
-  tcb->run_start = current;
-  tcb->run_time += elapsed;
-  if (elapsed > tcb->run_max)
-    {
-      tcb->run_max = elapsed;
-      CHECK_THREAD(tcb->pid, elapsed);
-    }
 }

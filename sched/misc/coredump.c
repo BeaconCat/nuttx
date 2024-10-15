@@ -91,12 +91,6 @@ static struct lib_blkoutstream_s  g_blockstream;
 static unsigned char *g_blockinfo;
 #endif
 
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-static struct memory_region_s g_memory_region[] =
-  {
-    CONFIG_BOARD_MEMORY_RANGE
-  };
-#endif
 static const struct memory_region_s *g_regions;
 
 /****************************************************************************
@@ -288,11 +282,11 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
 
   elf_emit(cinfo, &nhdr, sizeof(nhdr));
 
-  strlcpy(name, tcb->name, sizeof(name));
+  strlcpy(name, get_task_name(tcb), sizeof(name));
   elf_emit(cinfo, name, sizeof(name));
 
   info.pr_pid   = tcb->pid;
-  strlcpy(info.pr_fname, tcb->name, sizeof(info.pr_fname));
+  strlcpy(info.pr_fname, get_task_name(tcb), sizeof(info.pr_fname));
   elf_emit(cinfo, &info, sizeof(info));
 
   /* Fill Process status */
@@ -486,6 +480,13 @@ static void elf_emit_memory(FAR struct elf_dumpinfo_s *cinfo, int memsegs)
         }
       else
         {
+          /* Skip the Non-Write segment because it's unnecessary. */
+
+          if ((cinfo->regions[i].flags & PF_W) == 0)
+            {
+              continue;
+            }
+
           elf_emit(cinfo, (FAR void *)cinfo->regions[i].start,
                    cinfo->regions[i].end - cinfo->regions[i].start);
         }
@@ -720,7 +721,7 @@ static void coredump_dump_blkdev(pid_t pid)
 
   info->magic = COREDUMP_MAGIC;
   info->size  = g_blockstream.common.nput;
-  info->time  = time(NULL);
+  clock_gettime(CLOCK_REALTIME, &info->time);
   uname(&info->name);
   ret = g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
       (FAR void *)info, g_blockstream.geo.geo_nsectors - nsectors, nsectors);
@@ -730,25 +731,41 @@ static void coredump_dump_blkdev(pid_t pid)
       return;
     }
 
+  /* Close block device directly, make sure all data write to block device */
+
+  ret = g_blockstream.inode->u.i_bops->close(g_blockstream.inode);
+  if (ret < 0)
+    {
+      _alert("Coredump information close fail\n");
+      return;
+    }
+
   _alert("Finish coredump, write %d bytes to %s\n",
          info->size, CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
 }
 #endif
 
 /****************************************************************************
- * Name: coredump_set_memory_region
+ * Name: coredump_initialize_memory_region
  *
  * Description:
- *   Set do coredump memory region.
+ *   initialize the memory region with board memory range specified in config
  *
  ****************************************************************************/
 
-int coredump_set_memory_region(FAR const struct memory_region_s *region)
+static int coredump_initialize_memory_region(void)
 {
-  /* Not free g_regions, because allow call this fun when crash */
+  if (g_regions == NULL && CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
+    {
+      g_regions = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
+      if (g_regions == NULL)
+        {
+          _alert("Coredump memory region alloc fail\n");
+          return -ENOMEM;
+        }
+    }
 
-  g_regions = region;
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
@@ -759,10 +776,18 @@ int coredump_set_memory_region(FAR const struct memory_region_s *region)
  *
  ****************************************************************************/
 
-int coredump_add_memory_region(FAR const void *ptr, size_t size)
+int coredump_add_memory_region(FAR const void *ptr, size_t size,
+                               uint32_t flags)
 {
   FAR struct memory_region_s *region;
   size_t count = 1; /* 1 for end flag */
+  int ret;
+
+  ret = coredump_initialize_memory_region();
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   if (g_regions != NULL)
     {
@@ -777,11 +802,12 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size)
 
               return 0;
             }
-          else if ((uintptr_t)ptr < region->end &&
+          else if ((uintptr_t)ptr < region->start &&
                    (uintptr_t)ptr + size >= region->end)
             {
-              /* start in region, end out of region */
+              /* start out of region, end out of region */
 
+              region->start = (uintptr_t)ptr;
               region->end = (uintptr_t)ptr + size;
               return 0;
             }
@@ -793,12 +819,11 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size)
               region->start = (uintptr_t)ptr;
               return 0;
             }
-          else if ((uintptr_t)ptr < region->start &&
+          else if ((uintptr_t)ptr < region->end &&
                    (uintptr_t)ptr + size >= region->end)
             {
-              /* start out of region, end out of region */
+              /* start in region, end out of region */
 
-              region->start = (uintptr_t)ptr;
               region->end = (uintptr_t)ptr + size;
               return 0;
             }
@@ -810,26 +835,16 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size)
       /* Need a new region */
     }
 
-  region = lib_malloc(sizeof(struct memory_region_s) * (count + 1));
+  region = lib_realloc((FAR void *)g_regions,
+                       sizeof(struct memory_region_s) * (count + 1));
   if (region == NULL)
     {
       return -ENOMEM;
     }
 
-  memcpy(region, g_regions, sizeof(struct memory_region_s) * count);
-
-  if (g_regions != NULL
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-    && g_regions != g_memory_region
-#endif
-    )
-    {
-      lib_free((FAR void *)g_regions);
-    }
-
   region[count - 1].start = (uintptr_t)ptr;
   region[count - 1].end = (uintptr_t)ptr + size;
-  region[count - 1].flags = 0;
+  region[count - 1].flags = flags;
   region[count].start = 0;
   region[count].end = 0;
   region[count].flags = 0;
@@ -852,17 +867,21 @@ int coredump_initialize(void)
   blkcnt_t nsectors;
   int ret = 0;
 
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-  g_regions = g_memory_region;
-#endif
+  ret = coredump_initialize_memory_region();
+  if (ret < 0)
+    {
+      return ret;
+    }
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
   ret = lib_blkoutstream_open(&g_blockstream,
                               CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
   if (ret < 0)
     {
-      _alert("%s Coredump device not found\n",
-             CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
+      _alert("%s Coredump device not found (%d)\n",
+             CONFIG_BOARD_COREDUMP_BLKDEV_PATH, ret);
+      free_memory_region(g_regions);
+      g_regions = NULL;
       return ret;
     }
 
@@ -874,6 +893,8 @@ int coredump_initialize(void)
   if (g_blockinfo == NULL)
     {
       _alert("Coredump device memory alloc fail\n");
+      free_memory_region(g_regions);
+      g_regions = NULL;
       lib_blkoutstream_close(&g_blockstream);
       return -ENOMEM;
     }
