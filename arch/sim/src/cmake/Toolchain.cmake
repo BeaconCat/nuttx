@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/sim/src/cmake/Toolchain.cmake
+# arch/sim/cmake/Toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -92,9 +92,12 @@ if(CONFIG_SCHED_GCOV)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
+if(CONFIG_SCHED_GPROF_ALL OR CONFIG_SIM_GPROF)
+  add_compile_options(-pg)
+endif()
+
 if(CONFIG_SIM_ASAN)
   add_compile_options(-fsanitize=address)
-  add_link_options(-fsanitize=address)
   add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
@@ -108,7 +111,6 @@ if(CONFIG_MM_KASAN_GLOBAL)
 endif()
 
 if(CONFIG_SIM_UBSAN)
-  add_link_options(-fsanitize=undefined)
   add_compile_options(-fsanitize=undefined)
   add_link_options(-fsanitize=undefined)
 else()
@@ -190,5 +192,6 @@ endif()
 if(APPLE)
   add_link_options(-Wl,-dead_strip)
 else()
+  add_link_options(-Wl,--gc-sections)
   add_link_options(-Wl,-Ttext-segment=0x40000000)
 endif()

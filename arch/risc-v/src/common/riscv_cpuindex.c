@@ -43,7 +43,9 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void)
 {
   return (int)riscv_mhartid();
 }
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
