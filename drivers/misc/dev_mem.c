@@ -34,13 +34,6 @@
 
 #define DEVMEM_REGION 8
 
-#ifdef CONFIG_BOARD_MEMORY_RANGE
-static const struct memory_region_s g_memory_region[] =
-  {
-    CONFIG_BOARD_MEMORY_RANGE
-  };
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -98,8 +91,6 @@ static ssize_t devmem_read(FAR struct file *filep, FAR char *buffer,
   ssize_t len;
   int i;
 
-  DEBUGASSERT(region && src);
-
   for (i = 0; i < DEVMEM_REGION; i++)
     {
       if (region[i].start == 0 && region[i].end == 0)
@@ -135,8 +126,6 @@ static ssize_t devmem_write(FAR struct file *filep, FAR const char *buffer,
   ssize_t len;
   int i;
 
-  DEBUGASSERT(region && dest);
-
   for (i = 0; i < DEVMEM_REGION; i++)
     {
       if (region[i].start == 0 && region[i].end == 0)
@@ -169,8 +158,6 @@ static int devmem_mmap(FAR struct file *filep,
   uintptr_t start;
   uintptr_t end;
   int i;
-
-  DEBUGASSERT(region);
 
   if (map->offset < 0)
     {
@@ -215,50 +202,58 @@ static int devmem_mmap(FAR struct file *filep,
 int devmem_register(void)
 {
   FAR struct memory_region_s *region;
-  int ret;
-
-#ifndef CONFIG_BOARD_MEMORY_RANGE
   bool merge = (&_edata[0] == &_sbss[0]);
   ssize_t len = 0;
+  int ret;
+
   region = kmm_calloc(DEVMEM_REGION, sizeof(*region));
   if (region == NULL)
     {
       return -ENOMEM;
     }
 
-  if (len + (4 - merge) > DEVMEM_REGION)
+  if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
     {
-      len = DEVMEM_REGION - (4 - merge);
-    }
-
-    region[len].flags = PROT_EXEC | PROT_READ;
-    region[len].start = (uintptr_t)_stext;
-    region[len++].end = (uintptr_t)_etext;
-    region[len].flags = PROT_WRITE | PROT_READ;
-    region[len].start = (uintptr_t)_sdata;
-    region[len++].end = (uintptr_t)_edata;
-
-  if (merge)
-    {
-      region[len - 1].end = (uintptr_t)_ebss;
+      len = parse_memory_region(CONFIG_BOARD_MEMORY_RANGE, region,
+                                DEVMEM_REGION - 1);
+      if (len < 0)
+        {
+          kmm_free(region);
+          return len;
+        }
     }
   else
     {
+      if (len + (4 - merge) > DEVMEM_REGION)
+        {
+          len = DEVMEM_REGION - (4 - merge);
+        }
+
+      region[len].flags = PROT_EXEC | PROT_READ;
+      region[len].start = (uintptr_t)_stext;
+      region[len++].end = (uintptr_t)_etext;
       region[len].flags = PROT_WRITE | PROT_READ;
-      region[len].start = (uintptr_t)_sbss;
-      region[len++].end = (uintptr_t)_ebss;
+      region[len].start = (uintptr_t)_sdata;
+      region[len++].end = (uintptr_t)_edata;
+
+      if (merge)
+        {
+          region[len - 1].end = (uintptr_t)_ebss;
+        }
+      else
+        {
+          region[len].flags = PROT_WRITE | PROT_READ;
+          region[len].start = (uintptr_t)_sbss;
+          region[len++].end = (uintptr_t)_ebss;
+        }
     }
-#else
-  region = (FAR struct memory_region_s *)g_memory_region;
-#endif
+
   /* register the new MEM driver */
 
   ret = register_driver("/dev/mem", &g_devmem_fops, 0666, region);
   if (ret < 0)
     {
-#ifndef CONFIG_BOARD_MEMORY_RANGE
       kmm_free(region);
-#endif
       return -ENOMEM;
     }
 

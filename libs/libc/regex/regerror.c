@@ -1,8 +1,10 @@
 /****************************************************************************
  * libs/libc/regex/regerror.c
  *
- * SPDX-License-Identifier: BSD-2-Clause
- * SPDX-FileCopyrightText: 2001-2009 Ville Laurikari <vl@iki.fi>
+ * regerror.c - TRE POSIX compatible matching functions (and more).
+ *
+ *  Copyright (c) 2001-2009 Ville Laurikari <vl@iki.fi>
+ *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
