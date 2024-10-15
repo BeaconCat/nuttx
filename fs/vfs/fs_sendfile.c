@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/net.h>
 #include "fs_heap.h"
@@ -38,7 +39,7 @@
  ****************************************************************************/
 
 static ssize_t copyfile(FAR struct file *outfile, FAR struct file *infile,
-                        FAR off_t *offset, size_t count)
+                        off_t *offset, size_t count)
 {
   FAR uint8_t *iobuffer;
   FAR uint8_t *wrbuffer;
@@ -244,7 +245,7 @@ static ssize_t copyfile(FAR struct file *outfile, FAR struct file *infile,
  ****************************************************************************/
 
 ssize_t file_sendfile(FAR struct file *outfile, FAR struct file *infile,
-                      FAR off_t *offset, size_t count)
+                      off_t *offset, size_t count)
 {
   if (count == 0)
     {
@@ -328,7 +329,7 @@ ssize_t file_sendfile(FAR struct file *outfile, FAR struct file *infile,
  *
  ****************************************************************************/
 
-ssize_t sendfile(int outfd, int infd, FAR off_t *offset, size_t count)
+ssize_t sendfile(int outfd, int infd, off_t *offset, size_t count)
 {
   FAR struct file *outfile;
   FAR struct file *infile;

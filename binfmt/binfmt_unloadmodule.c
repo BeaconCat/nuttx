@@ -1,8 +1,6 @@
 /****************************************************************************
  * binfmt/binfmt_unloadmodule.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,6 +30,7 @@
 #include <debug.h>
 #include <errno.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/binfmt/binfmt.h>

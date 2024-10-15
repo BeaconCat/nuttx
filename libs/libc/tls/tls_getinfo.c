@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/tls/tls_getinfo.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,7 +28,6 @@
 #include <assert.h>
 
 #include <nuttx/tls.h>
-#include <nuttx/sched.h>
 
 #if !defined(up_tls_info) && (defined(__KERNEL__) || !defined(CONFIG_TLS_ALIGNED))
 
