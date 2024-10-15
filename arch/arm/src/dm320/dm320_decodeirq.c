@@ -34,7 +34,6 @@
 
 #include "chip.h"
 #include "arm_internal.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Public Functions
