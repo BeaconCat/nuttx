@@ -209,20 +209,13 @@ static inline void up_irq_restore(irqstate_t flags)
 
 #if defined(REG_PC2)
 #  define up_getusrpc(regs) \
-    ((regs) ? \
-     ((((uint8_t *)(regs))[REG_PC0] << 16) | \
-      (((uint8_t *)(regs))[REG_PC1] <<  8) | \
-      (((uint8_t *)(regs))[REG_PC2] <<  0)) : \
-     (((uint8_t *)up_current_regs())[REG_PC0] << 16) | \
-     (((uint8_t *)up_current_regs())[REG_PC1] <<  8) | \
-     (((uint8_t *)up_current_regs())[REG_PC2] <<  0))
+    ((((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC0] << 16) | \
+     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC1] <<  8) | \
+     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC2] <<  0))
 #else
 #  define up_getusrpc(regs) \
-    ((regs) ? \
-     ((((uint8_t *)(regs))[REG_PC0] << 8) | \
-      (((uint8_t *)(regs))[REG_PC1] << 0)) : \
-     (((uint8_t *)up_current_regs())[REG_PC0] << 8) | \
-     (((uint8_t *)up_current_regs())[REG_PC1] << 0))
+    ((((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC0] << 8) | \
+     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC1] << 0))
 #endif
 
 #ifndef __ASSEMBLY__

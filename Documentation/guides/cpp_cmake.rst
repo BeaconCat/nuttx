@@ -1,7 +1,6 @@
 .. include:: /substitutions.rst
 .. _cpp_cmake:
 
-=======================
 C++ Example using CMake
 =======================
 
@@ -25,7 +24,7 @@ applications using C++ language and also the cmake build tool.
 This document will show how to reimplement the hellocpp project using this cmake.
 
 Preparation
-===========
+-----------
 
 #. Base NuttX compilation changes
 
@@ -47,7 +46,7 @@ Preparation
        $ make export
 
 Creating the project
-====================
+--------------------
 
 #. Create your project file structure
 
@@ -269,7 +268,7 @@ Creating the project
     }
 
 Building
-========
+--------
 
 To launch build, you use the cmake procedure:
 

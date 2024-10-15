@@ -76,6 +76,7 @@ struct mpfs_pwmtimer_s
   struct mpfs_pwmchan_s channels[MPFS_MAX_PWM_CHANNELS];
   uint32_t frequency;          /* Current frequency setting */
   uintptr_t base;              /* The base address of the pwm block */
+  uint32_t pwmclk;             /* The frequency of the pwm clock */
 };
 
 /****************************************************************************
@@ -186,6 +187,7 @@ static struct mpfs_pwmtimer_s g_pwm0dev =
     }
   },
   .base        = CONFIG_MPFS_COREPWM0_BASE,
+  .pwmclk      = CONFIG_MPFS_COREPWM0_PWMCLK,
 };
 #endif
 
@@ -247,6 +249,7 @@ static struct mpfs_pwmtimer_s g_pwm1dev =
     }
   },
   .base        = CONFIG_MPFS_COREPWM1_BASE,
+  .pwmclk      = CONFIG_MPFS_COREPWM1_PWMCLK,
 };
 #endif
 
@@ -401,12 +404,12 @@ static int pwm_timer(struct mpfs_pwmtimer_s *priv,
    *    PERIOD = pwmclk / frequency = 25,000,000 / 50 = 500,000
    */
 
-  pwminfo("PWM%u frequency: %u PWMCLK: %lu prescaler: %u\n",
-          priv->pwmid, info->frequency, MPFS_FPGA_PERIPHERAL_CLK, prescaler);
+  pwminfo("PWM%u frequency: %u PWMCLK: %u prescaler: %u\n",
+          priv->pwmid, info->frequency, priv->pwmclk, prescaler);
 
   /* Set the reload and prescaler values */
 
-  period = MPFS_FPGA_PERIPHERAL_CLK / info->frequency;
+  period = priv->pwmclk / info->frequency;
 
   pwm_putreg(priv, MPFS_COREPWM_PERIOD_OFFSET, period);
   pwm_putreg(priv, MPFS_COREPWM_PRESCALE_OFFSET, prescaler);
@@ -557,13 +560,6 @@ static int pwm_setup(struct pwm_lowerhalf_s *dev)
   struct mpfs_pwmtimer_s *priv = (struct mpfs_pwmtimer_s *)dev;
 
   pwminfo("PWMID%u\n", priv->pwmid);
-
-  /* Make sure that frequency is zero and channels has been disabled */
-
-  priv->frequency = 0;
-  pwm_putreg(priv, MPFS_COREPWM_PWM_ENABLE_0_7_OFFSET,  0x00);
-  pwm_putreg(priv, MPFS_COREPWM_PWM_ENABLE_8_15_OFFSET, 0x00);
-
   pwm_dumpregs(priv, "Initially");
 
   return OK;
