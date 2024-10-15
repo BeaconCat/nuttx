@@ -31,6 +31,7 @@
 
 #include <debug.h>
 
+#include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/mutex.h>
 
@@ -124,7 +125,7 @@ static struct inode g_timerfd_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  1,                      /* i_crefs */
+  ATOMIC_VAR_INIT(1),     /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_timerfd_fops       /* u */
