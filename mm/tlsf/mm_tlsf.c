@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/tlsf/mm_tlsf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,7 +42,6 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
-#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 
 #include "tlsf/tlsf.h"
@@ -319,10 +320,10 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
 static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 {
+  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -366,8 +367,8 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-  return ret;
 #endif
+  return ret;
 }
 
 #if defined(CONFIG_MM_HEAP_MEMPOOL) && CONFIG_MM_BACKTRACE >= 0
@@ -604,7 +605,7 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
   if (delay)
 #endif
     {
-      memset(mem, MM_FREE_MAGIC, size);
+      memset(mem, MM_FREE_MAGIC, nodesize);
     }
 #endif
 
@@ -620,7 +621,7 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
         {
           /* Update heap statistics */
 
-          heap->mm_curused -= mm_malloc_size(heap, mem);
+          heap->mm_curused -= size;
           sched_note_heap(NOTE_HEAP_FREE, heap, mem, size, heap->mm_curused);
           tlsf_free(heap->mm_tlsf, mem);
         }
@@ -680,7 +681,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   /* Use the fill value to mark uninitialized user memory */
 
-  memset(heapstart, MM_INIT_MAGIC, heapsize);
+  memset(heapstart, 0xcc, heapsize);
 #endif
 
   /* Register to KASan for access check */
@@ -1361,7 +1362,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       ret = kasan_unpoison(ret, nodesize);
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(ret, MM_ALLOC_MAGIC, nodesize);
+      memset(ret, 0xaa, nodesize);
 #endif
     }
 
@@ -1485,10 +1486,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                      size_t size)
 {
   FAR void *newmem;
-#ifndef CONFIG_MM_KASAN
   size_t oldsize;
   size_t newsize;
-#endif
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
@@ -1655,6 +1654,22 @@ FAR void *mm_zalloc(FAR struct mm_heap_s *heap, size_t size)
 }
 
 /****************************************************************************
+ * Name: mm_free_delaylist
+ *
+ * Description:
+ *   force freeing the delaylist of this heap.
+ *
+ ****************************************************************************/
+
+void mm_free_delaylist(FAR struct mm_heap_s *heap)
+{
+  if (heap)
+    {
+       free_delaylist(heap, true);
+    }
+}
+
+/****************************************************************************
  * Name: mm_heapfree
  *
  * Description:
@@ -1678,20 +1693,4 @@ size_t mm_heapfree(FAR struct mm_heap_s *heap)
 size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 {
   return SIZE_MAX;
-}
-
-/****************************************************************************
- * Name: mm_free_delaylist
- *
- * Description:
- *   force freeing the delaylist of this heap.
- *
- ****************************************************************************/
-
-void mm_free_delaylist(FAR struct mm_heap_s *heap)
-{
-  if (heap)
-    {
-       free_delaylist(heap, true);
-    }
 }
