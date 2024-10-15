@@ -32,10 +32,6 @@
 #include <nuttx/clock.h>
 #include <nuttx/sched_note.h>
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
-#  include <nuttx/perf.h>
-#endif
-
 #include "irq/irq.h"
 #include "sched/sched.h"
 
@@ -63,11 +59,6 @@
 
 void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 {
-  if (!tcb)
-    {
-      return;
-    }
-
 #ifdef CONFIG_SCHED_SPORADIC
   if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
     {
@@ -84,10 +75,6 @@ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   sched_note_resume(tcb);
-#endif
-
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  perf_event_task_sched_in(tcb);
 #endif
 }
 
