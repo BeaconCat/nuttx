@@ -1,6 +1,8 @@
 /***************************************************************************
  * libs/libc/machine/arm/armv8-m/gnu/arch_strcpy.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -66,11 +68,11 @@
     .syntax unified
     .text
     .align  2
-    .global ARCH_LIBCFUN(strcpy)
+    .global strcpy
     .thumb
-    .type   ARCH_LIBCFUN(strcpy), %function
+    .type   strcpy, %function
 
-ARCH_LIBCFUN(strcpy):
+strcpy:
 #if __ARM_FEATURE_PAC_DEFAULT
 #  if __ARM_FEATURE_BTI_DEFAULT
     pacbti  ip, lr, sp
