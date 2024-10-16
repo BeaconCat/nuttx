@@ -45,6 +45,7 @@
 #include <nuttx/serial/pty.h>
 #include <nuttx/serial/uart_hostfs.h>
 #include <nuttx/serial/uart_ram.h>
+#include <nuttx/sysevent/sysevent_dev.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
 #include <nuttx/thermal.h>
@@ -54,19 +55,11 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/drivers/optee.h>
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Check if only one console device is selected.
- * If you get this errro, search your .config file for CONSOLE_XXX_CONSOLE
- * options and remove what is not needed.
- */
-
-#if (defined(CONFIG_LWL_CONSOLE) + defined(CONFIG_SERIAL_CONSOLE) + \
-     defined(CONFIG_CDCACM_CONSOLE) + defined(CONFIG_PL2303_CONSOLE) + \
-     defined(CONFIG_SERIAL_RTT_CONSOLE) + defined(CONFIG_RPMSG_UART_CONSOLE)) > 1
-#  error More than one console driver selected. Check your configuration !
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <perf/pmu.h>
+#endif
+#ifdef CONFIG_DRIVERS_BINDER
+#  include <nuttx/android/binder.h>
 #endif
 
 /****************************************************************************
@@ -113,6 +106,10 @@ void drivers_initialize(void)
   /* Register devices */
 
   syslog_initialize();
+
+#ifdef CONFIG_SYSEVENT
+  sysevent_dev_init();
+#endif
 
 #ifdef CONFIG_SERIAL_RTT
   serial_rtt_initialize();
@@ -192,6 +189,10 @@ void drivers_initialize(void)
   ptmx_register();
 #endif
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  pmu_initialize();
+#endif
+
 #if defined(CONFIG_CRYPTO)
   /* Initialize the HW crypto and /dev/crypto */
 
@@ -264,6 +265,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_MTD_LOOP
   mtd_loop_register();
+#endif
+
+#ifdef CONFIG_DRIVERS_BINDER
+  binder_initialize();
 #endif
 
 #if defined(CONFIG_PCI) && !defined(CONFIG_PCI_LATE_DRIVERS_REGISTER)

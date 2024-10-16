@@ -1,8 +1,6 @@
 /****************************************************************************
  * audio/audio.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -751,7 +749,6 @@ static inline void audio_complete(FAR struct audio_upperhalf_s *upper,
 
   /* Send a dequeue message to the user if a message queue is registered */
 
-  upper->started = false;
   if (upper->usermq != NULL)
     {
       msg.msg_id = AUDIO_MSG_COMPLETE;
