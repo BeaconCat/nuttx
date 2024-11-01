@@ -99,6 +99,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       g_running_tasks[this_cpu()] = tcb;
 
+      /* Record the new "running" task */
+
+      g_running_tasks[this_cpu()] = tcb;
+
       /* Then switch contexts */
 
       or1k_fullcontextrestore(tcb->xcp.regs);

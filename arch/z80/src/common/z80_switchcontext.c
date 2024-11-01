@@ -99,6 +99,10 @@ void up_switch_context(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 
       g_running_tasks[this_cpu()] = tcb;
 
+      /* Record the new "running" task */
+
+      g_running_tasks[this_cpu()] = tcb;
+
       /* Then switch contexts */
 
       RESTORE_USERCONTEXT(tcb);

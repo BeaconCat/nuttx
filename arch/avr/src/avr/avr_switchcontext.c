@@ -77,6 +77,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       g_running_tasks[this_cpu()] = tcb;
 
+      /* Record the new "running" task */
+
+      g_running_tasks[this_cpu()] = tcb;
+
       /* Switch context to the context of the task at the head of the
        * ready to run list.
        */
