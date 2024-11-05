@@ -77,6 +77,11 @@ set(CMAKE_INSTALL_PREFIX
     ${CMAKE_BINARY_DIR}/staging
     CACHE PATH "Global install prefix" FORCE)
 
+# default install path is from the original Makefile staging.
+set(CMAKE_INSTALL_PREFIX
+    ${CMAKE_BINARY_DIR}/staging
+    CACHE PATH "Global install prefix" FORCE)
+
 # Setup build type (Debug Release RelWithDebInfo MinSizeRel Coverage). Default
 # to minimum size release
 
