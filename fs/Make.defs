@@ -1,7 +1,5 @@
 # ##############################################################################
-# arch/x86_64/src/goldfish/CMakeLists.txt
-#
-# SPDX-License-Identifier: Apache-2.0
+# fs/Make.defs
 #
 # SPDX-License-Identifier: Apache-2.0
 #
