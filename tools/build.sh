@@ -214,9 +214,6 @@ function setup_toolchain()
             "gcc" \
             "clang" )
 
-  if [ "$XTENSAD_LICENSE_FILE" == "" ]; then
-    export XTENSAD_LICENSE_FILE=28000@0.0.0.0
-  fi
   # WASI SDK is clang based toolchain to build WebAssembly targets
   export WASI_SDK_PATH=${ROOTDIR}/prebuilts/clang/${SYSTEM}/wasm
   # Wasm toolchain is used to optimize wasm binaries
@@ -443,7 +440,6 @@ function build_board_cmake()
   fi
 }
 
-
 function setup_cmake_binary_dir()
 {
   local boardconfig=$1
@@ -565,4 +561,3 @@ else
     build_board_cmake ${board_config} $*
   fi
 fi
-
