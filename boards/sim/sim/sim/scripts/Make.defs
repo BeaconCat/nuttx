@@ -284,8 +284,8 @@ CELFFLAGS += -fno-pic
 CXXELFFLAGS += -fno-pic
 ifeq ($(CONFIG_ARCH_64BIT),y)
   # See the comment on CMODULEFLAGS above.
-  CELFFLAGS += -mcmodel=large
-  CXXELFFLAGS += -mcmodel=large
+  CELFFLAGS += -mcmodel=medium
+  CXXELFFLAGS += -mcmodel=medium
 endif
 
 LDELFFLAGS = -r -e main --gc-sections
