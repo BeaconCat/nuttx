@@ -1,7 +1,5 @@
 /****************************************************************************
- * libs/libc/assert/lib_assert.c
- *
- * SPDX-License-Identifier: Apache-2.0
+ * arch/sparc/src/sparc_v8/sparc_v8_assert.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,31 +22,20 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <nuttx/arch.h>
-
-#include <assert.h>
-#include <stdlib.h>
+#include <arch/syscall.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-void __assert(FAR const char *filename, int linenum, FAR const char *msg)
-{
-#ifdef CONFIG_BUILD_FLAT
-  if (up_interrupt_context())
-    {
-      _assert(filename, linenum, msg, NULL, true);
-    }
-  else
-#endif
-    {
-#ifdef CONFIG_ARCH_HAVE_SYSCALL
-      up_assert(filename, linenum, msg);
-#else
-      _assert(filename, linenum, msg, NULL, false);
-#endif
-    }
+/****************************************************************************
+ * Name: up_assert
+ ****************************************************************************/
 
-  abort();
+void up_assert(const char *filename, int linenum, const char *msg)
+{
+  sys_call3(SYS_assert_handler, (uintptr_t)filename, (uintptr_t)linenum,
+            (uintptr_t)msg);
 }
