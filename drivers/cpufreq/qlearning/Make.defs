@@ -1,5 +1,5 @@
 ############################################################################
-# drivers/cpufreq/Make.defs
+# drivers/cpufreq/qlearning/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,43 +18,11 @@
 #
 ############################################################################
 
-# Include cpufreq sources
+CPUFREQ_QL_DIR = cpufreq/qlearning
 
-ifeq ($(CONFIG_CPUFREQ),y)
+CSRCS += \
+	$(CPUFREQ_QL_DIR)/qlearning_manager.c \
+	$(CPUFREQ_QL_DIR)/qlearning_dqn.c
 
-CSRCS += qos.c cpufreq.c freq_table.c
-
-ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_PERFORMANCE),y)
-
-CSRCS += cpufreq_performance.c
-
-endif
-
-ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_POWERSAVE),y)
-
-CSRCS += cpufreq_powersave.c
-
-endif
-
-ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_ONDEMAND),y)
-
-CSRCS += cpufreq_ondemand.c
-
-endif
-
-ifeq ($(CONFIG_CPUFREQ_PROCFS),y)
-
-CSRCS += cpufreq_procfs.c
-
-endif
-
-ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_QLEARNING),y)
-
-include cpufreq/qlearning/Make.defs
-
-endif
-
-DEPPATH += --dep-path cpufreq
-VPATH += cpufreq
-
-endif
+CFLAGS += \
+	-I$(TOPDIR)/drivers/cpufreq
