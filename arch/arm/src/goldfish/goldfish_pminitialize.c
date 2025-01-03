@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/goldfish/goldfish_idle.c
+ * arch/arm/src/goldfish/goldfish_pminitialize.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,9 +23,8 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <nuttx/arch.h>
 #include <nuttx/power/pm.h>
+
 #include "arm_internal.h"
 
 /****************************************************************************
@@ -33,53 +32,28 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_idle
+ * Name: arm_pminitialize
  *
  * Description:
- *   up_idle() is the logic that will be executed when there is no other
- *   ready-to-run task.  This is processor idle time and will continue until
- *   some interrupt occurs to cause a context switch from the idle task.
+ *   This function is called by MCU-specific logic at power-on reset in
+ *   order to provide one-time initialization the power management subsystem.
+ *   This function must be called *very* early in the initialization sequence
+ *   *before* any other device drivers are initialized (since they may
+ *   attempt to register with the power management subsystem).
  *
- *   Processing in this state may be processor-specific. e.g., this is where
- *   power management operations might be performed.
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_PM
-static void pm_idle_handler(enum pm_state_e state)
+void arm_pminitialize(void)
 {
-  switch (state)
-    {
-      case PM_NORMAL:
-        break;
+  /* Initialize the NuttX power management subsystem proper */
 
-      case PM_IDLE:
-      case PM_STANDBY:
-      case PM_SLEEP:
-      default:
-        asm("WFI");
-        break;
-    }
+  pm_initialize();
 }
 #endif /* CONFIG_PM */
-
-void up_idle(void)
-{
-#if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
-  /* If the system is idle and there are no timer interrupts, then process
-   * "fake" timer interrupts. Hopefully, something will wake up.
-   */
-
-  nxsched_process_timer();
-#else
-
-  /* Sleep until an interrupt occurs to save power */
-
-#ifdef CONFIG_PM
-  pm_idle(pm_idle_handler);
-#else
-  asm("WFI");
-#endif /* CONFIG_PM */
-
-#endif
-}
