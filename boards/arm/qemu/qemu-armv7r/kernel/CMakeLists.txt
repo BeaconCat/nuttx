@@ -1,5 +1,5 @@
 # ##############################################################################
-# boards/arm/qemu/qemu-armv7r/CMakeLists.txt
+# boards/arm/qemu/qemu-armv7r/kernel/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,12 +20,4 @@
 #
 # ##############################################################################
 
-set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/nuttx.ld")
-
-add_subdirectory(src)
-
-if(CONFIG_BUILD_PROTECTED)
-  add_subdirectory(kernel)
-  set_property(GLOBAL PROPERTY LD_SCRIPT_USER
-                               ${CMAKE_CURRENT_LIST_DIR}/scripts/nuttx_user.ld)
-endif()
+target_sources(nuttx_user PRIVATE qemu_userspace.c)
