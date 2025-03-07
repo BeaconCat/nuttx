@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/spawn/lib_psa_init.c
+ * libs/libc/spawn/lib_psa_getheapsize.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,24 +29,22 @@
 #include <sched.h>
 #include <spawn.h>
 #include <assert.h>
-#include <errno.h>
-
-#include <nuttx/sched.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: posix_spawnattr_init
+ * Name: posix_spawnattr_getheapsize
  *
  * Description:
- *   The posix_spawnattr_init() function initializes the object referenced
- *   by attr, to an empty set of spawn attributes for subsequent use in a
- *   call to posix_spawn() or posix_spawnp().
+ *   The posix_spawnattr_getheapsize() function will obtain the value of
+ *   the spawn-heapsize attribute from the attributes object referenced
+ *   by attr.
  *
  * Input Parameters:
- *   attr - The address of the spawn attributes to be initialized.
+ *   attr - The address spawn attributes to be queried.
+ *   heapsize - The location to return the spawn-heapsize value.
  *
  * Returned Value:
  *   On success, these functions return 0; on failure they return an error
@@ -54,63 +52,10 @@
  *
  ****************************************************************************/
 
-int posix_spawnattr_init(posix_spawnattr_t *attr)
+int posix_spawnattr_getheapsize(FAR const posix_spawnattr_t *attr,
+                                FAR size_t *heapsize)
 {
-  struct sched_param param;
-  int ret;
-
-  DEBUGASSERT(attr);
-
-  /* Flags: None */
-
-  attr->flags = 0;
-
-  /* Set the default priority to the same priority as this task */
-
-  ret = _SCHED_GETPARAM(0, &param);
-  if (ret < 0)
-    {
-      return _SCHED_ERRNO(ret);
-    }
-
-  attr->priority            = param.sched_priority;
-
-  /* Set the default scheduler policy to the policy of this task */
-
-  ret = _SCHED_GETSCHEDULER(0);
-  if (ret < 0)
-    {
-      return _SCHED_ERRNO(ret);
-    }
-
-  attr->policy              = ret;
-
-  /* Empty signal mask */
-
-  sigemptyset(&attr->sigmask);
-
-#ifdef CONFIG_SCHED_SPORADIC
-  /* Sporadic scheduling parameters */
-
-  attr->low_priority        = (uint8_t)param.sched_ss_low_priority;
-  attr->max_repl            = (uint8_t)param.sched_ss_max_repl;
-  attr->repl_period.tv_sec  = param.sched_ss_repl_period.tv_sec;
-  attr->repl_period.tv_nsec = param.sched_ss_repl_period.tv_nsec;
-  attr->budget.tv_sec       = param.sched_ss_init_budget.tv_sec;
-  attr->budget.tv_nsec      = param.sched_ss_init_budget.tv_nsec;
-#endif
-
-  /* Default stack size */
-
-  attr->stacksize           = CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE;
-
-#ifndef CONFIG_BUILD_KERNEL
-  attr->stackaddr           = NULL;
-#endif
-
-#ifdef CONFIG_MM_TASK_HEAP
-  attr->heapsize            = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
-#endif
-
+  DEBUGASSERT(attr && heapsize);
+  *heapsize = attr->heapsize;
   return OK;
 }
