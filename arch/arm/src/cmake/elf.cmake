@@ -1,7 +1,5 @@
 # ##############################################################################
-# libs/libc/modlib/CMakeLists.txt
-#
-# SPDX-License-Identifier: Apache-2.0
+# arch/arm/src/cmake/elf.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -20,42 +18,18 @@
 #
 # ##############################################################################
 
-if(CONFIG_LIBC_MODLIB)
+# Loadable and ELF module settings
 
-  list(
-    APPEND
-    SRCS
-    modlib_addrenv.c
-    modlib_bind.c
-    modlib_depend.c
-    modlib_init.c
-    modlib_iobuffer.c
-    modlib_load.c
-    modlib_loadhdrs.c
-    modlib_verify.c
-    modlib_read.c
-    modlib_registry.c
-    modlib_sections.c
-    modlib_symbols.c
-    modlib_symtab.c
-    modlib_uninit.c
-    modlib_unload.c
-    modlib_gethandle.c
-    modlib_getsymbol.c
-    modlib_insert.c
-    modlib_remove.c)
+nuttx_elf_compile_options(-fvisibility=hidden -mlong-calls)
 
-  list(APPEND SRCS modlib_globals.S)
+nuttx_elf_compile_options_ifdef(CONFIG_UNWINDER_ARM -fno-unwind-tables
+                                -fno-asynchronous-unwind-tables)
 
-  target_sources(c PRIVATE ${SRCS})
+nuttx_elf_compile_options_ifdef(CONFIG_PIC --fixed-r10 -mpic-register=r10)
 
-  set(ELF_LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/gnu-elf.ld")
+nuttx_elf_link_options_ifdef(
+  CONFIG_PIC --unresolved-symbols=ignore-in-object-files --emit-relocs)
 
-  nuttx_generate_preprocess_target(
-    SOURCE_FILE ${NUTTX_DIR}/libs/libc/modlib/gnu-elf.ld.in TARGET_FILE
-    ${ELF_LD_SCRIPT_TMP})
+nuttx_elf_link_options_ifdef(CONFIG_BINFMT_ELF_RELOCATABLE -r)
 
-  add_custom_target(elfldscript_tmp DEPENDS ${ELF_LD_SCRIPT_TMP})
-  add_dependencies(nuttx elfldscript_tmp)
-  add_dependencies(apps_post elfldscript_tmp)
-endif()
+nuttx_elf_link_options_ifdef(CONFIG_BUILD_KERNEL -Bstatic)
