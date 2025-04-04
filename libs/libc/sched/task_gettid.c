@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/task/task_gettid.c
+ * libs/libc/sched/task_gettid.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,20 +24,19 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <sys/types.h>
 #include <unistd.h>
-#include <sched.h>
-#include <errno.h>
 
-#include "sched/sched.h"
-#include "task/task.h"
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsched_gettid
+ * Name: gettid
  *
  * Description:
  *   Get the thread ID of the currently executing thread.
@@ -50,31 +49,8 @@
  *
  ****************************************************************************/
 
-pid_t nxsched_gettid(void)
+pid_t gettid(void)
 {
-  FAR struct tcb_s *rtcb = this_task();
-
-  /* Get the TCB at the head of the ready-to-run task list.  That
-   * will usually be the currently executing task.  There are one
-   * exceptions to this:
-   *
-   * 1. As described above, during certain context-switching conditions the
-   *    task at the head of the ready-to-run list may not actually be
-   *    running.
-   */
-
-  /* Check if the task is actually running */
-
-  if (rtcb->task_state == TSTATE_TASK_RUNNING)
-    {
-      /* Yes.. Return the task ID from the TCB at the head of the
-       * ready-to-run task list
-       */
-
-      return rtcb->pid;
-    }
-
-  /* No.. return -ESRCH to indicate this condition */
-
-  return (pid_t)-ESRCH;
+  FAR struct tls_info_s *tls = tls_get_info();
+  return tls->tl_tid;
 }
