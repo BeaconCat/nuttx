@@ -1,5 +1,5 @@
 /****************************************************************************
- * mm/umm_heap/umm_sbrk.c
+ * mm/mm_heap/mm_sbrk.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,18 +26,21 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
+#include <errno.h>
 #include <unistd.h>
 
 #include <nuttx/mm/mm.h>
-
-#include "umm_heap/umm_heap.h"
+#include <nuttx/addrenv.h>
+#include <nuttx/arch.h>
+#include <nuttx/pgalloc.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sbrk
+ * Name: mm_sbrk
  *
  * Description:
  *    The sbrk() function is used to change the amount of space allocated
@@ -51,37 +54,63 @@
  *    program break is returned by sbrk(0).
  *
  * Input Parameters:
+ *    heap - The heap to be used.
  *    incr - Specifies the number of bytes to add or to remove from the
  *      space allocated for the process.
+ *    mem  - The address of the new program break.
  *
  * Returned Value:
- *    Upon successful completion, sbrk() returns the prior break value.
- *    Otherwise, it returns (void *)-1 and sets errno to indicate the
- *    error:
- *
- *      ENOMEM - The requested change would allocate more space than
- *        allowed under system limits.
- *      EAGAIN - The total amount of system memory available for allocation
- *        to this process is temporarily insufficient. This may occur even
- *        though the space requested was less than the maximum data segment
- *        size.
+ *    ENOMEM - The requested change would allocate more space than
+ *      allowed under system limits.
+ *    EAGAIN - The total amount of system memory available for allocation
+ *      to this process is temporarily insufficient. This may occur even
+ *      though the space requested was less than the maximum data segment
+ *      size.
  *
  ****************************************************************************/
 
-FAR void *sbrk(intptr_t incr)
+int mm_sbrk(FAR struct mm_heap_s *heap, intptr_t incr, FAR void **mem)
 {
-  FAR void *mem;
-  int ret;
+  uintptr_t brkaddr;
+  uintptr_t allocbase;
+  unsigned int pgincr;
+  size_t bytesize;
 
-  /* Initialize the user heap if it wasn't yet */
-
-  umm_try_initialize();
-  ret = mm_sbrk(USR_HEAP, incr, &mem);
-  if (ret < 0)
+  DEBUGASSERT(incr >= 0);
+  if (incr < 0)
     {
-      set_errno(ret);
-      return (FAR void *)-1;
+      return -ENOSYS;
     }
 
-  return mem;
+  /* Get the current break address (NOTE: assumes region 0). */
+
+  brkaddr = (uintptr_t)mm_brkaddr(heap, 0);
+  if (incr > 0)
+    {
+      /* Convert the increment to multiples of the page size */
+
+      pgincr = MM_NPAGES(incr);
+
+      /* Allocate the requested number of pages and map them to the
+       * break address.
+       */
+
+      allocbase = pgalloc(brkaddr, pgincr);
+      if (allocbase == 0)
+        {
+          return -EAGAIN;
+        }
+
+      /* Extend the heap (region 0) */
+
+      bytesize = pgincr << MM_PGSHIFT;
+      mm_extend(heap, (FAR void *)allocbase, bytesize, 0);
+    }
+
+  if (mem)
+    {
+      *mem = (FAR void *)brkaddr;
+    }
+
+  return 0;
 }
