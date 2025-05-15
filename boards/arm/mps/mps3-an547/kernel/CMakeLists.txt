@@ -1,7 +1,5 @@
 # ##############################################################################
-# boards/arm/mps/mps3-an547/CMakeLists.txt
-#
-# SPDX-License-Identifier: Apache-2.0
+# boards/arm/mps/mps3-an547/kernel/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -20,10 +18,4 @@
 #
 # ##############################################################################
 
-add_subdirectory(src)
-
-if(CONFIG_BUILD_PROTECTED)
-  add_subdirectory(kernel)
-  set_property(GLOBAL PROPERTY LD_SCRIPT_USER
-                               ${CMAKE_CURRENT_LIST_DIR}/scripts/user-space.ld)
-endif()
+target_sources(nuttx_user PRIVATE mps_userspace.c)
