@@ -244,6 +244,9 @@ function setup_toolchain()
               export PATH=${TOOLCHAIN_BIN}:$PATH
           fi
       done
+      if [ -d ${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-esp32s3-elf/bin ]; then
+        export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-esp32s3-elf/bin:$PATH
+      fi
     done
   done
 
