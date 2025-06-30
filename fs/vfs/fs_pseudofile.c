@@ -497,6 +497,8 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
 
   atomic_fetch_add(&(*node)->i_crefs, 1);
 
+  atomic_fetch_add(&(*node)->i_crefs, 1);
+
   inode_unlock();
 #ifdef CONFIG_FS_NOTIFY
   notify_create(path);
