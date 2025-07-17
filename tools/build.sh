@@ -203,6 +203,8 @@ function setup_toolchain()
       "xtensa" \
       "arm" \
       "arm64" \
+      "aarch64" \
+      "riscv" \
       "risc-v" \
       "x86_64" \
       "tc32" )
@@ -236,8 +238,13 @@ function setup_toolchain()
       elif [ -d ${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}/${ARCH[$i]}/bin ]; then
         export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}/${ARCH[$i]}/bin:$PATH
       fi
-      if [ -d ${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-none-linux-gnu/bin ]; then
-        export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-none-linux-gnu/bin:$PATH
+      for TOOLCHAIN_BIN in ${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-none-{eabi,elf}/bin; do
+        if [ -d ${TOOLCHAIN_BIN} ]; then
+          export PATH=${TOOLCHAIN_BIN}:${PATH}
+        fi
+      done
+      if [ -d ${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-esp32s3-elf/bin ]; then
+        export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}-${SYS_ARCH}/${ARCH[$i]}-esp32s3-elf/bin:$PATH
       fi
     done
   done
