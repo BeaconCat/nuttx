@@ -97,10 +97,6 @@ ifeq ($(CONFIG_LIBSUPCXX_TOOLCHAIN),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
 endif
 
-ifeq ($(CONFIG_CXX_EXCEPTION),y)
-  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcc_eh.a}}
-endif
-
 VPATH = chip:common:$(ARCH_SUBDIR)
 
 all: libarch$(LIBEXT)
