@@ -1,7 +1,5 @@
 ############################################################################
-# drivers/hwtracing/Make.defs
-#
-# SPDX-License-Identifier: Apache-2.0
+# drivers/hwtracing/tricoreht/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -20,21 +18,14 @@
 #
 ############################################################################
 
-# Include hwtracing driver build surrport
+# Include tricoreht driver build surrport
 
-ifeq ($(CONFIG_HWTRACING),y)
+ifeq ($(CONFIG_TRICOREHT),y)
 
-CSRCS += hwtracing.c
+CSRCS += tricoreht_trif_core.c tricoreht_trif_tfif.c tricoreht_mcds_core.c
 
-DEPPATH += --dep-path hwtracing
-VPATH += :hwtracing
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)hwtracing
+DEPPATH += --dep-path tricoreht
+VPATH += :tricoreht
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)tricoreht
 
-endif # CONFIG_HWTRACING
-
-ifeq ($(CONFIG_CORESIGHT),y)
-
-include hwtracing/coresight/Make.defs
-include hwtracing/tricoreht/Make.defs
-
-endif # CONFIG_CORESIGHT
+endif # CONFIG_TRICOREHT

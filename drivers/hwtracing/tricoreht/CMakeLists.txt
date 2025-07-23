@@ -1,5 +1,5 @@
 # ##############################################################################
-# drivers/hwtracing/CMakeLists.txt
+# drivers/hwtracing/coresight/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,16 +20,8 @@
 #
 # ##############################################################################
 
-if(CONFIG_CORESIGHT)
-  add_subdirectory(coresight)
-endif()
-
 if(CONFIG_TRICOREHT)
-  add_subdirectory(tricoreht)
-endif()
-
-if(CONFIG_HWTRACING)
-  set(SRCS hwtracing.c)
+  set(SRCS tricoreht_trif_core.c tricoreht_trif_tfif.c tricoreht_mcds_core.c)
 
   target_sources(drivers PRIVATE ${SRCS})
 endif()
