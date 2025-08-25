@@ -1,5 +1,6 @@
+#!/usr/bin/python3
 ############################################################################
-# tools/pynuttx/nxgdb/prefix.py
+# tools/pynuttx/gdbrpc/examples/memleak.py
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,39 +21,47 @@
 #
 ############################################################################
 
-import gdb
+import logging
+import os
+import queue
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+import gdbrpc  # noqa: E402
 
 
-class ForeachPrefix(gdb.Command):
-    """foreach commands prefix."""
-
+class FetchResult(gdbrpc.PostRequest):
     def __init__(self):
-        super(ForeachPrefix, self).__init__("foreach", gdb.COMMAND_USER, prefix=True)
+        super().__init__()
+
+    def __call__(self, result):
+        print(result)
 
 
-class MMPrefixCommand(gdb.Command):
-    """Memory manager related commands prefix."""
-
+class MemLeak(gdbrpc.Request):
     def __init__(self):
-        super().__init__("mm", gdb.COMMAND_USER, prefix=True)
+        super().__init__()
+
+    def __call__(self, q: queue.Queue):
+        import gdb
+
+        q.put(gdb.execute("memleak", to_string=True))
 
 
-class UVDumpPrefix(gdb.Command):
-    """UV Dump related commands prefix"""
+if __name__ == "__main__":
 
-    def __init__(self):
-        super().__init__("uv", gdb.COMMAND_USER, prefix=True)
+    client = gdbrpc.Client(logLevel=logging.DEBUG)
 
+    assert client.connect()
 
-class CrashPrefix(gdb.Command):
-    """Crash Dump related commands prefix"""
+    bt = FetchResult()
+    client.call(MemLeak(), bt)
 
-    def __init__(self):
-        super().__init__("crash", gdb.COMMAND_USER, prefix=True)
+    print("Waiting for async call to complete...")
 
+    bt.finish.wait()
 
-class GDBRpcPrefix(gdb.Command):
-    """GDB Remote Protocol related commands prefix"""
+    print("Async call completed.")
 
-    def __init__(self):
-        super().__init__("gdbrpc", gdb.COMMAND_USER, prefix=True)
+    client.disconnect()

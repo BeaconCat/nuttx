@@ -1,5 +1,5 @@
 ############################################################################
-# tools/pynuttx/nxgdb/prefix.py
+# tools/pynuttx/gdbrpc/__init__.py
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,39 +20,24 @@
 #
 ############################################################################
 
-import gdb
+import importlib.util
 
+__all__ = [
+    "Client",
+    "ClientCLI",
+    "PostRequest",
+    "Request",
+    "Response",
+    "ResponseStatus",
+    "Server",
+    "ShellExec",
+]
 
-class ForeachPrefix(gdb.Command):
-    """foreach commands prefix."""
+# Client must be imported first because ClientCLI depends on it
+from .client import Client
+from .utils import PostRequest, Request, Response, ResponseStatus, ShellExec
 
-    def __init__(self):
-        super(ForeachPrefix, self).__init__("foreach", gdb.COMMAND_USER, prefix=True)
+if importlib.util.find_spec("gdb") is not None:
+    from .server import Server  # noqa: F401
 
-
-class MMPrefixCommand(gdb.Command):
-    """Memory manager related commands prefix."""
-
-    def __init__(self):
-        super().__init__("mm", gdb.COMMAND_USER, prefix=True)
-
-
-class UVDumpPrefix(gdb.Command):
-    """UV Dump related commands prefix"""
-
-    def __init__(self):
-        super().__init__("uv", gdb.COMMAND_USER, prefix=True)
-
-
-class CrashPrefix(gdb.Command):
-    """Crash Dump related commands prefix"""
-
-    def __init__(self):
-        super().__init__("crash", gdb.COMMAND_USER, prefix=True)
-
-
-class GDBRpcPrefix(gdb.Command):
-    """GDB Remote Protocol related commands prefix"""
-
-    def __init__(self):
-        super().__init__("gdbrpc", gdb.COMMAND_USER, prefix=True)
+from .cli import ClientCLI

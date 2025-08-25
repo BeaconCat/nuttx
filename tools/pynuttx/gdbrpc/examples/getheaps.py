@@ -1,5 +1,6 @@
+#!/usr/bin/python3
 ############################################################################
-# tools/pynuttx/nxgdb/prefix.py
+# tools/pynuttx/gdbrpc/examples/getheaps.py
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -20,39 +21,34 @@
 #
 ############################################################################
 
-import gdb
+import os
+import queue
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+import gdbrpc  # noqa: E402
 
 
-class ForeachPrefix(gdb.Command):
-    """foreach commands prefix."""
-
+class Func(gdbrpc.Request):
     def __init__(self):
-        super(ForeachPrefix, self).__init__("foreach", gdb.COMMAND_USER, prefix=True)
+        super().__init__()
+
+    def __call__(self, q: queue.Queue):
+        import nxgdb
+
+        heaps = nxgdb.mm.get_heaps()
+        for heap in heaps:
+            print(heap)
+        q.put(list(map(str, heaps)))
 
 
-class MMPrefixCommand(gdb.Command):
-    """Memory manager related commands prefix."""
+if __name__ == "__main__":
 
-    def __init__(self):
-        super().__init__("mm", gdb.COMMAND_USER, prefix=True)
+    client = gdbrpc.Client()
 
+    assert client.connect()
 
-class UVDumpPrefix(gdb.Command):
-    """UV Dump related commands prefix"""
+    print(client.call(Func(), timeout=10))
 
-    def __init__(self):
-        super().__init__("uv", gdb.COMMAND_USER, prefix=True)
-
-
-class CrashPrefix(gdb.Command):
-    """Crash Dump related commands prefix"""
-
-    def __init__(self):
-        super().__init__("crash", gdb.COMMAND_USER, prefix=True)
-
-
-class GDBRpcPrefix(gdb.Command):
-    """GDB Remote Protocol related commands prefix"""
-
-    def __init__(self):
-        super().__init__("gdbrpc", gdb.COMMAND_USER, prefix=True)
+    client.disconnect()
