@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/syslog/lib_syslog.c
+ * drivers/syslog/setlogmask.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,82 +26,51 @@
 
 #include <nuttx/config.h>
 
-#include <stdarg.h>
+#include <stdint.h>
 #include <syslog.h>
 
 #include <nuttx/tls.h>
+#include <nuttx/sched.h>
 #include <nuttx/syslog/syslog.h>
 
-#include "syslog/syslog.h"
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+uint8_t g_syslog_mask = CONFIG_SYSLOG_DEFAULT_MASK;
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static void task_syslogmask(FAR struct tcb_s *tcb, FAR void *arg)
+{
+  FAR struct task_info_s *info = tcb->group->tg_info;
+
+  info->ta_syslog_mask = (uint8_t)(*(FAR const int *)arg);
+}
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: vsyslog
+ * Name: nx_setlogmask
  *
  * Description:
- *   The function vsyslog() performs the same task as syslog() with the
- *   difference that it takes a set of arguments which have been obtained
- *   using the stdarg variable argument list macros.
- *
- * Returned Value:
- *   None.
+ *   Like the standard setlogmask() function, nx_setlogmask() sets the all
+ *   system log mask to the specified value.  It also sets the per-task
+ *   log mask for all tasks.
  *
  ****************************************************************************/
 
-void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
+int nx_setlogmask(int mask)
 {
-  FAR struct task_info_s *info = task_get_info();
+  uint8_t oldmask;
 
-  /* Check if this priority is enabled */
+  oldmask = g_syslog_mask;
+  g_syslog_mask = (uint8_t)mask;
 
-  if ((info->ta_syslog_mask & LOG_MASK(priority)) != 0)
-    {
-      /* Yes.. Perform the nx_vsyslog system call.
-       *
-       * NOTE:  The va_list parameter is passed by reference.  That is
-       * because the va_list is a structure in some compilers and passing
-       * of structures in the NuttX syscalls does not work.
-       */
-
-#ifdef va_copy
-      va_list copy;
-
-      va_copy(copy, ap);
-      nx_vsyslog(priority, fmt, &copy);
-      va_end(copy);
-#else
-      nx_vsyslog(priority, fmt, &ap);
-#endif
-    }
-}
-
-/****************************************************************************
- * Name: syslog
- *
- * Description:
- *   syslog() generates a log message. The priority argument is formed by
- *   ORing the facility and the level values (see include/syslog.h). The
- *   remaining arguments are a format, as in printf and any arguments to the
- *   format.
- *
- *   The NuttX implementation does not support any special formatting
- *   characters beyond those supported by printf.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void syslog(int priority, FAR const IPTR char *fmt, ...)
-{
-  va_list ap;
-
-  /* Let vsyslog do the work */
-
-  va_start(ap, fmt);
-  vsyslog(priority, fmt, ap);
-  va_end(ap);
+  nxsched_foreach(task_syslogmask, &mask);
+  return oldmask;
 }
