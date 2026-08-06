@@ -26,22 +26,24 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
-#include <sys/types.h>
+#include <assert.h>
+#include <debug.h>
+#include <errno.h>
 #include <inttypes.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include <errno.h>
-#include <debug.h>
-
-#include <nuttx/kmalloc.h>
+#include <sys/param.h>
+#include <sys/types.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/pcm.h>
 
+#include <nuttx/kmalloc.h>
+
 #if defined(CONFIG_AUDIO) && defined(CONFIG_AUDIO_FORMAT_PCM)
+
+#define PCM_WAV_FORMAT_EXTENSIBLE 0xfffe
 
 /****************************************************************************
  * Private Types
@@ -87,6 +89,10 @@ struct pcm_decode_s
   uint8_t  bpsamp;                 /* Bits per sample: 8 bits = 8, 16 bits = 16 */
   uint8_t  nchannels;              /* Mono=1, Stereo=2 */
   bool     streaming;              /* Streaming PCM data chunk */
+  volatile bool mono; /* Downmix stereo frames when enabled */
+  volatile bool swap; /* Exchange left and right channels when enabled */
+  volatile bool invert_left;  /* Invert the left output polarity */
+  volatile bool invert_right; /* Invert the right output polarity */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
   /* Fast forward support */
@@ -110,7 +116,6 @@ static void pcm_dump(FAR const struct wav_header_s *wav);
 #endif
 
 #ifndef CONFIG_AUDIO_FORMAT_RAW
-static inline bool pcm_validwav(FAR const struct wav_header_s *wav);
 static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
                             apb_samp_t len);
 #endif
@@ -121,6 +126,9 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
 static void pcm_subsample(FAR struct pcm_decode_s *priv,
               FAR struct ap_buffer_s *apb);
 #endif
+
+static void pcm_transform_stereo(FAR struct pcm_decode_s *priv,
+                                 FAR struct ap_buffer_s *apb);
 
 /* struct audio_lowerhalf_s methods *****************************************/
 
@@ -282,26 +290,6 @@ static uint32_t pcm_leuint32(FAR const uint32_t *ptr)
 }
 
 /****************************************************************************
- * Name: pcm_validwav
- *
- * Description:
- *   Return true if this is a valid WAV file header
- *
- ****************************************************************************/
-
-static inline bool pcm_validwav(FAR const struct wav_header_s *wav)
-{
-  return (wav->hdr.chunkid  == WAV_HDR_CHUNKID  &&
-          wav->hdr.format   == WAV_HDR_FORMAT   &&
-          wav->fmt.chunkid  == WAV_FMT_CHUNKID  &&
-          wav->fmt.chunklen == WAV_FMT_CHUNKLEN &&
-          wav->fmt.format   == WAV_FMT_FORMAT   &&
-          wav->fmt.nchannels < 256              &&
-          wav->fmt.align     < 256              &&
-          wav->fmt.bpsamp    < 256);
-}
-
-/****************************************************************************
  * Name: pcm_parsewav
  *
  * Description:
@@ -314,99 +302,119 @@ static inline bool pcm_validwav(FAR const struct wav_header_s *wav)
 static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
                             apb_samp_t len)
 {
-  FAR const struct wav_header_s *wav = (FAR const struct wav_header_s *)data;
-  FAR const struct wav_datachunk_s *dchunk;
   struct wav_header_s localwav;
-  size_t ret = sizeof(struct wav_header_s);
+  uint32_t chunkid;
+  uint32_t chunklen;
+  uint16_t containerbits;
+  uint16_t validbits;
+  uint16_t format;
+  size_t offset;
+  bool havefmt = false;
 
-  if (len < sizeof(struct wav_header_s))
+  memset(&localwav, 0, sizeof(localwav));
+
+  if (len < 12)
     {
       return -EINVAL;
     }
 
-  /* Transfer the purported WAV file header into our stack storage,
-   * correcting for endian issues as needed.
-   */
-
-  localwav.hdr.chunkid   = pcm_leuint32(&wav->hdr.chunkid);
-  localwav.hdr.chunklen  = pcm_leuint32(&wav->hdr.chunklen);
-  localwav.hdr.format    = pcm_leuint32(&wav->hdr.format);
-
-  localwav.fmt.chunkid   = pcm_leuint32(&wav->fmt.chunkid);
-  localwav.fmt.chunklen  = pcm_leuint32(&wav->fmt.chunklen);
-  localwav.fmt.format    = pcm_leuint16(&wav->fmt.format);
-  localwav.fmt.nchannels = pcm_leuint16(&wav->fmt.nchannels);
-  localwav.fmt.samprate  = pcm_leuint32(&wav->fmt.samprate);
-  localwav.fmt.byterate  = pcm_leuint32(&wav->fmt.byterate);
-  localwav.fmt.align     = pcm_leuint16(&wav->fmt.align);
-  localwav.fmt.bpsamp    = pcm_leuint16(&wav->fmt.bpsamp);
-
-  /* Find the data chunk */
-
-  dchunk = &wav->data;
-
-  for (; ; )
+  localwav.hdr.chunkid   = pcm_leuint32((FAR const uint32_t *)&data[0]);
+  localwav.hdr.chunklen  = pcm_leuint32((FAR const uint32_t *)&data[4]);
+  localwav.hdr.format    = pcm_leuint32((FAR const uint32_t *)&data[8]);
+  if (localwav.hdr.chunkid != WAV_HDR_CHUNKID ||
+      localwav.hdr.format != WAV_HDR_FORMAT)
     {
-      /* NOTE: The data chunk is possible to be not word-aligned if extra
-       * chunks exist before it.
-       */
+      return -EINVAL;
+    }
 
-      localwav.data.chunkid  = pcm_leuint32(&dchunk->chunkid);
-      localwav.data.chunklen = pcm_leuint32(&dchunk->chunklen);
+  offset = 12;
+  while (offset + 8 <= len)
+    {
+      chunkid = pcm_leuint32((FAR const uint32_t *)&data[offset]);
+      chunklen = pcm_leuint32((FAR const uint32_t *)&data[offset + 4]);
 
-      if (localwav.data.chunkid == WAV_DATA_CHUNKID)
+      if (chunkid == WAV_DATA_CHUNKID)
         {
+          if (!havefmt)
+            {
+              return -EINVAL;
+            }
+
+          localwav.data.chunkid = chunkid;
+          localwav.data.chunklen = chunklen;
+          pcm_dump(&localwav);
           break;
         }
 
-      /* Not data chunk. Skip it. */
-
-      ret += localwav.data.chunklen + 8;
-      if (ret >= len)
+      if (offset + 8 + chunklen > len)
         {
-          /* Data chunk not found */
-
           return -EINVAL;
         }
 
-      dchunk = (FAR const struct wav_datachunk_s *)
-               ((uintptr_t)dchunk + localwav.data.chunklen + 8);
-    }
+      if (chunkid == WAV_FMT_CHUNKID)
+        {
+          FAR uint8_t *fmt = &data[offset + 8];
 
-  /* Dump the converted wave header information */
+          if (chunklen < WAV_FMT_CHUNKLEN)
+            {
+              return -EINVAL;
+            }
 
-  pcm_dump(&localwav);
+          format = pcm_leuint16((FAR const uint16_t *)&fmt[0]);
 
-  /* Check if the file is a valid PCM WAV header */
+  localwav.fmt.chunkid   =chunkid;
+  localwav.fmt.chunklen  =chunklen;
+  localwav.fmt.format    =format;
+  localwav.fmt.nchannels = pcm_leuint16((FAR const uint16_t *)&fmt[2]);
+  localwav.fmt.samprate  = pcm_leuint32((FAR const uint32_t *)&fmt[4]);
+  localwav.fmt.byterate  = pcm_leuint32((FAR const uint32_t *)&fmt[8]);
+  localwav.fmt.align     = pcm_leuint16((FAR const uint16_t *)&fmt[12]);
+          containerbits    = pcm_leuint16((FAR const uint16_t *)&fmt[14]);
+          validbits = containerbits;
 
-  if (!pcm_validwav(&localwav))
+      if (format == PCM_WAV_FORMAT_EXTENSIBLE)
+        {
+      if (chunklen < 40 ||
+                  pcm_leuint16( (FAR const uint16_t *)&fmt[16]) < 22 ||
+                  pcm_leuint32
+               ((FAR const uint32_t *)&fmt[24]) !=
+                      WAV_FMT_FORMAT)
     {
       return -EINVAL;
     }
-  else
-    {
-      /* Yes... pick off the relevant format values and save then in the
-       * device structure.
-       */
 
-      priv->samprate    = localwav.fmt.samprate;  /* 8000, 44100, ... */
-      priv->byterate    = localwav.fmt.byterate;  /* samprate * nchannels * bpsamp / 8 */
-      priv->align       = localwav.fmt.align;     /* nchannels * bpsamp / 8 */
-      priv->bpsamp      = localwav.fmt.bpsamp;    /* Bits per sample: 8 bits = 8, 16 bits = 16 */
-      priv->nchannels   = localwav.fmt.nchannels; /* Mono=1, Stereo=2 */
+              validbits = pcm_leuint16((FAR const uint16_t *)&fmt[18]);
+            }
+  else if (format != WAV_FMT_FORMAT)
+    {
+              return -EINVAL;
+            }
+
+          if (localwav.fmt.nchannels >= 256 || localwav.fmt.align >= 256 ||
+              validbits >= 256 || validbits == 0 || validbits > containerbits)
+            {
+              return -EINVAL;
+            }
+
+          localwav.fmt.bpsamp = validbits;
+          havefmt = true;
+        }
+
+      offset += 8 + chunklen + (chunklen & 1);
+    }
+
+  if (offset + 8 > len || !havefmt)
+    {
+      return -EINVAL;
+    }
+
+      priv->samprate    = localwav.fmt.samprate;
+      priv->byterate    = localwav.fmt.byterate;
+      priv->align       = localwav.fmt.align;
+      priv->bpsamp      = localwav.fmt.bpsamp;
+      priv->nchannels   = localwav.fmt.nchannels;
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
-      /* We are going to subsample, there then are some restrictions on the
-       * number of channels and sample sizes that we can handle.
-       */
-
-      if (priv->bpsamp != 8 && priv->bpsamp != 16)
-        {
-          auderr("ERROR: %d bits per sample are not supported in this "
-                 "mode\n",
-                 priv->bpsamp);
-          return -EINVAL;
-        }
 
       if (priv->nchannels != 1 && priv->nchannels != 2)
         {
@@ -414,14 +422,9 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
                  priv->nchannels);
           return -EINVAL;
         }
-
-      DEBUGASSERT(priv->align == priv->nchannels * priv->bpsamp / 8);
 #endif
-    }
 
-  /* And return true if the file is a valid WAV header file */
-
-  return ret;
+  return offset + 8;
 }
 #endif
 
@@ -439,6 +442,13 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
                                     uint8_t subsample)
 {
   audinfo("subsample: %d\n", subsample);
+
+  if (subsample != AUDIO_SUBSAMPLE_NONE && priv->bpsamp != 8 &&
+      priv->bpsamp != 16)
+    {
+      audwarn("Fast forward does not support %u-bit PCM\n", priv->bpsamp);
+      return;
+    }
 
   /* Three possibilities:
    *
@@ -1010,6 +1020,135 @@ static int pcm_freebuffer(FAR struct audio_lowerhalf_s *dev,
 }
 
 /****************************************************************************
+ * Name: pcm_transform_stereo
+ *
+ * Description:
+ *   Apply channel swap, per-output polarity inversion, and mono downmixing
+ *   to interleaved stereo frames in that order.
+ *   WAV block alignment distinguishes packed 24-bit samples from 24 valid
+ *   bits carried in a 32-bit container.
+ ****************************************************************************/
+
+static void pcm_transform_stereo(FAR struct pcm_decode_s *priv,
+                                 FAR struct ap_buffer_s *apb)
+{
+  FAR uint8_t *data;
+  apb_samp_t frames;
+  uint8_t sample_bytes;
+  uint8_t valid_bits;
+  apb_samp_t frame;
+
+  if ((!priv->mono && !priv->swap && !priv->invert_left &&
+       !priv->invert_right) ||
+      priv->nchannels != 2 || priv->align == 0)
+    {
+      return;
+    }
+
+  sample_bytes = priv->align / priv->nchannels;
+  valid_bits = priv->bpsamp;
+  if (sample_bytes < 1 || sample_bytes > 4 || valid_bits == 0 ||
+      valid_bits > sample_bytes * 8)
+    {
+      return;
+    }
+
+  data = &apb->samp[apb->curbyte];
+  frames = (apb->nbytes - apb->curbyte) / priv->align;
+
+  for (frame = 0; frame < frames; frame++, data += priv->align)
+    {
+      uint32_t left_raw = 0;
+      uint32_t right_raw = 0;
+      uint32_t mono_raw;
+      int32_t left;
+      int32_t right;
+      int32_t mono;
+      uint8_t byte;
+
+      for (byte = 0; byte < sample_bytes; byte++)
+        {
+          left_raw |= (uint32_t)data[byte] << (byte * 8);
+          right_raw |= (uint32_t)data[sample_bytes + byte] << (byte * 8);
+        }
+
+      if (priv->swap)
+        {
+          uint32_t temporary = left_raw;
+
+          left_raw = right_raw;
+          right_raw = temporary;
+        }
+
+      if (valid_bits == 8)
+        {
+          if (priv->invert_left)
+            {
+              left_raw = left_raw == 0 ? UINT8_MAX : 256 - left_raw;
+            }
+
+          if (priv->invert_right)
+            {
+              right_raw = right_raw == 0 ? UINT8_MAX : 256 - right_raw;
+            }
+        }
+      else
+        {
+          if (valid_bits < 32)
+            {
+              uint32_t sign = 1u << (valid_bits - 1);
+              uint32_t mask = (1u << valid_bits) - 1;
+
+              left_raw &= mask;
+              right_raw &= mask;
+              left_raw = (left_raw ^ sign) - sign;
+              right_raw = (right_raw ^ sign) - sign;
+            }
+
+          left = (int32_t)left_raw;
+          right = (int32_t)right_raw;
+
+          if (priv->invert_left)
+            {
+              left = left == INT32_MIN ? INT32_MAX : -left;
+            }
+
+          if (priv->invert_right)
+            {
+              right = right == INT32_MIN ? INT32_MAX : -right;
+            }
+        }
+
+      if (priv->mono)
+        {
+          if (valid_bits == 8)
+            {
+              mono_raw = (left_raw + right_raw) / 2;
+            }
+          else
+            {
+              mono = (int32_t)(((int64_t)left + (int64_t)right) / 2);
+              mono_raw = (uint32_t)mono;
+            }
+
+          left_raw = mono_raw;
+          right_raw = mono_raw;
+        }
+      else if (valid_bits != 8)
+        {
+          left_raw = (uint32_t)left;
+          right_raw = (uint32_t)right;
+        }
+
+      for (byte = 0; byte < sample_bytes; byte++)
+        {
+          data[byte] = left_raw >> (byte * 8);
+          data[sample_bytes + byte] = right_raw >> (byte * 8);
+        }
+    }
+}
+
+/****************************************************************************
  * Name: pcm_enqueuebuffer
  *
  * Description:
@@ -1066,6 +1205,8 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
       pcm_subsample(priv, apb);
 #endif
 
+      pcm_transform_stereo(priv, apb);
+
       /* Then give the audio buffer to the lower driver */
 
       audinfo("Pass to lower enqueuebuffer: apb=%p curbyte=%d nbytes=%d\n",
@@ -1098,7 +1239,7 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
        * and sample bitwidth.
        */
 
-      DEBUGASSERT(priv->samprate < 65535);
+      DEBUGASSERT(priv->samprate <= 0x00ffffff);
 
       caps.ac_len            = sizeof(struct audio_caps_s);
       caps.ac_type           = AUDIO_TYPE_OUTPUT;
@@ -1106,6 +1247,7 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 
       caps.ac_controls.hw[0] = (uint16_t)priv->samprate;
       caps.ac_controls.b[2]  = priv->bpsamp;
+      caps.ac_controls.b[3] = priv->samprate >> 16;
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       ret = lower->ops->configure(lower, priv->session, &caps);
@@ -1131,6 +1273,8 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
       pcm_subsample(priv, apb);
 #endif
 
+      pcm_transform_stereo(priv, apb);
+
       /* Then give the audio buffer to the lower driver */
 
       audinfo(
@@ -1149,18 +1293,18 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
           return OK;
         }
 
-      /* The normal protocol for streaming errors is as follows:
-       *
-       * (1) Fail the enqueueing by returned a negated error value.  The
-       *     upper level then knows that this buffer was not queue.
-       * (2) Return all queued buffers to the caller using the
-       *     AUDIO_CALLBACK_DEQUEUE callback
-       * (3) Terminate playing using the AUDIO_CALLBACK_COMPLETE
-       *     callback.
-       *
-       * In this case we fail on the very first buffer and we need only
-       * do (1) and (3).
-       */
+        /* The normal protocol for streaming errors is as follows:
+         *
+         * (1) Fail the enqueueing by returned a negated error value.  The
+         *     upper level then knows that this buffer was not queue.
+         * (2) Return all queued buffers to the caller using the
+         *     AUDIO_CALLBACK_DEQUEUE callback
+         * (3) Terminate playing using the AUDIO_CALLBACK_COMPLETE
+         *     callback.
+         *
+         * In this case we fail on the very first buffer and we need only
+         * do (1) and (3).
+         */
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
@@ -1363,6 +1507,51 @@ static void pcm_callback(FAR void *arg, uint16_t reason,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: pcm_decode_set_mono
+ ****************************************************************************/
+
+int pcm_decode_set_mono(FAR struct audio_lowerhalf_s *dev, bool enable)
+{
+  FAR struct pcm_decode_s *priv = (FAR struct pcm_decode_s *)dev;
+
+  if (priv == NULL)
+    {
+      return -EINVAL;
+    }
+
+  priv->mono = enable;
+  return OK;
+}
+
+int pcm_decode_set_swap(FAR struct audio_lowerhalf_s *dev, bool enable)
+{
+  FAR struct pcm_decode_s *priv = (FAR struct pcm_decode_s *)dev;
+
+  if (priv == NULL)
+    {
+      return -EINVAL;
+    }
+
+  priv->swap = enable;
+  return OK;
+}
+
+int pcm_decode_set_polarity(FAR struct audio_lowerhalf_s *dev,
+                            bool invert_left, bool invert_right)
+{
+  FAR struct pcm_decode_s *priv = (FAR struct pcm_decode_s *)dev;
+
+  if (priv == NULL)
+    {
+      return -EINVAL;
+    }
+
+  priv->invert_left = invert_left;
+  priv->invert_right = invert_right;
+  return OK;
+}
 
 /****************************************************************************
  * Name: pcm_decode_initialize
