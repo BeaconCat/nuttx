@@ -1964,7 +1964,7 @@ static inline int fat_getlfname(FAR struct fat_mountpt_s *fs,
   uint16_t diroffset;
   uint8_t  seqno;
   uint8_t  rawseq;
-  uint8_t  offset;
+  uint8_t  offset = NAME_MAX;
   uint8_t  checksum;
   int      nsrc;
   int      ret;
