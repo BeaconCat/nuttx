@@ -1511,6 +1511,12 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
   uint8_t regval = 0;
 
   audinfo("ES8388 Start\n");
+  if (!es8388_samplerate_supported(priv->samprate))
+    {
+      auderr("Cannot start without a valid stream format\n");
+      return -EINVAL;
+    }
+
 
   prev_regval = es8388_readreg(priv, ES8388_DACCONTROL21);
 
