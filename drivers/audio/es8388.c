@@ -2529,21 +2529,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
   es8388_setvolume(priv, ES_MODULE_DAC, CONFIG_ES8388_OUTPUT_INITVOLUME);
 #endif
 
-  if (priv->dac_output == ES8388_DAC_OUTPUT_LINE2)
-    {
-      regconfig = ES_DAC_CHANNEL_LOUT1 | ES_DAC_CHANNEL_ROUT1;
-    }
-  else if (priv->dac_output == ES8388_DAC_OUTPUT_LINE1)
-    {
-      regconfig = ES_DAC_CHANNEL_LOUT2 | ES_DAC_CHANNEL_ROUT2;
-    }
-  else
-    {
-      regconfig = ES_DAC_CHANNEL_LOUT1 | ES_DAC_CHANNEL_ROUT1 |
-                  ES_DAC_CHANNEL_LOUT2 | ES_DAC_CHANNEL_ROUT2;
-    }
-
-  es8388_writereg(priv, ES8388_DACPOWER, regconfig);
+  es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
 
   es8388_writereg(priv, ES8388_ADCPOWER,
                   ES8388_INT1LP_LP        |
