@@ -2408,7 +2408,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_ENREF_ENABLE    |
                   ES8388_SEQEN_DISABLE   |
                   ES8388_SAMEFS_SAME     |
-                  ES8388_DACMCLK_ADCMCLK |
+                  ES8388_DACMCLK_DACMCLK |
                   ES8388_LRCM_ISOLATED   |
                   ES8388_SCPRESET_NORMAL);
 
