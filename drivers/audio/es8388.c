@@ -1818,13 +1818,12 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
   if (priv->audio_mode == ES_MODULE_DAC ||
       priv->audio_mode == ES_MODULE_ADC_DAC)
     {
-      es8388_writereg(priv, ES8388_DACPOWER,
-                      ES8388_ROUT2_DISABLE |
-                      ES8388_LOUT2_DISABLE |
-                      ES8388_ROUT1_DISABLE |
-                      ES8388_LOUT1_DISABLE |
-                      ES8388_PDNDACR_PWRUP |
-                      ES8388_PDNDACL_PWRUP);
+      es8388_writereg(priv, ES8388_DACCONTROL17,
+                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
+                          ES8388_LI2LO_DISABLE | ES8388_LD2LO_DISABLE);
+      es8388_writereg(priv, ES8388_DACCONTROL20,
+                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
+                          ES8388_RI2RO_DISABLE | ES8388_RD2RO_DISABLE);
     }
 
   if (priv->audio_mode == ES_MODULE_ADC ||
