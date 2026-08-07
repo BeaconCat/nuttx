@@ -2731,6 +2731,7 @@ FAR struct audio_lowerhalf_s *
       priv->dev.ops    = &g_audioops;
       priv->lower      = lower;
       priv->i2c        = i2c;
+      priv->output_route = ES8388_OUTPUT_ROUTE_LINE1;
       priv->i2s        = i2s;
 
       nxmutex_init(&priv->pendlock);
@@ -2765,4 +2766,58 @@ FAR struct audio_lowerhalf_s *
     }
 
   return NULL;
+}
+
+/****************************************************************************
+ * Name: es8388_set_output_route
+ ****************************************************************************/
+
+int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
+                            enum es8388_output_route_e route)
+{
+  FAR struct es8388_dev_s *priv = (FAR struct es8388_dev_s *)dev;
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  bool was_muted;
+#endif
+  int ret;
+
+  if (priv == NULL || route > ES8388_OUTPUT_ROUTE_BOTH)
+    {
+      return -EINVAL;
+    }
+
+  ret = nxmutex_lock(&priv->pendlock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  was_muted = priv->mute;
+
+  if (priv->running && !was_muted)
+    {
+      es8388_setmute(priv, ES_MODULE_DAC, true);
+    }
+#endif
+
+  priv->output_route = route;
+  es8388_apply_output_route(priv, priv->running);
+
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  if (priv->running && !was_muted && route != ES8388_OUTPUT_ROUTE_NONE)
+    {
+      es8388_setmute(priv, ES_MODULE_DAC, false);
+    }
+
+  /* Route changes use a transient hardware mute.  Keep the user-visible
+   * mute state independent so that NONE can later transition back to an
+   * audible route.
+   */
+
+  priv->mute = was_muted;
+#endif
+
+  nxmutex_unlock(&priv->pendlock);
+  return OK;
 }
