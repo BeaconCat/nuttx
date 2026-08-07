@@ -1700,18 +1700,8 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
       priv->audio_mode == ES_MODULE_ADC_DAC ||
       priv->audio_mode == ES_MODULE_DAC)
     {
-      es8388_writereg(priv, ES8388_DACPOWER,
-                      ES8388_ROUT2_ENABLE  |
-                      ES8388_LOUT2_ENABLE  |
-                      ES8388_ROUT1_ENABLE  |
-                      ES8388_LOUT1_ENABLE  |
-                      ES8388_PDNDACR_PWRUP |
-                      ES8388_PDNDACL_PWRUP);
+      es8388_apply_output_route(priv, true);
     }
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, priv->audio_mode, false);
-#endif
 
   /* Create a message queue for the worker thread */
 
