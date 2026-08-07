@@ -505,54 +505,57 @@ static void es8388_setvolume(FAR struct es8388_dev_s *priv,
 
 static void es8388_setmclkfrequency(FAR struct es8388_dev_s *priv)
 {
-  int i;
+  uint32_t multiple;
+  int ret;
 
-  priv->mclk = 0;
-
-  for (i = 0; i < nitems(es8388_mclk_rate); i++)
+  switch (priv->samprate)
     {
-      if (es8388_mclk_rate[i].sample_rate == priv->samprate)
-        {
-          /* Normally master clock should be multiple of the sample rate
-           * and bclk at the same time. The field mclk_rate_s::multiple
-           * means the multiple of mclk to the sample rate. If data width
-           * is 24 bits, in order to keep mclk a multiple to the bclk,
-           * mclk_rate_s::multiple should be a divisible by 3, otherwise
-           * the ws signal will be inaccurate.
-           */
-
-          priv->mclk = es8388_mclk_rate[i].mclk;
-
-          if (es8388_mclk_rate[i].multiple % (priv->bpsamp / 8) == 0)
-            {
-              break;
-            }
-        }
+      case 8000:
+        multiple = 1536;
+        break;
+      case 11025:
+      case 12000:
+        multiple = 1024;
+        break;
+      case 16000:
+        multiple = 768;
+        break;
+      case 22050:
+      case 24000:
+        multiple = 512;
+        break;
+      case 32000:
+        multiple = 384;
+        break;
+      case 44100:
+      case 48000:
+        multiple = 256;
+        break;
+      case 88200:
+      case 96000:
+        multiple = 128;
+        break;
+      default:
+        auderr("Unsupported sample rate: %u\n", priv->samprate);
+        priv->mclk = 0;
+        return;
     }
 
-  if (priv->mclk)
+  priv->mclk = priv->samprate * multiple;
+  audinfo("MCLK Freq: %u\n", priv->mclk);
+  ret = I2S_SETMCLKFREQUENCY(priv->i2s, priv->mclk);
+
+  if (ret < 0)
     {
-      audinfo("MCLK Freq: %u\n", priv->mclk);
-
-      int ret = I2S_SETMCLKFREQUENCY(priv->i2s, priv->mclk);
-
-      if (ret < 0)
+      priv->mclk = 0;
+      if (ret != -ENOTTY)
         {
-          if (ret != -ENOTTY)
-            {
-              auderr("Failed to set the MCLK on lower half\n");
-            }
-          else
-            {
-              priv->mclk = 0;
-              auderr("MCLK cannot be set on lower half\n");
-            }
+          auderr("Failed to set the MCLK on lower half: %d\n", ret);
         }
-    }
-  else
-    {
-      auderr("Unsupported combination of sample rate and"
-                       " data width\n");
+      else
+        {
+          auderr("MCLK cannot be set on lower half\n");
+        }
     }
 }
 
