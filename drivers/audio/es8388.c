@@ -1196,8 +1196,8 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         priv->bpsamp    = caps->ac_controls.b[2];
 
         es8388_audio_output(priv);
-        es8388_setbitspersample(priv);
         es8388_setsamplerate(priv);
+        es8388_setbitspersample(priv);
         up_udelay(20);
         es8388_dac_digital_reset(priv, false);
 
