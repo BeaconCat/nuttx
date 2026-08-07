@@ -2481,7 +2481,8 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_DACFORMAT(ES_I2S_NORMAL)     |
                   ES8388_DACWL(ES_WORD_LENGTH_16BITS) |
                   ES8388_DACLRP_NORM_2ND              |
-                  ES8388_DACLRSWAP_NORMAL);
+                  (priv->lower->swap_dac_lr ? ES8388_DACLRSWAP_SWAP :
+                                              ES8388_DACLRSWAP_NORMAL));
 
   es8388_writereg(priv, ES8388_DACCONTROL2,
                   ES8388_DACFSRATIO(ES_LCLK_DIV_256) |
