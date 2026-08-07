@@ -2713,8 +2713,8 @@ FAR struct audio_lowerhalf_s *
       priv->dev.ops    = &g_audioops;
       priv->lower      = lower;
       priv->i2c        = i2c;
-      priv->output_route = ES8388_OUTPUT_ROUTE_LINE1;
       priv->i2s        = i2s;
+      priv->output_route = ES8388_OUTPUT_ROUTE_LINE1;
 
       nxmutex_init(&priv->pendlock);
       dq_init(&priv->pendq);
@@ -2744,6 +2744,14 @@ FAR struct audio_lowerhalf_s *
       es8388_dump_registers(&priv->dev, "Before reset");
 
       es8388_reset(priv);
+
+      es8388_writereg(priv, ES8388_DACCONTROL17,
+                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
+                          ES8388_LI2LO_DISABLE | ES8388_LD2LO_DISABLE);
+      es8388_writereg(priv, ES8388_DACCONTROL20,
+                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
+                          ES8388_RI2RO_DISABLE | ES8388_RD2RO_DISABLE);
+      es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
       return &priv->dev;
     }
 
