@@ -2405,7 +2405,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
 
   es8388_writereg(priv, ES8388_CONTROL1,
                   ES8388_VMIDSEL_500K    |
-                  ES8388_ENREF_DISABLE   |
+                  ES8388_ENREF_ENABLE    |
                   ES8388_SEQEN_DISABLE   |
                   ES8388_SAMEFS_SAME     |
                   ES8388_DACMCLK_ADCMCLK |
