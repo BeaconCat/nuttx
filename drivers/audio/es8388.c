@@ -1473,6 +1473,27 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
         {
           auderr("I2S transfer failed: %d\n", ret);
           break;
+
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+      /* Keep the DAC muted until the first buffer has armed both DMA and
+       * the I2S transfer engine.  Unmuting earlier exposes the analog output
+       * to an unstable serial stream and causes an audible startup click.
+       */
+
+      if (priv->audio_mode == ES_MODULE_DAC && priv->mute)
+        {
+          es8388_writereg(priv, ES8388_DACCONTROL17,
+                          ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
+                              ES8388_LI2LO_DISABLE | ES8388_LD2LO_ENABLE);
+          es8388_writereg(priv, ES8388_DACCONTROL20,
+                          ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
+                              ES8388_RI2RO_DISABLE | ES8388_RD2RO_ENABLE);
+          es8388_setmute(priv, ES_MODULE_DAC, false);
+#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
+          es8388_setvolume(priv, ES_MODULE_DAC, priv->volume_out);
+#endif
+        }
+#endif
         }
     }
 
