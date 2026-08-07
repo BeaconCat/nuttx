@@ -1113,6 +1113,12 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
                    caps->ac_controls.b[2]);
             break;
           }
+            /* Reconfigure playback while the idle mixer is disconnected. */
+
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+          es8388_setmute(priv, ES_MODULE_DAC, true);
+#endif
+          es8388_dac_digital_reset(priv, true);
 
         /* Save the current stream configuration */
 
@@ -1121,9 +1127,10 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         priv->bpsamp    = caps->ac_controls.b[2];
 
         es8388_audio_output(priv);
-        es8388_reset(priv);
-        es8388_setsamplerate(priv);
         es8388_setbitspersample(priv);
+        es8388_setsamplerate(priv);
+          up_udelay(20);
+          es8388_dac_digital_reset(priv, false);
 
         ret = OK;
       }
