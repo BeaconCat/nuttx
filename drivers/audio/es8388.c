@@ -1058,8 +1058,8 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
                             FAR const struct audio_caps_s *caps)
 #endif
 {
-  uint32_t samprate;
   FAR struct es8388_dev_s *priv = (FAR struct es8388_dev_s *)dev;
+  uint32_t samprate;
   int ret = OK;
 
   DEBUGASSERT(priv != NULL && caps != NULL);
@@ -1148,10 +1148,10 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         break;
 
     case AUDIO_TYPE_OUTPUT:
-          samprate = caps->ac_controls.hw[0] |
-                     ((uint32_t)caps->ac_controls.b[3] << 16);
-          priv->samprate = 0;
       {
+        samprate = caps->ac_controls.hw[0] |
+                   ((uint32_t)caps->ac_controls.b[3] << 16);
+        priv->samprate = 0;
         audinfo("  AUDIO_TYPE_OUTPUT:\n");
         audinfo("    Number of channels: %u\n", caps->ac_channels);
         audinfo("    Sample rate:        %u\n", samprate);
@@ -1168,12 +1168,12 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
           }
 
         if (!es8388_samplerate_supported(samprate))
-            {
-              auderr("Unsupported sample rate: %" PRIu32 "\n", samprate);
-              break;
-            }
+          {
+            auderr("Unsupported sample rate: %" PRIu32 "\n", samprate);
+            break;
+          }
 
-          if (caps->ac_controls.b[2] != 16 &&
+        if (caps->ac_controls.b[2] != 16 &&
             caps->ac_controls.b[2] != 24 &&
             caps->ac_controls.b[2] != 32)
           {
@@ -1181,12 +1181,13 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
                    caps->ac_controls.b[2]);
             break;
           }
-            /* Reconfigure playback while the idle mixer is disconnected. */
+
+        /* Reconfigure playback while the idle mixer is disconnected. */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-          es8388_setmute(priv, ES_MODULE_DAC, true);
+        es8388_setmute(priv, ES_MODULE_DAC, true);
 #endif
-          es8388_dac_digital_reset(priv, true);
+        es8388_dac_digital_reset(priv, true);
 
         /* Save the current stream configuration */
 
@@ -1197,18 +1198,18 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         es8388_audio_output(priv);
         es8388_setbitspersample(priv);
         es8388_setsamplerate(priv);
-          up_udelay(20);
-          es8388_dac_digital_reset(priv, false);
+        up_udelay(20);
+        es8388_dac_digital_reset(priv, false);
 
         ret = OK;
       }
       break;
 
-        case AUDIO_TYPE_INPUT:
-          samprate = caps->ac_controls.hw[0] |
-                     ((uint32_t)caps->ac_controls.b[3] << 16);
-          priv->samprate = 0;
+    case AUDIO_TYPE_INPUT:
       {
+        samprate = caps->ac_controls.hw[0] |
+                   ((uint32_t)caps->ac_controls.b[3] << 16);
+        priv->samprate = 0;
         audinfo("  AUDIO_TYPE_INPUT:\n");
         audinfo("    Number of channels: %u\n", caps->ac_channels);
         audinfo("    Sample rate:        %u\n", samprate);
@@ -1225,12 +1226,12 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
           }
 
         if (!es8388_samplerate_supported(samprate))
-            {
-              auderr("Unsupported sample rate: %" PRIu32 "\n", samprate);
-              break;
-            }
+          {
+            auderr("Unsupported sample rate: %" PRIu32 "\n", samprate);
+            break;
+          }
 
-          if (caps->ac_controls.b[2] != 16 &&
+        if (caps->ac_controls.b[2] != 16 &&
             caps->ac_controls.b[2] != 24 &&
             caps->ac_controls.b[2] != 32)
           {
@@ -1238,10 +1239,10 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
                    caps->ac_controls.b[2]);
             break;
           }
-          /* Reset before saving the requested capture format. */
 
-          es8388_reset(priv);
+        /* Reset before saving the requested capture format. */
 
+        es8388_reset(priv);
 
         /* Save the current stream configuration */
 
