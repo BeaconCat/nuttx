@@ -1516,6 +1516,18 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
       auderr("Cannot start without a valid stream format\n");
       return -EINVAL;
     }
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  es8388_setmute(priv, priv->audio_mode, true);
+#endif
+
+#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
+  if (priv->audio_mode == ES_MODULE_DAC ||
+      priv->audio_mode == ES_MODULE_ADC_DAC)
+    {
+      es8388_writereg(priv, ES8388_DACCONTROL4, ES8388_LDACVOL(0xc0));
+      es8388_writereg(priv, ES8388_DACCONTROL5, ES8388_RDACVOL(0xc0));
+    }
+#endif
 
 
   prev_regval = es8388_readreg(priv, ES8388_DACCONTROL21);
