@@ -1286,11 +1286,16 @@ static int es8388_shutdown(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("Shutdown triggered\n");
 
-  /* Now issue a software reset. This puts all ES8388 registers back in
-   * their default state.
-   */
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  es8388_setmute(priv, priv->audio_mode, true);
+#endif
 
-  es8388_reset(priv);
+  es8388_writereg(priv, ES8388_DACCONTROL17,
+                  ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
+                      ES8388_LI2LO_DISABLE | ES8388_LD2LO_DISABLE);
+  es8388_writereg(priv, ES8388_DACCONTROL20,
+                  ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
+                      ES8388_RI2RO_DISABLE | ES8388_RD2RO_DISABLE);
   return OK;
 }
 
