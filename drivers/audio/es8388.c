@@ -2375,8 +2375,8 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_VREFLO_NORMAL      |
                   ES8388_PDNIBIASGEN_NORMAL |
                   ES8388_PDNANA_NORMAL      |
-                  ES8388_LPVREFBUF_LP       |
-                  ES8388_LPVCMMOD_NORMAL    |
+                  ES8388_LPVREFBUF_NORMAL   |
+                  ES8388_LPVCMMOD_LP        |
                   (1 << 6)); /* Default value of undocumented bit */
 
   es8388_writereg(priv, ES8388_CHIPPOWER,
