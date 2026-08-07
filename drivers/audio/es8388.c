@@ -2367,7 +2367,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
   es8388_writereg(priv, ES8388_DACCONTROL3,
                   ES8388_DACMUTE_MUTED       |
                   ES8388_DACLER_NORMAL       |
-                  ES8388_DACSOFTRAMP_DISABLE |
+                  ES8388_DACSOFTRAMP_ENABLE  |
                   ES8388_DACRAMPRATE_4LRCK);
 
   es8388_writereg(priv, ES8388_CONTROL2,
