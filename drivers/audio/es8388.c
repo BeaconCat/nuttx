@@ -1170,6 +1170,10 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
                    caps->ac_controls.b[2]);
             break;
           }
+          /* Reset before saving the requested capture format. */
+
+          es8388_reset(priv);
+
 
         /* Save the current stream configuration */
 
@@ -1178,7 +1182,6 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         priv->bpsamp    = caps->ac_controls.b[2];
 
         es8388_audio_input(priv);
-        es8388_reset(priv);
         es8388_setsamplerate(priv);
         es8388_setbitspersample(priv);
 
