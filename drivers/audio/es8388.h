@@ -969,6 +969,7 @@ struct es8388_dev_s
   volatile int                        result;           /* The result of the last transfer */
   es_module_e                         audio_mode;       /* The current audio mode of the ES8388 chip */
   es8388_dac_output_e                 dac_output;       /* The current output of the ES8388 DAC */
+  enum es8388_output_route_e           output_route;   /* Active DAC outputs */
   es8388_adc_input_e                  adc_input;        /* The current input of the ES8388 ADC */
   es_mic_gain_e                       mic_gain;         /* The current microphone gain */
   uint32_t                            mclk;             /* The current MCLK frequency */

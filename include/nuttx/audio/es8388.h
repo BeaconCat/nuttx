@@ -111,6 +111,14 @@
  * Public Types
  ****************************************************************************/
 
+enum es8388_output_route_e
+{
+  ES8388_OUTPUT_ROUTE_NONE = 0,
+  ES8388_OUTPUT_ROUTE_LINE1,
+  ES8388_OUTPUT_ROUTE_LINE2,
+  ES8388_OUTPUT_ROUTE_BOTH,
+};
+
 struct es8388_lower_s;
 
 struct es8388_lower_s
@@ -119,6 +127,11 @@ struct es8388_lower_s
 
   uint32_t frequency;  /* Initial I2C frequency */
   uint8_t  address;    /* 7-bit I2C address (only bits 0-6 used) */
+
+  /* Board-level DAC channel wiring and analog output control. */
+
+  bool swap_dac_lr;
+  CODE void (*set_output)(enum es8388_output_route_e route, bool enable);
 };
 
 /****************************************************************************
@@ -162,6 +175,18 @@ FAR struct audio_lowerhalf_s *
   es8388_initialize(FAR struct i2c_master_s *i2c,
                     FAR struct i2s_dev_s *i2s,
                     FAR const struct es8388_lower_s *lower);
+
+/****************************************************************************
+ * Name: es8388_set_output_route
+ *
+ * Description:
+ *   Select the active analog DAC outputs while preserving the selection
+ *   across stream reconfiguration.
+ *
+ ****************************************************************************/
+
+int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
+                            enum es8388_output_route_e route);
 
 /****************************************************************************
  * Name: es8388_dump_registers
