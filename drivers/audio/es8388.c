@@ -657,6 +657,74 @@ static void es8388_setmute(FAR struct es8388_dev_s *priv,
     }
 }
 #endif
+/****************************************************************************
+ * Name: es8388_output_power
+ *
+ * Description:
+ *   Build the DACPOWER value for the selected runtime route.  The DAC cores
+ *   remain powered while a stream is prepared, but analog outputs are only
+ *   connected when requested by the active route.
+ ****************************************************************************/
+
+static uint8_t es8388_output_power(FAR struct es8388_dev_s *priv, bool connect)
+{
+  uint8_t regval = ES8388_PDNDACR_PWRUP | ES8388_PDNDACL_PWRUP;
+
+  if (!connect)
+    {
+      return regval;
+    }
+
+  switch (priv->output_route)
+    {
+      case ES8388_OUTPUT_ROUTE_LINE1:
+        regval |= ES8388_ROUT1_ENABLE | ES8388_LOUT1_ENABLE;
+        break;
+
+      case ES8388_OUTPUT_ROUTE_LINE2:
+        regval |= ES8388_ROUT2_ENABLE | ES8388_LOUT2_ENABLE;
+        break;
+
+      case ES8388_OUTPUT_ROUTE_BOTH:
+        regval |= ES8388_ROUT1_ENABLE | ES8388_LOUT1_ENABLE |
+                  ES8388_ROUT2_ENABLE | ES8388_LOUT2_ENABLE;
+        break;
+
+      case ES8388_OUTPUT_ROUTE_NONE:
+      default:
+        break;
+    }
+
+  return regval;
+}
+
+/****************************************************************************
+ * Name: es8388_apply_output_route
+ ****************************************************************************/
+
+static void es8388_apply_output_route(FAR struct es8388_dev_s *priv,
+                                      bool connect)
+{
+  uint8_t target = es8388_output_power(priv, connect);
+
+  if (es8388_readreg(priv, ES8388_DACPOWER) != target)
+    {
+      if (priv->lower->set_output != NULL)
+        {
+          priv->lower->set_output(priv->output_route, false);
+        }
+
+      es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
+      up_mdelay(20);
+      es8388_writereg(priv, ES8388_DACPOWER, target);
+
+      if (connect && priv->lower->set_output != NULL)
+        {
+          priv->lower->set_output(priv->output_route, true);
+        }
+    }
+}
+
 
 /****************************************************************************
  * Name: es8388_setbitspersample
