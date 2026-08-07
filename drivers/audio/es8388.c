@@ -583,6 +583,36 @@ static bool es8388_samplerate_supported(uint32_t samprate)
         return false;
     }
 }
+/****************************************************************************
+ * Name: es8388_dac_digital_reset
+ *
+ * Description:
+ *   Reset only the DAC digital state machine while leaving the analog
+ *   output bias untouched.  The playback mixer must be disconnected and
+ *   the DAC muted while changing this state.
+ ****************************************************************************/
+
+static void es8388_dac_digital_reset(FAR struct es8388_dev_s *priv,
+                                     bool assert_reset)
+{
+  uint8_t regval;
+
+  regval = ES8388_DACVREF_PDN_PWRUP | ES8388_ADCVREF_PDN_PWRUP |
+           ES8388_DACDLL_PDN_NORMAL | ES8388_ADCDLL_PDN_NORMAL |
+           ES8388_ADC_STM_RST_NORMAL | ES8388_ADC_DIGPDN_NORMAL;
+
+  if (assert_reset)
+    {
+      regval |= ES8388_DAC_STM_RST_RESET | ES8388_DAC_DIGPDN_RESET;
+    }
+  else
+    {
+      regval |= ES8388_DAC_STM_RST_NORMAL | ES8388_DAC_DIGPDN_NORMAL;
+    }
+
+  es8388_writereg(priv, ES8388_CHIPPOWER, regval);
+}
+
 
 /****************************************************************************
  * Name: es8388_setmute
