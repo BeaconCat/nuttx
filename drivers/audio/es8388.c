@@ -558,6 +558,32 @@ static void es8388_setmclkfrequency(FAR struct es8388_dev_s *priv)
         }
     }
 }
+/****************************************************************************
+ * Name: es8388_samplerate_supported
+ ****************************************************************************/
+
+static bool es8388_samplerate_supported(uint32_t samprate)
+{
+  switch (samprate)
+    {
+      case 8000:
+      case 11025:
+      case 12000:
+      case 16000:
+      case 22050:
+      case 24000:
+      case 32000:
+      case 44100:
+      case 48000:
+      case 88200:
+      case 96000:
+        return true;
+
+      default:
+        return false;
+    }
+}
+
 
 /****************************************************************************
  * Name: es8388_setmute
@@ -838,7 +864,8 @@ static int es8388_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
               caps->ac_controls.hw[0] =
                 AUDIO_SAMP_RATE_11K | AUDIO_SAMP_RATE_16K |
                 AUDIO_SAMP_RATE_22K | AUDIO_SAMP_RATE_32K |
-                AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K;
+                AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K |
+                AUDIO_SAMP_RATE_88K | AUDIO_SAMP_RATE_96K;
               break;
 
             default:
@@ -860,7 +887,8 @@ static int es8388_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
               caps->ac_controls.hw[0] =
                 AUDIO_SAMP_RATE_11K | AUDIO_SAMP_RATE_16K |
                 AUDIO_SAMP_RATE_22K | AUDIO_SAMP_RATE_32K |
-                AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K;
+                AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K |
+                AUDIO_SAMP_RATE_88K | AUDIO_SAMP_RATE_96K;
               break;
 
             default:
