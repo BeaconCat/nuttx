@@ -1781,6 +1781,12 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
   FAR void *value;
 
   audinfo("ES8388 Stop\n");
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  es8388_setmute(priv, priv->audio_mode, true);
+#endif
+
+  es8388_apply_output_route(priv, false);
+
 
   if (priv->audio_mode == ES_MODULE_LINE)
     {
@@ -1847,10 +1853,6 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
     }
 
 stop_msg:
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, priv->audio_mode, true);
-#endif
 
   /* Send a message to stop all audio streaming */
 
