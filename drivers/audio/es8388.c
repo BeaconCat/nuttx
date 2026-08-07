@@ -2389,12 +2389,6 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_DAC_DIGPDN_NORMAL  |
                   ES8388_ADC_DIGPDN_NORMAL);
 
-  /* Disable the internal DLL to improve 8K sample rate */
-
-  es8388_writereg(priv, 0x35, 0xa0);
-  es8388_writereg(priv, 0x37, 0xd0);
-  es8388_writereg(priv, 0x39, 0xd0);
-
   es8388_writereg(priv, ES8388_MASTERMODE,
                   ES8388_BCLKDIV(ES_MCLK_DIV_AUTO) |
                   ES8388_BCLK_INV_NORMAL           |
