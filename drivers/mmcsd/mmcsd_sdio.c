@@ -2864,7 +2864,43 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
 #ifdef CONFIG_MMCSD_MMCSUPPORT
   else
     {
-      if (priv->caps & SDIO_CAPS_MMC_HS_MODE)
+      finfo("MMC timing caps=%04x device_type=%02x\n",
+            priv->caps, priv->device_type);
+      if ((priv->caps & SDIO_CAPS_MMC_HS200_MODE) != 0 &&
+          (priv->device_type & (EXT_CSD_DEVICE_HS200_1V8 |
+                                EXT_CSD_DEVICE_HS200_1V2)) != 0)
+        {
+          mmcsd_sendcmdpoll(priv, MMCSD_CMD6,
+                            MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS200));
+          ret = mmcsd_recv_r1(priv, MMCSD_CMD6);
+          if (ret != OK)
+            {
+              ferr("ERROR: (MMCSD_CMD6) Setting MMC HS200 mode: %d\n", ret);
+              return ret;
+            }
+
+          priv->mode = EXT_CSD_HS_TIMING_HS200;
+          SDIO_CLOCK(priv->dev, CLOCK_MMC_HS200);
+          ret = SDIO_EXECUTE_TUNING(priv->dev, MMC_CMD21);
+          if (ret != OK)
+            {
+              fwarn("WARNING: MMC HS200 tuning failed: %d; falling back"
+                    " to High Speed\n", ret);
+              SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+              mmcsd_sendcmdpoll(
+                  priv, MMCSD_CMD6,
+                  MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
+              ret = mmcsd_recv_r1(priv, MMCSD_CMD6);
+              if (ret != OK)
+                {
+                  ferr("ERROR: MMC High Speed fallback failed: %d\n", ret);
+                  return ret;
+                }
+
+              priv->mode = EXT_CSD_HS_TIMING_HS;
+            }
+        }
+      else if (priv->caps & SDIO_CAPS_MMC_HS_MODE)
         {
           mmcsd_sendcmdpoll(priv, MMCSD_CMD6,
                             MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
@@ -2878,7 +2914,10 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
           priv->mode = EXT_CSD_HS_TIMING_HS;
         }
 
-      SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+      if (priv->mode != EXT_CSD_HS_TIMING_HS200)
+        {
+          SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+        }
     }
 #endif /* #ifdef CONFIG_MMCSD_MMCSUPPORT */
 
