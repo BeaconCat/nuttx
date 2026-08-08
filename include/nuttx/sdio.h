@@ -482,6 +482,7 @@
 #define SDIO_CAPS_8BIT            0x10 /* Bit 4=1: Supports 8 bit operation */
 #define SDIO_CAPS_4BIT_ONLY       0x20 /* Bit 5=1: Supports 4-bit only operation */
 #define SDIO_CAPS_MMC_HS_MODE     0x40 /* Bit 6=1: Supports eMMC high speed mode */
+#define SDIO_CAPS_MMC_HS200_MODE  0x80 /* Bit 7=1: Supports eMMC HS200 mode */
 
 /****************************************************************************
  * Name: SDIO_STATUS
@@ -919,6 +920,13 @@
     ((dev)->gotextcsd?(dev)->gotextcsd(dev,buffer):OK)
 
 /****************************************************************************
+ * Name: SDIO_EXECUTE_TUNING
+ ****************************************************************************/
+
+#define SDIO_EXECUTE_TUNING(dev,cmd) \
+    ((dev)->execute_tuning ? (dev)->execute_tuning(dev,cmd) : -ENOSYS)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -929,6 +937,7 @@ enum sdio_clock_e
   CLOCK_SDIO_DISABLED = 0, /* Clock is disabled */
   CLOCK_IDMODE,            /* Initial ID mode clocking (<400KHz) */
   CLOCK_MMC_TRANSFER,      /* MMC normal operation clocking */
+  CLOCK_MMC_HS200,         /* MMC HS200 operation clocking */
   CLOCK_SD_TRANSFER_1BIT,  /* SD normal operation clocking (narrow 1-bit mode) */
   CLOCK_SD_TRANSFER_4BIT   /* SD normal operation clocking (wide 4-bit mode) */
 };
@@ -944,7 +953,7 @@ typedef uint8_t sdio_eventset_t;
  * uint16_t.
  */
 
-typedef uint8_t sdio_capset_t;
+typedef uint16_t sdio_capset_t;
 
 /* Status set.  A uint8_t is big enough to hold a set of 8 status bits.
  * If more are needed, change this to a uint16_t.
@@ -1042,6 +1051,7 @@ struct sdio_dev_s
 #endif /* CONFIG_SDIO_DMA */
   CODE void  (*gotextcsd)(FAR struct sdio_dev_s *dev,
                           FAR const uint8_t *buffer);
+  CODE int   (*execute_tuning)(FAR struct sdio_dev_s *dev, uint32_t cmd);
 };
 
 /****************************************************************************
