@@ -674,13 +674,15 @@ static void mmcsd_decode_csd(FAR struct mmcsd_state_s *priv, uint32_t csd[4])
           uint16_t csize        = ((csd[1] & 0x03ff) << 2) |
                                   ((csd[2] >> 30) & 3);
           uint8_t  csizemult    = (csd[2] >> 15) & 7;
+          bool     usecsd       = csize != MMCSD_CSD_CSIZE_THRESHOLD &&
+                                  priv->part[0].nblocks == 0;
 
           priv->blockshift      = readbllen;
           priv->blocksize       = (1 << readbllen);
 
           /* For emmc densities up to 2 GB */
 
-          if (csize != MMCSD_CSD_CSIZE_THRESHOLD)
+          if (usecsd)
             {
               priv->part[0].nblocks = ((uint32_t)csize + 1) *
                                       (1 << (csizemult + 2));
@@ -688,7 +690,7 @@ static void mmcsd_decode_csd(FAR struct mmcsd_state_s *priv, uint32_t csd[4])
 
           if (priv->blocksize > 512)
             {
-              if (csize != MMCSD_CSD_CSIZE_THRESHOLD)
+              if (usecsd)
                 {
                   priv->part[0].nblocks <<= (priv->blockshift - 9);
                 }
