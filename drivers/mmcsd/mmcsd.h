@@ -99,6 +99,7 @@ struct mmcsd_state_s
   uint8_t buswidth:4;              /* Bus widths supported (SD only) */
   uint8_t cmd23support:1;          /* CMD23 supported (SD only) */
   uint8_t device_type;             /* MMC EXT_CSD DEVICE_TYPE */
+  uint8_t strobe_support;          /* MMC EXT_CSD STROBE_SUPPORT */
   sdio_capset_t caps;              /* SDIO driver capabilities/limitations */
   uint32_t cid[4];                 /* CID register */
   uint32_t csd[4];                 /* CSD register */

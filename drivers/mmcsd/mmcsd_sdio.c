@@ -161,6 +161,7 @@ static int     mmcsd_get_r1(FAR struct mmcsd_state_s *priv,
 static int     mmcsd_verifystate(FAR struct mmcsd_state_s *priv,
                                  uint32_t status);
 static int     mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg);
+static int     mmcsd_select_hs400(FAR struct mmcsd_state_s *priv);
 
 /* Transfer helpers *********************************************************/
 
@@ -1122,6 +1123,82 @@ static int mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg)
   mmcsd_sendcmdpoll(priv, MMCSD_CMD6, arg);
   priv->wrbusy = true;
   return mmcsd_recv_r1(priv, MMCSD_CMD6);
+}
+
+/****************************************************************************
+ * Name: mmcsd_select_hs400
+ *
+ * Description:
+ *   Enter HS400 Enhanced Strobe from an already tuned HS200 link.  JEDEC
+ *   requires returning through High Speed before selecting 8-bit DDR and
+ *   HS400.  Any failed step restores the proven 8-bit High Speed mode.
+ *
+ ****************************************************************************/
+
+static int mmcsd_select_hs400(FAR struct mmcsd_state_s *priv)
+{
+  uint8_t width = EXT_CSD_DDR_BUS_WIDTH_8 | EXT_CSD_BUS_WIDTH_STROBE;
+  uint32_t r1;
+  int ret;
+  int fallback;
+
+  ret = mmcsd_switch(priv,
+                     MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
+  if (ret != OK)
+    {
+      return ret;
+    }
+
+  SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+
+  ret = mmcsd_switch(priv, MMC_CMD6_BUSWIDTH(width));
+  if (ret != OK)
+    {
+      goto fallback;
+    }
+
+  ret = mmcsd_switch(priv,
+                     MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS400));
+  if (ret != OK)
+    {
+      goto fallback;
+    }
+
+  SDIO_CLOCK(priv->dev, CLOCK_MMC_HS400);
+  ret = SDIO_HS400_ENHANCED_STROBE(priv->dev, true);
+  if (ret == OK)
+    {
+      ret = mmcsd_get_r1(priv, &r1);
+    }
+
+  if (ret == OK)
+    {
+      priv->mode = EXT_CSD_HS_TIMING_HS400;
+      return OK;
+    }
+
+  SDIO_HS400_ENHANCED_STROBE(priv->dev, false);
+  fallback = mmcsd_switch(priv,
+                          MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
+  SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+  if (fallback != OK)
+    {
+      return fallback;
+    }
+
+fallback:
+  fallback = mmcsd_switch(priv,
+                          MMC_CMD6_BUSWIDTH(EXT_CSD_BUS_WIDTH_8));
+  if (fallback != OK)
+    {
+      ferr("ERROR: Failed to restore MMC 8-bit High Speed mode: %d\n",
+           fallback);
+      return fallback;
+    }
+
+  priv->mode = EXT_CSD_HS_TIMING_HS;
+  fwarn("WARNING: MMC HS400 selection failed: %d; using High Speed\n", ret);
+  return OK;
 }
 
 /****************************************************************************
@@ -2899,6 +2976,20 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
 
               priv->mode = EXT_CSD_HS_TIMING_HS;
             }
+          else if ((priv->caps & (SDIO_CAPS_MMC_HS400_MODE |
+                                  SDIO_CAPS_MMC_ENHANCED_STROBE)) ==
+                               (SDIO_CAPS_MMC_HS400_MODE |
+                                SDIO_CAPS_MMC_ENHANCED_STROBE) &&
+                   (priv->device_type & (EXT_CSD_DEVICE_HS400_1V8 |
+                                         EXT_CSD_DEVICE_HS400_1V2)) != 0 &&
+                   priv->strobe_support != 0)
+            {
+              ret = mmcsd_select_hs400(priv);
+              if (ret != OK)
+                {
+                  return ret;
+                }
+            }
         }
       else if (priv->caps & SDIO_CAPS_MMC_HS_MODE)
         {
@@ -2914,7 +3005,8 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
           priv->mode = EXT_CSD_HS_TIMING_HS;
         }
 
-      if (priv->mode != EXT_CSD_HS_TIMING_HS200)
+      if (priv->mode != EXT_CSD_HS_TIMING_HS200 &&
+          priv->mode != EXT_CSD_HS_TIMING_HS400)
         {
           SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
         }
@@ -2948,6 +3040,7 @@ static void mmcsd_decode_extcsd(FAR struct mmcsd_state_s *priv,
   priv->part[0].nblocks = (extcsd[215] << 24) | (extcsd[214] << 16) |
                           (extcsd[213] << 8) | extcsd[212];
   priv->device_type = extcsd[EXT_CSD_DEVICE_TYPE];
+  priv->strobe_support = extcsd[EXT_CSD_STROBE_SUPPORT];
   finfo("MMC ext CSD read succsesfully, number of block %" PRIuOFF "\n",
                                                 priv->part[0].nblocks);
 
