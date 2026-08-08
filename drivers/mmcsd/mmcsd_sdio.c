@@ -2908,6 +2908,7 @@ static void mmcsd_decode_extcsd(FAR struct mmcsd_state_s *priv,
 
   priv->part[0].nblocks = (extcsd[215] << 24) | (extcsd[214] << 16) |
                           (extcsd[213] << 8) | extcsd[212];
+  priv->device_type = extcsd[EXT_CSD_DEVICE_TYPE];
   finfo("MMC ext CSD read succsesfully, number of block %" PRIuOFF "\n",
                                                 priv->part[0].nblocks);
 
