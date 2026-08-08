@@ -63,6 +63,12 @@
 #define EXT_CSD_PART_CONF           179     /* R/W */
 #define EXT_CSD_BUS_WIDTH           183     /* WO */
 #define EXT_CSD_HS_TIMING           185     /* R/W */
+#define EXT_CSD_DEVICE_TYPE         196     /* RO */
+
+#define EXT_CSD_DEVICE_HS200_1V8    (1 << 4)
+#define EXT_CSD_DEVICE_HS200_1V2    (1 << 5)
+#define EXT_CSD_DEVICE_HS400_1V8    (1 << 6)
+#define EXT_CSD_DEVICE_HS400_1V2    (1 << 7)
 
 /* EXT_CSD_BUS_WIDTH */
 #define EXT_CSD_BUS_WIDTH_1         (0x00)  /* Card is in 1 bit mode */
