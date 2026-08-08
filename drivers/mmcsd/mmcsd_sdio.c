@@ -2790,15 +2790,19 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
     }
 #ifdef CONFIG_MMCSD_MMCSUPPORT
   else if (IS_MMC(priv->type) &&
-           ((priv->buswidth & MMCSD_SCR_BUSWIDTH_4BIT) != 0 &&
-           (priv->caps & SDIO_CAPS_1BIT_ONLY) == 0))
+           (priv->caps & (SDIO_CAPS_8BIT | SDIO_CAPS_4BIT |
+                          SDIO_CAPS_4BIT_ONLY)) != 0 &&
+           (priv->caps & SDIO_CAPS_1BIT_ONLY) == 0)
     {
       /* SD card supports 4-bit BUS and host settings is not 1-bit only.
        * Configuring MMC - Use MMC_SWITCH access modes.
        */
 
-      mmcsd_sendcmdpoll(priv, MMCSD_CMD6,
-                        MMC_CMD6_BUSWIDTH(EXT_CSD_BUS_WIDTH_4));
+      mmcsd_sendcmdpoll(
+          priv, MMCSD_CMD6,
+          MMC_CMD6_BUSWIDTH((priv->caps & SDIO_CAPS_8BIT) != 0
+                                ? EXT_CSD_BUS_WIDTH_8
+                                : EXT_CSD_BUS_WIDTH_4));
       ret = mmcsd_recv_r1(priv, MMCSD_CMD6);
 
       if (ret != OK)
