@@ -147,6 +147,19 @@ extern "C"
 FAR struct audio_lowerhalf_s *
   pcm_decode_initialize(FAR struct audio_lowerhalf_s *dev);
 
+/****************************************************************************
+ * Name: pcm_decode_set_mono
+ *
+ * Description:
+ *   Configure runtime stereo channel transforms in the PCM decoder.
+ *
+ ****************************************************************************/
+
+int pcm_decode_set_mono(FAR struct audio_lowerhalf_s *dev, bool enable);
+int pcm_decode_set_swap(FAR struct audio_lowerhalf_s *dev, bool enable);
+int pcm_decode_set_polarity(FAR struct audio_lowerhalf_s *dev,
+                            bool invert_left, bool invert_right);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
