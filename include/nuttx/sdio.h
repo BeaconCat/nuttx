@@ -483,6 +483,8 @@
 #define SDIO_CAPS_4BIT_ONLY       0x20 /* Bit 5=1: Supports 4-bit only operation */
 #define SDIO_CAPS_MMC_HS_MODE     0x40 /* Bit 6=1: Supports eMMC high speed mode */
 #define SDIO_CAPS_MMC_HS200_MODE  0x80 /* Bit 7=1: Supports eMMC HS200 mode */
+#define SDIO_CAPS_MMC_HS400_MODE  0x0100 /* Bit 8=1: eMMC HS400 mode */
+#define SDIO_CAPS_MMC_ENHANCED_STROBE 0x0200 /* Bit 9=1: Enhanced strobe */
 
 /****************************************************************************
  * Name: SDIO_STATUS
@@ -927,6 +929,14 @@
     ((dev)->execute_tuning ? (dev)->execute_tuning(dev,cmd) : -ENOSYS)
 
 /****************************************************************************
+ * Name: SDIO_HS400_ENHANCED_STROBE
+ ****************************************************************************/
+
+#define SDIO_HS400_ENHANCED_STROBE(dev,enable) \
+    ((dev)->hs400_enhanced_strobe ? \
+     (dev)->hs400_enhanced_strobe(dev,enable) : -ENOSYS)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -938,6 +948,7 @@ enum sdio_clock_e
   CLOCK_IDMODE,            /* Initial ID mode clocking (<400KHz) */
   CLOCK_MMC_TRANSFER,      /* MMC normal operation clocking */
   CLOCK_MMC_HS200,         /* MMC HS200 operation clocking */
+  CLOCK_MMC_HS400,         /* MMC HS400 operation clocking */
   CLOCK_SD_TRANSFER_1BIT,  /* SD normal operation clocking (narrow 1-bit mode) */
   CLOCK_SD_TRANSFER_4BIT   /* SD normal operation clocking (wide 4-bit mode) */
 };
@@ -1052,6 +1063,8 @@ struct sdio_dev_s
   CODE void  (*gotextcsd)(FAR struct sdio_dev_s *dev,
                           FAR const uint8_t *buffer);
   CODE int   (*execute_tuning)(FAR struct sdio_dev_s *dev, uint32_t cmd);
+  CODE int   (*hs400_enhanced_strobe)(FAR struct sdio_dev_s *dev,
+                                      bool enable);
 };
 
 /****************************************************************************
