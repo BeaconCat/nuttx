@@ -62,6 +62,7 @@
 
 #define EXT_CSD_PART_CONF           179     /* R/W */
 #define EXT_CSD_BUS_WIDTH           183     /* WO */
+#define EXT_CSD_STROBE_SUPPORT      184     /* RO */
 #define EXT_CSD_HS_TIMING           185     /* R/W */
 #define EXT_CSD_DEVICE_TYPE         196     /* RO */
 
@@ -74,6 +75,7 @@
 #define EXT_CSD_BUS_WIDTH_1         (0x00)  /* Card is in 1 bit mode */
 #define EXT_CSD_BUS_WIDTH_4         (0x01)  /* Card is in 4 bit mode */
 #define EXT_CSD_BUS_WIDTH_8         (0x02)  /* Card is in 8 bit mode */
+#define EXT_CSD_BUS_WIDTH_STROBE    (0x80)  /* Use enhanced data strobe */
 #define EXT_CSD_DDR_BUS_WIDTH_4     (0x05)  /* Card is in 4 bit DDR mode */
 #define EXT_CSD_DDR_BUS_WIDTH_8     (0x06)  /* Card is in 8 bit DDR mode */
 
