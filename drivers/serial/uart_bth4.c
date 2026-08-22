@@ -50,6 +50,7 @@ union bt_hdr_u
   struct bt_hci_acl_hdr_s acl;
   struct bt_hci_evt_hdr_s evt;
   struct bt_hci_iso_hdr_s iso;
+  struct bt_hci_sco_hdr_s sco;
 };
 
 struct uart_bth4_s
@@ -153,6 +154,10 @@ static int uart_bth4_receive(FAR struct bt_driver_s *drv,
       else if (type == BT_ISO_IN)
         {
           htype = H4_ISO;
+        }
+      else if (type == BT_SCO_IN)
+        {
+          htype = H4_SCO;
         }
       else
         {
@@ -326,6 +331,11 @@ static ssize_t uart_bth4_write(FAR struct file *filep,
             hdrlen = sizeof(struct bt_hci_iso_hdr_s);
             pktlen = hdr->iso.len;
             type = BT_ISO_OUT;
+            break;
+          case H4_SCO:
+            hdrlen = sizeof(struct bt_hci_sco_hdr_s);
+            pktlen = hdr->sco.len;
+            type = BT_SCO_OUT;
             break;
           default:
             ret = -EINVAL;
