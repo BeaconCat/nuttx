@@ -296,6 +296,12 @@ begin_packed_struct struct bt_hci_acl_hdr_s
   uint16_t len;
 } end_packed_struct;
 
+begin_packed_struct struct bt_hci_sco_hdr_s
+{
+  uint16_t handle;
+  uint8_t len;
+} end_packed_struct;
+
 begin_packed_struct struct bt_hci_iso_hdr_s
 {
   uint16_t handle;
