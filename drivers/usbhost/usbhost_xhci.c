@@ -3449,12 +3449,21 @@ static int xhci_enumerate(FAR struct usbhost_connection_s *conn,
   ret = usbhost_enumerate(hport, &hport->devclass);
   if (ret < 0)
     {
+      FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_CONN(conn);
+      FAR struct xhci_dev_s *dev;
+
       /* Failed to enumerate */
 
       /* If this is a root hub port, then marking the hub port not connected
        * will cause xhci_wait() to return and we will try the connection
        * again.
        */
+
+      dev = xhci_device_find(priv, hport);
+      if (dev != NULL)
+        {
+          xhci_device_deinit(priv, dev);
+        }
 
       hport->connected = false;
     }
