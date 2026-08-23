@@ -149,6 +149,7 @@ struct xhci_epinfo_s
 #endif
   struct xhci_ring_s td;           /* TD ring for this endpoint */
   uint8_t            slot;         /* Slot where this EP resides */
+  FAR struct usbhost_hubport_s *hport; /* Hub port owning this endpoint */
 
   /* These fields are used in the split-transaction protocol. */
 
@@ -189,7 +190,9 @@ struct xhci_dev_s
   uint8_t                          slot;    /* Slot ID associated with this device */
   FAR struct xhci_dev_ctx_s       *ctx;     /* Output Device Context. Managed by xHC */
   FAR struct xhci_input_dev_ctx_s *input;   /* Input Device Context. Input to xHC */
-  FAR struct xhci_rhport_s        *rhport;  /* Root Hub Port associated with this device */
+  FAR struct xhci_rhport_s        *rhport;  /* Root hub port carrying this device */
+  FAR struct usbhost_hubport_s    *hport;   /* Direct parent hub port */
+  FAR struct xhci_epinfo_s        *ep0;     /* Default control endpoint */
 
   /* Reference to allocated endpoints */
 
@@ -354,13 +357,19 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
                               uint8_t maxburst, uint64_t tr_dp,
                               uint8_t mult, uint8_t interval);
 static int xhci_address_set(FAR struct usbhost_xhci_s *priv,
-                            FAR struct xhci_rhport_s *rhport, bool setaddr);
+                            FAR struct xhci_dev_s *dev, bool setaddr);
 static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
                           FAR struct xhci_dev_s *dev);
 static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
-                            FAR struct xhci_rhport_s *rhport);
+                            FAR struct usbhost_hubport_s *hport);
 static int xhci_device_deinit(FAR struct usbhost_xhci_s *priv,
-                              FAR struct xhci_rhport_s *rhport);
+                              FAR struct xhci_dev_s *dev);
+static FAR struct xhci_dev_s *
+xhci_device_find(FAR struct usbhost_xhci_s *priv,
+                 FAR struct usbhost_hubport_s *hport);
+static FAR struct xhci_dev_s *
+xhci_device_from_ep(FAR struct usbhost_xhci_s *priv,
+                    FAR struct xhci_epinfo_s *epinfo);
 static inline uint8_t xhci_epno_get(FAR struct xhci_epinfo_s *epinfo);
 static void xhci_context_ctrl(FAR struct usbhost_xhci_s *priv,
                               FAR struct xhci_dev_s *dev,
@@ -840,6 +849,9 @@ static void xhci_ring_deinit(FAR struct xhci_ring_s *ring)
   /* Free ring memory */
 
   kmm_free(ring->ring);
+  ring->ring = NULL;
+  ring->len = 0;
+  ring->i = 0;
 }
 
 /****************************************************************************
@@ -1510,6 +1522,55 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
 }
 
 /****************************************************************************
+ * Name: xhci_device_find
+ *
+ * Description:
+ *   Find the xHCI slot assigned to one root or external hub port.
+ *
+ ****************************************************************************/
+
+static FAR struct xhci_dev_s *
+xhci_device_find(FAR struct usbhost_xhci_s *priv,
+                 FAR struct usbhost_hubport_s *hport)
+{
+  int i;
+
+  for (i = 0; i < priv->no_slots; i++)
+    {
+      if (priv->devs[i].state != XHCI_SLOT_DISABLED &&
+          priv->devs[i].hport == hport)
+        {
+          return &priv->devs[i];
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: xhci_device_from_ep
+ *
+ * Description:
+ *   Resolve an endpoint's slot while rejecting stale endpoint handles.
+ *
+ ****************************************************************************/
+
+static FAR struct xhci_dev_s *
+xhci_device_from_ep(FAR struct usbhost_xhci_s *priv,
+                    FAR struct xhci_epinfo_s *epinfo)
+{
+  FAR struct xhci_dev_s *dev;
+
+  if (epinfo->slot == 0 || epinfo->slot > priv->no_slots)
+    {
+      return NULL;
+    }
+
+  dev = &priv->devs[epinfo->slot - 1];
+  return dev->state == XHCI_SLOT_DISABLED ? NULL : dev;
+}
+
+/****************************************************************************
  * Name: xhci_address_set
  *
  * Description:
@@ -1520,15 +1581,13 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
  ****************************************************************************/
 
 static int xhci_address_set(FAR struct usbhost_xhci_s *priv,
-                            FAR struct xhci_rhport_s *rhport, bool setaddr)
+                            FAR struct xhci_dev_s *dev, bool setaddr)
 {
-  FAR struct xhci_dev_s *dev;
   uint64_t ctx;
 
-  dev = rhport->dev;
   ctx = up_addrenv_va_to_pa(dev->input);
 
-  return xhci_cmd_setaddr(priv, rhport->slot, ctx, !setaddr);
+  return xhci_cmd_setaddr(priv, dev->slot, ctx, !setaddr);
 }
 
 /****************************************************************************
@@ -1596,12 +1655,12 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
    * allocated.
    */
 
-  drdp = up_addrenv_va_to_pa(dev->rhport->ep0.td.ring);
+  drdp = up_addrenv_va_to_pa(dev->ep0->td.ring);
 
   /* Step 5. Initialize the Input default control Endpoint 0 Context */
 
-  DEBUGASSERT(dev->rhport != NULL);
-  if (dev->rhport->hport.hport.speed == USB_SPEED_HIGH)
+  DEBUGASSERT(dev->rhport != NULL && dev->hport != NULL);
+  if (dev->hport->speed == USB_SPEED_HIGH)
     {
       /* For high-speed, we must use 64 bytes */
 
@@ -1659,11 +1718,18 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
  ****************************************************************************/
 
 static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
-                            FAR struct xhci_rhport_s *rhport)
+                            FAR struct usbhost_hubport_s *hport)
 {
   FAR struct xhci_dev_s *dev;
+  FAR struct xhci_epinfo_s *ep0;
+  FAR struct xhci_rhport_s *rhport;
   uint8_t                slot;
   int                    ret;
+
+  DEBUGASSERT(hport != NULL && hport->drvr != NULL && hport->ep0 != NULL);
+
+  rhport = XHCI_RHPORT_FROM_DRVR(hport->drvr);
+  ep0 = (FAR struct xhci_epinfo_s *)hport->ep0;
 
   /* We entry this function after steps 1-3 from "USB Device Initialization"
    * are done.
@@ -1681,14 +1747,12 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
       /* Something goes wrong ! */
 
       usbhost_vtrace1(XHCI_TRACE1_SLOTEN_FAILED, ret);
-      return ret;
+      return ret < 0 ? ret : -EIO;
     }
 
   /* Slot ID is an index to that identify Device data */
 
-  rhport->dev = &priv->devs[slot - 1];
-  rhport->slot = slot;
-  dev = rhport->dev;
+  dev = &priv->devs[slot - 1];
 
   /* Slot has been allocated to software and is now in Enabled state */
 
@@ -1698,22 +1762,31 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
    * All data structured are already allocated.
    */
 
-  ret = xhci_ring_init(&rhport->ep0.td, XHCI_TD_MAX);
+  ep0->slot      = slot;
+  ep0->hport     = hport;
+  dev->rhport    = rhport;
+  dev->hport     = hport;
+  dev->ep0       = ep0;
+  dev->slot      = slot;
+  dev->epinfo[0] = ep0;
+
+  if (ROOTHUB(hport))
+    {
+      rhport->dev = dev;
+      rhport->slot = slot;
+    }
+
+  ret = xhci_ring_init(&ep0->td, XHCI_TD_MAX);
   if (ret < 0)
     {
       uerr("ep0 ring init failed\n");
-      return ret;
+      goto errout;
     }
-
-  rhport->ep0.slot = slot;
-  dev->rhport      = rhport;
-  dev->slot        = slot;
-  dev->epinfo[0]   = &rhport->ep0;
 
   ret = xhci_slot_init(priv, dev);
   if (ret < 0)
     {
-      return ret;
+      goto errout;
     }
 
   /* Step 6: Assing and address to the device and enable its Default
@@ -1724,16 +1797,20 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
    *       stack.
    */
 
-  ret = xhci_address_set(priv, rhport, false);
+  ret = xhci_address_set(priv, dev, false);
   if (ret < 0)
     {
       uerr("failed to set address %d\n", ret);
-      return ret;
+      goto errout;
     }
 
   /* Steps 7-12 don't belong here! */
 
   return OK;
+
+errout:
+  xhci_device_deinit(priv, dev);
+  return ret;
 }
 
 /****************************************************************************
@@ -1748,9 +1825,10 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
  ****************************************************************************/
 
 static int xhci_device_deinit(FAR struct usbhost_xhci_s *priv,
-                              FAR struct xhci_rhport_s *rhport)
+                              FAR struct xhci_dev_s *dev)
 {
-  uint8_t slot = rhport->slot;
+  FAR struct xhci_rhport_s *rhport = dev->rhport;
+  uint8_t slot = dev->slot;
   int     ret;
 
   /* Disable Slot */
@@ -1767,14 +1845,23 @@ static int xhci_device_deinit(FAR struct usbhost_xhci_s *priv,
 
   /* Clean up device data, but don't touch allocated memory! */
 
-  rhport->dev->state = XHCI_SLOT_DISABLED;
+  dev->state = XHCI_SLOT_DISABLED;
 
-  memset(rhport->dev->ctx, 0, sizeof(struct xhci_dev_ctx_s));
-  memset(rhport->dev->input, 0, sizeof(struct xhci_input_dev_ctx_s));
+  memset(dev->ctx, 0, sizeof(struct xhci_dev_ctx_s));
+  memset(dev->input, 0, sizeof(struct xhci_input_dev_ctx_s));
+  xhci_ring_deinit(&dev->ep0->td);
 
   /* Remove reference to a device slot */
 
-  rhport->dev = NULL;
+  if (rhport->dev == dev)
+    {
+      rhport->dev = NULL;
+      rhport->slot = 0;
+    }
+
+  dev->rhport = NULL;
+  dev->hport = NULL;
+  dev->ep0 = NULL;
 
   return OK;
 }
@@ -2140,7 +2227,7 @@ static int xhci_ioc_setup(FAR struct xhci_rhport_s *rhport,
   /* Is the device still connected? */
 
   flags = spin_lock_irqsave(&priv->spinlock);
-  if (rhport->connected)
+  if (epinfo->hport != NULL && epinfo->hport->connected)
     {
       /* Then set iocwait to indicate that we expect to be informed when
        * either (1) the device is disconnected, or (2) the transfer
@@ -2472,7 +2559,7 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
   /* Is the device still connected? */
 
   flags = spin_lock_irqsave(&priv->spinlock);
-  if (rhport->connected)
+  if (epinfo->hport != NULL && epinfo->hport->connected)
     {
       /* Then save callback information to used when either (1) the
        * device is disconnected, or (2) the transfer completes.
@@ -3138,7 +3225,7 @@ static int xhci_rh_enumerate(FAR struct usbhost_connection_s *conn,
 
   /* Initialzie device data */
 
-  ret = xhci_device_init(priv, rhport);
+  ret = xhci_device_init(priv, hport);
   if (ret < 0)
     {
       uerr("Failed to initialize device %d\n", ret);
@@ -3177,6 +3264,19 @@ static int xhci_enumerate(FAR struct usbhost_connection_s *conn,
           return ret;
         }
     }
+#ifdef CONFIG_USBHOST_HUB
+  else
+    {
+      FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_CONN(conn);
+
+      ret = xhci_device_init(priv, hport);
+      if (ret < 0)
+        {
+          uerr("Failed to initialize hub device %d\n", ret);
+          return ret;
+        }
+    }
+#endif
 
   /* Then let the common usbhost_enumerate do the real enumeration. */
 
@@ -3227,39 +3327,45 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
                              usbhost_ep_t ep0, uint8_t funcaddr,
                              uint8_t speed, uint16_t maxpacketsize)
 {
-  FAR struct xhci_rhport_s  *rhport = (FAR struct xhci_rhport_s *)drvr;
   FAR struct xhci_epinfo_s  *epinfo = (FAR struct xhci_epinfo_s *)ep0;
   FAR struct usbhost_xhci_s *priv   = XHCI_PRIV_FROM_DRVR(drvr);
+  FAR struct xhci_dev_s     *dev;
   uint64_t                   ctx;
   int                        ret;
 
   DEBUGASSERT(drvr != NULL && epinfo != NULL && maxpacketsize < 2048);
+
+  dev = xhci_device_from_ep(priv, epinfo);
+  if (dev == NULL)
+    {
+      return -ENODEV;
+    }
 
   ret = nxmutex_lock(&priv->lock);
   if (ret >= 0)
     {
       /* Update max packet size */
 
-      rhport->dev->input->ep[0].ctx1 &= ~XHCI_EP_CTX1_MAXPKT_MASK;
-      rhport->dev->input->ep[0].ctx1 |= XHCI_EP_CTX1_MAXPKT(maxpacketsize);
+      dev->input->ep[0].ctx1 &= ~XHCI_EP_CTX1_MAXPKT_MASK;
+      dev->input->ep[0].ctx1 |= XHCI_EP_CTX1_MAXPKT(maxpacketsize);
 
       /* Add Slot Context and EP0 Context */
 
-      xhci_context_ctrl(priv, rhport->dev, 0,
+      xhci_context_ctrl(priv, dev, 0,
                         XHCI_IN_CTX1_A(XHCI_SLOT_FLAG) |
                         XHCI_IN_CTX1_A(XHCI_EP0_FLAG));
 
       /* Flush Device input context */
 
-      up_flush_dcache((uintptr_t)rhport->dev->input,
-                      (uintptr_t)rhport->dev->input +
+      up_flush_dcache((uintptr_t)dev->input,
+                      (uintptr_t)dev->input +
                       sizeof(struct xhci_input_dev_ctx_s));
 
       /* Free mutex before command execution */
 
       nxmutex_unlock(&priv->lock);
 
-      ctx = up_addrenv_va_to_pa(rhport->dev->input);
+      ctx = up_addrenv_va_to_pa(dev->input);
       ret = xhci_cmd_evalctx(priv, epinfo->slot, ctx);
     }
 
@@ -3293,7 +3399,6 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
                         FAR usbhost_ep_t *ep)
 {
   FAR struct usbhost_xhci_s    *priv   = XHCI_PRIV_FROM_DRVR(drvr);
-  FAR struct xhci_rhport_s     *rhport = (FAR struct xhci_rhport_s *)drvr;
   FAR struct usbhost_hubport_s *hport;
   FAR struct xhci_epinfo_s     *epinfo;
   FAR struct xhci_dev_s        *dev;
@@ -3341,13 +3446,32 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   epinfo->interval  = epdesc->interval;
 #endif
   epinfo->xfrtype   = epdesc->xfrtype;
+  epinfo->hport     = hport;
   nxsem_init(&epinfo->iocsem, 0, 0);
+
+  /* Downstream hub ports allocate EP0 before the waiter assigns an xHCI
+   * slot.  Keep the endpoint container and let xhci_device_init() create
+   * its transfer ring once the connection is enumerated.
+   */
+
+  if (epinfo->xfrtype == USB_EP_ATTR_XFER_CONTROL)
+    {
+      *ep = (usbhost_ep_t)epinfo;
+      return OK;
+    }
+
+  dev = xhci_device_find(priv, hport);
+  if (dev == NULL)
+    {
+      nxsem_destroy(&epinfo->iocsem);
+      kmm_free(epinfo);
+      return -ENODEV;
+    }
 
   /* xhci_epno_get() returns Device Context Index (DCI) */
 
   idx              = xhci_epno_get(epinfo);
   mask             = XHCI_IN_CTX1_A(XHCI_EP_FLAG(idx));
-  dev              = rhport->dev;
   dev->epinfo[idx - 1] = epinfo;
 
   /* TD rings already allocated but not connected yet. */
@@ -3361,7 +3485,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
   /* Store slot ID for later */
 
-  epinfo->slot = rhport->slot;
+  epinfo->slot = dev->slot;
 
 #ifdef CONFIG_USBHOST_HUB
   if (hport->speed != USB_SPEED_HIGH)
@@ -3483,11 +3607,19 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
 static int xhci_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 {
+  FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_epinfo_s *epinfo = (FAR struct xhci_epinfo_s *)ep;
+  FAR struct xhci_dev_s *dev;
 
   /* There should not be any pending, transfers */
 
   DEBUGASSERT(drvr && epinfo && epinfo->iocwait == 0);
+
+  dev = xhci_device_from_ep(priv, epinfo);
+  if (dev != NULL && dev->ep0 == epinfo)
+    {
+      xhci_device_deinit(priv, dev);
+    }
 
   /* Free ring */
 
@@ -3720,11 +3852,18 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   FAR struct usbhost_xhci_s *priv    = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_rhport_s  *rhport  = (FAR struct xhci_rhport_s *)drvr;
   FAR struct xhci_epinfo_s  *ep0info = (FAR struct xhci_epinfo_s *)ep0;
+  FAR struct xhci_dev_s     *dev;
   uint16_t                   len;
   ssize_t                    nbytes;
   int                        ret;
 
   DEBUGASSERT(rhport != NULL && ep0info != NULL && req != NULL);
+
+  dev = xhci_device_from_ep(priv, ep0info);
+  if (dev == NULL)
+    {
+      return -ENODEV;
+    }
 
   len = xhci_getle16(req->len);
 
@@ -3744,18 +3883,18 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
        * on control EP.
        */
 
-      xhci_ring_init(&rhport->dev->rhport->ep0.td, 0);
+      xhci_ring_init(&dev->ep0->td, 0);
 
       /* Issue SET_ADDRESS request */
 
-      ret = xhci_address_set(priv, rhport, true);
+      ret = xhci_address_set(priv, dev, true);
       if (ret == OK)
         {
           /* Store USB Device Address assigned by xHCI */
 
           ep0info->devaddr =
-            XHCI_ST_CTX3_ADDR_GET(rhport->dev->ctx->slot.ctx[3]);
-          rhport->dev->input->slot.ctx[3] = rhport->dev->ctx->slot.ctx[3];
+            XHCI_ST_CTX3_ADDR_GET(dev->ctx->slot.ctx[3]);
+          dev->input->slot.ctx[3] = dev->ctx->slot.ctx[3];
         }
 
       return OK;
@@ -4178,7 +4317,23 @@ static int xhci_connect(FAR struct usbhost_driver_s *drvr,
                         FAR struct usbhost_hubport_s *hport,
                         bool connected)
 {
-#error missing logic
+  FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_DRVR(drvr);
+  irqstate_t flags;
+
+  DEBUGASSERT(priv != NULL && hport != NULL);
+
+  hport->connected = connected;
+
+  flags = spin_lock_irqsave(&priv->spinlock);
+  priv->hport = hport;
+  if (priv->pscwait)
+    {
+      priv->pscwait = false;
+      nxsem_post(&priv->pscsem);
+    }
+
+  spin_unlock_irqrestore(&priv->spinlock, flags);
+  return OK;
 }
 #endif
 
@@ -4212,16 +4367,17 @@ static void xhci_disconnect(FAR struct usbhost_driver_s *drvr,
                             FAR struct usbhost_hubport_s *hport)
 {
   FAR struct usbhost_xhci_s *priv   = XHCI_PRIV_FROM_DRVR(drvr);
-  FAR struct xhci_rhport_s  *rhport = (FAR struct xhci_rhport_s *)drvr;
+  FAR struct xhci_dev_s     *dev;
 
   DEBUGASSERT(hport != NULL);
   hport->devclass = NULL;
 
   /* Deinit device slot */
 
-  if (rhport->dev)
+  dev = xhci_device_find(priv, hport);
+  if (dev != NULL)
     {
-      xhci_device_deinit(priv, rhport);
+      xhci_device_deinit(priv, dev);
     }
 }
 
