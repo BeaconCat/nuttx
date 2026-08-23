@@ -54,12 +54,6 @@
 #  error Invalid value for CONFIG_USBHOST_XHCI_MAX_DEVS
 #endif
 
-/* USB HUB support is not yet implemented */
-
-#ifdef CONFIG_USBHOST_HUB
-#  error XHCI USB HUB support is not yet implemented
-#endif
-
 /* Some constants for this implementation */
 
 #define XHCI_MAX_ERST            (1)
@@ -151,12 +145,6 @@ struct xhci_epinfo_s
   uint8_t            slot;         /* Slot where this EP resides */
   FAR struct usbhost_hubport_s *hport; /* Hub port owning this endpoint */
 
-  /* These fields are used in the split-transaction protocol. */
-
-  uint8_t           hubaddr;      /* USB device address of the high-speed hub below
-                                   * which a full/low-speed device is attached.
-                                   */
-  uint8_t           hubport;      /* The port on the above high-speed hub. */
 };
 
 /* This structure retains the state of one root hub port */
@@ -193,6 +181,12 @@ struct xhci_dev_s
   FAR struct xhci_rhport_s        *rhport;  /* Root hub port carrying this device */
   FAR struct usbhost_hubport_s    *hport;   /* Direct parent hub port */
   FAR struct xhci_epinfo_s        *ep0;     /* Default control endpoint */
+#ifdef CONFIG_USBHOST_HUB
+  uint8_t                          nports;  /* Downstream hub ports */
+  uint8_t                          ttthink; /* Transaction translator think time */
+  bool                             hub;     /* Slot represents a USB hub */
+  bool                             mtt;     /* Hub provides multiple TTs */
+#endif
 
   /* Reference to allocated endpoints */
 
@@ -475,6 +469,9 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep);
 static int xhci_connect(FAR struct usbhost_driver_s *drvr,
                         FAR struct usbhost_hubport_s *hport,
                         bool connected);
+static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
+                             FAR struct usbhost_hubport_s *hport,
+                             uint8_t nports, uint8_t ttthink, bool mtt);
 #endif
 
 static void xhci_disconnect(FAR struct usbhost_driver_s *drvr,
@@ -1571,6 +1568,33 @@ xhci_device_from_ep(FAR struct usbhost_xhci_s *priv,
 }
 
 /****************************************************************************
+ * Name: xhci_slot_speed
+ *
+ * Description:
+ *   Convert a NuttX USB speed into the xHCI slot-context encoding.
+ *
+ ****************************************************************************/
+
+static uint8_t xhci_slot_speed(uint8_t speed)
+{
+  switch (speed)
+    {
+      case USB_SPEED_FULL:
+        return XHCI_PORTSC_PS_FULL;
+      case USB_SPEED_LOW:
+        return XHCI_PORTSC_PS_LOW;
+      case USB_SPEED_HIGH:
+        return XHCI_PORTSC_PS_HIGH;
+      case USB_SPEED_SUPER:
+        return XHCI_PORTSC_PS_SUPPER11;
+      case USB_SPEED_SUPER_PLUS:
+        return XHCI_PORTSC_PS_SUPPER21;
+      default:
+        return 0;
+    }
+}
+
+/****************************************************************************
  * Name: xhci_address_set
  *
  * Description:
@@ -1609,8 +1633,17 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
                           FAR struct xhci_dev_s *dev)
 {
   uint32_t regval;
+  uint32_t ctx2 = 0;
   uint16_t maxpkt;
+  uint8_t speed;
   uintptr_t drdp;
+#ifdef CONFIG_USBHOST_HUB
+  FAR struct usbhost_hubport_s *child;
+  FAR struct usbhost_hubport_s *parent;
+  FAR struct xhci_dev_s *ttdev;
+  uint32_t route = 0;
+  int depth = 0;
+#endif
 
   /* Step 1. The Input Context data structure already allocated.
    * Initialize all fields to 0.
@@ -1628,16 +1661,42 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
 
   /* Step 3. Initialize the Input Slot Context */
 
-  regval = XHCI_ST_CTX0_CTXENT_SET(1);
+  speed = xhci_slot_speed(dev->hport->speed);
+  if (speed == 0)
+    {
+      return -EINVAL;
+    }
+
+  regval = XHCI_ST_CTX0_CTXENT_SET(1) |
+           XHCI_ST_CTX0_SPEED_SET(speed);
 
 #ifdef CONFIG_USBHOST_HUB
-  /* TODO:
-   *   1. Activate the transaction translator if required
-   *   2. Configure hub bit in slot context if hub
-   *   3. configure route string
+  /* Route String contains one four-bit downstream port number for each hub
+   * tier.  The root-hub port itself is carried in Slot Context 1.
    */
 
-#  warning missing logic
+  child = dev->hport;
+  while (!ROOTHUB(child))
+    {
+      if (depth >= 5 || child->port >= 15)
+        {
+          return -ENOTSUP;
+        }
+
+      route |= (uint32_t)(child->port + 1) << (depth * 4);
+      child = child->parent;
+      depth++;
+    }
+
+  regval |= XHCI_ST_CTX0_RTSTR_SET(route);
+  if (dev->hub)
+    {
+      regval |= XHCI_ST_CTX0_HUB;
+      if (dev->mtt)
+        {
+          regval |= XHCI_ST_CTX0_MTT;
+        }
+    }
 #endif
 
   dev->input->slot.ctx[0] = htole32(regval);
@@ -1648,8 +1707,43 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
 
   /* TODO: configure number of ports */
 
-  regval |= XHCI_ST_CTX1_PORTS_SET(0);
+#ifdef CONFIG_USBHOST_HUB
+  regval |= XHCI_ST_CTX1_PORTS_SET(dev->nports);
+#endif
   dev->input->slot.ctx[1] = htole32(regval);
+
+#ifdef CONFIG_USBHOST_HUB
+  /* Full/low-speed devices below a high-speed hub need that hub's slot and
+   * downstream port so the xHC can schedule split transactions.
+   */
+
+  if (dev->hport->speed == USB_SPEED_FULL ||
+      dev->hport->speed == USB_SPEED_LOW)
+    {
+      child = dev->hport;
+      parent = child->parent;
+      while (parent != NULL && parent->speed != USB_SPEED_HIGH)
+        {
+          child = parent;
+          parent = parent->parent;
+        }
+
+      if (parent != NULL)
+        {
+          ttdev = xhci_device_find(priv, parent);
+          if (ttdev == NULL)
+            {
+              return -ENODEV;
+            }
+
+          ctx2 = XHCI_ST_CTX2_TTHUB_SET(ttdev->slot) |
+                 XHCI_ST_CTX2_TTPORT_SET(child->port + 1) |
+                 XHCI_ST_CTX2_TTT_SET(ttdev->ttthink);
+        }
+    }
+#endif
+
+  dev->input->slot.ctx[2] = htole32(ctx2);
 
   /* Step 4. the Transfer Ring for the Default Control Endpoint is already
    * allocated.
@@ -2475,6 +2569,7 @@ static int xhci_isoc_setup(FAR struct xhci_rhport_s *rhport,
 
   return OK;
 }
+
 #endif
 
 /****************************************************************************
@@ -3487,32 +3582,6 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
   epinfo->slot = dev->slot;
 
-#ifdef CONFIG_USBHOST_HUB
-  if (hport->speed != USB_SPEED_HIGH)
-    {
-      /* A high speed hub exists between this device and the root hub
-       * otherwise we would not get here.
-       */
-
-      FAR struct usbhost_hubport_s *parent = hport->parent;
-
-      for (; parent->speed != USB_SPEED_HIGH; parent = hport->parent)
-        {
-          hport = parent;
-        }
-
-      if (parent->speed == USB_SPEED_HIGH)
-        {
-          epinfo->hubport = HPORT(hport);
-          epinfo->hubaddr = hport->parent->funcaddr;
-        }
-      else
-        {
-          return -EINVAL;
-        }
-    }
-#endif
-
   /* Get EP type */
 
   switch (epinfo->xfrtype)
@@ -4335,6 +4404,75 @@ static int xhci_connect(FAR struct usbhost_driver_s *drvr,
   spin_unlock_irqrestore(&priv->spinlock, flags);
   return OK;
 }
+
+/****************************************************************************
+ * Name: xhci_hubconfigure
+ *
+ * Description:
+ *   Update the slot context after the hub class identifies a hub and reads
+ *   its descriptor.
+ *
+ ****************************************************************************/
+
+static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
+                             FAR struct usbhost_hubport_s *hport,
+                             uint8_t nports, uint8_t ttthink, bool mtt)
+{
+  FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_DRVR(drvr);
+  FAR struct xhci_dev_s *dev;
+  uint32_t regval;
+  uint64_t ctx;
+  int ret;
+
+  dev = xhci_device_find(priv, hport);
+  if (dev == NULL)
+    {
+      return -ENODEV;
+    }
+
+  ret = nxmutex_lock(&priv->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  dev->hub = true;
+  dev->mtt = mtt;
+  dev->nports = nports;
+  dev->ttthink = ttthink;
+
+  regval = le32toh(dev->input->slot.ctx[0]);
+  regval |= XHCI_ST_CTX0_HUB;
+  if (mtt)
+    {
+      regval |= XHCI_ST_CTX0_MTT;
+    }
+  else
+    {
+      regval &= ~XHCI_ST_CTX0_MTT;
+    }
+
+  dev->input->slot.ctx[0] = htole32(regval);
+
+  regval = le32toh(dev->input->slot.ctx[1]);
+  regval &= ~XHCI_ST_CTX1_PORTS_MASK;
+  regval |= XHCI_ST_CTX1_PORTS_SET(nports);
+  dev->input->slot.ctx[1] = htole32(regval);
+
+  regval = le32toh(dev->input->slot.ctx[2]);
+  regval &= ~XHCI_ST_CTX2_TTT_MASK;
+  regval |= XHCI_ST_CTX2_TTT_SET(ttthink);
+  dev->input->slot.ctx[2] = htole32(regval);
+
+  xhci_context_ctrl(priv, dev, 0, XHCI_IN_CTX1_A(XHCI_SLOT_FLAG));
+  up_flush_dcache((uintptr_t)dev->input,
+                  (uintptr_t)dev->input +
+                  sizeof(struct xhci_input_dev_ctx_s));
+  ctx = up_addrenv_va_to_pa(dev->input);
+
+  nxmutex_unlock(&priv->lock);
+  return xhci_cmd_evalctx(priv, dev->slot, ctx);
+}
 #endif
 
 /****************************************************************************
@@ -4769,6 +4907,7 @@ static inline int xhci_sw_initialize(FAR struct usbhost_xhci_s *priv)
       rhport->drvr.cancel         = xhci_cancel;
 #ifdef CONFIG_USBHOST_HUB
       rhport->drvr.connect        = xhci_connect;
+      rhport->drvr.hubconfigure   = xhci_hubconfigure;
 #endif
       rhport->drvr.disconnect     = xhci_disconnect;
       rhport->hport.pdevgen       = &priv->devgen;
