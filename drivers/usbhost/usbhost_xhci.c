@@ -4617,6 +4617,7 @@ static void xhci_disconnect(FAR struct usbhost_driver_s *drvr,
 
 static int xhci_hw_getparams(FAR struct usbhost_xhci_s *priv)
 {
+  uint32_t no_erst;
   uint32_t regval;
 
   /* Get data form Host Controller Capability 1 Parameters */
@@ -4656,17 +4657,18 @@ static int xhci_hw_getparams(FAR struct usbhost_xhci_s *priv)
 
   uinfo("no scratch = %d\n", priv->no_scratch);
 
-  priv->no_erst = 1 << XHCI_HCSPARAMS2_ERST(regval);
+  no_erst = 1u << XHCI_HCSPARAMS2_ERST(regval);
 
-  uinfo("no_erst = %d\n", priv->no_erst);
+  uinfo("maximum ERST segments = %" PRIu32 "\n", no_erst);
 
   /* Limit event ring segment table to 1 */
 
-  if (priv->no_erst > XHCI_MAX_ERST)
+  if (no_erst > XHCI_MAX_ERST)
     {
-      priv->no_erst = XHCI_MAX_ERST;
+      no_erst = XHCI_MAX_ERST;
     }
 
+  priv->no_erst = (uint8_t)no_erst;
   uinfo("no erst = %d\n", priv->no_erst);
 
   return OK;
