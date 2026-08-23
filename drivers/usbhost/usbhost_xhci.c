@@ -74,6 +74,8 @@
 
 #define XHCI_PORT_RESET_MS       (500)
 #define XHCI_BUFSIZE             (512)
+#define XHCI_CONTEXT_SIZE_32     (32)
+#define XHCI_CONTEXT_SIZE_64     (64)
 
 /* Port numbers macros */
 
@@ -176,8 +178,8 @@ struct xhci_dev_s
 {
   uint8_t                          state;   /* Slot stat */
   uint8_t                          slot;    /* Slot ID associated with this device */
-  FAR struct xhci_dev_ctx_s       *ctx;     /* Output Device Context. Managed by xHC */
-  FAR struct xhci_input_dev_ctx_s *input;   /* Input Device Context. Input to xHC */
+  FAR uint8_t                     *ctx;     /* Output Device Context. Managed by xHC */
+  FAR uint8_t                     *input;   /* Input Device Context. Input to xHC */
   FAR struct xhci_rhport_s        *rhport;  /* Root hub port carrying this device */
   FAR struct usbhost_hubport_s    *hport;   /* Direct parent hub port */
   FAR struct xhci_epinfo_s        *ep0;     /* Default control endpoint */
@@ -212,6 +214,7 @@ struct usbhost_xhci_s
   uint8_t                       no_slots;   /* Maximum number of Device Slots (one per USB device) */
   uint8_t                       no_scratch; /* Number of scratch buffers */
   uint8_t                       no_erst;    /* Event Ring Segment Table size */
+  uint8_t                       ctxsize;    /* Bytes per xHCI context */
 
   /* xHCI data */
 
@@ -364,6 +367,20 @@ xhci_device_find(FAR struct usbhost_xhci_s *priv,
 static FAR struct xhci_dev_s *
 xhci_device_from_ep(FAR struct usbhost_xhci_s *priv,
                     FAR struct xhci_epinfo_s *epinfo);
+static FAR struct xhci_input_ctx_s *
+xhci_input_ctrl(FAR struct usbhost_xhci_s *priv,
+                FAR struct xhci_dev_s *dev);
+static FAR struct xhci_slot_ctx_s *
+xhci_input_slot(FAR struct usbhost_xhci_s *priv,
+                FAR struct xhci_dev_s *dev);
+static FAR struct xhci_ep_ctx_s *
+xhci_input_ep(FAR struct usbhost_xhci_s *priv,
+              FAR struct xhci_dev_s *dev, uint8_t index);
+static FAR struct xhci_slot_ctx_s *
+xhci_output_slot(FAR struct usbhost_xhci_s *priv,
+                 FAR struct xhci_dev_s *dev);
+static size_t xhci_input_size(FAR struct usbhost_xhci_s *priv);
+static size_t xhci_output_size(FAR struct usbhost_xhci_s *priv);
 static inline uint8_t xhci_epno_get(FAR struct xhci_epinfo_s *epinfo);
 static void xhci_context_ctrl(FAR struct usbhost_xhci_s *priv,
                               FAR struct xhci_dev_s *dev,
@@ -1567,6 +1584,47 @@ xhci_device_from_ep(FAR struct usbhost_xhci_s *priv,
   return dev->state == XHCI_SLOT_DISABLED ? NULL : dev;
 }
 
+static FAR struct xhci_input_ctx_s *
+xhci_input_ctrl(FAR struct usbhost_xhci_s *priv,
+                FAR struct xhci_dev_s *dev)
+{
+  (void)priv;
+  return (FAR struct xhci_input_ctx_s *)dev->input;
+}
+
+static FAR struct xhci_slot_ctx_s *
+xhci_input_slot(FAR struct usbhost_xhci_s *priv,
+                FAR struct xhci_dev_s *dev)
+{
+  return (FAR struct xhci_slot_ctx_s *)(dev->input + priv->ctxsize);
+}
+
+static FAR struct xhci_ep_ctx_s *
+xhci_input_ep(FAR struct usbhost_xhci_s *priv,
+              FAR struct xhci_dev_s *dev, uint8_t index)
+{
+  return (FAR struct xhci_ep_ctx_s *)
+         (dev->input + ((size_t)index + 2) * priv->ctxsize);
+}
+
+static FAR struct xhci_slot_ctx_s *
+xhci_output_slot(FAR struct usbhost_xhci_s *priv,
+                 FAR struct xhci_dev_s *dev)
+{
+  (void)priv;
+  return (FAR struct xhci_slot_ctx_s *)dev->ctx;
+}
+
+static size_t xhci_input_size(FAR struct usbhost_xhci_s *priv)
+{
+  return (XHCI_MAX_ENDPOINTS + 2) * priv->ctxsize;
+}
+
+static size_t xhci_output_size(FAR struct usbhost_xhci_s *priv)
+{
+  return (XHCI_MAX_ENDPOINTS + 1) * priv->ctxsize;
+}
+
 /****************************************************************************
  * Name: xhci_slot_speed
  *
@@ -1632,6 +1690,8 @@ static int xhci_address_set(FAR struct usbhost_xhci_s *priv,
 static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
                           FAR struct xhci_dev_s *dev)
 {
+  FAR struct xhci_slot_ctx_s *slotctx;
+  FAR struct xhci_ep_ctx_s *ep0ctx;
   uint32_t regval;
   uint32_t ctx2 = 0;
   uint16_t maxpkt;
@@ -1649,7 +1709,9 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
    * Initialize all fields to 0.
    */
 
-  memset(dev->input, 0, sizeof(struct xhci_input_dev_ctx_s));
+  memset(dev->input, 0, xhci_input_size(priv));
+  slotctx = xhci_input_slot(priv, dev);
+  ep0ctx = xhci_input_ep(priv, dev, 0);
 
   /* Step 2. Initialize the Input Control Context by setting the A0 and
    * A1 flags to 1 (Slot flag and EP0 flag).
@@ -1699,7 +1761,7 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
     }
 #endif
 
-  dev->input->slot.ctx[0] = htole32(regval);
+  slotctx->ctx[0] = htole32(regval);
 
   /* Configure Root Hub Port Number (starts from 1) */
 
@@ -1710,7 +1772,7 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
 #ifdef CONFIG_USBHOST_HUB
   regval |= XHCI_ST_CTX1_PORTS_SET(dev->nports);
 #endif
-  dev->input->slot.ctx[1] = htole32(regval);
+  slotctx->ctx[1] = htole32(regval);
 
 #ifdef CONFIG_USBHOST_HUB
   /* Full/low-speed devices below a high-speed hub need that hub's slot and
@@ -1743,7 +1805,7 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
     }
 #endif
 
-  dev->input->slot.ctx[2] = htole32(ctx2);
+  slotctx->ctx[2] = htole32(ctx2);
 
   /* Step 4. the Transfer Ring for the Default Control Endpoint is already
    * allocated.
@@ -1769,7 +1831,7 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
 
   DEBUGASSERT(drdp != 0);
   xhci_ep_configure(priv,
-                    &dev->input->ep[0],
+                    ep0ctx,
                     XHCI_EPTYPE_CTRL, maxpkt,
                     0, drdp,
                     0, 0);
@@ -1778,13 +1840,13 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
    * Initialize all fields to 0.
    */
 
-  memset(dev->ctx, 0, sizeof(struct xhci_dev_ctx_s));
+  memset(dev->ctx, 0, xhci_output_size(priv));
 
   /* Flush Device input context */
 
   up_flush_dcache((uintptr_t)dev->input,
                   (uintptr_t)dev->input +
-                  sizeof(struct xhci_input_dev_ctx_s));
+                  xhci_input_size(priv));
 
   /* Step 7. Load the appropriate (Device Slot ID) entry in the Device
    * Context Base Address Array with a pointer to the Output Device
@@ -1941,8 +2003,8 @@ static int xhci_device_deinit(FAR struct usbhost_xhci_s *priv,
 
   dev->state = XHCI_SLOT_DISABLED;
 
-  memset(dev->ctx, 0, sizeof(struct xhci_dev_ctx_s));
-  memset(dev->input, 0, sizeof(struct xhci_input_dev_ctx_s));
+  memset(dev->ctx, 0, xhci_output_size(priv));
+  memset(dev->input, 0, xhci_input_size(priv));
   xhci_ring_deinit(&dev->ep0->td);
 
   /* Remove reference to a device slot */
@@ -2005,10 +2067,14 @@ static void xhci_context_ctrl(FAR struct usbhost_xhci_s *priv,
                               FAR struct xhci_dev_s *dev,
                               uint32_t drop, uint32_t add)
 {
+  FAR struct xhci_input_ctx_s *input;
+  FAR struct xhci_slot_ctx_s *slot;
   int i;
 
-  dev->input->input.ctx[0] = htole32(drop);
-  dev->input->input.ctx[1] = htole32(add);
+  input = xhci_input_ctrl(priv, dev);
+  slot = xhci_input_slot(priv, dev);
+  input->ctx[0] = htole32(drop);
+  input->ctx[1] = htole32(add);
 
   /* Update Context Entries in Slot */
 
@@ -2020,8 +2086,8 @@ static void xhci_context_ctrl(FAR struct usbhost_xhci_s *priv,
         }
     }
 
-  dev->input->slot.ctx[0] &= ~XHCI_ST_CTX0_CTXENT_MASK;
-  dev->input->slot.ctx[0] |= XHCI_ST_CTX0_CTXENT_SET(i);
+  slot->ctx[0] &= ~XHCI_ST_CTX0_CTXENT_MASK;
+  slot->ctx[0] |= XHCI_ST_CTX0_CTXENT_SET(i);
 }
 
 /****************************************************************************
@@ -3425,6 +3491,7 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
   FAR struct xhci_epinfo_s  *epinfo = (FAR struct xhci_epinfo_s *)ep0;
   FAR struct usbhost_xhci_s *priv   = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_dev_s     *dev;
+  FAR struct xhci_ep_ctx_s  *ep0ctx;
   uint64_t                   ctx;
   int                        ret;
 
@@ -3436,13 +3503,14 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
       return -ENODEV;
     }
 
+  ep0ctx = xhci_input_ep(priv, dev, 0);
   ret = nxmutex_lock(&priv->lock);
   if (ret >= 0)
     {
       /* Update max packet size */
 
-      dev->input->ep[0].ctx1 &= ~XHCI_EP_CTX1_MAXPKT_MASK;
-      dev->input->ep[0].ctx1 |= XHCI_EP_CTX1_MAXPKT(maxpacketsize);
+      ep0ctx->ctx1 &= ~XHCI_EP_CTX1_MAXPKT_MASK;
+      ep0ctx->ctx1 |= XHCI_EP_CTX1_MAXPKT(maxpacketsize);
 
       /* Add Slot Context and EP0 Context */
 
@@ -3454,7 +3522,7 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
 
       up_flush_dcache((uintptr_t)dev->input,
                       (uintptr_t)dev->input +
-                      sizeof(struct xhci_input_dev_ctx_s));
+                      xhci_input_size(priv));
 
       /* Free mutex before command execution */
 
@@ -3623,7 +3691,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
    * Max Burst Size set for 0 for now (USB3.0 specific)
    */
 
-  xhci_ep_configure(priv, &dev->input->ep[idx - 1],
+  xhci_ep_configure(priv, xhci_input_ep(priv, dev, idx - 1),
                     eptype, epdesc->mxpacketsize, 0,
                     up_addrenv_va_to_pa(epinfo->td.ring),
                     0, epinfo->interval);
@@ -3634,7 +3702,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
   up_flush_dcache((uintptr_t)dev->input,
                   (uintptr_t)dev->input +
-                  sizeof(struct xhci_input_dev_ctx_s));
+                  xhci_input_size(priv));
 
   /* Configure EP */
 
@@ -3922,6 +3990,8 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   FAR struct xhci_rhport_s  *rhport  = (FAR struct xhci_rhport_s *)drvr;
   FAR struct xhci_epinfo_s  *ep0info = (FAR struct xhci_epinfo_s *)ep0;
   FAR struct xhci_dev_s     *dev;
+  FAR struct xhci_slot_ctx_s *inputslot;
+  FAR struct xhci_slot_ctx_s *outputslot;
   uint16_t                   len;
   ssize_t                    nbytes;
   int                        ret;
@@ -3934,6 +4004,8 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
       return -ENODEV;
     }
 
+  inputslot = xhci_input_slot(priv, dev);
+  outputslot = xhci_output_slot(priv, dev);
   len = xhci_getle16(req->len);
 
   /* Terse output only if we are tracing */
@@ -3962,8 +4034,8 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
           /* Store USB Device Address assigned by xHCI */
 
           ep0info->devaddr =
-            XHCI_ST_CTX3_ADDR_GET(dev->ctx->slot.ctx[3]);
-          dev->input->slot.ctx[3] = dev->ctx->slot.ctx[3];
+            XHCI_ST_CTX3_ADDR_GET(outputslot->ctx[3]);
+          inputslot->ctx[3] = outputslot->ctx[3];
         }
 
       return OK;
@@ -4420,6 +4492,7 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
 {
   FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_dev_s *dev;
+  FAR struct xhci_slot_ctx_s *slotctx;
   uint32_t regval;
   uint64_t ctx;
   int ret;
@@ -4430,6 +4503,7 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
       return -ENODEV;
     }
 
+  slotctx = xhci_input_slot(priv, dev);
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
     {
@@ -4441,7 +4515,7 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
   dev->nports = nports;
   dev->ttthink = ttthink;
 
-  regval = le32toh(dev->input->slot.ctx[0]);
+  regval = le32toh(slotctx->ctx[0]);
   regval |= XHCI_ST_CTX0_HUB;
   if (mtt)
     {
@@ -4452,22 +4526,22 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
       regval &= ~XHCI_ST_CTX0_MTT;
     }
 
-  dev->input->slot.ctx[0] = htole32(regval);
+  slotctx->ctx[0] = htole32(regval);
 
-  regval = le32toh(dev->input->slot.ctx[1]);
+  regval = le32toh(slotctx->ctx[1]);
   regval &= ~XHCI_ST_CTX1_PORTS_MASK;
   regval |= XHCI_ST_CTX1_PORTS_SET(nports);
-  dev->input->slot.ctx[1] = htole32(regval);
+  slotctx->ctx[1] = htole32(regval);
 
-  regval = le32toh(dev->input->slot.ctx[2]);
+  regval = le32toh(slotctx->ctx[2]);
   regval &= ~XHCI_ST_CTX2_TTT_MASK;
   regval |= XHCI_ST_CTX2_TTT_SET(ttthink);
-  dev->input->slot.ctx[2] = htole32(regval);
+  slotctx->ctx[2] = htole32(regval);
 
   xhci_context_ctrl(priv, dev, 0, XHCI_IN_CTX1_A(XHCI_SLOT_FLAG));
   up_flush_dcache((uintptr_t)dev->input,
                   (uintptr_t)dev->input +
-                  sizeof(struct xhci_input_dev_ctx_s));
+                  xhci_input_size(priv));
   ctx = up_addrenv_va_to_pa(dev->input);
 
   nxmutex_unlock(&priv->lock);
@@ -4534,11 +4608,9 @@ static int xhci_hw_getparams(FAR struct usbhost_xhci_s *priv)
   /* Get data form Host Controller Capability 1 Parameters */
 
   regval = xhci_capa_getreg(priv, XHCI_HCCPARAMS1);
-  if (regval & XHCI_HCCPARAMS1_CSZ)
-    {
-      uerr("Only 32 byte Context data structures supported!\n");
-      return -EIO;
-    }
+  priv->ctxsize = (regval & XHCI_HCCPARAMS1_CSZ) != 0 ?
+                  XHCI_CONTEXT_SIZE_64 : XHCI_CONTEXT_SIZE_32;
+  uinfo("context size = %d\n", priv->ctxsize);
 
   /* Get data from Structural Parameters 1 register */
 
@@ -4700,24 +4772,29 @@ static int xhci_mem_alloc(FAR struct usbhost_xhci_s *priv)
     {
       /* Allocate Device Context */
 
-      priv->devs[i].ctx = kmm_zalloc(sizeof(struct xhci_dev_ctx_s));
+      tmp = xhci_output_size(priv);
+      priv->devs[i].ctx = kmm_memalign(XHCI_PAGE_SIZE, tmp);
       if (!priv->devs[i].ctx)
         {
           uerr("dev ctx zalloc failed!\n");
           return -ENOMEM;
         }
 
+      memset(priv->devs[i].ctx, 0, tmp);
+
       /* Allocate Input Context. The Input Context shall be physically
        * contiguous within a page
        */
 
-      priv->devs[i].input = kmm_memalign((XHCI_PAGE_SIZE / 2),
-                            sizeof(struct xhci_input_dev_ctx_s));
+      tmp = xhci_input_size(priv);
+      priv->devs[i].input = kmm_memalign(XHCI_PAGE_SIZE, tmp);
       if (!priv->devs[i].input)
         {
           uerr("dev input zalloc failed!\n");
           return -ENOMEM;
         }
+
+      memset(priv->devs[i].input, 0, tmp);
 
       /* No endpoint for device yet */
 
