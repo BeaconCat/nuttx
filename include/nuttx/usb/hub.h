@@ -50,6 +50,7 @@
 #define USBHUB_REQ_RESETTT             (0x09)
 #define USBHUB_REQ_GETTTSTATE          (0x0a)
 #define USBHUB_REQ_STOPTT              (0x0b)
+#define USBHUB_REQ_SETDEPTH            (0x0c)
 
 /* Hub class features */
 
@@ -132,6 +133,7 @@
 /* Hub descriptor type */
 
 #define USB_DESC_TYPE_HUB              (USB_REQ_TYPE_CLASS | USB_CLASS_HUB)
+#define USB_DESC_TYPE_SS_HUB           (0x2a)
 
 /* Hub max ports */
 
@@ -155,6 +157,22 @@ struct usb_hubdesc_s
   uint8_t  pwrctrlmask;
 };
 #define USB_SIZEOF_HUBDESC 9
+
+/* SuperSpeed hub descriptor */
+
+struct usb_ss_hubdesc_s
+{
+  uint8_t len;
+  uint8_t type;
+  uint8_t nports;
+  uint8_t characteristics[2];
+  uint8_t pwrondelay;
+  uint8_t ctrlcurrent;
+  uint8_t hubhdrdeclang;
+  uint8_t hubdelay[2];
+  uint8_t devremovable[2];
+};
+#define USB_SIZEOF_SS_HUBDESC 12
 
 /* Hub status */
 

@@ -1816,7 +1816,12 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
   /* Step 5. Initialize the Input default control Endpoint 0 Context */
 
   DEBUGASSERT(dev->rhport != NULL && dev->hport != NULL);
-  if (dev->hport->speed == USB_SPEED_HIGH)
+  if (dev->hport->speed == USB_SPEED_SUPER ||
+      dev->hport->speed == USB_SPEED_SUPER_PLUS)
+    {
+      maxpkt = 512;
+    }
+  else if (dev->hport->speed == USB_SPEED_HIGH)
     {
       /* For high-speed, we must use 64 bytes */
 
