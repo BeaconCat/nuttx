@@ -4716,7 +4716,7 @@ static int xhci_mem_alloc(FAR struct usbhost_xhci_s *priv)
       memset(priv->pg_sb, 0, tmp);
     }
 
-  for (i = 0; i < priv->no_scratch; i++)
+  for (i = 0; priv->pg_sb != NULL && i < priv->no_scratch; i++)
     {
       /* Alloc page for each entry in array */
 
@@ -4782,7 +4782,7 @@ static int xhci_mem_alloc(FAR struct usbhost_xhci_s *priv)
 
   /* Allocate xHC devices resources */
 
-  for (i = 0; i < priv->no_slots; i++)
+  for (i = 0; priv->devs != NULL && i < priv->no_slots; i++)
     {
       /* Allocate Device Context */
 
@@ -4852,6 +4852,12 @@ static int xhci_mem_free(FAR struct usbhost_xhci_s *priv)
   kmm_free(priv->pg_ctx);
   kmm_free(priv->pg_erst);
   kmm_free(priv->rhport);
+
+  priv->pg_sb = NULL;
+  priv->devs = NULL;
+  priv->pg_ctx = NULL;
+  priv->pg_erst = NULL;
+  priv->rhport = NULL;
 
   /* Free command ring and event ring */
 
