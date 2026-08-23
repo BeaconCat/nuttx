@@ -603,6 +603,10 @@
 #ifdef CONFIG_USBHOST_HUB
 #  define DRVR_CONNECT(drvr,hport,connected) \
      ((drvr)->connect(drvr,hport,connected))
+
+#  define DRVR_HUBCONFIGURE(drvr,hport,nports,ttthink,mtt) \
+     ((drvr)->hubconfigure == NULL ? OK : \
+      (drvr)->hubconfigure(drvr,hport,nports,ttthink,mtt))
 #endif
 
 /****************************************************************************
@@ -932,6 +936,15 @@ struct usbhost_driver_s
 
   CODE int (*connect)(FAR struct usbhost_driver_s *drvr,
                       FAR struct usbhost_hubport_s *hport, bool connected);
+
+  /* Give host controllers that need topology in hardware the information
+   * learned from the hub descriptor.  nports may be zero on the first call,
+   * before endpoint allocation.
+   */
+
+  CODE int (*hubconfigure)(FAR struct usbhost_driver_s *drvr,
+                           FAR struct usbhost_hubport_s *hport,
+                           uint8_t nports, uint8_t ttthink, bool mtt);
 #endif
 
   /* Called by the class when an error occurs and driver has been

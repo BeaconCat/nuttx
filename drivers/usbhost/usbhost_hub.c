@@ -118,6 +118,8 @@ struct usbhost_hubpriv_s
 
   uint8_t                   ifno;         /* Interface number */
   uint8_t                   nports;       /* Number of ports */
+  uint8_t                   protocol;     /* Hub protocol from device ID */
+  uint8_t                   ttthink;      /* Transaction translator think time */
   uint8_t                   lpsm;         /* Logical power switching mode */
   uint8_t                   ocmode;       /* Over current protection mode */
   uint8_t                   ctrlcurrent;  /* Control current */
@@ -184,7 +186,7 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *hubclass);
  * used to associate the USB host hub class to a connected USB hub.
  */
 
-static const struct usbhost_id_s g_id[2] =
+static const struct usbhost_id_s g_id[3] =
 {
   {
       USB_CLASS_HUB,  /* base         */
@@ -199,6 +201,13 @@ static const struct usbhost_id_s g_id[2] =
       1,              /* proto HS hub */
       0,              /* vid          */
       0               /* pid          */
+  },
+  {
+      USB_CLASS_HUB,  /* base             */
+      0,              /* subclass         */
+      2,              /* proto HS MTT hub */
+      0,              /* vid              */
+      0               /* pid              */
   }
 };
 
@@ -208,7 +217,7 @@ static struct usbhost_registry_s g_hub =
 {
   NULL,                   /* flink    */
   usbhost_create,         /* create   */
-  2,                      /* nids     */
+  3,                      /* nids     */
   g_id                    /* id[]     */
 };
 
@@ -565,6 +574,8 @@ static inline int usbhost_hubdesc(FAR struct usbhost_class_s *hubclass)
   priv->compounddev = (hubchar & USBHUB_CHAR_COMPOUND) ? true : false;
   priv->ocmode      = (hubchar & USBHUB_CHAR_OCPM_MASK) >>
                        USBHUB_CHAR_OCPM_SHIFT;
+  priv->ttthink     = (hubchar & USBHUB_CHAR_TTTT_MASK) >>
+                       USBHUB_CHAR_TTTT_SHIFT;
   priv->indicator   = (hubchar & USBHUB_CHAR_PORTIND) ? true : false;
 
   priv->pwrondelay  = (2 * hubdesc->pwrondelay);
@@ -1345,6 +1356,7 @@ static FAR struct usbhost_class_s *
   /* Initialize the private class structure */
 
   priv = &alloc->hubpriv;
+  priv->protocol = id->proto;
 
   /* Allocate memory for control requests */
 
@@ -1441,6 +1453,19 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
 
   DEBUGASSERT(configdesc != NULL && desclen >= sizeof(struct usb_cfgdesc_s));
 
+  /* xHCI must know that a slot represents a hub before the interrupt
+   * endpoint is configured.  The number of ports and TT think time become
+   * available after reading the hub descriptor, so update the slot again
+   * below.
+   */
+
+  ret = DRVR_HUBCONFIGURE(hport->drvr, hport, 0, 0,
+                          priv->protocol == 2);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   /* Parse the configuration descriptor to get the endpoints */
 
   ret = usbhost_cfgdesc(hubclass, configdesc, desclen);
@@ -1453,6 +1478,13 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
   /* Read the hub descriptor */
 
   ret = usbhost_hubdesc(hubclass);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = DRVR_HUBCONFIGURE(hport->drvr, hport, priv->nports,
+                          priv->ttthink, priv->protocol == 2);
   if (ret < 0)
     {
       return ret;
