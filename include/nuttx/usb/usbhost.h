@@ -785,6 +785,7 @@ struct usbhost_epdesc_s
                                         * in usb.h */
   uint8_t interval;                    /* Polling interval */
   uint16_t mxpacketsize;               /* Max packetsize */
+  uint8_t maxburst;                    /* SuperSpeed maximum burst value */
 };
 
 /* struct usbhost_connection_s provides as interface between
