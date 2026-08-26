@@ -148,7 +148,12 @@ static ssize_t part_read(FAR struct inode *inode, FAR unsigned char *buffer,
   FAR struct part_struct_s *dev = inode->i_private;
   FAR struct inode *parent = dev->parent;
 
-  if (start_sector + nsectors > dev->nsectors)
+  if (start_sector >= dev->nsectors)
+    {
+      return 0;
+    }
+
+  if (nsectors > dev->nsectors - start_sector)
     {
       nsectors = dev->nsectors - start_sector;
     }
@@ -172,7 +177,12 @@ static ssize_t part_write(FAR struct inode *inode,
   FAR struct part_struct_s *dev = inode->i_private;
   FAR struct inode *parent = dev->parent;
 
-  if (start_sector + nsectors > dev->nsectors)
+  if (start_sector >= dev->nsectors)
+    {
+      return 0;
+    }
+
+  if (nsectors > dev->nsectors - start_sector)
     {
       nsectors = dev->nsectors - start_sector;
     }
