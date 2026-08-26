@@ -179,6 +179,9 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
              FAR const uint8_t *configdesc, int desclen);
 static int usbhost_disconnected(FAR struct usbhost_class_s *hubclass);
 
+static int usbhost_change_feature(FAR struct usbhost_hubpriv_s *priv,
+                                  uint16_t mask);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -775,6 +778,38 @@ static int usbhost_hubpwr(FAR struct usbhost_hubpriv_s *priv,
 }
 
 /****************************************************************************
+ * Name: usbhost_change_feature
+ ****************************************************************************/
+
+static int usbhost_change_feature(FAR struct usbhost_hubpriv_s *priv,
+                                  uint16_t mask)
+{
+  switch (mask)
+    {
+      case USBHUB_PORT_STAT_CCONNECTION:
+        return USBHUB_PORT_FEAT_CCONNECTION;
+      case USBHUB_PORT_STAT_CENABLE:
+        return USBHUB_PORT_FEAT_CENABLE;
+      case USBHUB_PORT_STAT_CSUSPEND:
+        return USBHUB_PORT_FEAT_CSUSPEND;
+      case USBHUB_PORT_STAT_COVERCURRENT:
+        return USBHUB_PORT_FEAT_COVER_CURRENT;
+      case USBHUB_PORT_STAT_CRESET:
+        return USBHUB_PORT_FEAT_CRESET;
+      case USBHUB_PORT_STAT_CL1:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CLINKSTATE :
+                                     USBHUB_PORT_FEAT_CPORTL1;
+      case USBHUB_PORT_STAT_CCONFIGERROR:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CCONFIGERROR :
+                                     -EINVAL;
+      case USBHUB_PORT_STAT_CBHRESET:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CBHRESET : -EINVAL;
+      default:
+        return -EINVAL;
+    }
+}
+
+/****************************************************************************
  * Name: usbhost_hub_event
  *
  * Description:
@@ -804,7 +839,6 @@ static void usbhost_hub_event(FAR void *arg)
   uint16_t status;
   uint16_t change;
   uint16_t mask;
-  uint16_t feat;
   uint8_t statuschange;
   int port;
   int ret;
@@ -879,30 +913,32 @@ static void usbhost_hub_event(FAR void *arg)
       /* First, clear all change bits */
 
       mask = 1;
-      feat = USBHUB_PORT_FEAT_CCONNECTION;
       while (change)
         {
           if (change & mask)
             {
-              ctrlreq->type = USBHUB_REQ_TYPE_PORT;
-              ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
-              usbhost_putle16(ctrlreq->value, feat);
-              usbhost_putle16(ctrlreq->index, port);
-              usbhost_putle16(ctrlreq->len, 0);
-
-              ret = DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
-              if (ret < 0)
+              ret = usbhost_change_feature(priv, mask);
+              if (ret >= 0)
                 {
-                  uerr("ERROR:");
-                  uerr(" Failed to clear port %d change mask %04x: %d\n",
-                       port, mask, ret);
+                  ctrlreq->type = USBHUB_REQ_TYPE_PORT;
+                  ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
+                  usbhost_putle16(ctrlreq->value, ret);
+                  usbhost_putle16(ctrlreq->index, port);
+                  usbhost_putle16(ctrlreq->len, 0);
+
+                  ret = DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq,
+                                     NULL);
+                  if (ret < 0)
+                    {
+                      uerr("ERROR: Failed to clear port %d change mask "
+                           "%04x: %d\n", port, mask, ret);
+                    }
                 }
 
               change &= (~mask);
             }
 
           mask <<= 1;
-          feat++;
         }
 
       change = usbhost_getle16(portstatus->change);
@@ -1023,16 +1059,27 @@ static void usbhost_hub_event(FAR void *arg)
               if ((status & USBHUB_PORT_STAT_RESET)  == 0 &&
                   (status & USBHUB_PORT_STAT_ENABLE) != 0)
                 {
-                  if ((change & USBHUB_PORT_STAT_CRESET) != 0)
+                  mask = 1;
+                  while (change)
                     {
-                      ctrlreq->type = USBHUB_REQ_TYPE_PORT;
-                      ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
-                      usbhost_putle16(ctrlreq->value,
-                                      USBHUB_PORT_FEAT_CRESET);
-                      usbhost_putle16(ctrlreq->index, port);
-                      usbhost_putle16(ctrlreq->len, 0);
+                      if (change & mask)
+                        {
+                          ret = usbhost_change_feature(priv, mask);
+                          if (ret >= 0)
+                            {
+                              ctrlreq->type = USBHUB_REQ_TYPE_PORT;
+                              ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
+                              usbhost_putle16(ctrlreq->value, ret);
+                              usbhost_putle16(ctrlreq->index, port);
+                              usbhost_putle16(ctrlreq->len, 0);
+                              DRVR_CTRLOUT(hport->drvr, hport->ep0,
+                                           ctrlreq, NULL);
+                            }
 
-                      DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
+                          change &= ~mask;
+                        }
+
+                      mask <<= 1;
                     }
 
                   connport = &priv->hport[PORT_INDX(port)];
@@ -1097,9 +1144,18 @@ static void usbhost_hub_event(FAR void *arg)
               connport = &priv->hport[PORT_INDX(port)];
               if (connport->devclass != NULL)
                 {
+                  bool child_is_hub;
+
+                  /* A class disconnect callback may synchronously destroy
+                   * and free the class instance.  Save the only property
+                   * needed after the callback before invoking it.
+                   */
+
+                  child_is_hub =
+                    connport->devclass->connect == usbhost_connect;
                   CLASS_DISCONNECTED(connport->devclass);
 
-                  if (connport->devclass->connect == usbhost_connect)
+                  if (child_is_hub)
                     {
                       /* For hubs, the usbhost_disconnect_event function
                        * (triggered by the CLASS_DISCONNECTED call above)
@@ -1553,29 +1609,10 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
       return ret;
     }
 
-  /* xHCI must know that a slot represents a hub before the interrupt
-   * endpoint is configured.  The number of ports and TT think time become
-   * available after reading the hub descriptor, so update the slot again
-   * below.
+  /* Read the hub descriptor over EP0 before configuring the periodic
+   * endpoint.  xHCI requires Hub=1 and a non-zero Number of Ports in the
+   * Slot Context when Configure Endpoint is issued.
    */
-
-  ret = DRVR_HUBCONFIGURE(hport->drvr, hport, 0, 0,
-                          priv->protocol == 2);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Parse the configuration descriptor to get the endpoints */
-
-  ret = usbhost_cfgdesc(hubclass, configdesc, desclen);
-  if (ret < 0)
-    {
-      uerr("ERROR: Failed to parse config descriptor: %d\n", ret);
-      return ret;
-    }
-
-  /* Read the hub descriptor */
 
   ret = usbhost_hubdesc(hubclass);
   if (ret < 0)
@@ -1587,6 +1624,15 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
                           priv->ttthink, priv->protocol == 2);
   if (ret < 0)
     {
+      return ret;
+    }
+
+  /* Parse the configuration descriptor to get the endpoints */
+
+  ret = usbhost_cfgdesc(hubclass, configdesc, desclen);
+  if (ret < 0)
+    {
+      uerr("ERROR: Failed to parse config descriptor: %d\n", ret);
       return ret;
     }
 
