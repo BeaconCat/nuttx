@@ -32,6 +32,8 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
+#include <nuttx/cache.h>
+#include <nuttx/signal.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/spinlock.h>
@@ -59,7 +61,8 @@
 #define XHCI_MAX_ERST            (1)
 #define XHCI_CMD_MAX             (16)
 #define XHCI_EVENT_MAX           (232)
-#define XHCI_TD_MAX              (8)
+#define XHCI_TD_MAX              (64)
+#define XHCI_TRB_BOUNDARY        (64 * 1024)
 
 /* How long to give the controller to stop, in milliseconds.  The
  * specification asks for it within 16; this is generous.
@@ -73,6 +76,11 @@
  */
 
 #define XHCI_PORT_RESET_MS       (500)
+#define XHCI_HUB_REUSE_WAIT_MS   (5000)
+#define XHCI_SS_DEBOUNCE_MS      (3000)
+#define XHCI_POLL_TIMEOUT_MS     (5000)
+#define XHCI_IRQ_SPIN_US         (10)
+#define XHCI_IMOD_INTERVAL       (160)
 #define XHCI_BUFSIZE             (512)
 #define XHCI_CONTEXT_SIZE_32     (32)
 #define XHCI_CONTEXT_SIZE_64     (64)
@@ -352,7 +360,8 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
                               FAR struct xhci_ep_ctx_s *ctx,
                               uint8_t type, uint16_t maxpkt,
                               uint8_t maxburst, uint64_t tr_dp,
-                              uint8_t mult, uint8_t interval);
+                              uint8_t mult, uint8_t interval,
+                              uint32_t maxesit);
 static int xhci_address_set(FAR struct usbhost_xhci_s *priv,
                             FAR struct xhci_dev_s *dev, bool setaddr);
 static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
@@ -409,7 +418,8 @@ static void xhci_ep_doorbell(FAR struct usbhost_xhci_s *priv,
 static int xhci_ioc_setup(FAR struct xhci_rhport_s *rhport,
                           FAR struct xhci_epinfo_s *epinfo,
                           size_t buflen);
-static int xhci_ioc_wait(FAR struct xhci_epinfo_s *epinfo);
+static int xhci_ioc_wait(FAR struct usbhost_xhci_s *priv,
+                         FAR struct xhci_epinfo_s *epinfo);
 #ifdef CONFIG_USBHOST_ASYNCH
 static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
                                        FAR struct xhci_epinfo_s *epinfo,
@@ -548,6 +558,26 @@ static uint8_t xhci_capa_getreg_1b(FAR struct usbhost_xhci_s *priv,
   __asm__ __volatile__("" : "+r"(regval));
   return regval;
 }
+
+/****************************************************************************
+ * Name: xhci_capa_getreg_2b
+ *
+ * Description:
+ *   Get a 2B capability register.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEBUG_USB_INFO
+static uint16_t xhci_capa_getreg_2b(FAR struct usbhost_xhci_s *priv,
+                                    unsigned int offset)
+{
+  uintptr_t addr   = priv->capa_base + offset;
+  uint16_t  regval = *((FAR volatile uint16_t *)addr);
+
+  __asm__ __volatile__("" : "+r"(regval));
+  return regval;
+}
+#endif
 
 /****************************************************************************
  * Name: xhci_capa_putreg_1b
@@ -736,8 +766,10 @@ static void xhci_dump_mem(FAR struct usbhost_xhci_s *priv,
   uinfo("Dump xHCI registers: %s\n", msg);
 
   uinfo("=== Host Controller Capability Registers ===\n");
-  xhci_dump_capa_reg(priv, "CAPLENGTH   ", XHCI_CAPLENGTH);
-  xhci_dump_capa_reg(priv, "HCIVERSION  ", XHCI_HCIVERSION);
+  uinfo("\tCAPLENGTH   :\t\t0x%" PRIx8 "\n",
+        xhci_capa_getreg_1b(priv, XHCI_CAPLENGTH));
+  uinfo("\tHCIVERSION  :\t\t0x%" PRIx16 "\n",
+        xhci_capa_getreg_2b(priv, XHCI_HCIVERSION));
   xhci_dump_capa_reg(priv, "HCSPARAMS1  ", XHCI_HCSPARAMS1);
   xhci_dump_capa_reg(priv, "HCSPARAMS2  ", XHCI_HCSPARAMS2);
   xhci_dump_capa_reg(priv, "HCSPARAMS3  ", XHCI_HCSPARAMS3);
@@ -913,6 +945,8 @@ static void xhci_add_trb(FAR struct usbhost_xhci_s *priv,
                          FAR struct xhci_trb_s *trb,
                          int len)
 {
+  FAR struct xhci_trb_s *first = NULL;
+  uint32_t               firstd2 = 0;
   uint32_t d2;
   int      i;
 
@@ -937,7 +971,22 @@ static void xhci_add_trb(FAR struct usbhost_xhci_s *priv,
 
       ring->ring[ring->i].d0 = htole64(trb[i].d0);
       ring->ring[ring->i].d1 = htole32(trb[i].d1);
-      ring->ring[ring->i].d2 = htole32(d2);
+
+      /* A multi-TRB TD must become visible atomically.  Keep the first TRB
+       * owned by software until every following TRB has been initialized;
+       * otherwise a coherent xHC can fetch a partially constructed TD.
+       */
+
+      if (i == 0 && len > 1)
+        {
+          first = &ring->ring[ring->i];
+          firstd2 = d2;
+          ring->ring[ring->i].d2 = htole32(d2 ^ XHCI_TRB_D2_C);
+        }
+      else
+        {
+          ring->ring[ring->i].d2 = htole32(d2);
+        }
 
       /* Next TD */
 
@@ -962,6 +1011,11 @@ static void xhci_add_trb(FAR struct usbhost_xhci_s *priv,
                    XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_LINK);
             }
 
+          if (i < len - 1)
+            {
+              d2 |= XHCI_TRB_D2_CH;
+            }
+
           /* Other parameters are already corredt for this TRB */
 
           ring->ring[ring->i].d2 = htole32(d2);
@@ -976,6 +1030,12 @@ static void xhci_add_trb(FAR struct usbhost_xhci_s *priv,
 
   up_flush_dcache((uintptr_t)ring->ring,
                   (uintptr_t)(ring->ring + ring->len));
+
+  if (first != NULL)
+    {
+      first->d2 = htole32(firstd2);
+      up_flush_dcache((uintptr_t)first, (uintptr_t)(first + 1));
+    }
 }
 
 /****************************************************************************
@@ -1074,11 +1134,15 @@ static int xhci_bios_wait(FAR struct usbhost_xhci_s *priv)
 static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
 {
   FAR struct xhci_event_ring_s *evnt;
+  uintptr_t                     cmdpa;
   uint32_t                      regval;
   int                           ret;
   int                           i;
 
   uinfo("Start controller\n");
+  uinfo("pre-reset USBCMD=%08" PRIx32 " USBSTS=%08" PRIx32 "\n",
+        xhci_oper_getreg(priv, XHCI_USBCMD),
+        xhci_oper_getreg(priv, XHCI_USBSTS));
 
   /* Reset controller before writing any Operational or Runtime registers */
 
@@ -1089,11 +1153,15 @@ static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
       return ret;
     }
 
+  uinfo("controller reset complete USBSTS=%08" PRIx32 "\n",
+        xhci_oper_getreg(priv, XHCI_USBSTS));
+
   /* TODO: clear interrupts and disable all device notifications */
 
   /* Max Device Slots Enabled */
 
   xhci_oper_putreg(priv, XHCI_CONFIG, priv->no_slots);
+  uinfo("CONFIG programmed\n");
 
   /* Slot 0 of the Device Context array points at the Scratchpad Buffer
    * Array, or is zero when the controller asked for none.
@@ -1105,6 +1173,7 @@ static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
   /* Device Context Base Address Array Pointer */
 
   xhci_oper_putreg_8b(priv, XHCI_DCBAAP, up_addrenv_va_to_pa(priv->pg_ctx));
+  uinfo("DCBAAP programmed\n");
 
   /* Event Ring Segment Table Size */
 
@@ -1151,6 +1220,8 @@ static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
 
   xhci_runt_putreg_8b(priv, XHCI_ERSTBA(0),
                       up_addrenv_va_to_pa(priv->pg_erst));
+  xhci_runt_putreg(priv, XHCI_IMOD(0), XHCI_IMOD_INTERVAL);
+  uinfo("ERDP and ERSTBA programmed\n");
 
   /* Last item in the command ring point to the beggining of the ring */
 
@@ -1159,25 +1230,38 @@ static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
 
   /* Configure the Command Ring */
 
-  xhci_oper_putreg_8b(priv, XHCI_CRCR,
-                      up_addrenv_va_to_pa(priv->cmd.ring) | XHCI_CRCR_RCS);
+  cmdpa = up_addrenv_va_to_pa(priv->cmd.ring);
+  uinfo("command ring va=%p pa=%" PRIxPTR " USBSTS=%08" PRIx32 "\n",
+        priv->cmd.ring, cmdpa, xhci_oper_getreg(priv, XHCI_USBSTS));
 
-  /* Enable interupts */
+  xhci_oper_putreg_8b(priv, XHCI_CRCR,
+                      (uint64_t)cmdpa | XHCI_CRCR_RCS);
+  uinfo("CRCR programmed low=%08" PRIx32 " high=%08" PRIx32 "\n",
+        xhci_oper_getreg(priv, XHCI_CRCR),
+        xhci_oper_getreg(priv, XHCI_CRCR + sizeof(uint32_t)));
+
+  /* Clear an old interrupter-pending condition but keep the interrupter
+   * masked until the controller is running and the initial event ring has
+   * been drained.  Platform controllers commonly use a level interrupt.
+   */
 
   regval = xhci_runt_getreg(priv, XHCI_IMAN(0));
-  regval |= XHCI_IMAN_IE;
+  regval &= ~XHCI_IMAN_IE;
+  regval |= XHCI_IMAN_IP;
   xhci_runt_putreg(priv, XHCI_IMAN(0), regval);
+  uinfo("interrupter pending cleared; polling mode\n");
 
   /* Flush all memory once again */
 
   up_flush_dcache_all();
 
-  /* Turn the host controler ON, enable interrupts and system errors */
+  /* Start the host controller with global interrupts still masked. */
 
   xhci_oper_putreg(priv, XHCI_USBCMD,
                          XHCI_USBCMD_RS |
                          XHCI_USBCMD_INTE |
                          XHCI_USBCMD_HSEE);
+  uinfo("Run/Stop asserted\n");
 
   /* Wait for controller started */
 
@@ -1204,6 +1288,13 @@ static int xhci_ctrl_start(FAR struct usbhost_xhci_s *priv)
   /* Poll all pending events */
 
   xhci_events_poll(priv);
+
+  /* Acknowledge startup status, then enable interrupter zero. */
+
+  regval = xhci_oper_getreg(priv, XHCI_USBSTS);
+  xhci_oper_putreg(priv, XHCI_USBSTS, regval);
+  xhci_runt_putreg(priv, XHCI_IMAN(0), XHCI_IMAN_IP | XHCI_IMAN_IE);
+  uinfo("interrupt mode active\n");
 
   return OK;
 }
@@ -1271,24 +1362,64 @@ static int xhci_ctrl_halt(FAR struct usbhost_xhci_s *priv)
 
 static int xhci_ctrl_reset(FAR struct usbhost_xhci_s *priv)
 {
-  int ret = -EAGAIN;
-  int i;
+  uint32_t regval;
+  int      ret;
+  int      i;
 
-  /* Halt controller */
+  /* The xHCI specification requires the controller to be halted before
+   * HCRST is asserted.
+   */
 
-  xhci_oper_putreg(priv, XHCI_USBCMD, XHCI_USBCMD_HCRST);
-
-  /* Wait for controller halted */
-
-  for (i = 0; i < 10; i++)
+  ret = xhci_ctrl_halt(priv);
+  if (ret < 0)
     {
-      up_mdelay(100);
+      return ret;
+    }
 
-      if (!(xhci_oper_getreg(priv, XHCI_USBSTS) & XHCI_USBSTS_CNR))
+  regval = xhci_oper_getreg(priv, XHCI_USBCMD);
+  xhci_oper_putreg(priv, XHCI_USBCMD, regval | XHCI_USBCMD_HCRST);
+
+  /* HCRST clears only after the reset operation itself completes.  CNR may
+   * already read zero before then, so both handshakes are required before
+   * any operational register may be programmed.
+   */
+
+  ret = -EAGAIN;
+  for (i = 0; i < XHCI_HALT_TIMEOUT_MS; i++)
+    {
+      regval = xhci_oper_getreg(priv, XHCI_USBCMD);
+      if ((regval & XHCI_USBCMD_HCRST) == 0)
         {
           ret = OK;
           break;
         }
+
+      up_udelay(1000);
+    }
+
+  if (ret < 0)
+    {
+      uerr("controller reset did not complete, USBCMD %08" PRIx32 "\n",
+           regval);
+      return ret;
+    }
+
+  ret = -EAGAIN;
+  for (i = 0; i < XHCI_HALT_TIMEOUT_MS; i++)
+    {
+      regval = xhci_oper_getreg(priv, XHCI_USBSTS);
+      if ((regval & XHCI_USBSTS_CNR) == 0)
+        {
+          ret = OK;
+          break;
+        }
+
+      up_udelay(1000);
+    }
+
+  if (ret < 0)
+    {
+      uerr("controller stayed not-ready, USBSTS %08" PRIx32 "\n", regval);
     }
 
   return ret;
@@ -1304,6 +1435,7 @@ static int xhci_ctrl_reset(FAR struct usbhost_xhci_s *priv)
 
 static void xhci_probe_ports(FAR struct usbhost_xhci_s *priv)
 {
+  uint32_t change;
   uint32_t portsc;
   int      i;
 
@@ -1312,10 +1444,23 @@ static void xhci_probe_ports(FAR struct usbhost_xhci_s *priv)
       portsc = xhci_oper_getreg(priv, XHCI_PORTSC(i));
       priv->rhport[i].connected = ((portsc & XHCI_PORTSC_CCS) != 0);
 
-      /* Clear status change */
+      /* Acknowledge only change bits with a neutral PORTSC write.  Leaving
+       * them set keeps USBSTS.PCD asserted; replaying the raw snapshot would
+       * instead disturb PED and link state.
+       */
 
-      xhci_oper_putreg(priv, XHCI_PORTSC(i), portsc);
+      change = portsc & (XHCI_PORTSC_RW1C & ~XHCI_PORTSC_PED);
+      if (change != 0)
+        {
+          xhci_oper_putreg(priv, XHCI_PORTSC(i),
+                           XHCI_PORTSC_NEUTRAL(portsc) | change);
+        }
+
+      uinfo("initial port %d connected=%d PORTSC=%08" PRIx32 "\n",
+            i, priv->rhport[i].connected, portsc);
     }
+
+  xhci_oper_putreg(priv, XHCI_USBSTS, XHCI_USBSTS_PCD);
 }
 
 /****************************************************************************
@@ -1338,19 +1483,63 @@ static int xhci_port_enable(FAR struct usbhost_xhci_s *priv,
   rhpndx = hport->port;
 
   regval = xhci_oper_getreg(priv, XHCI_PORTSC(rhpndx));
+  uinfo("enable root port %d PORTSC=%08" PRIx32 "\n", rhpndx, regval);
+
+  speed = XHCI_PORTSC_PS(regval);
+
+  /* A connected SuperSpeed port becomes Enabled during link training, but
+   * the attached device still requires a Warm Port Reset before default-
+   * address control transfers.  PR is defined only for USB2 protocol ports.
+   */
+
+  if ((regval & XHCI_PORTSC_CCS) != 0 &&
+      speed >= XHCI_PORTSC_PS_SUPPER11)
+    {
+      up_mdelay(XHCI_SS_DEBOUNCE_MS);
+      regval = xhci_oper_getreg(priv, XHCI_PORTSC(rhpndx));
+      xhci_oper_putreg(priv, XHCI_PORTSC(rhpndx),
+                       XHCI_PORTSC_NEUTRAL(regval) | XHCI_PORTSC_WPR);
+
+      for (retries = XHCI_PORT_RESET_MS; retries > 0; retries--)
+        {
+          regval = xhci_oper_getreg(priv, XHCI_PORTSC(rhpndx));
+          if ((regval & XHCI_PORTSC_WPR) == 0 &&
+              (regval & XHCI_PORTSC_WRC) != 0 &&
+              (regval & XHCI_PORTSC_PED) != 0)
+            {
+              break;
+            }
+
+          up_mdelay(1);
+        }
+
+      if ((regval & XHCI_PORTSC_PED) == 0 ||
+          (regval & XHCI_PORTSC_WPR) != 0)
+        {
+          uerr("port %d warm reset failed, PORTSC %08" PRIx32 "\n",
+               rhpndx, regval);
+          return -ETIMEDOUT;
+        }
+
+      if ((regval & XHCI_PORTSC_WRC) != 0)
+        {
+          xhci_oper_putreg(priv, XHCI_PORTSC(rhpndx),
+                           XHCI_PORTSC_NEUTRAL(regval) | XHCI_PORTSC_WRC);
+        }
+    }
 
   /* A USB3 protocol port attempts to automatically advance to the
    * Enabled state for port as part of the attach process.
    */
 
-  if (!(regval & XHCI_PORTSC_PED))
+  else if (!(regval & XHCI_PORTSC_PED))
     {
       /* Reset the port, masking the write-one-to-clear bits out of the
        * value first.  See XHCI_PORTSC_RW1C.
        */
 
       regval  = xhci_oper_getreg(priv, XHCI_PORTSC(rhpndx));
-      regval &= ~XHCI_PORTSC_RW1C;
+      regval  = XHCI_PORTSC_NEUTRAL(regval);
       regval |= XHCI_PORTSC_PR;
       xhci_oper_putreg(priv, XHCI_PORTSC(rhpndx), regval);
 
@@ -1388,6 +1577,8 @@ static int xhci_port_enable(FAR struct usbhost_xhci_s *priv,
   /* Get port speed */
 
   speed = XHCI_PORTSC_PS(regval);
+  uinfo("root port %d enabled speed-id=%u PORTSC=%08" PRIx32 "\n",
+        rhpndx, speed, regval);
   switch (speed)
     {
       case XHCI_PORTSC_PS_FULL:
@@ -1471,7 +1662,8 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
                               FAR struct xhci_ep_ctx_s *ctx,
                               uint8_t type, uint16_t maxpkt,
                               uint8_t maxburst, uint64_t tr_dp,
-                              uint8_t mult, uint8_t interval)
+                              uint8_t mult, uint8_t interval,
+                              uint32_t maxesit)
 {
   uint32_t ctx0 = 0;
   uint32_t ctx1 = 0;
@@ -1515,6 +1707,7 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
   /* Set mult */
 
   ctx0 |= XHCI_EP_CTX0_MULT(mult);
+  ctx0 |= XHCI_EP_CTX0_MAXESIT_HI(maxesit);
 
   /* Set error count to 3 if this is not ISOCH endpoint */
 
@@ -1528,6 +1721,10 @@ static void xhci_ep_configure(FAR struct usbhost_xhci_s *priv,
   ctx->ctx0 = htole32(ctx0);
   ctx->ctx1 = htole32(ctx1);
   ctx->ctx2 = htole64(ctx2);
+  ctx->ctx3 = htole32(XHCI_EP_CTX3_AVGTRB(
+                        type == XHCI_EPTYPE_CTRL ? 8 :
+                        maxesit != 0 ? maxesit : maxpkt) |
+                      XHCI_EP_CTX3_MAXESIT_LO(maxesit));
 
   /* Flush context */
 
@@ -1665,11 +1862,29 @@ static uint8_t xhci_slot_speed(uint8_t speed)
 static int xhci_address_set(FAR struct usbhost_xhci_s *priv,
                             FAR struct xhci_dev_s *dev, bool setaddr)
 {
+  FAR struct xhci_ep_ctx_s *ep0ctx;
+  FAR struct xhci_slot_ctx_s *slotctx;
   uint64_t ctx;
+  int ret;
 
   ctx = up_addrenv_va_to_pa(dev->input);
+  ret = xhci_cmd_setaddr(priv, dev->slot, ctx, !setaddr);
 
-  return xhci_cmd_setaddr(priv, dev->slot, ctx, !setaddr);
+  up_invalidate_dcache((uintptr_t)dev->ctx,
+                       (uintptr_t)dev->ctx + xhci_output_size(priv));
+  ep0ctx = (FAR struct xhci_ep_ctx_s *)(dev->ctx + priv->ctxsize);
+  slotctx = xhci_output_slot(priv, dev);
+  uinfo("slot %u address ret=%d slot0=%08" PRIx32
+        " ep0=%08" PRIx32 "/%08" PRIx32 "/%016" PRIx64 "\n",
+        dev->slot, ret, le32toh(*(FAR uint32_t *)dev->ctx),
+        le32toh(ep0ctx->ctx0), le32toh(ep0ctx->ctx1),
+        le64toh(ep0ctx->ctx2));
+  uinfo("slot %u output %08" PRIx32 "/%08" PRIx32 "/%08" PRIx32
+        "/%08" PRIx32 "\n", dev->slot,
+        le32toh(slotctx->ctx[0]), le32toh(slotctx->ctx[1]),
+        le32toh(slotctx->ctx[2]), le32toh(slotctx->ctx[3]));
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1839,7 +2054,7 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
                     ep0ctx,
                     XHCI_EPTYPE_CTRL, maxpkt,
                     0, drdp,
-                    0, 0);
+                    0, 0, 0);
 
   /* Step 6. The output Device Context data structure already allocated.
    * Initialize all fields to 0.
@@ -1902,6 +2117,7 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
    *   - 4.3.2: Device Slot Assignment
    */
 
+  uinfo("enable slot for port %d\n", hport->port);
   ret = xhci_cmd_sloten(priv, &slot);
   if (ret < 0 || slot > priv->no_slots)
     {
@@ -1958,12 +2174,15 @@ static int xhci_device_init(FAR struct usbhost_xhci_s *priv,
    *       stack.
    */
 
+  uinfo("address slot %u for port %d\n", slot, hport->port);
   ret = xhci_address_set(priv, dev, false);
   if (ret < 0)
     {
       uerr("failed to set address %d\n", ret);
       goto errout;
     }
+
+  dev->state = XHCI_SLOT_ADDRESSED;
 
   /* Steps 7-12 don't belong here! */
 
@@ -2039,7 +2258,10 @@ static int xhci_device_deinit(FAR struct usbhost_xhci_s *priv,
 
 static inline uint8_t xhci_epno_get(FAR struct xhci_epinfo_s *epinfo)
 {
-  DEBUGASSERT(epinfo);
+  if (epinfo == NULL)
+    {
+      return OK;
+    }
 
   if (epinfo->epno == 0)
     {
@@ -2120,24 +2342,36 @@ static int xhci_command(FAR struct usbhost_xhci_s *priv,
       return ret;
     }
 
+  uinfo("command type=%u timeout=%u ms\n",
+        XHCI_TRB_D2_TYPE_GET(trb->d2), timeout_ms);
+
   /* Add command to ring */
 
   xhci_add_trb(priv, &priv->cmd, trb, 1);
+  uinfo("command TRB committed index=%zu\n", priv->cmd.i);
 
   /* Ringing the Host Controller Doorbell */
 
+  uinfo("ring command doorbell at %" PRIx64 "\n", priv->door_base);
   xhci_door_putreg(priv, XHCI_DOORBEL(0), 0);
+  uinfo("command doorbell returned\n");
 
   /* Wait for Command Completion Event */
 
-  ret = nxsem_tickwait_uninterruptible(&priv->cmdsem,
-                                       MSEC2TICK(timeout_ms));
-  if (ret < 0)
+  uinfo("waiting command semaphore\n");
+  ret = -ETIMEDOUT;
+  for (int elapsed = 0; elapsed < timeout_ms * 1000;
+       elapsed += XHCI_IRQ_SPIN_US)
     {
-      /* Check for missed interrupts */
+      if (XHCI_TRB_D1_CC_GET(priv->cmdres.d1) != 0)
+        {
+          ret = OK;
+          break;
+        }
 
-      xhci_events_poll(priv);
+      up_udelay(XHCI_IRQ_SPIN_US);
     }
+  uinfo("command wait returned %d\n", ret);
 
   /* Return command results */
 
@@ -2427,20 +2661,48 @@ static int xhci_ioc_setup(FAR struct xhci_rhport_s *rhport,
  *
  ****************************************************************************/
 
-static int xhci_ioc_wait(FAR struct xhci_epinfo_s *epinfo)
+static int xhci_ioc_wait(FAR struct usbhost_xhci_s *priv,
+                         FAR struct xhci_epinfo_s *epinfo)
 {
-  int ret = OK;
+  int ret = -ETIMEDOUT;
 
   /* Wait for the IOC event.  Loop to handle any false alarm semaphore
    * counts.  Return an error if the task is canceled.
    */
 
-  while (epinfo->iocwait)
+  for (int elapsed = 0;
+       elapsed < XHCI_POLL_TIMEOUT_MS * 1000;
+       elapsed += XHCI_IRQ_SPIN_US)
     {
-      ret = nxsem_wait_uninterruptible(&epinfo->iocsem);
-      if (ret < 0)
+      if (!epinfo->iocwait)
         {
+          ret = OK;
           break;
+        }
+
+      up_udelay(XHCI_IRQ_SPIN_US);
+    }
+
+  if (ret < 0)
+    {
+      FAR struct xhci_dev_s *dev = xhci_device_from_ep(priv, epinfo);
+
+      uerr("transfer timeout slot=%u ep=%u USBSTS=%08" PRIx32
+           " ERDP=%08" PRIx32 " MFINDEX=%08" PRIx32 "\n",
+           epinfo->slot, xhci_epno_get(epinfo),
+           xhci_oper_getreg(priv, XHCI_USBSTS),
+           xhci_runt_getreg(priv, XHCI_ERDP(0)),
+           xhci_runt_getreg(priv, XHCI_MFINDEX));
+      if (dev != NULL)
+        {
+          FAR struct xhci_ep_ctx_s *ctx =
+            (FAR struct xhci_ep_ctx_s *)(dev->ctx + priv->ctxsize);
+
+          up_invalidate_dcache((uintptr_t)ctx,
+                               (uintptr_t)ctx + priv->ctxsize);
+          uerr("output EP0 %08" PRIx32 "/%08" PRIx32 "/%016" PRIx64
+               "\n", le32toh(ctx->ctx0), le32toh(ctx->ctx1),
+               le64toh(ctx->ctx2));
         }
     }
 
@@ -2476,6 +2738,7 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
   FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_RHPORT(rhport);
   struct xhci_trb_s          trb[3];
   uint8_t                    trt;
+  size_t                     start;
   int                        i    = 0;
 
   /* Preapera Setup Stage TRB */
@@ -2519,7 +2782,7 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
 
       if (req->type & USB_REQ_DIR_IN)
         {
-          trb[i].d2 |= XHCI_TRB_D2_DIR;
+          trb[i].d2 |= XHCI_TRB_D2_DIR | XHCI_TRB_D2_ISP;
         }
 
       /* Next TRB */
@@ -2545,7 +2808,25 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
 
   /* Add TRBs to ring */
 
+  if (buffer != NULL && buflen > 0)
+    {
+      up_flush_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+    }
+
+  start = epinfo->td.i;
   xhci_add_trb(priv, &epinfo->td, trb, i);
+  uinfo("EP0 slot=%u ring=%p start=%zu count=%d req=%02x/%02x len=%zu\n",
+        epinfo->slot, epinfo->td.ring, start, i, req->type, req->req,
+        buflen);
+  for (int n = 0; n < i; n++)
+    {
+      FAR struct xhci_trb_s *queued =
+        &epinfo->td.ring[(start + n) % (epinfo->td.len - 1)];
+
+      uinfo("EP0 TRB%d %016" PRIx64 " %08" PRIx32 " %08" PRIx32 "\n",
+            n, le64toh(queued->d0), le32toh(queued->d1),
+            le32toh(queued->d2));
+    }
 
   /* Trigger transfer */
 
@@ -2578,17 +2859,54 @@ static int xhci_normal_setup(FAR struct xhci_rhport_s *rhport,
                              FAR uint8_t *buffer, size_t buflen)
 {
   FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_RHPORT(rhport);
-  struct xhci_trb_s          trb;
+  struct xhci_trb_s          trb[XHCI_TD_MAX - 1];
+  FAR uint8_t               *cursor = buffer;
+  size_t                     remaining = buflen;
+  size_t                     chunk;
+  uintptr_t                  pa;
+  int                        ntrbs = 0;
+  int                        i;
 
-  /* Preapera TRB */
+  /* Split at 64-KiB boundaries as required by xHCI. */
 
-  trb.d0 = up_addrenv_va_to_pa(buffer);
-  trb.d1 = XHCI_TRB_D1_IRQ_SET(0) | XHCI_TRB_D1_TXLEN_SET(buflen);
-  trb.d2 = XHCI_TRB_D2_IOC | XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_NORMAL);
+  while (remaining > 0 && ntrbs < XHCI_TD_MAX - 1)
+    {
+      pa = up_addrenv_va_to_pa(cursor);
+      chunk = XHCI_TRB_BOUNDARY - (pa & (XHCI_TRB_BOUNDARY - 1));
+      if (chunk > remaining)
+        {
+          chunk = remaining;
+        }
+
+      trb[ntrbs].d0 = pa;
+      trb[ntrbs].d1 = XHCI_TRB_D1_IRQ_SET(0) |
+                       XHCI_TRB_D1_TXLEN_SET(chunk);
+      trb[ntrbs].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_NORMAL);
+      if (epinfo->dirin)
+        {
+          trb[ntrbs].d2 |= XHCI_TRB_D2_ISP;
+        }
+
+      cursor += chunk;
+      remaining -= chunk;
+      ntrbs++;
+    }
+
+  if (remaining != 0)
+    {
+      return -E2BIG;
+    }
+
+  for (i = 0; i < ntrbs; i++)
+    {
+      trb[i].d1 |= XHCI_TRB_D1_TDSIZE_SET(
+        ntrbs - i - 1 > 31 ? 31 : ntrbs - i - 1);
+      trb[i].d2 |= i == ntrbs - 1 ? XHCI_TRB_D2_IOC : XHCI_TRB_D2_CH;
+    }
 
   /* Add TRBs to ring */
 
-  xhci_add_trb(priv, &epinfo->td, &trb, 1);
+  xhci_add_trb(priv, &epinfo->td, trb, ntrbs);
 
   /* Trigger transfer */
 
@@ -2671,7 +2989,7 @@ static ssize_t xhci_transfer_wait(FAR struct usbhost_xhci_s *priv,
 
   /* Wait for the IOC completion event */
 
-  ret = xhci_ioc_wait(epinfo);
+  ret = xhci_ioc_wait(priv, epinfo);
 
   /* Did xhci_ioc_wait() or nxmutex_lock report an error? */
 
@@ -2907,10 +3225,19 @@ static void xhci_portsc_work(FAR void *arg)
             }
         }
 
-      /* Clear pending bit but don't touch PED ! */
+      /* Clear change bits using a neutral write.  PORTSC mixes RO, RW, RW1S
+       * and RW1C fields; replaying the raw snapshot can disable PED or
+       * disturb link state.
+       */
 
-      portsc &= ~XHCI_PORTSC_PED;
-      xhci_oper_putreg(priv, XHCI_PORTSC(rhpndx), portsc);
+      if ((portsc & (XHCI_PORTSC_RW1C & ~XHCI_PORTSC_PED)) != 0)
+        {
+          uint32_t change = portsc &
+                            (XHCI_PORTSC_RW1C & ~XHCI_PORTSC_PED);
+
+          xhci_oper_putreg(priv, XHCI_PORTSC(rhpndx),
+                           XHCI_PORTSC_NEUTRAL(portsc) | change);
+        }
     }
 }
 
@@ -3147,7 +3474,6 @@ static int xhci_events_poll(FAR struct usbhost_xhci_s *priv)
 static void xhci_interrupt_work(FAR void *arg)
 {
   FAR struct usbhost_xhci_s *priv = arg;
-  uint32_t                   iman;
 
   xhci_events_poll(priv);
 
@@ -3187,11 +3513,9 @@ static void xhci_interrupt_work(FAR void *arg)
 
   /* Clear interrupter pending bit */
 
-  iman = xhci_runt_getreg(priv, XHCI_IMAN(0));
-  if (iman & XHCI_IMAN_IP)
-    {
-      xhci_runt_putreg(priv, XHCI_IMAN(0), iman);
-    }
+  xhci_runt_putreg(priv, XHCI_IMAN(0),
+                   XHCI_IMAN_IP | XHCI_IMAN_IE);
+
 
   /* Clear pending bits */
 
@@ -3209,17 +3533,26 @@ static void xhci_interrupt_work(FAR void *arg)
 static int xhci_interrupt(int irq, FAR void *context, FAR void *arg)
 {
   FAR struct usbhost_xhci_s *priv = arg;
+  uint32_t status;
 
   /* Get pending interrupts */
 
-  priv->pending = xhci_oper_getreg(priv, XHCI_USBSTS);
-
-  /* Handle interrupts in worker */
-
-  if (work_available(&priv->work))
+  status = xhci_oper_getreg(priv, XHCI_USBSTS);
+  if ((status & XHCI_USBSTS_EINT) == 0)
     {
-      work_queue(HPWORK, &priv->work, xhci_interrupt_work, arg, 0);
+      return OK;
     }
+
+  /* Match the xHCI interrupt order: acknowledge operational and interrupter
+   * status, consume every available event, then update ERDP/EHB before
+   * returning from the level-triggered interrupt.
+   */
+
+  xhci_oper_putreg(priv, XHCI_USBSTS, status);
+  xhci_runt_putreg(priv, XHCI_IMAN(0),
+                   xhci_runt_getreg(priv, XHCI_IMAN(0)) |
+                   XHCI_IMAN_IP | XHCI_IMAN_IE);
+  xhci_events_poll(priv);
 
   return OK;
 }
