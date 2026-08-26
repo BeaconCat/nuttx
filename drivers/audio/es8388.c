@@ -150,6 +150,10 @@ static void *es8388_workerthread(pthread_addr_t pvarg);
 static void es8388_audio_output(FAR struct es8388_dev_s *priv);
 static void es8388_audio_input(FAR struct es8388_dev_s *priv);
 static void es8388_reset(FAR struct es8388_dev_s *priv);
+static int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
+                                   enum es8388_output_route_e route);
+static int es8388_set_control(FAR struct es8388_dev_s *priv,
+                              FAR const struct es8388_control_s *control);
 
 /****************************************************************************
  * Private Data
@@ -2077,6 +2081,53 @@ static int es8388_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
         break;
 #endif
 
+      case ES8388IOC_SET_CONTROL:
+        ret = es8388_set_control(
+            (FAR struct es8388_dev_s *)dev,
+            (FAR const struct es8388_control_s *)(uintptr_t)arg);
+        break;
+
+      case ES8388IOC_GET_CONTROL:
+        {
+          FAR struct es8388_dev_s *priv = (FAR struct es8388_dev_s *)dev;
+          FAR struct es8388_control_s *control =
+              (FAR struct es8388_control_s *)(uintptr_t)arg;
+          uint8_t daccontrol1;
+          uint8_t daccontrol6;
+          uint8_t daccontrol7;
+
+          if (control == NULL)
+            {
+              ret = -EINVAL;
+              break;
+            }
+
+          ret = nxmutex_lock(&priv->pendlock);
+          if (ret < 0)
+            {
+              break;
+            }
+
+          daccontrol1 = es8388_readreg(priv, ES8388_DACCONTROL1);
+          daccontrol6 = es8388_readreg(priv, ES8388_DACCONTROL6);
+          daccontrol7 = es8388_readreg(priv, ES8388_DACCONTROL7);
+          control->route = priv->output_policy;
+          control->active_route = priv->output_route;
+          control->mono = (daccontrol7 & ES8388_MONO_BITMASK) != 0;
+          control->swap =
+              ((daccontrol1 & ES8388_DACLRSWAP_BITMASK) != 0) ^
+              priv->lower->swap_dac_lr;
+          control->invert_left =
+              (daccontrol6 & ES8388_DAC_INVL_BITMASK) != 0;
+          control->invert_right =
+              (daccontrol6 & ES8388_DAC_INVR_BITMASK) != 0;
+          control->headphones_connected =
+              priv->lower->headphones_connected != NULL &&
+              priv->lower->headphones_connected();
+          nxmutex_unlock(&priv->pendlock);
+        }
+        break;
+
       default:
         ret = -ENOTTY;
         audinfo("Unhandled ioctl: %d\n", cmd);
@@ -2481,8 +2532,8 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_DACFORMAT(ES_I2S_NORMAL)     |
                   ES8388_DACWL(ES_WORD_LENGTH_16BITS) |
                   ES8388_DACLRP_NORM_2ND              |
-                  (priv->lower->swap_dac_lr ? ES8388_DACLRSWAP_SWAP :
-                                              ES8388_DACLRSWAP_NORMAL));
+                  ((priv->lower->swap_dac_lr ^ priv->swap) ?
+                       ES8388_DACLRSWAP_SWAP : ES8388_DACLRSWAP_NORMAL));
 
   es8388_writereg(priv, ES8388_DACCONTROL2,
                   ES8388_DACFSRATIO(ES_LCLK_DIV_256) |
@@ -2717,6 +2768,7 @@ FAR struct audio_lowerhalf_s *
       priv->i2c        = i2c;
       priv->i2s        = i2s;
       priv->output_route = ES8388_OUTPUT_ROUTE_LINE1;
+      priv->output_policy = ES8388_OUTPUT_ROUTE_LINE1;
 
       nxmutex_init(&priv->pendlock);
       dq_init(&priv->pendq);
@@ -2764,18 +2816,33 @@ FAR struct audio_lowerhalf_s *
  * Name: es8388_set_output_route
  ****************************************************************************/
 
-int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
-                            enum es8388_output_route_e route)
+static int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
+                                   enum es8388_output_route_e route)
 {
   FAR struct es8388_dev_s *priv = (FAR struct es8388_dev_s *)dev;
+  enum es8388_output_route_e policy = route;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
   bool was_muted;
 #endif
   int ret;
 
-  if (priv == NULL || route > ES8388_OUTPUT_ROUTE_BOTH)
+  if (priv == NULL || route > ES8388_OUTPUT_ROUTE_AUTO)
     {
       return -EINVAL;
+    }
+
+  if (route == ES8388_OUTPUT_ROUTE_AUTO)
+    {
+      if (priv->lower->resolve_output == NULL)
+        {
+          return -ENOTSUP;
+        }
+
+      route = priv->lower->resolve_output();
+      if (route > ES8388_OUTPUT_ROUTE_BOTH)
+        {
+          return -EINVAL;
+        }
     }
 
   ret = nxmutex_lock(&priv->pendlock);
@@ -2793,6 +2860,7 @@ int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
     }
 #endif
 
+  priv->output_policy = policy;
   priv->output_route = route;
   es8388_apply_output_route(priv, priv->running);
 
@@ -2810,6 +2878,57 @@ int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
   priv->mute = was_muted;
 #endif
 
+  nxmutex_unlock(&priv->pendlock);
+  return OK;
+}
+
+static int es8388_set_control(FAR struct es8388_dev_s *priv,
+                              FAR const struct es8388_control_s *control)
+{
+  uint8_t regval;
+  int ret;
+
+  if (priv == NULL || control == NULL ||
+      control->route > ES8388_OUTPUT_ROUTE_AUTO)
+    {
+      return -EINVAL;
+    }
+
+  ret = es8388_set_output_route(&priv->dev, control->route);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = nxmutex_lock(&priv->pendlock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  regval = es8388_readreg(priv, ES8388_DACCONTROL1);
+  regval &= ~ES8388_DACLRSWAP_BITMASK;
+  regval |= (priv->lower->swap_dac_lr ^ control->swap) ?
+                ES8388_DACLRSWAP_SWAP : ES8388_DACLRSWAP_NORMAL;
+  es8388_writereg(priv, ES8388_DACCONTROL1, regval);
+
+  regval = es8388_readreg(priv, ES8388_DACCONTROL6);
+  regval &= ~(ES8388_DAC_INVL_BITMASK | ES8388_DAC_INVR_BITMASK);
+  regval |= control->invert_left ? ES8388_DAC_INVL_180INV :
+                                   ES8388_DAC_INVL_NOINV;
+  regval |= control->invert_right ? ES8388_DAC_INVR_180INV :
+                                    ES8388_DAC_INVR_NOINV;
+  es8388_writereg(priv, ES8388_DACCONTROL6, regval);
+
+  regval = es8388_readreg(priv, ES8388_DACCONTROL7);
+  regval &= ~ES8388_MONO_BITMASK;
+  regval |= control->mono ? ES8388_MONO_MONO : ES8388_MONO_STEREO;
+  es8388_writereg(priv, ES8388_DACCONTROL7, regval);
+
+  priv->mono = control->mono;
+  priv->swap = control->swap;
+  priv->invert_left = control->invert_left;
+  priv->invert_right = control->invert_right;
   nxmutex_unlock(&priv->pendlock);
   return OK;
 }

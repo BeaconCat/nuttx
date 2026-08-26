@@ -111,12 +111,25 @@
  * Public Types
  ****************************************************************************/
 
-enum es8388_output_route_e
-{
+enum es8388_output_route_e {
   ES8388_OUTPUT_ROUTE_NONE = 0,
   ES8388_OUTPUT_ROUTE_LINE1,
   ES8388_OUTPUT_ROUTE_LINE2,
   ES8388_OUTPUT_ROUTE_BOTH,
+  ES8388_OUTPUT_ROUTE_AUTO,
+};
+
+#define ES8388IOC_SET_CONTROL _AUDIOIOC(0x80)
+#define ES8388IOC_GET_CONTROL _AUDIOIOC(0x81)
+
+struct es8388_control_s {
+  enum es8388_output_route_e route;
+  enum es8388_output_route_e active_route;
+  bool mono;
+  bool swap;
+  bool invert_left;
+  bool invert_right;
+  bool headphones_connected;
 };
 
 struct es8388_lower_s;
@@ -132,6 +145,8 @@ struct es8388_lower_s
 
   bool swap_dac_lr;
   CODE void (*set_output)(enum es8388_output_route_e route, bool enable);
+  CODE enum es8388_output_route_e (*resolve_output)(void);
+  CODE bool (*headphones_connected)(void);
 };
 
 /****************************************************************************
@@ -172,21 +187,8 @@ struct i2s_dev_s;
 struct audio_lowerhalf_s;
 
 FAR struct audio_lowerhalf_s *
-  es8388_initialize(FAR struct i2c_master_s *i2c,
-                    FAR struct i2s_dev_s *i2s,
-                    FAR const struct es8388_lower_s *lower);
-
-/****************************************************************************
- * Name: es8388_set_output_route
- *
- * Description:
- *   Select the active analog DAC outputs while preserving the selection
- *   across stream reconfiguration.
- *
- ****************************************************************************/
-
-int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
-                            enum es8388_output_route_e route);
+es8388_initialize(FAR struct i2c_master_s *i2c, FAR struct i2s_dev_s *i2s,
+                  FAR const struct es8388_lower_s *lower);
 
 /****************************************************************************
  * Name: es8388_dump_registers
