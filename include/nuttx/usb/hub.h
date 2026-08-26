@@ -76,6 +76,9 @@
 #define USBHUB_PORT_FEAT_TEST          (0x15)
 #define USBHUB_PORT_FEAT_INDICATOR     (0x16)
 #define USBHUB_PORT_FEAT_CPORTL1       (0x17)
+#define USBHUB_PORT_FEAT_CLINKSTATE     (0x19)
+#define USBHUB_PORT_FEAT_CCONFIGERROR   (0x1a)
+#define USBHUB_PORT_FEAT_CBHRESET       (0x1c)
 
 /* Hub characteristics */
 
@@ -129,6 +132,8 @@
 #define USBHUB_PORT_STAT_COVERCURRENT  (1 << 3)
 #define USBHUB_PORT_STAT_CRESET        (1 << 4)
 #define USBHUB_PORT_STAT_CL1           (1 << 5)
+#define USBHUB_PORT_STAT_CCONFIGERROR  (1 << 6)
+#define USBHUB_PORT_STAT_CBHRESET      (1 << 7)
 
 /* Hub descriptor type */
 
