@@ -3652,6 +3652,7 @@ static int xhci_wait(FAR struct usbhost_connection_s *conn,
       spin_unlock_irqrestore(&priv->spinlock, flags);
 
       ret = nxsem_wait_uninterruptible(&priv->pscsem);
+
       if (ret < 0)
         {
           return ret;
@@ -3713,6 +3714,8 @@ static int xhci_rh_enumerate(FAR struct usbhost_connection_s *conn,
       return -ENODEV;
     }
 
+  uinfo("enumerate root port %d\n", rhpndx);
+
   /* Enable port */
 
   ret = xhci_port_enable(priv, hport);
@@ -3767,6 +3770,26 @@ static int xhci_enumerate(FAR struct usbhost_connection_s *conn,
   else
     {
       FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_CONN(conn);
+      int elapsed;
+
+      /* A removable class may defer its final destruction until mounted
+       * files are closed.  On a fast hub-port replug, wait for that cleanup
+       * to release the old USB function address before assigning a new xHCI
+       * slot to the same hub-port object.
+       */
+
+      for (elapsed = 0; hport->funcaddr != 0 &&
+                        elapsed < XHCI_HUB_REUSE_WAIT_MS; elapsed += 10)
+        {
+          nxsig_usleep(10 * 1000);
+        }
+
+      if (hport->funcaddr != 0)
+        {
+          uerr("Hub port %u cleanup timed out, function address %u\n",
+               hport->port + 1, hport->funcaddr);
+          return -EBUSY;
+        }
 
       ret = xhci_device_init(priv, hport);
       if (ret < 0)
@@ -3839,7 +3862,9 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
   FAR struct usbhost_xhci_s *priv   = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_dev_s     *dev;
   FAR struct xhci_ep_ctx_s  *ep0ctx;
+  FAR struct xhci_ep_ctx_s  *outputep0;
   uint64_t                   ctx;
+  uint16_t                   current;
   int                        ret;
 
   DEBUGASSERT(drvr != NULL && epinfo != NULL && maxpacketsize < 2048);
@@ -3851,6 +3876,17 @@ static int xhci_ep0configure(FAR struct usbhost_driver_s *drvr,
     }
 
   ep0ctx = xhci_input_ep(priv, dev, 0);
+  outputep0 = (FAR struct xhci_ep_ctx_s *)(dev->ctx + priv->ctxsize);
+  up_invalidate_dcache((uintptr_t)outputep0,
+                       (uintptr_t)outputep0 + priv->ctxsize);
+  current = (le32toh(outputep0->ctx1) & XHCI_EP_CTX1_MAXPKT_MASK) >>
+            XHCI_EP_CTX1_MAXPKT_SHIFT;
+  if (current == maxpacketsize)
+    {
+      uinfo("EP0 max packet already %u, skip Evaluate Context\n", current);
+      return OK;
+    }
+
   ret = nxmutex_lock(&priv->lock);
   if (ret >= 0)
     {
@@ -3915,6 +3951,10 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   uint32_t                      mask;
   uint8_t                       eptype;
   uint8_t                       idx;
+  uint8_t                       interval;
+  uint8_t                       maxburst;
+  uint16_t                      maxpkt;
+  uint32_t                      maxesit;
   int                           ret;
 
   /* Sanity check.  NOTE that this method should only be called if a device
@@ -3923,6 +3963,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
   DEBUGASSERT(drvr != 0 && epdesc != NULL && epdesc->hport != NULL
               && ep != NULL);
+  *ep = NULL;
   hport = epdesc->hport;
 
   /* Terse output only if we are tracing */
@@ -4038,10 +4079,49 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
    * Max Burst Size set for 0 for now (USB3.0 specific)
    */
 
+  interval = epinfo->interval;
+  maxpkt = epdesc->mxpacketsize & 0x07ff;
+  maxburst = hport->speed >= USB_SPEED_SUPER ? epdesc->maxburst : 0;
+  maxesit = 0;
+  if (epinfo->xfrtype == USB_EP_ATTR_XFER_INT ||
+      epinfo->xfrtype == USB_EP_ATTR_XFER_ISOC)
+    {
+      if (hport->speed == USB_SPEED_HIGH)
+        {
+          maxburst = (epdesc->mxpacketsize >> 11) & 0x3;
+        }
+      maxesit = maxpkt * ((uint32_t)maxburst + 1);
+      if (hport->speed >= USB_SPEED_HIGH)
+        {
+          interval = interval == 0 ? 0 :
+                     interval > 16 ? 15 : interval - 1;
+        }
+      else
+        {
+          uint32_t microframes = (uint32_t)interval * 8;
+
+          interval = 0;
+          while (microframes > 1)
+            {
+              microframes >>= 1;
+              interval++;
+            }
+
+          if (interval < 3)
+            {
+              interval = 3;
+            }
+          else if (interval > 10)
+            {
+              interval = 10;
+            }
+        }
+    }
+
   xhci_ep_configure(priv, xhci_input_ep(priv, dev, idx - 1),
-                    eptype, epdesc->mxpacketsize, 0,
+                    eptype, maxpkt, maxburst,
                     up_addrenv_va_to_pa(epinfo->td.ring),
-                    0, epinfo->interval);
+                    0, interval, maxesit);
 
   /* Evaluate the slot context */
 
@@ -4051,6 +4131,22 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
                   (uintptr_t)dev->input +
                   xhci_input_size(priv));
 
+  {
+    FAR struct xhci_input_ctx_s *ctrl = xhci_input_ctrl(priv, dev);
+    FAR struct xhci_slot_ctx_s *slotctx = xhci_input_slot(priv, dev);
+    FAR struct xhci_ep_ctx_s *epctx = xhci_input_ep(priv, dev, idx - 1);
+
+    uinfo("configure slot=%u DCI=%u ctrl=%08" PRIx32 "/%08" PRIx32
+          " slot=%08" PRIx32 "/%08" PRIx32 "/%08" PRIx32
+          "/%08" PRIx32 " ep=%08" PRIx32 "/%08" PRIx32
+          "/%016" PRIx64 "/%08" PRIx32 "\n",
+          epinfo->slot, idx, le32toh(ctrl->ctx[0]), le32toh(ctrl->ctx[1]),
+          le32toh(slotctx->ctx[0]), le32toh(slotctx->ctx[1]),
+          le32toh(slotctx->ctx[2]), le32toh(slotctx->ctx[3]),
+          le32toh(epctx->ctx0), le32toh(epctx->ctx1),
+          le64toh(epctx->ctx2), le32toh(epctx->ctx3));
+  }
+
   /* Configure EP */
 
   ret = xhci_cmd_cfgep(priv, epinfo->slot,
@@ -4058,6 +4154,10 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   if (ret < 0)
     {
       uerr("failed to configure EP %d\n", ret);
+      dev->epinfo[idx - 1] = NULL;
+      xhci_ring_deinit(&epinfo->td);
+      nxsem_destroy(&epinfo->iocsem);
+      kmm_free(epinfo);
       return ret;
     }
 
@@ -4095,9 +4195,21 @@ static int xhci_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   FAR struct xhci_epinfo_s *epinfo = (FAR struct xhci_epinfo_s *)ep;
   FAR struct xhci_dev_s *dev;
 
-  /* There should not be any pending, transfers */
+  /* There should not be any pending transfers.  Class bind unwind may call
+   * epfree with a NULL handle after epalloc failed, which is already free.
+   */
 
-  DEBUGASSERT(drvr && epinfo && epinfo->iocwait == 0);
+  if (drvr == NULL)
+    {
+      return -EINVAL;
+    }
+
+  if (epinfo == NULL)
+    {
+      return OK;
+    }
+
+  DEBUGASSERT(epinfo->iocwait == 0);
 
   dev = xhci_device_from_ep(priv, epinfo);
   if (dev != NULL && dev->ep0 == epinfo)
@@ -4337,6 +4449,8 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   FAR struct xhci_rhport_s  *rhport  = (FAR struct xhci_rhport_s *)drvr;
   FAR struct xhci_epinfo_s  *ep0info = (FAR struct xhci_epinfo_s *)ep0;
   FAR struct xhci_dev_s     *dev;
+  FAR struct xhci_ep_ctx_s  *inputep0;
+  FAR struct xhci_ep_ctx_s  *outputep0;
   FAR struct xhci_slot_ctx_s *inputslot;
   FAR struct xhci_slot_ctx_s *outputslot;
   uint16_t                   len;
@@ -4365,25 +4479,34 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
 
   if (req->req == USB_REQ_SETADDRESS)
     {
-      /* Reset EP0 ring to its initial state, so when xHCI update EP0
-       * context, TD dequeue pointer would be valid. It may be already
-       * off, because NuttX USB Host stack has already send some messages
-       * on control EP.
+      /* The initial Address Device command used BSR=1 and left the slot in
+       * Default state so descriptors could be read at address zero.  Preserve
+       * the live EP0 consumer position, then issue BSR=0 to send SET_ADDRESS
+       * and transition the slot to Addressed state.
        */
 
-      xhci_ring_init(&dev->ep0->td, 0);
-
-      /* Issue SET_ADDRESS request */
+      inputep0 = xhci_input_ep(priv, dev, 0);
+      outputep0 = (FAR struct xhci_ep_ctx_s *)(dev->ctx + priv->ctxsize);
+      up_invalidate_dcache((uintptr_t)outputep0,
+                           (uintptr_t)outputep0 + priv->ctxsize);
+      inputep0->ctx2 = outputep0->ctx2;
+      xhci_context_ctrl(priv, dev, 0,
+                        XHCI_IN_CTX1_A(XHCI_SLOT_FLAG) |
+                        XHCI_IN_CTX1_A(XHCI_EP0_FLAG));
+      up_flush_dcache((uintptr_t)dev->input,
+                      (uintptr_t)dev->input + xhci_input_size(priv));
 
       ret = xhci_address_set(priv, dev, true);
-      if (ret == OK)
+      if (ret < 0)
         {
-          /* Store USB Device Address assigned by xHCI */
-
-          ep0info->devaddr =
-            XHCI_ST_CTX3_ADDR_GET(outputslot->ctx[3]);
-          inputslot->ctx[3] = outputslot->ctx[3];
+          return ret;
         }
+
+      up_invalidate_dcache((uintptr_t)outputslot,
+                           (uintptr_t)outputslot + priv->ctxsize);
+      ep0info->devaddr = XHCI_ST_CTX3_ADDR_GET(outputslot->ctx[3]);
+      inputslot->ctx[3] = outputslot->ctx[3];
+      dev->state = XHCI_SLOT_ADDRESSED;
 
       return OK;
     }
@@ -4494,10 +4617,31 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
   FAR struct usbhost_xhci_s *priv   = XHCI_PRIV_FROM_DRVR(drvr);
   FAR struct xhci_rhport_s  *rhport = (FAR struct xhci_rhport_s *)drvr;
   FAR struct xhci_epinfo_s  *epinfo = (FAR struct xhci_epinfo_s *)ep;
+  FAR uint8_t               *dmabuffer;
   ssize_t                    nbytes;
+  size_t                     linesize;
+  size_t                     dmasize;
   int                        ret;
 
   DEBUGASSERT(priv && rhport && epinfo && buffer && buflen > 0);
+
+  linesize = up_get_dcache_linesize();
+  if (linesize == 0)
+    {
+      linesize = sizeof(uintptr_t);
+    }
+
+  dmasize = ((buflen + linesize - 1) / linesize) * linesize;
+  dmabuffer = kmm_memalign(linesize, dmasize);
+  if (dmabuffer == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  if (!epinfo->dirin)
+    {
+      memcpy(dmabuffer, buffer, buflen);
+    }
 
   /* We must have exclusive access to the xHCI hardware and data
    * structures.
@@ -4506,6 +4650,7 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
     {
+      kmm_free(dmabuffer);
       return (ssize_t)ret;
     }
 
@@ -4519,6 +4664,9 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
 
   /* Initiate the transfer */
 
+  up_flush_dcache((uintptr_t)dmabuffer,
+                  (uintptr_t)dmabuffer + dmasize);
+
   switch (epinfo->xfrtype)
     {
       case USB_EP_ATTR_XFER_BULK:
@@ -4526,14 +4674,14 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
       case USB_EP_ATTR_XFER_INT:
 #endif
         {
-          ret = xhci_normal_setup(rhport, epinfo, buffer, buflen);
+          ret = xhci_normal_setup(rhport, epinfo, dmabuffer, buflen);
           break;
         }
 
 #ifndef CONFIG_USBHOST_ISOC_DISABLE
       case USB_EP_ATTR_XFER_ISOC:
         {
-          ret = xhci_isoc_setup(rhport, epinfo, buffer, buflen);
+          ret = xhci_isoc_setup(rhport, epinfo, dmabuffer, buflen);
           break;
         }
 #endif
@@ -4560,12 +4708,22 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
   /* Then wait for the transfer to complete */
 
   nbytes = xhci_transfer_wait(priv, epinfo);
+  if (nbytes >= 0 && epinfo->dirin)
+    {
+      up_invalidate_dcache((uintptr_t)dmabuffer,
+                           (uintptr_t)dmabuffer + dmasize);
+      memcpy(buffer, dmabuffer,
+             (size_t)nbytes < buflen ? (size_t)nbytes : buflen);
+    }
+
+  kmm_free(dmabuffer);
   return nbytes;
 
 errout_with_iocwait:
   epinfo->iocwait = false;
 errout_with_lock:
   nxmutex_unlock(&priv->lock);
+  kmm_free(dmabuffer);
   return (ssize_t)ret;
 }
 
@@ -4857,6 +5015,8 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
       return ret;
     }
 
+  uinfo("command and event rings initialized\n");
+
   dev->hub = true;
   dev->mtt = mtt;
   dev->nports = nports;
@@ -5018,6 +5178,7 @@ static int xhci_hw_getparams(FAR struct usbhost_xhci_s *priv)
 
 static int xhci_irq_initialize(FAR struct usbhost_xhci_s *priv)
 {
+  (void)xhci_interrupt_work;
   return priv->ops->irq_attach(priv->arg, xhci_interrupt, priv);
 }
 
@@ -5466,6 +5627,7 @@ xhci_initialize(FAR const char *name, uintptr_t base,
    */
 
   xhci_probe_ports(priv);
+  uinfo("initial root-port probe complete\n");
 
   ret = usbhost_waiter_initialize(&conn->conn);
   if (ret < 0)
@@ -5475,6 +5637,7 @@ xhci_initialize(FAR const char *name, uintptr_t base,
     }
 
   conn->pid = ret;
+  uinfo("waiter started pid=%d\n", ret);
 
   return &conn->conn;
 
