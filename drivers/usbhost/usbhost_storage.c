@@ -974,6 +974,9 @@ static inline int usbhost_cfgdesc(FAR struct usbhost_state_s *priv,
   FAR struct usbhost_epdesc_s boutdesc;
   int remaining;
   uint8_t found = 0;
+  uint8_t lastbulk = 0;
+  bool bincomp = false;
+  bool boutcomp = false;
   int ret;
 
   DEBUGASSERT(priv != NULL && priv->usbclass.hport &&
@@ -1080,6 +1083,7 @@ static inline int usbhost_cfgdesc(FAR struct usbhost_state_s *priv,
                     boutdesc.interval     = epdesc->interval;
                     boutdesc.mxpacketsize =
                       usbhost_getle16(epdesc->mxpacketsize);
+                    lastbulk = USBHOST_BOUTFOUND;
 
                     uinfo("Bulk OUT EP addr:%d mxpacketsize:%d\n",
                           boutdesc.addr, boutdesc.mxpacketsize);
@@ -1111,11 +1115,38 @@ static inline int usbhost_cfgdesc(FAR struct usbhost_state_s *priv,
                     bindesc.interval     = epdesc->interval;
                     bindesc.mxpacketsize =
                       usbhost_getle16(epdesc->mxpacketsize);
+                    lastbulk = USBHOST_BINFOUND;
 
                     uinfo("Bulk IN EP addr:%d mxpacketsize:%d\n",
                           bindesc.addr, bindesc.mxpacketsize);
                   }
               }
+          }
+          break;
+
+        case USB_DESC_TYPE_ENDPOINT_COMPANION:
+          {
+            FAR struct usb_ss_epcompdesc_s *compdesc =
+              (FAR struct usb_ss_epcompdesc_s *)configdesc;
+
+            if (remaining < USB_SIZEOF_SS_EPCOMPDESC ||
+                hport->speed < USB_SPEED_SUPER)
+              {
+                return -EINVAL;
+              }
+
+            if (lastbulk == USBHOST_BOUTFOUND)
+              {
+                boutdesc.maxburst = compdesc->mxburst;
+                boutcomp = true;
+              }
+            else if (lastbulk == USBHOST_BINFOUND)
+              {
+                bindesc.maxburst = compdesc->mxburst;
+                bincomp = true;
+              }
+
+            lastbulk = 0;
           }
           break;
 
@@ -1129,7 +1160,8 @@ static inline int usbhost_cfgdesc(FAR struct usbhost_state_s *priv,
        * of the loop early.
        */
 
-      if (found == USBHOST_ALLFOUND)
+      if (found == USBHOST_ALLFOUND &&
+          (hport->speed < USB_SPEED_SUPER || (bincomp && boutcomp)))
         {
           break;
         }
