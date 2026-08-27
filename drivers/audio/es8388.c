@@ -1624,6 +1624,10 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
       if (ret < 0)
         {
           auderr("I2S transfer failed: %d\n", ret);
+          flags = enter_critical_section();
+          priv->inflight--;
+          leave_critical_section(flags);
+          dq_addfirst((FAR dq_entry_t *)apb, &priv->pendq);
           break;
         }
 
@@ -2403,6 +2407,7 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
   struct audio_msg_s msg;
   FAR struct ap_buffer_s *apb;
   int msglen;
+  int result = OK;
   unsigned int prio;
 
   audinfo("ES8388 worker thread starting\n");
@@ -2434,7 +2439,18 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
         {
           /* Check if we can process more audio buffers */
 
-          es8388_processbegin(priv);
+          if (result >= 0)
+            {
+              result = es8388_processbegin(priv);
+              if (result < 0)
+                {
+                  priv->terminating = true;
+                  if (priv->inflight == 0)
+                    {
+                      break;
+                    }
+                }
+            }
         }
 
       /* Wait for messages from our message queue */
@@ -2495,9 +2511,14 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
         }
     }
 
-  /* Reset the ES8388 hardware */
+  /* A rejected transfer must not reset hardware used by another stream. */
 
-  es8388_reset(priv);
+  priv->running = false;
+
+  if (result >= 0)
+    {
+      es8388_reset(priv);
+    }
 
   /* Return any pending buffers in our pending queue */
 
@@ -2531,9 +2552,9 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
   /* Send an AUDIO_MSG_COMPLETE message to the client */
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
-  priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, OK, NULL);
+  priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, result, NULL);
 #else
-  priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, OK);
+  priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, result);
 #endif
 
   audinfo("ES8388 worker thread finishing\n");
