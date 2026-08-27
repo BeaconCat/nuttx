@@ -763,6 +763,18 @@ static int pcm_configure(FAR struct audio_lowerhalf_s *dev,
     }
 #endif
 
+#ifndef CONFIG_AUDIO_FORMAT_RAW
+  /* WAV stream parameters come from its header, not the player's initial
+   * defaults.  Applying those defaults can conflict with active capture
+   * before the actual, compatible format is known.
+   */
+
+  if (caps->ac_type == AUDIO_TYPE_OUTPUT && !priv->streaming)
+    {
+      return OK;
+    }
+#endif
+
   /* Defer all other operations to the lower device driver */
 
   lower = priv->lower;
