@@ -1249,6 +1249,12 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
             break;
           }
 
+        ret = I2S_TXCHANNELS(priv->i2s, caps->ac_channels);
+        if (ret < 0 && ret != -ENOTTY)
+          {
+            break;
+          }
+
         /* Reconfigure playback while the idle mixer is disconnected. */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
@@ -1304,6 +1310,12 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
           {
             auderr("Unsupported bits per sample: %d\n",
                    caps->ac_controls.b[2]);
+            break;
+          }
+
+        ret = I2S_RXCHANNELS(priv->i2s, caps->ac_channels);
+        if (ret < 0 && ret != -ENOTTY)
+          {
             break;
           }
 
