@@ -416,6 +416,8 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
         }
 
       DEBUGASSERT(priv->align == priv->nchannels * priv->bpsamp / 8);
+      priv->npartial = 0;
+      priv->skip = 0;
 #endif
     }
 
@@ -460,8 +462,8 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
            * then next audio buffer that we receive.
            */
 
-          priv->npartial  = 0;
-          priv->skip      = 0;
+          /* Finish any frame already forwarded at normal speed. */
+
           priv->subsample = subsample;
         }
     }
@@ -478,8 +480,15 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
        * when the next audio buffer is received.
        */
 
-      priv->npartial  = 0;
-      priv->skip      = 0;
+      /* Finish a partially skipped frame, but stop skipping whole frames.
+       * A partially copied frame must also retain its byte position.
+       */
+
+      if (priv->align > 0)
+        {
+          priv->skip %= priv->align;
+        }
+
       priv->subsample = AUDIO_SUBSAMPLE_NONE;
     }
 
@@ -524,7 +533,20 @@ static void pcm_subsample(FAR struct pcm_decode_s *priv,
 
   if (priv->subsample == AUDIO_SUBSAMPLE_NONE)
     {
-      /* No.. do nothing to the buffer */
+      /* Preserve frame position for a later fast-forward request.  If
+       * normal playback resumed inside a skipped frame, discard its tail
+       * before forwarding complete samples again.
+       */
+
+      srcsize = apb->nbytes - apb->curbyte;
+      copysize = MIN(priv->skip, srcsize);
+      apb->curbyte += copysize;
+      priv->skip -= copysize;
+      if (priv->align > 0)
+        {
+          priv->npartial = (priv->npartial + srcsize - copysize) %
+                           priv->align;
+        }
 
       return;
     }
