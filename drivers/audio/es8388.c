@@ -716,7 +716,7 @@ static void es8388_apply_input_route(FAR struct es8388_dev_s *priv,
   es8388_writereg(priv, ES8388_ADCCONTROL2, adccontrol2);
   es8388_writereg(priv, ES8388_ADCCONTROL3, adccontrol3);
 
-  mute = !stream_ready || priv->microphone_muted ||
+  mute = !stream_ready || priv->paused || priv->microphone_muted ||
          priv->input_route == ES8388_INPUT_ROUTE_NONE;
   adccontrol7 = es8388_readreg(priv, ES8388_ADCCONTROL7);
   adccontrol7 &= ~ES8388_ADCMUTE_BITMASK;
@@ -2024,7 +2024,14 @@ static int es8388_resume(FAR struct audio_lowerhalf_s *dev)
     {
       priv->paused = false;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-      es8388_setmute(priv, priv->audio_mode, false);
+      if (priv->audio_mode == ES_MODULE_ADC)
+        {
+          es8388_apply_input_route(priv, priv->input_stream_ready);
+        }
+      else
+        {
+          es8388_setmute(priv, priv->audio_mode, false);
+        }
 #endif
       es8388_processbegin(priv);
     }
