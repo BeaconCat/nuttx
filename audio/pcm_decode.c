@@ -396,11 +396,12 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
       priv->nchannels   = localwav.fmt.nchannels; /* Mono=1, Stereo=2 */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
-      /* We are going to subsample, there then are some restrictions on the
-       * number of channels and sample sizes that we can handle.
+      /* Subsampling copies complete frames as bytes, including packed
+       * 24-bit and 32-bit PCM.  Bound the supported frame size.
        */
 
-      if (priv->bpsamp != 8 && priv->bpsamp != 16)
+      if (priv->bpsamp != 8 && priv->bpsamp != 16 &&
+          priv->bpsamp != 24 && priv->bpsamp != 32)
         {
           auderr("ERROR: %d bits per sample are not supported in this "
                  "mode\n",
@@ -779,6 +780,14 @@ static int pcm_configure(FAR struct audio_lowerhalf_s *dev,
        * configuration to the lower level
        * driver.
        */
+
+      if (caps->ac_controls.b[0] != AUDIO_SUBSAMPLE_NONE &&
+          (priv->align == 0 ||
+           (priv->bpsamp != 8 && priv->bpsamp != 16 &&
+            priv->bpsamp != 24 && priv->bpsamp != 32)))
+        {
+          return -ENOTSUP;
+        }
 
       pcm_subsample_configure(priv, caps->ac_controls.b[0]);
       return OK;
