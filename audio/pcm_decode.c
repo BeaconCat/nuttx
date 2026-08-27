@@ -1098,7 +1098,10 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
        * and sample bitwidth.
        */
 
-      DEBUGASSERT(priv->samprate < 65535);
+      if (priv->samprate > 0x00ffffff)
+        {
+          return -EINVAL;
+        }
 
       caps.ac_len            = sizeof(struct audio_caps_s);
       caps.ac_type           = AUDIO_TYPE_OUTPUT;
@@ -1106,6 +1109,7 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 
       caps.ac_controls.hw[0] = (uint16_t)priv->samprate;
       caps.ac_controls.b[2]  = priv->bpsamp;
+      caps.ac_controls.b[3]  = priv->samprate >> 16;
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       ret = lower->ops->configure(lower, priv->session, &caps);
