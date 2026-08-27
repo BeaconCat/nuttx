@@ -979,6 +979,7 @@ struct es8388_dev_s
   bool microphone_muted;                    /* User microphone mute */
   bool input_stream_ready;                  /* RX transfer is armed */
   uint32_t input_start_tick;                /* ADC power-up tick */
+  FAR struct es8388_dev_s *next;            /* Instances sharing codecs */
   es8388_adc_input_e adc_input; /* The current input of the ES8388 ADC */
   es_mic_gain_e mic_gain;       /* The current microphone gain */
   uint32_t mclk;                /* The current MCLK frequency */

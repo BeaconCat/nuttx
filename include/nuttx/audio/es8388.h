@@ -155,6 +155,7 @@ struct es8388_lower_s
 
   uint32_t frequency;  /* Initial I2C frequency */
   uint8_t  address;    /* 7-bit I2C address (only bits 0-6 used) */
+  uint8_t stream_type; /* 0: legacy; AUDIO_TYPE_INPUT or AUDIO_TYPE_OUTPUT */
 
   /* Board-level DAC channel wiring and analog output control. */
 
