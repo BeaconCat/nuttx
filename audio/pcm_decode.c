@@ -781,6 +781,12 @@ static int pcm_configure(FAR struct audio_lowerhalf_s *dev,
        * driver.
        */
 
+      if (caps->ac_controls.b[0] == 1 ||
+          caps->ac_controls.b[0] > AUDIO_SUBSAMPLE_MAX)
+        {
+          return -EINVAL;
+        }
+
       if (caps->ac_controls.b[0] != AUDIO_SUBSAMPLE_NONE &&
           (priv->align == 0 ||
            (priv->bpsamp != 8 && priv->bpsamp != 16 &&
