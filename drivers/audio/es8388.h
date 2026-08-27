@@ -481,8 +481,8 @@
 
 #define ES8388_DATSEL_SHIFT           (6)
 #define ES8388_DATSEL_BITMASK         (0x03 << ES8388_DATSEL_SHIFT)
-#define ES8388_DATSEL_LL              (0 << ES8388_DATSEL_SHIFT)
-#define ES8388_DATSEL_LR              (1 << ES8388_DATSEL_SHIFT)
+#define ES8388_DATSEL_LR              (0 << ES8388_DATSEL_SHIFT)
+#define ES8388_DATSEL_LL              (1 << ES8388_DATSEL_SHIFT)
 #define ES8388_DATSEL_RR              (2 << ES8388_DATSEL_SHIFT)
 #define ES8388_DATSEL_RL              (3 << ES8388_DATSEL_SHIFT)
 

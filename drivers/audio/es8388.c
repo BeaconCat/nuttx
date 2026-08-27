@@ -2621,7 +2621,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_ADCFORMAT(ES_I2S_NORMAL)     |
                   ES8388_ADCWL(ES_WORD_LENGTH_16BITS) |
                   ES8388_ADCLRP_NORM_2ND              |
-                  ES8388_DATSEL_LL);
+                  ES8388_DATSEL_LR);
 
   es8388_writereg(priv, ES8388_ADCCONTROL5,
                   ES8388_ADCFSRATIO(ES_LCLK_DIV_256) |
