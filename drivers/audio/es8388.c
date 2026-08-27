@@ -152,6 +152,8 @@ static void es8388_audio_input(FAR struct es8388_dev_s *priv);
 static void es8388_reset(FAR struct es8388_dev_s *priv);
 static int es8388_set_output_route(FAR struct audio_lowerhalf_s *dev,
                                    enum es8388_output_route_e route);
+static void es8388_apply_input_route(FAR struct es8388_dev_s *priv,
+                                     bool stream_ready);
 static int es8388_set_control(FAR struct es8388_dev_s *priv,
                               FAR const struct es8388_control_s *control);
 
@@ -661,6 +663,65 @@ static void es8388_setmute(FAR struct es8388_dev_s *priv,
     }
 }
 #endif
+
+/****************************************************************************
+ * Name: es8388_apply_input_route
+ *
+ * Description:
+ *   Apply the selected ES8388 analog input.  LINE1 and LINE2 use the codec's
+ *   differential PGA.  BOTH exposes LINE2 on the left ADC and LINE1 on the
+ *   right ADC so both connectors can be captured in one stereo stream.
+ ****************************************************************************/
+
+static void es8388_apply_input_route(FAR struct es8388_dev_s *priv,
+                                     bool stream_ready)
+{
+  uint8_t adccontrol2;
+  uint8_t adccontrol3;
+  uint8_t adccontrol7;
+  bool mute;
+
+  adccontrol3 = es8388_readreg(priv, ES8388_ADCCONTROL3);
+  adccontrol3 &= ~(ES8388_DS_BITMASK | ES8388_MONOMIX_BITMASK);
+
+  switch (priv->input_route)
+    {
+      case ES8388_INPUT_ROUTE_LINE2:
+        adccontrol2 = ES8388_LINSEL_DIFF | ES8388_RINSEL_DIFF |
+                      ES8388_DSR_LINPUT2_RINPUT2;
+        adccontrol3 |= ES8388_DS_LINPUT2_RINPUT2;
+        break;
+
+      case ES8388_INPUT_ROUTE_LINE1:
+        adccontrol2 = ES8388_LINSEL_DIFF | ES8388_RINSEL_DIFF |
+                      ES8388_DSR_LINPUT1_RINPUT1;
+        break;
+
+      case ES8388_INPUT_ROUTE_BOTH:
+        adccontrol2 = ES8388_LINSEL_DIFF | ES8388_RINSEL_DIFF |
+                      ES8388_DSSEL_MULT_REG |
+                      ES8388_DSR_LINPUT1_RINPUT1;
+        adccontrol3 |= ES8388_DS_LINPUT2_RINPUT2;
+        break;
+
+      case ES8388_INPUT_ROUTE_NONE:
+      default:
+        adccontrol2 = ES8388_LINSEL_DIFF | ES8388_RINSEL_DIFF |
+                      ES8388_DSR_LINPUT2_RINPUT2;
+        break;
+    }
+
+  es8388_writereg(priv, ES8388_ADCCONTROL2, adccontrol2);
+  es8388_writereg(priv, ES8388_ADCCONTROL3, adccontrol3);
+
+  mute = !stream_ready || priv->microphone_muted ||
+         priv->input_route == ES8388_INPUT_ROUTE_NONE;
+  adccontrol7 = es8388_readreg(priv, ES8388_ADCCONTROL7);
+  adccontrol7 &= ~ES8388_ADCMUTE_BITMASK;
+  adccontrol7 |= ES8388_ADCMUTE(mute);
+  es8388_writereg(priv, ES8388_ADCCONTROL7, adccontrol7);
+}
+
 /****************************************************************************
  * Name: es8388_output_power
  *
@@ -1553,6 +1614,12 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
           break;
         }
 
+      if (priv->audio_mode == ES_MODULE_ADC && !priv->input_stream_ready)
+        {
+          priv->input_stream_ready = true;
+          es8388_apply_input_route(priv, true);
+        }
+
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
       /* Keep the DAC muted until the first buffer has armed both DMA and
        * the I2S transfer engine.  Unmuting earlier exposes the analog output
@@ -1610,6 +1677,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
   uint8_t regval = 0;
 
   audinfo("ES8388 Start\n");
+  priv->input_stream_ready = false;
   if (!es8388_samplerate_supported(priv->samprate))
     {
       auderr("Cannot start without a valid stream format\n");
@@ -1704,6 +1772,8 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
                       ES8388_PDNADCL_PWRUP        |
                       ES8388_PDNAINR_NORMAL       |
                       ES8388_PDNAINL_NORMAL);
+
+      es8388_apply_input_route(priv, false);
     }
 
   if (priv->audio_mode == ES_MODULE_LINE    ||
@@ -1791,6 +1861,7 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
   FAR void *value;
 
   audinfo("ES8388 Stop\n");
+  priv->input_stream_ready = false;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
   es8388_setmute(priv, priv->audio_mode, true);
 #endif
@@ -2111,6 +2182,7 @@ static int es8388_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
           daccontrol1 = es8388_readreg(priv, ES8388_DACCONTROL1);
           daccontrol6 = es8388_readreg(priv, ES8388_DACCONTROL6);
           daccontrol7 = es8388_readreg(priv, ES8388_DACCONTROL7);
+          control->mask = ES8388_CONTROL_ALL;
           control->route = priv->output_policy;
           control->active_route = priv->output_route;
           control->mono = (daccontrol7 & ES8388_MONO_BITMASK) != 0;
@@ -2121,6 +2193,8 @@ static int es8388_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
               (daccontrol6 & ES8388_DAC_INVL_BITMASK) != 0;
           control->invert_right =
               (daccontrol6 & ES8388_DAC_INVR_BITMASK) != 0;
+          control->input_route = priv->input_route;
+          control->microphone_muted = priv->microphone_muted;
           control->headphones_connected =
               priv->lower->headphones_connected != NULL &&
               priv->lower->headphones_connected();
@@ -2769,6 +2843,8 @@ FAR struct audio_lowerhalf_s *
       priv->i2s        = i2s;
       priv->output_route = ES8388_OUTPUT_ROUTE_LINE1;
       priv->output_policy = ES8388_OUTPUT_ROUTE_LINE1;
+      priv->input_route = ES8388_INPUT_ROUTE_LINE2;
+      priv->microphone_muted = false;
 
       nxmutex_init(&priv->pendlock);
       dq_init(&priv->pendq);
@@ -2888,16 +2964,23 @@ static int es8388_set_control(FAR struct es8388_dev_s *priv,
   uint8_t regval;
   int ret;
 
-  if (priv == NULL || control == NULL ||
-      control->route > ES8388_OUTPUT_ROUTE_AUTO)
+  if (priv == NULL || control == NULL || control->mask == 0 ||
+      (control->mask & ~ES8388_CONTROL_ALL) != 0 ||
+      ((control->mask & ES8388_CONTROL_OUTPUT) != 0 &&
+       control->route > ES8388_OUTPUT_ROUTE_AUTO) ||
+      ((control->mask & ES8388_CONTROL_INPUT) != 0 &&
+       control->input_route > ES8388_INPUT_ROUTE_BOTH))
     {
       return -EINVAL;
     }
 
-  ret = es8388_set_output_route(&priv->dev, control->route);
-  if (ret < 0)
+  if ((control->mask & ES8388_CONTROL_OUTPUT) != 0)
     {
-      return ret;
+      ret = es8388_set_output_route(&priv->dev, control->route);
+      if (ret < 0)
+        {
+          return ret;
+        }
     }
 
   ret = nxmutex_lock(&priv->pendlock);
@@ -2906,29 +2989,39 @@ static int es8388_set_control(FAR struct es8388_dev_s *priv,
       return ret;
     }
 
-  regval = es8388_readreg(priv, ES8388_DACCONTROL1);
-  regval &= ~ES8388_DACLRSWAP_BITMASK;
-  regval |= (priv->lower->swap_dac_lr ^ control->swap) ?
-                ES8388_DACLRSWAP_SWAP : ES8388_DACLRSWAP_NORMAL;
-  es8388_writereg(priv, ES8388_DACCONTROL1, regval);
+  if ((control->mask & ES8388_CONTROL_OUTPUT) != 0)
+    {
+      regval = es8388_readreg(priv, ES8388_DACCONTROL1);
+      regval &= ~ES8388_DACLRSWAP_BITMASK;
+      regval |= (priv->lower->swap_dac_lr ^ control->swap) ?
+                    ES8388_DACLRSWAP_SWAP : ES8388_DACLRSWAP_NORMAL;
+      es8388_writereg(priv, ES8388_DACCONTROL1, regval);
 
-  regval = es8388_readreg(priv, ES8388_DACCONTROL6);
-  regval &= ~(ES8388_DAC_INVL_BITMASK | ES8388_DAC_INVR_BITMASK);
-  regval |= control->invert_left ? ES8388_DAC_INVL_180INV :
-                                   ES8388_DAC_INVL_NOINV;
-  regval |= control->invert_right ? ES8388_DAC_INVR_180INV :
-                                    ES8388_DAC_INVR_NOINV;
-  es8388_writereg(priv, ES8388_DACCONTROL6, regval);
+      regval = es8388_readreg(priv, ES8388_DACCONTROL6);
+      regval &= ~(ES8388_DAC_INVL_BITMASK | ES8388_DAC_INVR_BITMASK);
+      regval |= control->invert_left ? ES8388_DAC_INVL_180INV :
+                                       ES8388_DAC_INVL_NOINV;
+      regval |= control->invert_right ? ES8388_DAC_INVR_180INV :
+                                        ES8388_DAC_INVR_NOINV;
+      es8388_writereg(priv, ES8388_DACCONTROL6, regval);
 
-  regval = es8388_readreg(priv, ES8388_DACCONTROL7);
-  regval &= ~ES8388_MONO_BITMASK;
-  regval |= control->mono ? ES8388_MONO_MONO : ES8388_MONO_STEREO;
-  es8388_writereg(priv, ES8388_DACCONTROL7, regval);
+      regval = es8388_readreg(priv, ES8388_DACCONTROL7);
+      regval &= ~ES8388_MONO_BITMASK;
+      regval |= control->mono ? ES8388_MONO_MONO : ES8388_MONO_STEREO;
+      es8388_writereg(priv, ES8388_DACCONTROL7, regval);
 
-  priv->mono = control->mono;
-  priv->swap = control->swap;
-  priv->invert_left = control->invert_left;
-  priv->invert_right = control->invert_right;
+      priv->mono = control->mono;
+      priv->swap = control->swap;
+      priv->invert_left = control->invert_left;
+      priv->invert_right = control->invert_right;
+    }
+
+  if ((control->mask & ES8388_CONTROL_INPUT) != 0)
+    {
+      priv->input_route = control->input_route;
+      priv->microphone_muted = control->microphone_muted;
+      es8388_apply_input_route(priv, priv->input_stream_ready);
+    }
   nxmutex_unlock(&priv->pendlock);
   return OK;
 }

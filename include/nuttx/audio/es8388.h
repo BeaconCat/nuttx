@@ -119,16 +119,31 @@ enum es8388_output_route_e {
   ES8388_OUTPUT_ROUTE_AUTO,
 };
 
+enum es8388_input_route_e
+{
+  ES8388_INPUT_ROUTE_NONE = 0,
+  ES8388_INPUT_ROUTE_LINE1,
+  ES8388_INPUT_ROUTE_LINE2,
+  ES8388_INPUT_ROUTE_BOTH,
+};
+
 #define ES8388IOC_SET_CONTROL _AUDIOIOC(0x80)
 #define ES8388IOC_GET_CONTROL _AUDIOIOC(0x81)
 
+#define ES8388_CONTROL_OUTPUT (1 << 0)
+#define ES8388_CONTROL_INPUT  (1 << 1)
+#define ES8388_CONTROL_ALL    (ES8388_CONTROL_OUTPUT | ES8388_CONTROL_INPUT)
+
 struct es8388_control_s {
+  uint32_t mask;
   enum es8388_output_route_e route;
   enum es8388_output_route_e active_route;
+  enum es8388_input_route_e input_route;
   bool mono;
   bool swap;
   bool invert_left;
   bool invert_right;
+  bool microphone_muted;
   bool headphones_connected;
 };
 
