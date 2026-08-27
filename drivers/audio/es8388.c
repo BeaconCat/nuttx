@@ -59,6 +59,8 @@
 
 #include "es8388.h"
 
+#define ES8388_ADC_SETTLE_MS 500
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -1614,7 +1616,9 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
           break;
         }
 
-      if (priv->audio_mode == ES_MODULE_ADC && !priv->input_stream_ready)
+      if (priv->audio_mode == ES_MODULE_ADC && !priv->input_stream_ready &&
+          (uint32_t)((uint32_t)clock_systime_ticks() -
+                     priv->input_start_tick) >= MSEC2TICK(ES8388_ADC_SETTLE_MS))
         {
           priv->input_stream_ready = true;
           es8388_apply_input_route(priv, true);
@@ -1774,6 +1778,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
                       ES8388_PDNAINL_NORMAL);
 
       es8388_apply_input_route(priv, false);
+      priv->input_start_tick = (uint32_t)clock_systime_ticks();
     }
 
   if (priv->audio_mode == ES_MODULE_LINE    ||
