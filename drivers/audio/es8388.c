@@ -605,9 +605,8 @@ static void es8388_dac_digital_reset(FAR struct es8388_dev_s *priv,
 {
   uint8_t regval;
 
-  regval = ES8388_DACVREF_PDN_PWRUP | ES8388_ADCVREF_PDN_PWRUP |
-           ES8388_DACDLL_PDN_NORMAL | ES8388_ADCDLL_PDN_NORMAL |
-           ES8388_ADC_STM_RST_NORMAL | ES8388_ADC_DIGPDN_NORMAL;
+  regval = es8388_readreg(priv, ES8388_CHIPPOWER);
+  regval &= ~(ES8388_DAC_STM_RST_RESET | ES8388_DAC_DIGPDN_RESET);
 
   if (assert_reset)
     {
