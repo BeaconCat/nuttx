@@ -1115,6 +1115,18 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
       if (ret < 0)
         {
           auderr("ERROR: Failed to set PCM configuration: %d\n", ret);
+
+          /* No buffer reached the lower driver.  Complete the rejected
+           * stream so the client does not wait for a worker never started.
+           */
+
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
+                             NULL, -ret, priv->session);
+#else
+          priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
+                             NULL, -ret);
+#endif
           return ret;
         }
 
