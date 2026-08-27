@@ -1448,6 +1448,20 @@ static int es8388_shutdown(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("Shutdown triggered\n");
 
+  /* Last close after configure failed has no worker to release the lease. */
+
+  if (priv->threadid == 0)
+    {
+      int ret = nxmutex_lock(&g_es8388_reserve_lock);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      priv->reserved = false;
+      nxmutex_unlock(&g_es8388_reserve_lock);
+    }
+
   if (priv->audio_mode == ES_MODULE_ADC)
     {
       priv->input_stream_ready = false;
