@@ -815,21 +815,32 @@ static void es8388_apply_output_route(FAR struct es8388_dev_s *priv,
 {
   uint8_t target = es8388_output_power(priv, connect);
 
-  if (es8388_readreg(priv, ES8388_DACPOWER) != target)
+  /* Notify the board even when codec power bits already match.  An idle
+   * policy change to NONE must also release externally retained power.
+   */
+
+  if (es8388_readreg(priv, ES8388_DACPOWER) == target)
     {
-      if (priv->lower->set_output != NULL)
+      if (!connect && priv->lower->set_output != NULL)
         {
           priv->lower->set_output(priv->output_route, false);
         }
 
-      es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
-      up_mdelay(20);
-      es8388_writereg(priv, ES8388_DACPOWER, target);
+      return;
+    }
 
-      if (connect && priv->lower->set_output != NULL)
-        {
-          priv->lower->set_output(priv->output_route, true);
-        }
+  if (priv->lower->set_output != NULL)
+    {
+      priv->lower->set_output(priv->output_route, false);
+    }
+
+  es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
+  up_mdelay(20);
+  es8388_writereg(priv, ES8388_DACPOWER, target);
+
+  if (connect && priv->lower->set_output != NULL)
+    {
+      priv->lower->set_output(priv->output_route, true);
     }
 }
 
