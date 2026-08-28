@@ -1769,12 +1769,6 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
 
       if (priv->audio_mode == ES_MODULE_DAC && priv->mute)
         {
-          es8388_writereg(priv, ES8388_DACCONTROL17,
-                          ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
-                              ES8388_LI2LO_DISABLE | ES8388_LD2LO_ENABLE);
-          es8388_writereg(priv, ES8388_DACCONTROL20,
-                          ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
-                              ES8388_RI2RO_DISABLE | ES8388_RD2RO_ENABLE);
           es8388_setmute(priv, ES_MODULE_DAC, false);
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
           es8388_setvolume(priv, ES_MODULE_DAC, priv->volume_out);
@@ -1922,6 +1916,20 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
       priv->audio_mode == ES_MODULE_ADC_DAC ||
       priv->audio_mode == ES_MODULE_DAC)
     {
+      if (priv->audio_mode == ES_MODULE_DAC)
+        {
+          /* Establish the analog path before enabling the amplifier.
+           * Keep digital mute until the first I2S buffer is submitted.
+           */
+
+          es8388_writereg(priv, ES8388_DACCONTROL17,
+                          ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
+                              ES8388_LI2LO_DISABLE | ES8388_LD2LO_ENABLE);
+          es8388_writereg(priv, ES8388_DACCONTROL20,
+                          ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
+                              ES8388_RI2RO_DISABLE | ES8388_RD2RO_ENABLE);
+        }
+
       es8388_apply_output_route(priv, true);
     }
 
