@@ -3036,6 +3036,9 @@ FAR struct audio_lowerhalf_s *
 
   if (priv)
     {
+      FAR struct es8388_dev_s *peer;
+      int ret;
+
       priv->dev.ops    = &g_audioops;
       priv->lower      = lower;
       priv->i2c        = i2c;
@@ -3062,6 +3065,12 @@ FAR struct audio_lowerhalf_s *
       priv->samprate   = ES8388_DEFAULT_SAMPRATE;
       priv->nchannels  = ES8388_DEFAULT_NCHANNELS;
       priv->bpsamp     = ES8388_DEFAULT_BPSAMP;
+      priv->mic_gain = ES_MIC_GAIN_24DB;
+      priv->mute = true;
+#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
+      priv->volume_out = CONFIG_ES8388_OUTPUT_INITVOLUME;
+      priv->volume_in = CONFIG_ES8388_INPUT_INITVOLUME;
+#endif
 #if !defined(CONFIG_AUDIO_EXCLUDE_VOLUME) && !defined(CONFIG_AUDIO_EXCLUDE_BALANCE)
       priv->balance    = 500;            /* Center balance */
 #endif
@@ -3070,6 +3079,35 @@ FAR struct audio_lowerhalf_s *
               lower->address, lower->frequency);
 
       /* Reset and reconfigure the ES8388 hardware */
+
+      ret = nxmutex_lock(&g_es8388_reserve_lock);
+      if (ret < 0)
+        {
+          nxmutex_destroy(&priv->pendlock);
+          kmm_free(priv);
+          return NULL;
+        }
+
+      for (peer = g_es8388_instances; peer != NULL; peer = peer->next)
+        {
+          if (peer->i2c == i2c && peer->lower->address == lower->address)
+            {
+              /* One physical reset, independent state for each direction.
+               * A second legacy or same-direction owner is not supported.
+               */
+
+              if (lower->stream_type == 0 || peer->lower->stream_type == 0 ||
+                  lower->stream_type == peer->lower->stream_type)
+                {
+                  nxmutex_unlock(&g_es8388_reserve_lock);
+                  nxmutex_destroy(&priv->pendlock);
+                  kmm_free(priv);
+                  return NULL;
+                }
+
+              goto register_instance;
+            }
+        }
 
       es8388_dump_registers(&priv->dev, "Before reset");
 
@@ -3082,7 +3120,7 @@ FAR struct audio_lowerhalf_s *
                       ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
                           ES8388_RI2RO_DISABLE | ES8388_RD2RO_DISABLE);
       es8388_writereg(priv, ES8388_DACPOWER, es8388_output_power(priv, false));
-      nxmutex_lock(&g_es8388_reserve_lock);
+register_instance:
       priv->next = g_es8388_instances;
       g_es8388_instances = priv;
       nxmutex_unlock(&g_es8388_reserve_lock);
