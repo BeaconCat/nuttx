@@ -1831,6 +1831,15 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
 #endif
 
 
+  if (priv->audio_mode == ES_MODULE_DAC)
+    {
+      ret = I2S_IOCTL(priv->i2s, AUDIOIOC_START, true);
+      if (ret < 0 && ret != -ENOTTY)
+        {
+          return ret;
+        }
+    }
+
   prev_regval = es8388_readreg(priv, ES8388_DACCONTROL21);
 
   if (priv->audio_mode == ES_MODULE_LINE)
@@ -1949,6 +1958,11 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
       /* Error creating message queue! */
 
       auderr("Couldn't allocate message queue\n");
+      if (priv->audio_mode == ES_MODULE_DAC)
+        {
+          I2S_IOCTL(priv->i2s, AUDIOIOC_SHUTDOWN, true);
+        }
+      es8388_shutdown(dev);
       return ret;
     }
 
@@ -1973,6 +1987,14 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
   if (ret != OK)
     {
       auderr("pthread_create failed: %d\n", ret);
+      if (priv->audio_mode == ES_MODULE_DAC)
+        {
+          I2S_IOCTL(priv->i2s, AUDIOIOC_SHUTDOWN, true);
+        }
+      file_mq_close(&priv->mq);
+      file_mq_unlink(priv->mqname);
+      es8388_shutdown(dev);
+      return -ret;
     }
   else
     {
@@ -2689,7 +2711,26 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
         }
       else
         {
+          if (priv->audio_mode == ES_MODULE_DAC)
+            {
+              int ret = I2S_IOCTL(priv->i2s, AUDIOIOC_STOP, true);
+              if (ret < 0 && ret != -ENOTTY)
+                {
+                  result = ret;
+                }
+
+            }
+
           es8388_shutdown(&priv->dev);
+        }
+    }
+
+  if (priv->audio_mode == ES_MODULE_DAC)
+    {
+      int ret = I2S_IOCTL(priv->i2s, AUDIOIOC_SHUTDOWN, true);
+      if (ret < 0 && ret != -ENOTTY && result >= 0)
+        {
+          result = ret;
         }
     }
 
