@@ -135,9 +135,13 @@ enum es8388_input_route_e
 #define ES8388_CONTROL_ALL    (ES8388_CONTROL_OUTPUT | ES8388_CONTROL_INPUT)
 
 struct es8388_control_s {
+  /* SET masks select whole direction groups, not individual fields.
+   * Initialize every writable field in the selected group. GET-modify-SET
+   * preserves values not intentionally changed; unselected groups are ignored.
+   */
   uint32_t mask;
-  enum es8388_output_route_e route;
-  enum es8388_output_route_e active_route;
+  enum es8388_output_route_e route;        /* Requested output policy */
+  enum es8388_output_route_e active_route; /* GET: resolved route, not mute state */
   enum es8388_input_route_e input_route;
   bool mono;
   bool swap;
