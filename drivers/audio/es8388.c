@@ -3218,6 +3218,20 @@ static int es8388_set_control(FAR struct es8388_dev_s *priv,
 
   if ((control->mask & ES8388_CONTROL_OUTPUT) != 0)
     {
+      if (priv->lower->stream_type == AUDIO_TYPE_INPUT)
+        {
+          return -ENOTSUP;
+        }
+    }
+
+  if ((control->mask & ES8388_CONTROL_INPUT) != 0 &&
+      priv->lower->stream_type == AUDIO_TYPE_OUTPUT)
+    {
+      return -ENOTSUP;
+    }
+
+  if ((control->mask & ES8388_CONTROL_OUTPUT) != 0)
+    {
       ret = es8388_set_output_route(&priv->dev, control->route);
       if (ret < 0)
         {
