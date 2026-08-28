@@ -1769,10 +1769,10 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
 
       if (priv->audio_mode == ES_MODULE_DAC && priv->mute)
         {
-          es8388_setmute(priv, ES_MODULE_DAC, false);
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
           es8388_setvolume(priv, ES_MODULE_DAC, priv->volume_out);
 #endif
+          es8388_setmute(priv, ES_MODULE_DAC, false);
         }
 #endif
     }
@@ -1826,8 +1826,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
   if (priv->audio_mode == ES_MODULE_DAC ||
       priv->audio_mode == ES_MODULE_ADC_DAC)
     {
-      es8388_writereg(priv, ES8388_DACCONTROL4, ES8388_LDACVOL(0xc0));
-      es8388_writereg(priv, ES8388_DACCONTROL5, ES8388_RDACVOL(0xc0));
+      es8388_setvolume(priv, ES_MODULE_DAC, priv->volume_out);
     }
 #endif
 
