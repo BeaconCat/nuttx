@@ -49,6 +49,7 @@
 #include <nuttx/queue.h>
 #include <nuttx/clock.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/signal.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/fs/fs.h>
@@ -60,6 +61,7 @@
 #include "es8388.h"
 
 #define ES8388_ADC_SETTLE_MS 500
+#define ES8388_DAC_MAX_ATTENUATION 192 /* Half-dB steps to -96 dB */
 
 /****************************************************************************
  * Private Function Prototypes
@@ -84,6 +86,7 @@ static void es8388_setmute(FAR struct es8388_dev_s *priv,
                            bool enable);
 #endif
 static void es8388_setmicgain(FAR struct es8388_dev_s *priv, uint32_t gain);
+static void es8388_quiet_output(FAR struct es8388_dev_s *priv);
 static int es8388_check_peer_format(FAR struct es8388_dev_s *priv,
                                     uint32_t rate, uint8_t bits,
                                     uint8_t channels);
@@ -1485,11 +1488,11 @@ static int es8388_shutdown(FAR struct audio_lowerhalf_s *dev)
       return OK;
     }
 
-  es8388_apply_output_route(priv, false);
-
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
   es8388_setmute(priv, priv->audio_mode, true);
 #endif
+
+  es8388_apply_output_route(priv, false);
 
   es8388_writereg(priv, ES8388_DACCONTROL17,
                   ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
@@ -2049,9 +2052,7 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
       priv->input_stream_ready = false;
       if (priv->audio_mode == ES_MODULE_DAC)
         {
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-          es8388_setmute(priv, ES_MODULE_DAC, true);
-#endif
+          es8388_quiet_output(priv);
         }
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
       else
@@ -2169,6 +2170,43 @@ stop_msg:
 #endif
 
 /****************************************************************************
+ * Name: es8388_quiet_output
+ *
+ * Description:
+ *   Use the DAC volume ramp while its clocks remain available.  Call with
+ *   pendlock held so a worker cannot undo the mute during stop.
+ *
+ ****************************************************************************/
+
+static void es8388_quiet_output(FAR struct es8388_dev_s *priv)
+{
+#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
+  static const unsigned int cycles[] = {4, 32, 64, 128};
+  uint8_t mode = es8388_readreg(priv, ES8388_DACCONTROL3);
+  unsigned int left = es8388_readreg(priv, ES8388_DACCONTROL4);
+  unsigned int right = es8388_readreg(priv, ES8388_DACCONTROL5);
+  unsigned int steps = ES8388_DAC_MAX_ATTENUATION -
+      MIN(MIN(left, right), ES8388_DAC_MAX_ATTENUATION);
+
+  /* Write attenuation directly; preserve the user's cached target volume. */
+
+  es8388_writereg(priv, ES8388_DACCONTROL4,
+                  ES8388_LDACVOL(ES8388_DAC_MAX_ATTENUATION));
+  es8388_writereg(priv, ES8388_DACCONTROL5,
+                  ES8388_RDACVOL(ES8388_DAC_MAX_ATTENUATION));
+  if ((mode & ES8388_DACSOFTRAMP_ENABLE) != 0 && priv->samprate != 0)
+    {
+      unsigned int frames = steps * cycles[mode >> 6] + 2;
+      nxsig_usleep(((uint64_t)frames * USEC_PER_SEC + priv->samprate - 1) /
+                   priv->samprate);
+    }
+#endif
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+  es8388_setmute(priv, ES_MODULE_DAC, true);
+#endif
+}
+
+/****************************************************************************
  * Name: es8388_pause
  *
  * Description: Pauses the playback.
@@ -2203,8 +2241,15 @@ static int es8388_pause(FAR struct audio_lowerhalf_s *dev)
     {
       priv->paused = true;
       priv->output_armed = false;
+      if (priv->audio_mode == ES_MODULE_DAC)
+        {
+          es8388_quiet_output(priv);
+        }
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-      es8388_setmute(priv, priv->audio_mode, true);
+      else
+        {
+          es8388_setmute(priv, priv->audio_mode, true);
+        }
 #endif
     }
 
@@ -2784,6 +2829,9 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
                   result = ret;
                 }
 
+              nxmutex_lock(&priv->pendlock);
+              es8388_quiet_output(priv);
+              nxmutex_unlock(&priv->pendlock);
             }
 
           es8388_shutdown(&priv->dev);
