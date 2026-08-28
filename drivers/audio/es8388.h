@@ -961,6 +961,8 @@ struct es8388_dev_s
   volatile uint8_t                    inflight;         /* Number of audio buffers in-flight */
   bool                                running;          /* True: Worker thread is running */
   bool                                paused;           /* True: Playing is paused */
+  bool                                stopping;         /* Reject new submissions during stop */
+  bool                                output_armed;     /* Initial output unmute completed */
   bool                                mute;             /* True: Output is muted */
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
   bool                                terminating;      /* True: Stop requested */

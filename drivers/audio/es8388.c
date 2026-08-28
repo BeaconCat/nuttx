@@ -1687,7 +1687,7 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
     }
 
   while (priv->inflight < CONFIG_ES8388_INFLIGHT &&
-         dq_peek(&priv->pendq) != NULL && !priv->paused)
+         dq_peek(&priv->pendq) != NULL && !priv->paused && !priv->stopping)
     {
       /* Take next buffer from the queue of pending transfers */
 
@@ -1767,12 +1767,14 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
        * to an unstable serial stream and causes an audible startup click.
        */
 
-      if (priv->audio_mode == ES_MODULE_DAC && priv->mute)
+      if (priv->audio_mode == ES_MODULE_DAC && !priv->output_armed &&
+          !priv->stopping)
         {
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
           es8388_setvolume(priv, ES_MODULE_DAC, priv->volume_out);
 #endif
           es8388_setmute(priv, ES_MODULE_DAC, false);
+          priv->output_armed = true;
         }
 #endif
     }
@@ -1813,6 +1815,8 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("ES8388 Start\n");
   priv->input_stream_ready = false;
+  priv->stopping = false;
+  priv->output_armed = false;
   if (!es8388_samplerate_supported(priv->samprate))
     {
       auderr("Cannot start without a valid stream format\n");
@@ -2032,6 +2036,45 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
   FAR void *value;
 
   audinfo("ES8388 Stop\n");
+  if (priv->lower->stream_type != 0)
+    {
+      int ret = nxmutex_lock(&priv->pendlock);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      priv->stopping = true;
+      priv->paused = false;
+      priv->input_stream_ready = false;
+      if (priv->audio_mode == ES_MODULE_DAC)
+        {
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+          es8388_setmute(priv, ES_MODULE_DAC, true);
+#endif
+        }
+#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
+      else
+        {
+          es8388_setmute(priv, priv->audio_mode, true);
+        }
+#endif
+      nxmutex_unlock(&priv->pendlock);
+
+      term_msg.msg_id = AUDIO_MSG_STOP;
+      term_msg.u.data = 0;
+      ret = file_mq_send(&priv->mq, (FAR const char *)&term_msg,
+                         sizeof(term_msg), CONFIG_ES8388_MSG_PRIO);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      ret = pthread_join(priv->threadid, &value);
+      priv->threadid = 0;
+      return ret == 0 ? OK : -ret;
+    }
+
   priv->input_stream_ready = false;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
   es8388_setmute(priv, priv->audio_mode, true);
@@ -2150,13 +2193,22 @@ static int es8388_pause(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("ES8388 Pause\n");
 
-  if (priv->running && !priv->paused)
+  int ret = nxmutex_lock(&priv->pendlock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (priv->running && !priv->paused && !priv->stopping)
     {
       priv->paused = true;
+      priv->output_armed = false;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
       es8388_setmute(priv, priv->audio_mode, true);
 #endif
     }
+
+  nxmutex_unlock(&priv->pendlock);
 
   return OK;
 }
@@ -2188,20 +2240,33 @@ static int es8388_resume(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("ES8388 Resume\n");
 
-  if (priv->running && priv->paused)
+  bool resume = false;
+  int ret = nxmutex_lock(&priv->pendlock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (priv->running && priv->paused && !priv->stopping)
     {
       priv->paused = false;
+      resume = true;
 #ifndef CONFIG_AUDIO_EXCLUDE_MUTE
       if (priv->audio_mode == ES_MODULE_ADC)
         {
           es8388_apply_input_route(priv, priv->input_stream_ready);
         }
-      else
+      else if (priv->audio_mode != ES_MODULE_DAC)
         {
           es8388_setmute(priv, priv->audio_mode, false);
         }
 #endif
-      es8388_processbegin(priv);
+    }
+
+  nxmutex_unlock(&priv->pendlock);
+  if (resume)
+    {
+      return es8388_processbegin(priv);
     }
 
   return OK;
