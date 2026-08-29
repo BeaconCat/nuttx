@@ -111,6 +111,46 @@
  * Public Types
  ****************************************************************************/
 
+enum es8388_output_route_e {
+  ES8388_OUTPUT_ROUTE_NONE = 0,
+  ES8388_OUTPUT_ROUTE_LINE1,
+  ES8388_OUTPUT_ROUTE_LINE2,
+  ES8388_OUTPUT_ROUTE_BOTH,
+  ES8388_OUTPUT_ROUTE_AUTO,
+};
+
+enum es8388_input_route_e
+{
+  ES8388_INPUT_ROUTE_NONE = 0,
+  ES8388_INPUT_ROUTE_LINE1,
+  ES8388_INPUT_ROUTE_LINE2,
+  ES8388_INPUT_ROUTE_BOTH,
+};
+
+#define ES8388IOC_SET_CONTROL _AUDIOIOC(0x80)
+#define ES8388IOC_GET_CONTROL _AUDIOIOC(0x81)
+
+#define ES8388_CONTROL_OUTPUT (1 << 0)
+#define ES8388_CONTROL_INPUT  (1 << 1)
+#define ES8388_CONTROL_ALL    (ES8388_CONTROL_OUTPUT | ES8388_CONTROL_INPUT)
+
+struct es8388_control_s {
+  /* SET masks select whole direction groups, not individual fields.
+   * Initialize every writable field in the selected group. GET-modify-SET
+   * preserves values not intentionally changed; unselected groups are ignored.
+   */
+  uint32_t mask;
+  enum es8388_output_route_e route;        /* Requested output policy */
+  enum es8388_output_route_e active_route; /* GET: resolved route, not mute state */
+  enum es8388_input_route_e input_route;
+  bool mono;
+  bool swap;
+  bool invert_left;
+  bool invert_right;
+  bool microphone_muted;
+  bool headphones_connected;
+};
+
 struct es8388_lower_s;
 
 struct es8388_lower_s
@@ -119,6 +159,18 @@ struct es8388_lower_s
 
   uint32_t frequency;  /* Initial I2C frequency */
   uint8_t  address;    /* 7-bit I2C address (only bits 0-6 used) */
+  uint8_t stream_type; /* 0: legacy; AUDIO_TYPE_INPUT or AUDIO_TYPE_OUTPUT */
+
+  /* Fixed-direction instances sharing a physical codec require compatible
+   * formats and synchronized I2S clocks. Stream queues remain independent.
+   */
+
+  /* Board-level DAC channel wiring and analog output control. */
+
+  bool swap_dac_lr;
+  CODE void (*set_output)(enum es8388_output_route_e route, bool enable);
+  CODE enum es8388_output_route_e (*resolve_output)(void);
+  CODE bool (*headphones_connected)(void);
 };
 
 /****************************************************************************
@@ -159,9 +211,8 @@ struct i2s_dev_s;
 struct audio_lowerhalf_s;
 
 FAR struct audio_lowerhalf_s *
-  es8388_initialize(FAR struct i2c_master_s *i2c,
-                    FAR struct i2s_dev_s *i2s,
-                    FAR const struct es8388_lower_s *lower);
+es8388_initialize(FAR struct i2c_master_s *i2c, FAR struct i2s_dev_s *i2s,
+                  FAR const struct es8388_lower_s *lower);
 
 /****************************************************************************
  * Name: es8388_dump_registers

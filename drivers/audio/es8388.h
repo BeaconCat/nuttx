@@ -481,8 +481,8 @@
 
 #define ES8388_DATSEL_SHIFT           (6)
 #define ES8388_DATSEL_BITMASK         (0x03 << ES8388_DATSEL_SHIFT)
-#define ES8388_DATSEL_LL              (0 << ES8388_DATSEL_SHIFT)
-#define ES8388_DATSEL_LR              (1 << ES8388_DATSEL_SHIFT)
+#define ES8388_DATSEL_LR              (0 << ES8388_DATSEL_SHIFT)
+#define ES8388_DATSEL_LL              (1 << ES8388_DATSEL_SHIFT)
 #define ES8388_DATSEL_RR              (2 << ES8388_DATSEL_SHIFT)
 #define ES8388_DATSEL_RL              (3 << ES8388_DATSEL_SHIFT)
 
@@ -961,17 +961,30 @@ struct es8388_dev_s
   volatile uint8_t                    inflight;         /* Number of audio buffers in-flight */
   bool                                running;          /* True: Worker thread is running */
   bool                                paused;           /* True: Playing is paused */
+  bool                                stopping;         /* Reject new submissions during stop */
+  bool                                output_armed;     /* Initial output unmute completed */
   bool                                mute;             /* True: Output is muted */
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
   bool                                terminating;      /* True: Stop requested */
 #endif
   bool                                reserved;         /* True: Device is reserved */
-  volatile int                        result;           /* The result of the last transfer */
-  es_module_e                         audio_mode;       /* The current audio mode of the ES8388 chip */
-  es8388_dac_output_e                 dac_output;       /* The current output of the ES8388 DAC */
-  es8388_adc_input_e                  adc_input;        /* The current input of the ES8388 ADC */
-  es_mic_gain_e                       mic_gain;         /* The current microphone gain */
-  uint32_t                            mclk;             /* The current MCLK frequency */
+  volatile int result;    /* The result of the last transfer */
+  es_module_e audio_mode; /* The current audio mode of the ES8388 chip */
+  es8388_dac_output_e dac_output; /* The current output of the ES8388 DAC */
+  enum es8388_output_route_e output_route;  /* Active DAC outputs */
+  enum es8388_output_route_e output_policy; /* Requested route */
+  bool mono;                                /* DAC mono mix */
+  bool swap;                                /* Runtime DAC swap */
+  bool invert_left;                         /* Invert left DAC */
+  bool invert_right;                        /* Invert right DAC */
+  enum es8388_input_route_e input_route;    /* Selected microphone input */
+  bool microphone_muted;                    /* User microphone mute */
+  bool input_stream_ready;                  /* RX transfer is armed */
+  uint32_t input_start_tick;                /* ADC power-up tick */
+  FAR struct es8388_dev_s *next;            /* Instances sharing codecs */
+  es8388_adc_input_e adc_input; /* The current input of the ES8388 ADC */
+  es_mic_gain_e mic_gain;       /* The current microphone gain */
+  uint32_t mclk;                /* The current MCLK frequency */
 };
 
 /****************************************************************************

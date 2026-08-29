@@ -396,11 +396,12 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
       priv->nchannels   = localwav.fmt.nchannels; /* Mono=1, Stereo=2 */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
-      /* We are going to subsample, there then are some restrictions on the
-       * number of channels and sample sizes that we can handle.
+      /* Subsampling copies complete frames as bytes, including packed
+       * 24-bit and 32-bit PCM.  Bound the supported frame size.
        */
 
-      if (priv->bpsamp != 8 && priv->bpsamp != 16)
+      if (priv->bpsamp != 8 && priv->bpsamp != 16 &&
+          priv->bpsamp != 24 && priv->bpsamp != 32)
         {
           auderr("ERROR: %d bits per sample are not supported in this "
                  "mode\n",
@@ -416,6 +417,8 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
         }
 
       DEBUGASSERT(priv->align == priv->nchannels * priv->bpsamp / 8);
+      priv->npartial = 0;
+      priv->skip = 0;
 #endif
     }
 
@@ -460,8 +463,8 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
            * then next audio buffer that we receive.
            */
 
-          priv->npartial  = 0;
-          priv->skip      = 0;
+          /* Finish any frame already forwarded at normal speed. */
+
           priv->subsample = subsample;
         }
     }
@@ -478,8 +481,15 @@ static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
        * when the next audio buffer is received.
        */
 
-      priv->npartial  = 0;
-      priv->skip      = 0;
+      /* Finish a partially skipped frame, but stop skipping whole frames.
+       * A partially copied frame must also retain its byte position.
+       */
+
+      if (priv->align > 0)
+        {
+          priv->skip %= priv->align;
+        }
+
       priv->subsample = AUDIO_SUBSAMPLE_NONE;
     }
 
@@ -524,7 +534,20 @@ static void pcm_subsample(FAR struct pcm_decode_s *priv,
 
   if (priv->subsample == AUDIO_SUBSAMPLE_NONE)
     {
-      /* No.. do nothing to the buffer */
+      /* Preserve frame position for a later fast-forward request.  If
+       * normal playback resumed inside a skipped frame, discard its tail
+       * before forwarding complete samples again.
+       */
+
+      srcsize = apb->nbytes - apb->curbyte;
+      copysize = MIN(priv->skip, srcsize);
+      apb->curbyte += copysize;
+      priv->skip -= copysize;
+      if (priv->align > 0)
+        {
+          priv->npartial = (priv->npartial + srcsize - copysize) %
+                           priv->align;
+        }
 
       return;
     }
@@ -758,7 +781,33 @@ static int pcm_configure(FAR struct audio_lowerhalf_s *dev,
        * driver.
        */
 
+      if (caps->ac_controls.b[0] == 1 ||
+          caps->ac_controls.b[0] > AUDIO_SUBSAMPLE_MAX)
+        {
+          return -EINVAL;
+        }
+
+      if (caps->ac_controls.b[0] != AUDIO_SUBSAMPLE_NONE &&
+          (priv->align == 0 ||
+           (priv->bpsamp != 8 && priv->bpsamp != 16 &&
+            priv->bpsamp != 24 && priv->bpsamp != 32)))
+        {
+          return -ENOTSUP;
+        }
+
       pcm_subsample_configure(priv, caps->ac_controls.b[0]);
+      return OK;
+    }
+#endif
+
+#ifndef CONFIG_AUDIO_FORMAT_RAW
+  /* WAV stream parameters come from its header, not the player's initial
+   * defaults.  Applying those defaults can conflict with active capture
+   * before the actual, compatible format is known.
+   */
+
+  if (caps->ac_type == AUDIO_TYPE_OUTPUT && !priv->streaming)
+    {
       return OK;
     }
 #endif
@@ -1098,7 +1147,10 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
        * and sample bitwidth.
        */
 
-      DEBUGASSERT(priv->samprate < 65535);
+      if (priv->samprate > 0x00ffffff)
+        {
+          return -EINVAL;
+        }
 
       caps.ac_len            = sizeof(struct audio_caps_s);
       caps.ac_type           = AUDIO_TYPE_OUTPUT;
@@ -1106,6 +1158,7 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 
       caps.ac_controls.hw[0] = (uint16_t)priv->samprate;
       caps.ac_controls.b[2]  = priv->bpsamp;
+      caps.ac_controls.b[3]  = priv->samprate >> 16;
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       ret = lower->ops->configure(lower, priv->session, &caps);
@@ -1115,6 +1168,18 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
       if (ret < 0)
         {
           auderr("ERROR: Failed to set PCM configuration: %d\n", ret);
+
+          /* No buffer reached the lower driver.  Complete the rejected
+           * stream so the client does not wait for a worker never started.
+           */
+
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
+                             NULL, -ret, priv->session);
+#else
+          priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
+                             NULL, -ret);
+#endif
           return ret;
         }
 
