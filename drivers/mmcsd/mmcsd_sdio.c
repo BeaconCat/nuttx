@@ -1140,7 +1140,8 @@ static int mmcsd_select_hs400(FAR struct mmcsd_state_s *priv)
   uint8_t width = EXT_CSD_DDR_BUS_WIDTH_8 | EXT_CSD_BUS_WIDTH_STROBE;
   uint32_t r1;
   int ret;
-  int fallback;
+  int restore_ret;
+  int restore_error = OK;
 
   ret = mmcsd_switch(priv,
                      MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
@@ -1154,14 +1155,14 @@ static int mmcsd_select_hs400(FAR struct mmcsd_state_s *priv)
   ret = mmcsd_switch(priv, MMC_CMD6_BUSWIDTH(width));
   if (ret != OK)
     {
-      goto fallback;
+      goto restore_bus_width;
     }
 
   ret = mmcsd_switch(priv,
                      MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS400));
   if (ret != OK)
     {
-      goto fallback;
+      goto restore_hs_timing;
     }
 
   SDIO_CLOCK(priv->dev, CLOCK_MMC_HS400);
@@ -1177,23 +1178,47 @@ static int mmcsd_select_hs400(FAR struct mmcsd_state_s *priv)
       return OK;
     }
 
-  SDIO_HS400_ENHANCED_STROBE(priv->dev, false);
-  fallback = mmcsd_switch(priv,
-                          MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
-  SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
-  if (fallback != OK)
+  restore_ret = SDIO_HS400_ENHANCED_STROBE(priv->dev, false);
+  if (restore_ret != OK)
     {
-      return fallback;
+      ferr("ERROR: Failed to disable MMC HS400 enhanced strobe: %d\n",
+           restore_ret);
+      restore_error = restore_ret;
     }
 
-fallback:
-  fallback = mmcsd_switch(priv,
-                          MMC_CMD6_BUSWIDTH(EXT_CSD_BUS_WIDTH_8));
-  if (fallback != OK)
+restore_hs_timing:
+  restore_ret = mmcsd_switch(priv,
+                             MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
+  SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
+  if (restore_ret != OK)
+    {
+      ferr("ERROR: Failed to restore MMC High Speed timing: %d\n",
+           restore_ret);
+      if (restore_error == OK)
+        {
+          restore_error = restore_ret;
+        }
+    }
+
+  /* Restoring the timing does not change EXT_CSD_BUS_WIDTH.  Continue into
+   * the width restoration so the card leaves DDR8/Enhanced Strobe mode. */
+
+restore_bus_width:
+  restore_ret = mmcsd_switch(priv,
+                             MMC_CMD6_BUSWIDTH(EXT_CSD_BUS_WIDTH_8));
+  if (restore_ret != OK)
     {
       ferr("ERROR: Failed to restore MMC 8-bit High Speed mode: %d\n",
-           fallback);
-      return fallback;
+           restore_ret);
+      if (restore_error == OK)
+        {
+          restore_error = restore_ret;
+        }
+    }
+
+  if (restore_error != OK)
+    {
+      return restore_error;
     }
 
   priv->mode = EXT_CSD_HS_TIMING_HS;
