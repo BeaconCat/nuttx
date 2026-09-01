@@ -118,6 +118,8 @@ struct usbhost_hubpriv_s
 
   uint8_t                   ifno;         /* Interface number */
   uint8_t                   nports;       /* Number of ports */
+  uint8_t                   protocol;     /* Hub protocol from device ID */
+  uint8_t                   ttthink;      /* Transaction translator think time */
   uint8_t                   lpsm;         /* Logical power switching mode */
   uint8_t                   ocmode;       /* Over current protection mode */
   uint8_t                   ctrlcurrent;  /* Control current */
@@ -152,6 +154,7 @@ struct usbhost_hubclass_s
 static inline int usbhost_cfgdesc(FAR struct usbhost_class_s *hubclass,
              FAR const uint8_t *configdesc, int desclen);
 static inline int usbhost_hubdesc(FAR struct usbhost_class_s *hubclass);
+static inline int usbhost_setdepth(FAR struct usbhost_class_s *hubclass);
 static inline int usbhost_hubpwr(FAR struct usbhost_hubpriv_s *priv,
                                  FAR struct usbhost_hubport_s *hport,
                                  bool on);
@@ -176,6 +179,9 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
              FAR const uint8_t *configdesc, int desclen);
 static int usbhost_disconnected(FAR struct usbhost_class_s *hubclass);
 
+static int usbhost_change_feature(FAR struct usbhost_hubpriv_s *priv,
+                                  uint16_t mask);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -184,7 +190,7 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *hubclass);
  * used to associate the USB host hub class to a connected USB hub.
  */
 
-static const struct usbhost_id_s g_id[2] =
+static const struct usbhost_id_s g_id[4] =
 {
   {
       USB_CLASS_HUB,  /* base         */
@@ -199,6 +205,20 @@ static const struct usbhost_id_s g_id[2] =
       1,              /* proto HS hub */
       0,              /* vid          */
       0               /* pid          */
+  },
+  {
+      USB_CLASS_HUB,  /* base             */
+      0,              /* subclass         */
+      2,              /* proto HS MTT hub */
+      0,              /* vid              */
+      0               /* pid              */
+  },
+  {
+      USB_CLASS_HUB,  /* base         */
+      0,              /* subclass     */
+      3,              /* proto SS hub */
+      0,              /* vid          */
+      0               /* pid          */
   }
 };
 
@@ -208,7 +228,7 @@ static struct usbhost_registry_s g_hub =
 {
   NULL,                   /* flink    */
   usbhost_create,         /* create   */
-  2,                      /* nids     */
+  4,                      /* nids     */
   g_id                    /* id[]     */
 };
 
@@ -492,6 +512,48 @@ static inline int usbhost_cfgdesc(FAR struct usbhost_class_s *hubclass,
 }
 
 /****************************************************************************
+ * Name: usbhost_setdepth
+ *
+ * Description:
+ *   Tell a SuperSpeed hub how many upstream hubs precede it.
+ *
+ ****************************************************************************/
+
+static inline int usbhost_setdepth(FAR struct usbhost_class_s *hubclass)
+{
+  FAR struct usbhost_hubpriv_s *priv;
+  FAR struct usbhost_hubport_s *hport;
+  FAR struct usbhost_hubport_s *parent;
+  FAR struct usb_ctrlreq_s *ctrlreq;
+  uint8_t depth = 0;
+
+  priv = &((FAR struct usbhost_hubclass_s *)hubclass)->hubpriv;
+  if (priv->protocol != 3)
+    {
+      return OK;
+    }
+
+  hport = hubclass->hport;
+  for (parent = hport->parent; parent != NULL; parent = parent->parent)
+    {
+      depth++;
+      if (depth >= 5)
+        {
+          return -ENOTSUP;
+        }
+    }
+
+  ctrlreq = priv->ctrlreq;
+  ctrlreq->type = USBHUB_REQ_TYPE_HUB;
+  ctrlreq->req = USBHUB_REQ_SETDEPTH;
+  usbhost_putle16(ctrlreq->value, depth);
+  usbhost_putle16(ctrlreq->index, 0);
+  usbhost_putle16(ctrlreq->len, 0);
+
+  return DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
+}
+
+/****************************************************************************
  * Name: usbhost_hubdesc
  *
  * Description:
@@ -517,7 +579,15 @@ static inline int usbhost_hubdesc(FAR struct usbhost_class_s *hubclass)
   FAR struct usbhost_hubpriv_s *priv;
   FAR struct usbhost_hubport_s *hport;
   FAR struct usb_ctrlreq_s *ctrlreq;
-  FAR struct usb_hubdesc_s *hubdesc;
+  FAR uint8_t *desc;
+  FAR uint8_t *characteristics;
+  uint8_t desctype;
+  uint8_t desclen;
+  uint8_t nports;
+  uint8_t pwrondelay;
+  uint8_t ctrlcurrent;
+  uint16_t devremovable;
+  uint8_t pwrctrlmask;
   uint16_t hubchar;
   int ret;
   size_t maxlen;
@@ -535,58 +605,90 @@ static inline int usbhost_hubdesc(FAR struct usbhost_class_s *hubclass)
   ctrlreq = priv->ctrlreq;
   DEBUGASSERT(ctrlreq);
 
+  desctype = priv->protocol == 3 ? USB_DESC_TYPE_SS_HUB :
+                                  USB_DESC_TYPE_HUB;
+  desclen = priv->protocol == 3 ? USB_SIZEOF_SS_HUBDESC :
+                                 USB_SIZEOF_HUBDESC;
+
   ctrlreq->type = USB_REQ_DIR_IN | USBHUB_REQ_TYPE_HUB;
   ctrlreq->req  = USBHUB_REQ_GETDESCRIPTOR;
-  usbhost_putle16(ctrlreq->value, (USB_DESC_TYPE_HUB << 8));
+  usbhost_putle16(ctrlreq->value, (desctype << 8));
   usbhost_putle16(ctrlreq->index, 0);
-  usbhost_putle16(ctrlreq->len, USB_SIZEOF_HUBDESC);
+  usbhost_putle16(ctrlreq->len, desclen);
 
-  ret = DRVR_ALLOC(hport->drvr, (FAR uint8_t **)&hubdesc, &maxlen);
+  ret = DRVR_ALLOC(hport->drvr, &desc, &maxlen);
   if (ret < 0)
     {
       uerr("ERROR: DRVR_ALLOC failed: %d\n", ret);
       return ret;
     }
 
-  ret = DRVR_CTRLIN(hport->drvr, hport->ep0,
-                    ctrlreq, (FAR uint8_t *)hubdesc);
+  ret = DRVR_CTRLIN(hport->drvr, hport->ep0, ctrlreq, desc);
   if (ret < 0)
     {
-      DRVR_FREE(hport->drvr, (FAR uint8_t *)hubdesc);
+      DRVR_FREE(hport->drvr, desc);
       uerr("ERROR: Failed to read hub descriptor: %d\n", ret);
       return ret;
     }
 
-  priv->nports      = hubdesc->nports;
+  if (priv->protocol == 3)
+    {
+      FAR struct usb_ss_hubdesc_s *hubdesc;
 
-  hubchar           = usbhost_getle16(hubdesc->characteristics);
+      hubdesc = (FAR struct usb_ss_hubdesc_s *)desc;
+      nports = hubdesc->nports;
+      characteristics = hubdesc->characteristics;
+      pwrondelay = hubdesc->pwrondelay;
+      ctrlcurrent = hubdesc->ctrlcurrent;
+      devremovable = usbhost_getle16(hubdesc->devremovable);
+      pwrctrlmask = 0;
+    }
+  else
+    {
+      FAR struct usb_hubdesc_s *hubdesc;
+
+      hubdesc = (FAR struct usb_hubdesc_s *)desc;
+      nports = hubdesc->nports;
+      characteristics = hubdesc->characteristics;
+      pwrondelay = hubdesc->pwrondelay;
+      ctrlcurrent = hubdesc->ctrlcurrent;
+      devremovable = hubdesc->devattached;
+      pwrctrlmask = hubdesc->pwrctrlmask;
+    }
+
+  priv->nports      = nports;
+
+  hubchar           = usbhost_getle16(characteristics);
   priv->lpsm        = (hubchar & USBHUB_CHAR_LPSM_MASK) >>
                        USBHUB_CHAR_LPSM_SHIFT;
   priv->compounddev = (hubchar & USBHUB_CHAR_COMPOUND) ? true : false;
   priv->ocmode      = (hubchar & USBHUB_CHAR_OCPM_MASK) >>
                        USBHUB_CHAR_OCPM_SHIFT;
+  priv->ttthink     = priv->protocol == 3 ? 0 :
+                      (hubchar & USBHUB_CHAR_TTTT_MASK) >>
+                      USBHUB_CHAR_TTTT_SHIFT;
   priv->indicator   = (hubchar & USBHUB_CHAR_PORTIND) ? true : false;
 
-  priv->pwrondelay  = (2 * hubdesc->pwrondelay);
-  priv->ctrlcurrent = hubdesc->ctrlcurrent;
+  priv->pwrondelay  = (2 * pwrondelay);
+  priv->ctrlcurrent = ctrlcurrent;
 
   uinfo("Hub Descriptor:\n");
-  uinfo("  bDescLength:         %d\n", hubdesc->len);
-  uinfo("  bDescriptorType:     0x%02x\n", hubdesc->type);
-  uinfo("  bNbrPorts:           %d\n", hubdesc->nports);
+  uinfo("  bDescLength:         %d\n", desc[0]);
+  uinfo("  bDescriptorType:     0x%02x\n", desc[1]);
+  uinfo("  bNbrPorts:           %d\n", nports);
   uinfo("  wHubCharacteristics: 0x%04x\n",
-        usbhost_getle16(hubdesc->characteristics));
+        hubchar);
   uinfo("    lpsm:              %d\n", priv->lpsm);
   uinfo("    compounddev:       %s\n", priv->compounddev ? "TRUE" : "FALSE");
   uinfo("    ocmode:            %d\n", priv->ocmode);
   uinfo("    indicator:         %s\n", priv->indicator ? "TRUE" : "FALSE");
-  uinfo("  bPwrOn2PwrGood:      %d\n", hubdesc->pwrondelay);
+  uinfo("  bPwrOn2PwrGood:      %d\n", pwrondelay);
   uinfo("    pwrondelay:        %d\n", priv->pwrondelay);
-  uinfo("  bHubContrCurrent:    %d\n", hubdesc->ctrlcurrent);
-  uinfo("  DeviceRemovable:     %d\n", hubdesc->devattached);
-  uinfo("  PortPwrCtrlMask:     %d\n", hubdesc->pwrctrlmask);
+  uinfo("  bHubContrCurrent:    %d\n", ctrlcurrent);
+  uinfo("  DeviceRemovable:     %d\n", devremovable);
+  uinfo("  PortPwrCtrlMask:     %d\n", pwrctrlmask);
 
-  DRVR_FREE(hport->drvr, (FAR uint8_t *)hubdesc);
+  DRVR_FREE(hport->drvr, desc);
 
   return OK;
 }
@@ -676,6 +778,38 @@ static int usbhost_hubpwr(FAR struct usbhost_hubpriv_s *priv,
 }
 
 /****************************************************************************
+ * Name: usbhost_change_feature
+ ****************************************************************************/
+
+static int usbhost_change_feature(FAR struct usbhost_hubpriv_s *priv,
+                                  uint16_t mask)
+{
+  switch (mask)
+    {
+      case USBHUB_PORT_STAT_CCONNECTION:
+        return USBHUB_PORT_FEAT_CCONNECTION;
+      case USBHUB_PORT_STAT_CENABLE:
+        return USBHUB_PORT_FEAT_CENABLE;
+      case USBHUB_PORT_STAT_CSUSPEND:
+        return USBHUB_PORT_FEAT_CSUSPEND;
+      case USBHUB_PORT_STAT_COVERCURRENT:
+        return USBHUB_PORT_FEAT_COVER_CURRENT;
+      case USBHUB_PORT_STAT_CRESET:
+        return USBHUB_PORT_FEAT_CRESET;
+      case USBHUB_PORT_STAT_CL1:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CLINKSTATE :
+                                     USBHUB_PORT_FEAT_CPORTL1;
+      case USBHUB_PORT_STAT_CCONFIGERROR:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CCONFIGERROR :
+                                     -EINVAL;
+      case USBHUB_PORT_STAT_CBHRESET:
+        return priv->protocol == 3 ? USBHUB_PORT_FEAT_CBHRESET : -EINVAL;
+      default:
+        return -EINVAL;
+    }
+}
+
+/****************************************************************************
  * Name: usbhost_hub_event
  *
  * Description:
@@ -705,7 +839,6 @@ static void usbhost_hub_event(FAR void *arg)
   uint16_t status;
   uint16_t change;
   uint16_t mask;
-  uint16_t feat;
   uint8_t statuschange;
   int port;
   int ret;
@@ -780,30 +913,32 @@ static void usbhost_hub_event(FAR void *arg)
       /* First, clear all change bits */
 
       mask = 1;
-      feat = USBHUB_PORT_FEAT_CCONNECTION;
       while (change)
         {
           if (change & mask)
             {
-              ctrlreq->type = USBHUB_REQ_TYPE_PORT;
-              ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
-              usbhost_putle16(ctrlreq->value, feat);
-              usbhost_putle16(ctrlreq->index, port);
-              usbhost_putle16(ctrlreq->len, 0);
-
-              ret = DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
-              if (ret < 0)
+              ret = usbhost_change_feature(priv, mask);
+              if (ret >= 0)
                 {
-                  uerr("ERROR:");
-                  uerr(" Failed to clear port %d change mask %04x: %d\n",
-                       port, mask, ret);
+                  ctrlreq->type = USBHUB_REQ_TYPE_PORT;
+                  ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
+                  usbhost_putle16(ctrlreq->value, ret);
+                  usbhost_putle16(ctrlreq->index, port);
+                  usbhost_putle16(ctrlreq->len, 0);
+
+                  ret = DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq,
+                                     NULL);
+                  if (ret < 0)
+                    {
+                      uerr("ERROR: Failed to clear port %d change mask "
+                           "%04x: %d\n", port, mask, ret);
+                    }
                 }
 
               change &= (~mask);
             }
 
           mask <<= 1;
-          feat++;
         }
 
       change = usbhost_getle16(portstatus->change);
@@ -924,20 +1059,36 @@ static void usbhost_hub_event(FAR void *arg)
               if ((status & USBHUB_PORT_STAT_RESET)  == 0 &&
                   (status & USBHUB_PORT_STAT_ENABLE) != 0)
                 {
-                  if ((change & USBHUB_PORT_STAT_CRESET) != 0)
+                  mask = 1;
+                  while (change)
                     {
-                      ctrlreq->type = USBHUB_REQ_TYPE_PORT;
-                      ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
-                      usbhost_putle16(ctrlreq->value,
-                                      USBHUB_PORT_FEAT_CRESET);
-                      usbhost_putle16(ctrlreq->index, port);
-                      usbhost_putle16(ctrlreq->len, 0);
+                      if (change & mask)
+                        {
+                          ret = usbhost_change_feature(priv, mask);
+                          if (ret >= 0)
+                            {
+                              ctrlreq->type = USBHUB_REQ_TYPE_PORT;
+                              ctrlreq->req  = USBHUB_REQ_CLEARFEATURE;
+                              usbhost_putle16(ctrlreq->value, ret);
+                              usbhost_putle16(ctrlreq->index, port);
+                              usbhost_putle16(ctrlreq->len, 0);
+                              DRVR_CTRLOUT(hport->drvr, hport->ep0,
+                                           ctrlreq, NULL);
+                            }
 
-                      DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
+                          change &= ~mask;
+                        }
+
+                      mask <<= 1;
                     }
 
                   connport = &priv->hport[PORT_INDX(port)];
-                  if ((status & USBHUB_PORT_STAT_HIGH_SPEED) != 0)
+                  if (hport->speed == USB_SPEED_SUPER ||
+                      hport->speed == USB_SPEED_SUPER_PLUS)
+                    {
+                      connport->speed = hport->speed;
+                    }
+                  else if ((status & USBHUB_PORT_STAT_HIGH_SPEED) != 0)
                     {
                       connport->speed = USB_SPEED_HIGH;
                     }
@@ -993,9 +1144,18 @@ static void usbhost_hub_event(FAR void *arg)
               connport = &priv->hport[PORT_INDX(port)];
               if (connport->devclass != NULL)
                 {
+                  bool child_is_hub;
+
+                  /* A class disconnect callback may synchronously destroy
+                   * and free the class instance.  Save the only property
+                   * needed after the callback before invoking it.
+                   */
+
+                  child_is_hub =
+                    connport->devclass->connect == usbhost_connect;
                   CLASS_DISCONNECTED(connport->devclass);
 
-                  if (connport->devclass->connect == usbhost_connect)
+                  if (child_is_hub)
                     {
                       /* For hubs, the usbhost_disconnect_event function
                        * (triggered by the CLASS_DISCONNECTED call above)
@@ -1345,6 +1505,7 @@ static FAR struct usbhost_class_s *
   /* Initialize the private class structure */
 
   priv = &alloc->hubpriv;
+  priv->protocol = id->proto;
 
   /* Allocate memory for control requests */
 
@@ -1441,20 +1602,37 @@ static int usbhost_connect(FAR struct usbhost_class_s *hubclass,
 
   DEBUGASSERT(configdesc != NULL && desclen >= sizeof(struct usb_cfgdesc_s));
 
+  ret = usbhost_setdepth(hubclass);
+  if (ret < 0)
+    {
+      uerr("ERROR: Failed to set SuperSpeed hub depth: %d\n", ret);
+      return ret;
+    }
+
+  /* Read the hub descriptor over EP0 before configuring the periodic
+   * endpoint.  xHCI requires Hub=1 and a non-zero Number of Ports in the
+   * Slot Context when Configure Endpoint is issued.
+   */
+
+  ret = usbhost_hubdesc(hubclass);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = DRVR_HUBCONFIGURE(hport->drvr, hport, priv->nports,
+                          priv->ttthink, priv->protocol == 2);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   /* Parse the configuration descriptor to get the endpoints */
 
   ret = usbhost_cfgdesc(hubclass, configdesc, desclen);
   if (ret < 0)
     {
       uerr("ERROR: Failed to parse config descriptor: %d\n", ret);
-      return ret;
-    }
-
-  /* Read the hub descriptor */
-
-  ret = usbhost_hubdesc(hubclass);
-  if (ret < 0)
-    {
       return ret;
     }
 

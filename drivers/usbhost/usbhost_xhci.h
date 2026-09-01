@@ -27,6 +27,10 @@
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
+
+#include <nuttx/usb/xhci.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -268,6 +272,27 @@
 #define XHCI_PORTSC_DR               (1 << 30)             /* Bit 30: Device Removable */
 #define XHCI_PORTSC_WPR              (1 << 31)             /* Bit 31: Warm Port Reset */
 
+/* The write-one-to-clear bits of PORTSC.  Mask these out of any
+ * read-modify-write of the register, unless clearing them is intended.
+ */
+
+#define XHCI_PORTSC_RW1C             (XHCI_PORTSC_PED | XHCI_PORTSC_CSC | \
+                                      XHCI_PORTSC_PEC | XHCI_PORTSC_WRC | \
+                                      XHCI_PORTSC_OCC | XHCI_PORTSC_PRC | \
+                                      XHCI_PORTSC_PLC | XHCI_PORTSC_CEC)
+
+/* Bits safe to preserve when constructing a neutral PORTSC write. */
+
+#define XHCI_PORTSC_RO               (XHCI_PORTSC_CCS | XHCI_PORTSC_OCA | \
+                                      XHCI_PORTSC_PS_MASK | XHCI_PORTSC_DR)
+#define XHCI_PORTSC_RWS              (XHCI_PORTSC_PLS_MASK | \
+                                      XHCI_PORTSC_PP | \
+                                      (3 << XHCI_PORTSC_PIC_SHIFT) | \
+                                      XHCI_PORTSC_WCE | XHCI_PORTSC_WDE | \
+                                      XHCI_PORTSC_WOE)
+#define XHCI_PORTSC_NEUTRAL(s)       ((s) & (XHCI_PORTSC_RO | \
+                                             XHCI_PORTSC_RWS))
+
 /* Port Power Management Status and Control (USB3) */
 
 #define XHCI_PORTPMSC_U1TO_SHIFT     (0)                   /* Bits 0-7: U1 Timeout */
@@ -480,8 +505,10 @@
 
 #define XHCI_ST_CTX0_RTSTR_SHIFT     (0)                   /* Bits 0:19: Route String */
 #define XHCI_ST_CTX0_RTSTR_MASK      (0xfffff << XHCI_ST_CTX0_RTSTR_SHIFT)
+#define XHCI_ST_CTX0_RTSTR_SET(x)    (((x) << XHCI_ST_CTX0_RTSTR_SHIFT) & XHCI_ST_CTX0_RTSTR_MASK)
 #define XHCI_ST_CTX0_SPEED_SHIFT     (20)                  /* Bits 20:23: Speed */
 #define XHCI_ST_CTX0_SPEED_MASK      (0xf << XHCI_ST_CTX0_SPEED_SHIFT)
+#define XHCI_ST_CTX0_SPEED_SET(x)    (((x) << XHCI_ST_CTX0_SPEED_SHIFT) & XHCI_ST_CTX0_SPEED_MASK)
 #define XHCI_ST_CTX0_MTT             (1 << 25)             /* Bit 25: Multi-TT */
                                                            /* Bit 24: Reserved */
 #define XHCI_ST_CTX0_HUB             (1 << 26)             /* Bit 26: Hub */
@@ -494,6 +521,16 @@
 #define XHCI_ST_CTX1_PORTS_SHIFT     (24)                  /* Bit 24-31: Number of Ports */
 #define XHCI_ST_CTX1_PORTS_MASK      (0xff << XHCI_ST_CTX1_PORTS_SHIFT)
 #define XHCI_ST_CTX1_PORTS_SET(x)    (((x) << XHCI_ST_CTX1_PORTS_SHIFT) & XHCI_ST_CTX1_PORTS_MASK)
+
+#define XHCI_ST_CTX2_TTHUB_SHIFT     (0)                   /* Bits 0-7: TT Hub Slot ID */
+#define XHCI_ST_CTX2_TTHUB_MASK      (0xff << XHCI_ST_CTX2_TTHUB_SHIFT)
+#define XHCI_ST_CTX2_TTHUB_SET(x)    (((x) << XHCI_ST_CTX2_TTHUB_SHIFT) & XHCI_ST_CTX2_TTHUB_MASK)
+#define XHCI_ST_CTX2_TTPORT_SHIFT    (8)                   /* Bits 8-15: TT Port Number */
+#define XHCI_ST_CTX2_TTPORT_MASK     (0xff << XHCI_ST_CTX2_TTPORT_SHIFT)
+#define XHCI_ST_CTX2_TTPORT_SET(x)   (((x) << XHCI_ST_CTX2_TTPORT_SHIFT) & XHCI_ST_CTX2_TTPORT_MASK)
+#define XHCI_ST_CTX2_TTT_SHIFT       (16)                  /* Bits 16-17: TT Think Time */
+#define XHCI_ST_CTX2_TTT_MASK        (3 << XHCI_ST_CTX2_TTT_SHIFT)
+#define XHCI_ST_CTX2_TTT_SET(x)      (((x) << XHCI_ST_CTX2_TTT_SHIFT) & XHCI_ST_CTX2_TTT_MASK)
 
 #define XHCI_ST_CTX3_ADDR_SHIFT      (0)                  /* Bit 0-7: USB Device Address */
 #define XHCI_ST_CTX3_ADDR_MASK       (0xff << XHCI_ST_CTX3_ADDR_SHIFT)
@@ -517,6 +554,9 @@
 #define XHCI_EP_CTX0_MULT_SHIFT      (8)                   /* Bits 8-9: Mult */
 #define XHCI_EP_CTX0_MULT_MASK       (3 << XHCI_EP_CTX0_MULT_SHIFT)
 #define XHCI_EP_CTX0_MULT(x)         (((x) << XHCI_EP_CTX0_MULT_SHIFT) & XHCI_EP_CTX0_MULT_MASK)
+#define XHCI_EP_CTX0_MAXESIT_HI_SHIFT (24)
+#define XHCI_EP_CTX0_MAXESIT_HI(x)   ((((x) >> 16) & 0xff) << \
+                                      XHCI_EP_CTX0_MAXESIT_HI_SHIFT)
 
 #define XHCI_EP_CTX0_MAXPSTR_SHIFT   (10)                  /* Bits 10-14: Max Primary Streams (MaxPStreams) */
 #define XHCI_EP_CTX0_MAXPSTR_MASK    (0x1f << XHCI_EP_CTX0_MAXPSTR_SHIFT)
@@ -550,6 +590,9 @@
 #define XHCI_EP_CTX1_MAXPKT_SHIFT    (16)                  /* Bits 16-31: Max Packet Size */
 #define XHCI_EP_CTX1_MAXPKT_MASK     (0xffff << XHCI_EP_CTX1_MAXPKT_SHIFT)
 #define XHCI_EP_CTX1_MAXPKT(x)       (((x) << XHCI_EP_CTX1_MAXPKT_SHIFT) & XHCI_EP_CTX1_MAXPKT_MASK)
+
+#define XHCI_EP_CTX3_AVGTRB(x)       ((x) & 0xffff)
+#define XHCI_EP_CTX3_MAXESIT_LO(x)   (((x) & 0xffff) << 16)
 
 #define XHCI_EP_CTX2_DCS             (1 << 0)              /* Bit 1: Dequeue Cycle State */
                                                            /* Bits 1-3: Reserved */

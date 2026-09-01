@@ -50,6 +50,7 @@
 #define USBHUB_REQ_RESETTT             (0x09)
 #define USBHUB_REQ_GETTTSTATE          (0x0a)
 #define USBHUB_REQ_STOPTT              (0x0b)
+#define USBHUB_REQ_SETDEPTH            (0x0c)
 
 /* Hub class features */
 
@@ -75,6 +76,9 @@
 #define USBHUB_PORT_FEAT_TEST          (0x15)
 #define USBHUB_PORT_FEAT_INDICATOR     (0x16)
 #define USBHUB_PORT_FEAT_CPORTL1       (0x17)
+#define USBHUB_PORT_FEAT_CLINKSTATE     (0x19)
+#define USBHUB_PORT_FEAT_CCONFIGERROR   (0x1a)
+#define USBHUB_PORT_FEAT_CBHRESET       (0x1c)
 
 /* Hub characteristics */
 
@@ -128,10 +132,13 @@
 #define USBHUB_PORT_STAT_COVERCURRENT  (1 << 3)
 #define USBHUB_PORT_STAT_CRESET        (1 << 4)
 #define USBHUB_PORT_STAT_CL1           (1 << 5)
+#define USBHUB_PORT_STAT_CCONFIGERROR  (1 << 6)
+#define USBHUB_PORT_STAT_CBHRESET      (1 << 7)
 
 /* Hub descriptor type */
 
 #define USB_DESC_TYPE_HUB              (USB_REQ_TYPE_CLASS | USB_CLASS_HUB)
+#define USB_DESC_TYPE_SS_HUB           (0x2a)
 
 /* Hub max ports */
 
@@ -155,6 +162,22 @@ struct usb_hubdesc_s
   uint8_t  pwrctrlmask;
 };
 #define USB_SIZEOF_HUBDESC 9
+
+/* SuperSpeed hub descriptor */
+
+struct usb_ss_hubdesc_s
+{
+  uint8_t len;
+  uint8_t type;
+  uint8_t nports;
+  uint8_t characteristics[2];
+  uint8_t pwrondelay;
+  uint8_t ctrlcurrent;
+  uint8_t hubhdrdeclang;
+  uint8_t hubdelay[2];
+  uint8_t devremovable[2];
+};
+#define USB_SIZEOF_SS_HUBDESC 12
 
 /* Hub status */
 
