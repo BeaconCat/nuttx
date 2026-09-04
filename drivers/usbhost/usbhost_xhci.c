@@ -423,7 +423,8 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
                                        FAR struct xhci_epinfo_s *epinfo,
                                        usbhost_asynch_t callback,
                                        FAR void *arg);
-static void xhci_asynch_completion(FAR struct xhci_epinfo_s *epinfo);
+static void xhci_asynch_completion(usbhost_asynch_t callback, FAR void *arg,
+                                   ssize_t nbytes);
 #endif
 static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
                               FAR struct xhci_epinfo_s *epinfo,
@@ -3079,37 +3080,10 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
  *
  ****************************************************************************/
 
-static void xhci_asynch_completion(FAR struct xhci_epinfo_s *epinfo)
+static void xhci_asynch_completion(usbhost_asynch_t callback, FAR void *arg,
+                                   ssize_t nbytes)
 {
-  usbhost_asynch_t callback;
-  ssize_t nbytes;
-  FAR void *arg;
-  int result;
-
-  DEBUGASSERT(epinfo != NULL && epinfo->iocwait == false &&
-              epinfo->callback != NULL);
-
-  /* Extract and reset the callback info */
-
-  callback         = epinfo->callback;
-  arg              = epinfo->arg;
-  result           = epinfo->result;
-  nbytes           = epinfo->xfrd;
-
-  epinfo->callback = NULL;
-  epinfo->arg      = NULL;
-  epinfo->result   = OK;
-  epinfo->iocwait  = false;
-
-  /* Then perform the callback.  Provide the number of bytes successfully
-   * transferred or the negated errno value in the event of a failure.
-   */
-
-  if (result < 0)
-    {
-      nbytes = (ssize_t)result;
-    }
-
+  DEBUGASSERT(callback != NULL);
   callback(arg, nbytes);
 }
 #endif
@@ -3256,6 +3230,11 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
   uint8_t                   ep   = XHCI_TRB_D2_EP_GET(evt->d2);
   uint8_t                   ret  = XHCI_TRB_D1_CC_GET(evt->d1);
   irqstate_t                flags;
+#ifdef CONFIG_USBHOST_ASYNCH
+  usbhost_asynch_t          callback = NULL;
+  FAR void                 *arg = NULL;
+  ssize_t                   nbytes = 0;
+#endif
 
   /* Get EP associated with this transfer */
 
@@ -3321,13 +3300,28 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
 
   else if (epinfo->callback != NULL)
     {
-      /* Yes.. perform the callback */
+      /* Detach the callback while cancellation is excluded, then invoke it
+       * after releasing the controller lock.
+       */
 
-      xhci_asynch_completion(epinfo);
+      callback         = epinfo->callback;
+      arg              = epinfo->arg;
+      nbytes           = epinfo->result < 0 ? epinfo->result : epinfo->xfrd;
+      epinfo->callback = NULL;
+      epinfo->arg      = NULL;
+      epinfo->result   = OK;
+      epinfo->iocwait  = false;
     }
 #endif
 
   spin_unlock_irqrestore(&priv->spinlock, flags);
+
+#ifdef CONFIG_USBHOST_ASYNCH
+  if (callback != NULL)
+    {
+      xhci_asynch_completion(callback, arg, nbytes);
+    }
+#endif
 }
 
 /****************************************************************************
