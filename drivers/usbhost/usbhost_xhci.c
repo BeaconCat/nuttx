@@ -3273,16 +3273,34 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
 
   /* Get EP associated with this transfer */
 
+  if (slot == 0 || slot > priv->no_slots ||
+      ep == 0 || ep > XHCI_MAX_ENDPOINTS)
+    {
+      uerr("invalid transfer event slot=%u ep=%u\n", slot, ep);
+      return;
+    }
+
   epinfo = priv->devs[slot - 1].epinfo[ep - 1];
-  DEBUGASSERT(epinfo != NULL);
+  if (epinfo == NULL)
+    {
+      uerr("transfer event for inactive slot=%u ep=%u\n", slot, ep);
+      return;
+    }
 
   flags = spin_lock_irqsave(&priv->spinlock);
 
   /* Get transfered legnth */
 
-  if (epinfo->buflen > 0)
+  if (epinfo->buflen > 0 && tl <= epinfo->buflen)
     {
       epinfo->xfrd = epinfo->buflen - tl;
+    }
+  else if (tl > epinfo->buflen)
+    {
+      uerr("invalid residual length=%" PRIu32 " buffer=%zu\n",
+           tl, epinfo->buflen);
+      epinfo->xfrd = 0;
+      ret = XHCI_TRB_CC_TRB;
     }
 
   /* Check transfer status */
