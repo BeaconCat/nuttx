@@ -412,6 +412,12 @@ static int xhci_cmd_cfgep(FAR struct usbhost_xhci_s *priv, uint8_t slot,
                           uint64_t ctx, bool deconfig);
 static int xhci_cmd_stopep(FAR struct usbhost_xhci_s *priv, uint8_t slot,
                            uint8_t ep, bool suspend);
+static int xhci_cmd_resetep(FAR struct usbhost_xhci_s *priv, uint8_t slot,
+                            uint8_t ep);
+static int xhci_cmd_settrdeq(FAR struct usbhost_xhci_s *priv, uint8_t slot,
+                             uint8_t ep, uintptr_t dequeue, bool dcs);
+static int xhci_ep_recover(FAR struct usbhost_xhci_s *priv,
+                           FAR struct xhci_epinfo_s *epinfo);
 static int xhci_cmd_evalctx(FAR struct usbhost_xhci_s *priv, uint8_t slot,
                             uint64_t ctx);
 
@@ -2551,6 +2557,92 @@ static int xhci_cmd_stopep(FAR struct usbhost_xhci_s *priv, uint8_t slot,
 }
 
 /****************************************************************************
+ * Name: xhci_cmd_resetep
+ *
+ * Description:
+ *   Reset a halted endpoint.
+ *
+ ****************************************************************************/
+
+static int xhci_cmd_resetep(FAR struct usbhost_xhci_s *priv, uint8_t slot,
+                            uint8_t ep)
+{
+  struct xhci_trb_s trb;
+
+  trb.d0 = 0;
+  trb.d1 = 0;
+  trb.d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_RST_EP) |
+           XHCI_TRB_D2_SLOTID_SET(slot) | XHCI_TRB_D2_EP_SET(ep);
+
+  return xhci_command(priv, &trb, 100);
+}
+
+/****************************************************************************
+ * Name: xhci_cmd_settrdeq
+ *
+ * Description:
+ *   Set an endpoint's transfer-ring dequeue pointer.
+ *
+ ****************************************************************************/
+
+static int xhci_cmd_settrdeq(FAR struct usbhost_xhci_s *priv, uint8_t slot,
+                             uint8_t ep, uintptr_t dequeue, bool dcs)
+{
+  struct xhci_trb_s trb;
+
+  trb.d0 = dequeue | (dcs ? XHCI_EP_CTX2_DCS : 0);
+  trb.d1 = 0;
+  trb.d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_SET_TR_DEQ) |
+           XHCI_TRB_D2_SLOTID_SET(slot) | XHCI_TRB_D2_EP_SET(ep);
+
+  return xhci_command(priv, &trb, 100);
+}
+
+/****************************************************************************
+ * Name: xhci_ep_recover
+ *
+ * Description:
+ *   Stop an endpoint, discard all pending TDs, and restart its transfer
+ *   ring from a known dequeue position.  If Stop Endpoint fails because
+ *   the endpoint is halted, Reset Endpoint transitions it to stopped first.
+ *
+ ****************************************************************************/
+
+static int xhci_ep_recover(FAR struct usbhost_xhci_s *priv,
+                           FAR struct xhci_epinfo_s *epinfo)
+{
+  uint8_t ep = xhci_epno_get(epinfo);
+  int ret;
+
+  ret = xhci_cmd_stopep(priv, epinfo->slot, ep, false);
+  if (ret < 0)
+    {
+      ret = xhci_cmd_resetep(priv, epinfo->slot, ep);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  ret = nxmutex_lock(&priv->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = xhci_ring_init(&epinfo->td, epinfo->td.len);
+  nxmutex_unlock(&priv->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return xhci_cmd_settrdeq(priv, epinfo->slot, ep,
+                           up_addrenv_va_to_pa(epinfo->td.ring),
+                           epinfo->td.ccs);
+}
+
+/****************************************************************************
  * Name: xhci_cmd_evalctx
  *
  * Description:
@@ -3063,6 +3155,23 @@ static ssize_t xhci_transfer_wait(FAR struct usbhost_xhci_s *priv,
     {
       usbhost_trace1(XHCI_TRACE1_TRANSFER_FAILED, -ret);
       epinfo->iocwait = false;
+
+      /* A timed-out TD remains owned by the controller until the endpoint
+       * is stopped and its dequeue pointer is advanced.  Leaving it in the
+       * ring makes the next transfer reuse live TRBs and can wedge every
+       * class sharing this controller.
+       */
+
+      if (ret == -ETIMEDOUT)
+        {
+          int recover = xhci_ep_recover(priv, epinfo);
+
+          if (recover < 0)
+            {
+              uerr("endpoint recovery failed: %d\n", recover);
+            }
+        }
+
       return (ssize_t)ret;
     }
 
@@ -4986,6 +5095,7 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 #endif
   irqstate_t                 flags;
   bool                       iocwait;
+  int                        ret;
 
   DEBUGASSERT(epinfo);
 
@@ -5022,11 +5132,15 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
       return OK;
     }
 
-  /* Stop endpoint */
+  /* Stop the endpoint and remove the cancelled TDs from its transfer ring
+   * before allowing a class driver to queue another request.
+   */
 
-  xhci_cmd_stopep(priv, epinfo->slot, xhci_epno_get(epinfo), false);
-
-  /* REVISIT: what if we interrupted the execution of a TD? page 139 */
+  ret = xhci_ep_recover(priv, epinfo);
+  if (ret < 0)
+    {
+      uerr("endpoint recovery failed: %d\n", ret);
+    }
 
   epinfo->result = -ESHUTDOWN;
 
@@ -5049,7 +5163,7 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
     }
 #endif
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
