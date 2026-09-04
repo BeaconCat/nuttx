@@ -436,6 +436,8 @@ struct usb_ss_epcompdesc_s
   uint8_t  wbytes[2];
 };
 
+#define USB_SS_EPCOMP_ATTR_MULT_MASK 0x03
+
 #define USB_SIZEOF_SS_EPCOMPDESC 6
 
 /* Super speed endpoint descriptor */
