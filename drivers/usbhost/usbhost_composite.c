@@ -709,10 +709,14 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
               FAR struct usb_ifdesc_s *ifdesc =
                 (FAR struct usb_ifdesc_s *)desc;
 
-              /* Was the interface merged via an IAD descriptor? */
+              /* Alternate settings belong to the same interface.  Match
+               * the first pass, which counts only alternate setting zero.
+               * Keep all settings in the member's configuration below.
+               */
 
               DEBUGASSERT(ifdesc->ifno < 32);
-              if ((mergeset & (1 << ifdesc->ifno)) == 0)
+              if (ifdesc->alt == 0 &&
+                  (mergeset & (1 << ifdesc->ifno)) == 0)
                 {
                   /* No, this interface was not merged.  Save the registry
                    * lookup information from the interface descriptor.
