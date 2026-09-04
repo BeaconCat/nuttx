@@ -140,6 +140,9 @@ struct xhci_epinfo_s
   uint8_t            devaddr;      /* Device addres returned from xHCI */
   uint8_t            status;       /* Retained token status bits (for debug purposes) */
   uint32_t           maxesit;      /* Maximum bytes per service interval */
+  uint16_t           maxpacket;    /* Endpoint maximum packet size */
+  uint8_t            maxburst;     /* Maximum burst value */
+  uint8_t            speed;        /* Device speed */
   bool               iocwait;      /* TRUE: Thread is waiting for transfer completion */
   uint8_t            xfrtype:2;    /* See USB_EP_ATTR_XFER_* definitions in usb.h */
   int                result;       /* The result of the transfer */
@@ -568,7 +571,6 @@ static uint8_t xhci_capa_getreg_1b(FAR struct usbhost_xhci_s *priv,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_USB_INFO
 static uint16_t xhci_capa_getreg_2b(FAR struct usbhost_xhci_s *priv,
                                     unsigned int offset)
 {
@@ -578,7 +580,6 @@ static uint16_t xhci_capa_getreg_2b(FAR struct usbhost_xhci_s *priv,
   __asm__ __volatile__("" : "+r"(regval));
   return regval;
 }
-#endif
 
 /****************************************************************************
  * Name: xhci_capa_putreg_1b
@@ -2940,6 +2941,9 @@ static int xhci_isoc_setup(FAR struct xhci_rhport_s *rhport,
   struct xhci_trb_s          trb[2];
   uintptr_t                  pa;
   size_t                     first;
+  unsigned int               packets;
+  unsigned int               tbc = 0;
+  unsigned int               tlbpc = 0;
   int                        ntrbs;
 
   if (buflen == 0 || buflen > epinfo->maxesit)
@@ -2959,6 +2963,25 @@ static int xhci_isoc_setup(FAR struct xhci_rhport_s *rhport,
               XHCI_TRB_D1_TXLEN_SET(first);
   trb[0].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_ISOCH) |
               XHCI_TRB_D2_SIA;
+
+  if (xhci_capa_getreg_2b(priv, XHCI_HCIVERSION) >= 0x0100)
+    {
+      packets = (buflen + epinfo->maxpacket - 1) / epinfo->maxpacket;
+      if (epinfo->speed >= USB_SPEED_SUPER)
+        {
+          tbc = (packets + epinfo->maxburst) /
+                (epinfo->maxburst + 1) - 1;
+          tlbpc = packets % (epinfo->maxburst + 1);
+          tlbpc = tlbpc == 0 ? epinfo->maxburst : tlbpc - 1;
+        }
+      else
+        {
+          tlbpc = packets - 1;
+        }
+
+      trb[0].d2 |= XHCI_TRB_D2_TBC_SET(tbc) |
+                   XHCI_TRB_D2_TLBPC_SET(tlbpc);
+    }
   ntrbs = 1;
 
   if (first < buflen)
@@ -4168,6 +4191,9 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
     }
 
   epinfo->maxesit = maxesit;
+  epinfo->maxpacket = maxpkt;
+  epinfo->maxburst = maxburst;
+  epinfo->speed = hport->speed;
 
   xhci_ep_configure(priv, xhci_input_ep(priv, dev, idx - 1),
                     eptype, maxpkt, maxburst,
