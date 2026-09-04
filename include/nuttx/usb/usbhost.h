@@ -1262,6 +1262,21 @@ int usbhost_bthci_initialize(void);
 #endif
 
 /****************************************************************************
+ * Name: usbhost_audio_initialize
+ *
+ * Description:
+ *   Register the USB Audio Class host driver.
+ *
+ * Returned Value:
+ *   Zero on success or a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_USBHOST_AUDIO
+int usbhost_audio_initialize(void);
+#endif
+
+/****************************************************************************
  * Name: usbhost_wlaninit
  *
  * Description:
