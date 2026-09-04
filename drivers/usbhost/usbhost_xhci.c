@@ -152,6 +152,8 @@ struct xhci_epinfo_s
 #ifdef CONFIG_USBHOST_ASYNCH
   usbhost_asynch_t   callback;     /* Transfer complete callback */
   FAR void          *arg;          /* Argument that accompanies the callback */
+  FAR uint8_t       *asyncbuffer;  /* Buffer used by asynchronous transfer */
+  size_t             asynclen;     /* Asynchronous buffer length */
 #endif
   struct xhci_ring_s td;           /* TD ring for this endpoint */
   uint8_t            slot;         /* Slot where this EP resides */
@@ -3121,6 +3123,8 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
       epinfo->result   = -EBUSY;   /* Transfer in progress */
       epinfo->callback = callback; /* Asynchronous callback */
       epinfo->arg      = arg;      /* Argument that accompanies the callback */
+      epinfo->asyncbuffer = NULL;
+      epinfo->asynclen = buflen;
       ret              = OK;       /* We are good to go */
     }
 
@@ -3300,7 +3304,10 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
 #ifdef CONFIG_USBHOST_ASYNCH
   usbhost_asynch_t          callback = NULL;
   FAR void                 *arg = NULL;
+  FAR uint8_t              *asyncbuffer = NULL;
   ssize_t                   nbytes = 0;
+  size_t                    asynclen = 0;
+  bool                      asyncin = false;
 #endif
 
   /* Get EP associated with this transfer */
@@ -3391,9 +3398,14 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
 
       callback         = epinfo->callback;
       arg              = epinfo->arg;
+      asyncbuffer      = epinfo->asyncbuffer;
+      asynclen         = epinfo->asynclen;
+      asyncin          = epinfo->dirin;
       nbytes           = epinfo->result < 0 ? epinfo->result : epinfo->xfrd;
       epinfo->callback = NULL;
       epinfo->arg      = NULL;
+      epinfo->asyncbuffer = NULL;
+      epinfo->asynclen = 0;
       epinfo->result   = OK;
       epinfo->iocwait  = false;
     }
@@ -3404,6 +3416,12 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
 #ifdef CONFIG_USBHOST_ASYNCH
   if (callback != NULL)
     {
+      if (asyncin && asyncbuffer != NULL && asynclen != 0)
+        {
+          up_invalidate_dcache((uintptr_t)asyncbuffer,
+                               (uintptr_t)asyncbuffer + asynclen);
+        }
+
       xhci_asynch_completion(callback, arg, nbytes);
     }
 #endif
@@ -4880,6 +4898,9 @@ static int xhci_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
       goto errout_with_lock;
     }
 
+  epinfo->asyncbuffer = buffer;
+  up_flush_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
+
   /* Initiate the transfer */
 
   switch (epinfo->xfrtype)
@@ -4925,6 +4946,8 @@ static int xhci_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 errout_with_callback:
   epinfo->callback = NULL;
   epinfo->arg      = NULL;
+  epinfo->asyncbuffer = NULL;
+  epinfo->asynclen = 0;
 errout_with_lock:
   nxmutex_unlock(&priv->lock);
   return ret;
@@ -4979,6 +5002,8 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 #ifdef CONFIG_USBHOST_ASYNCH
   epinfo->callback = NULL;
   epinfo->arg      = NULL;
+  epinfo->asyncbuffer = NULL;
+  epinfo->asynclen = 0;
 #endif
   epinfo->iocwait  = false;
   spin_unlock_irqrestore(&priv->spinlock, flags);
