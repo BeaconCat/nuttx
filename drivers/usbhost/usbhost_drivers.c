@@ -76,6 +76,16 @@ void usbhost_drivers_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_USBHOST_AUDIO
+  /* Register the USB Audio Class driver. */
+
+  ret = usbhost_audio_initialize();
+  if (ret != OK)
+    {
+      uerr("ERROR: Failed to register the USB audio class: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_USBHOST_CDCACM
   /* Register the CDC/ACM serial class */
 
