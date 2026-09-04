@@ -422,6 +422,7 @@ static int xhci_ioc_wait(FAR struct usbhost_xhci_s *priv,
 #ifdef CONFIG_USBHOST_ASYNCH
 static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
                                        FAR struct xhci_epinfo_s *epinfo,
+                                       size_t buflen,
                                        usbhost_asynch_t callback,
                                        FAR void *arg);
 static void xhci_asynch_completion(usbhost_asynch_t callback, FAR void *arg,
@@ -3061,6 +3062,7 @@ static ssize_t xhci_transfer_wait(FAR struct usbhost_xhci_s *priv,
 
 static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
                                        FAR struct xhci_epinfo_s *epinfo,
+                                       size_t buflen,
                                        usbhost_asynch_t callback,
                                        FAR void *arg)
 {
@@ -3083,6 +3085,7 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
       epinfo->iocwait  = false;    /* No synchronous wakeup */
       epinfo->status   = 0;        /* No status yet */
       epinfo->xfrd     = 0;        /* Nothing transferred yet */
+      epinfo->buflen   = buflen;   /* Buffer length */
       epinfo->result   = -EBUSY;   /* Transfer in progress */
       epinfo->callback = callback; /* Asynchronous callback */
       epinfo->arg      = arg;      /* Argument that accompanies the callback */
@@ -4817,7 +4820,7 @@ static int xhci_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
   /* Set the request for the callback well BEFORE initiating the transfer. */
 
-  ret = xhci_ioc_async_setup(rhport, epinfo, callback, arg);
+  ret = xhci_ioc_async_setup(rhport, epinfo, buflen, callback, arg);
   if (ret != OK)
     {
       goto errout_with_lock;
