@@ -2869,6 +2869,15 @@ static int xhci_normal_setup(FAR struct xhci_rhport_s *rhport,
   int                        ntrbs = 0;
   int                        i;
 
+  if (remaining == 0)
+    {
+      trb[0].d0 = 0;
+      trb[0].d1 = XHCI_TRB_D1_IRQ_SET(0) | XHCI_TRB_D1_TXLEN_SET(0);
+      trb[0].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_NORMAL) |
+                  XHCI_TRB_D2_IOC;
+      ntrbs = 1;
+    }
+
   /* Split at 64-KiB boundaries as required by xHCI. */
 
   while (remaining > 0 && ntrbs < XHCI_TD_MAX - 1)
@@ -4700,7 +4709,7 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
   size_t                     dmasize;
   int                        ret;
 
-  DEBUGASSERT(priv && rhport && epinfo && buffer && buflen > 0);
+  DEBUGASSERT(priv && rhport && epinfo && buffer);
 
   linesize = up_get_dcache_linesize();
   if (linesize == 0)
@@ -4708,7 +4717,8 @@ static ssize_t xhci_transfer(FAR struct usbhost_driver_s *drvr,
       linesize = sizeof(uintptr_t);
     }
 
-  dmasize = ((buflen + linesize - 1) / linesize) * linesize;
+  dmasize = buflen == 0 ? linesize :
+            ((buflen + linesize - 1) / linesize) * linesize;
   dmabuffer = kmm_memalign(linesize, dmasize);
   if (dmabuffer == NULL)
     {
