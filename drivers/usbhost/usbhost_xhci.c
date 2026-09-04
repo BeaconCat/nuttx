@@ -139,6 +139,7 @@ struct xhci_epinfo_s
   uint8_t            interval;     /* Periodic service interval */
   uint8_t            devaddr;      /* Device addres returned from xHCI */
   uint8_t            status;       /* Retained token status bits (for debug purposes) */
+  uint32_t           maxesit;      /* Maximum bytes per service interval */
   bool               iocwait;      /* TRUE: Thread is waiting for transfer completion */
   uint8_t            xfrtype:2;    /* See USB_EP_ATTR_XFER_* definitions in usb.h */
   int                result;       /* The result of the transfer */
@@ -2935,21 +2936,52 @@ static int xhci_isoc_setup(FAR struct xhci_rhport_s *rhport,
                            FAR uint8_t *buffer, size_t buflen)
 {
   FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_RHPORT(rhport);
-  struct xhci_trb_s          trb;
+  struct xhci_trb_s          trb[2];
+  uintptr_t                  pa;
+  size_t                     first;
+  int                        ntrbs;
 
-  /* Preapera TRB */
+  if (buflen == 0 || buflen > epinfo->maxesit)
+    {
+      return -EMSGSIZE;
+    }
 
-  trb.d0 = up_addrenv_va_to_pa(buffer);
-  trb.d1 = XHCI_TRB_D1_IRQ_SET(0) | XHCI_TRB_D1_TXLEN_SET(buflen);
-  trb.d2 = XHCI_TRB_D2_IOC | XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_ISOCH);
+  pa = up_addrenv_va_to_pa(buffer);
+  first = XHCI_TRB_BOUNDARY - (pa & (XHCI_TRB_BOUNDARY - 1));
+  if (first > buflen)
+    {
+      first = buflen;
+    }
 
-  /* Start Isoch ASAP */
+  trb[0].d0 = pa;
+  trb[0].d1 = XHCI_TRB_D1_IRQ_SET(0) |
+              XHCI_TRB_D1_TXLEN_SET(first);
+  trb[0].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_ISOCH) |
+              XHCI_TRB_D2_SIA;
+  ntrbs = 1;
 
-  trb.d2 |= XHCI_TRB_D2_SIA;
+  if (first < buflen)
+    {
+      trb[0].d1 |= XHCI_TRB_D1_TDSIZE_SET(1);
+      trb[0].d2 |= XHCI_TRB_D2_CH;
+
+      trb[1].d0 = up_addrenv_va_to_pa(buffer + first);
+      trb[1].d1 = XHCI_TRB_D1_IRQ_SET(0) |
+                  XHCI_TRB_D1_TXLEN_SET(buflen - first);
+      trb[1].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_NORMAL);
+      ntrbs++;
+    }
+
+  if (epinfo->dirin)
+    {
+      trb[ntrbs - 1].d2 |= XHCI_TRB_D2_ISP;
+    }
+
+  trb[ntrbs - 1].d2 |= XHCI_TRB_D2_IOC;
 
   /* Add TRBs to ring */
 
-  xhci_add_trb(priv, &epinfo->td, &trb, 1);
+  xhci_add_trb(priv, &epinfo->td, trb, ntrbs);
 
   /* Trigger transfer */
 
@@ -4113,6 +4145,8 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
             }
         }
     }
+
+  epinfo->maxesit = maxesit;
 
   xhci_ep_configure(priv, xhci_input_ep(priv, dev, idx - 1),
                     eptype, maxpkt, maxburst,
