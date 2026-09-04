@@ -4048,6 +4048,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   uint8_t                       idx;
   uint8_t                       interval;
   uint8_t                       maxburst;
+  uint8_t                       mult;
   uint16_t                      maxpkt;
   uint32_t                      maxesit;
   int                           ret;
@@ -4175,6 +4176,8 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   interval = epinfo->interval;
   maxpkt = epdesc->mxpacketsize & 0x07ff;
   maxburst = hport->speed >= USB_SPEED_SUPER ? epdesc->maxburst : 0;
+  mult = hport->speed >= USB_SPEED_SUPER ?
+         (epdesc->mxpacketsize >> 11) & 0x3 : 0;
   maxesit = 0;
   if (epinfo->xfrtype == USB_EP_ATTR_XFER_INT ||
       epinfo->xfrtype == USB_EP_ATTR_XFER_ISOC)
@@ -4183,7 +4186,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
         {
           maxburst = (epdesc->mxpacketsize >> 11) & 0x3;
         }
-      maxesit = maxpkt * ((uint32_t)maxburst + 1);
+      maxesit = maxpkt * ((uint32_t)maxburst + 1) * (mult + 1);
       if (hport->speed >= USB_SPEED_HIGH)
         {
           interval = interval == 0 ? 0 :
@@ -4225,7 +4228,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   xhci_ep_configure(priv, xhci_input_ep(priv, dev, idx - 1),
                     eptype, maxpkt, maxburst,
                     up_addrenv_va_to_pa(epinfo->td.ring),
-                    0, interval, maxesit);
+                    mult, interval, maxesit);
 
   /* Evaluate the slot context */
 

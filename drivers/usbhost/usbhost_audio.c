@@ -659,6 +659,8 @@ static int usbhost_audio_parse(FAR struct usbhost_audio_s *audio,
             (FAR const struct usb_ss_epcompdesc_s *)desc;
 
           lastep->maxburst = comp->mxburst;
+          lastep->mxpacketsize |=
+            (comp->attr & USB_SS_EPCOMP_ATTR_MULT_MASK) << 11;
         }
 
       offset += desc->len;
