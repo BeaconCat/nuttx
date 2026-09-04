@@ -136,9 +136,7 @@ struct xhci_epinfo_s
   uint8_t            epno:7;       /* Endpoint number */
   uint8_t            dirin:1;      /* 1:IN endpoint 0:OUT endpoint */
   uint8_t            toggle:1;     /* Next data toggle */
-#ifndef CONFIG_USBHOST_INT_DISABLE
-  uint8_t            interval;     /* Polling interval */
-#endif
+  uint8_t            interval;     /* Periodic service interval */
   uint8_t            devaddr;      /* Device addres returned from xHCI */
   uint8_t            status;       /* Retained token status bits (for debug purposes) */
   bool               iocwait;      /* TRUE: Thread is waiting for transfer completion */
@@ -3993,9 +3991,7 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
   epinfo->dirin = epdesc->in;
   epinfo->epno  = epdesc->addr;
 
-#ifndef CONFIG_USBHOST_INT_DISABLE
   epinfo->interval  = epdesc->interval;
-#endif
   epinfo->xfrtype   = epdesc->xfrtype;
   epinfo->hport     = hport;
   nxsem_init(&epinfo->iocsem, 0, 0);
@@ -4095,6 +4091,12 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
         {
           interval = interval == 0 ? 0 :
                      interval > 16 ? 15 : interval - 1;
+        }
+      else if (epinfo->xfrtype == USB_EP_ATTR_XFER_ISOC &&
+               hport->speed == USB_SPEED_FULL)
+        {
+          interval = interval == 0 ? 3 :
+                     interval > 16 ? 18 : interval + 2;
         }
       else
         {
