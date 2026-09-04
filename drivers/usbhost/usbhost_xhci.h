@@ -447,6 +447,12 @@
 
 /* Isoch TRB */
 
+#define XHCI_TRB_D2_TBC_SHIFT       (7)                   /* Bits 7-8: Transfer Burst Count */
+#define XHCI_TRB_D2_TBC_MASK        (0x3 << XHCI_TRB_D2_TBC_SHIFT)
+#define XHCI_TRB_D2_TBC_SET(x)      (((x) << XHCI_TRB_D2_TBC_SHIFT) & XHCI_TRB_D2_TBC_MASK)
+#define XHCI_TRB_D2_TLBPC_SHIFT     (16)                  /* Bits 16-19: Last Burst Packet Count */
+#define XHCI_TRB_D2_TLBPC_MASK      (0xf << XHCI_TRB_D2_TLBPC_SHIFT)
+#define XHCI_TRB_D2_TLBPC_SET(x)    (((x) << XHCI_TRB_D2_TLBPC_SHIFT) & XHCI_TRB_D2_TLBPC_MASK)
 #define XHCI_TRB_D2_SIA              (1 << 31)             /* Bit 31: Start Isoch ASAP */
 
 /* Address Device Command TRB */
