@@ -39,6 +39,10 @@ if(CONFIG_USBHOST)
     list(APPEND SRCS usbhost_composite.c)
   endif()
 
+  if(CONFIG_USBHOST_AUDIO)
+    list(APPEND SRCS usbhost_audio.c)
+  endif()
+
   if(CONFIG_USBHOST_MSC)
     list(APPEND SRCS usbhost_storage.c)
   endif()
