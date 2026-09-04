@@ -123,6 +123,34 @@ config USBHOST_COMPOSITE_STRICT
 		then, for example, you could use the CDC/ACM interface of the device
 		with no support for the other interfaces.
 
+config USBHOST_AUDIO
+	bool "USB Audio Class host support"
+	default n
+	depends on AUDIO && SCHED_LPWORK && !USBHOST_ISOC_DISABLE
+	select USBHOST_COMPOSITE
+	---help---
+		Enable host support for USB Audio Class playback and capture devices.
+		The driver exposes PCM streams through the NuttX audio upper half.
+
+if USBHOST_AUDIO
+
+config USBHOST_AUDIO_STACKSIZE
+	int "USB audio worker stack size"
+	default 2048
+	range 1024 16384
+
+config USBHOST_AUDIO_NBUFFERS
+	int "Preferred USB audio buffer count"
+	default 4
+	range 2 16
+
+config USBHOST_AUDIO_BUFFER_INTERVALS
+	int "Service intervals per audio buffer"
+	default 16
+	range 1 128
+
+endif # USBHOST_AUDIO
+
 config USBHOST_MSC
 	bool "Mass Storage Class Support"
 	default n
