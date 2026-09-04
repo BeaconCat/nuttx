@@ -1099,7 +1099,7 @@ struct adc_as_ifdesc_s
   uint8_t as_names;             /* 15: String index to name of first channel */
 };
 
-#define USB_SIZEOF_ADC_AS_IFDESC 9
+#define USB_SIZEOF_ADC_AS_IFDESC 16
 
 /* Encoder Descriptor */
 
@@ -1519,7 +1519,7 @@ struct adc_t4_format_desc_s
   uint8_t t4_fmttype;           /* 3: Identifies the format type (ADC_FORMAT_TYPEIV) */
 };
 
-#define USB_SIZEOF_ADC_T4_FORMAT_DESC  6
+#define USB_SIZEOF_ADC_T4_FORMAT_DESC  4
 
 /* Extended Type I Format Type Descriptor */
 
@@ -1536,7 +1536,7 @@ struct adc_x1_format_desc_s
   uint8_t x1_sbproto;           /* 8: Sideband protocol used in packet header and ctrl channel */
 };
 
-#define USB_SIZEOF_ADC_X1_FORMAT_DESC  8
+#define USB_SIZEOF_ADC_X1_FORMAT_DESC  9
 
 /* Extended Type II Format Type Descriptor */
 
