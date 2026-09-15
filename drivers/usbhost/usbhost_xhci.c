@@ -2769,17 +2769,27 @@ static int xhci_ioc_wait(FAR struct usbhost_xhci_s *priv,
    * counts.  Return an error if the task is canceled.
    */
 
-  for (int elapsed = 0;
-       elapsed < XHCI_POLL_TIMEOUT_MS * 1000;
-       elapsed += XHCI_IRQ_SPIN_US)
+  ret = OK;
+  while (epinfo->iocwait)
     {
-      if (!epinfo->iocwait)
+      if (epinfo->xfrtype == USB_EP_ATTR_XFER_INT && epinfo->dirin)
         {
-          ret = OK;
-          break;
+          /* An idle interrupt IN endpoint may NAK indefinitely.  Keep
+           * waiting for data or the normal disconnect/cancel notification.
+           */
+
+          ret = nxsem_wait_uninterruptible(&epinfo->iocsem);
+        }
+      else
+        {
+          ret = nxsem_tickwait_uninterruptible(&epinfo->iocsem,
+                                      MSEC2TICK(XHCI_POLL_TIMEOUT_MS));
         }
 
-      up_udelay(XHCI_IRQ_SPIN_US);
+      if (ret < 0)
+        {
+          break;
+        }
     }
 
   if (ret < 0)
