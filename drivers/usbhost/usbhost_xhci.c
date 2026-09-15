@@ -4420,9 +4420,12 @@ static int xhci_epalloc(FAR struct usbhost_driver_s *drvr,
 
 static int xhci_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 {
-  FAR struct usbhost_xhci_s *priv = XHCI_PRIV_FROM_DRVR(drvr);
+  FAR struct usbhost_xhci_s *priv;
   FAR struct xhci_epinfo_s *epinfo = (FAR struct xhci_epinfo_s *)ep;
   FAR struct xhci_dev_s *dev;
+  irqstate_t flags;
+  uint8_t idx;
+  int ret;
 
   /* There should not be any pending transfers.  Class bind unwind may call
    * epfree with a NULL handle after epalloc failed, which is already free.
@@ -4438,6 +4441,13 @@ static int xhci_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
       return OK;
     }
 
+  priv = XHCI_PRIV_FROM_DRVR(drvr);
+  ret = xhci_cancel(drvr, ep);
+  if (ret < 0 && !priv->failed)
+    {
+      return ret;
+    }
+
   DEBUGASSERT(epinfo->iocwait == 0);
 
   dev = xhci_device_from_ep(priv, epinfo);
@@ -4445,10 +4455,58 @@ static int xhci_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
     {
       xhci_device_deinit(priv, dev);
     }
+  else if (dev != NULL && !priv->failed)
+    {
+      FAR struct xhci_slot_ctx_s *slotctx;
+      int last;
+
+      idx = xhci_epno_get(epinfo);
+      ret = nxmutex_lock(&priv->lock);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      memset(dev->input, 0, xhci_input_size(priv));
+      slotctx = xhci_input_slot(priv, dev);
+      up_invalidate_dcache((uintptr_t)dev->ctx,
+                           (uintptr_t)dev->ctx + priv->ctxsize);
+      memcpy(slotctx, xhci_output_slot(priv, dev), sizeof(*slotctx));
+      xhci_input_ctrl(priv, dev)->ctx[0] = htole32(1u << idx);
+      xhci_input_ctrl(priv, dev)->ctx[1] = htole32(1u);
+      for (last = XHCI_MAX_ENDPOINTS; last > 1; last--)
+        {
+          if (last != idx && dev->epinfo[last - 1] != NULL)
+            {
+              break;
+            }
+        }
+
+      slotctx->ctx[0] = htole32(
+        (le32toh(slotctx->ctx[0]) & ~XHCI_ST_CTX0_CTXENT_MASK) |
+        XHCI_ST_CTX0_CTXENT_SET(last));
+      up_flush_dcache((uintptr_t)dev->input,
+                      (uintptr_t)dev->input + xhci_input_size(priv));
+      nxmutex_unlock(&priv->lock);
+      ret = xhci_cmd_cfgep(priv, epinfo->slot,
+                           up_addrenv_va_to_pa(dev->input), false);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  if (dev != NULL)
+    {
+      flags = spin_lock_irqsave(&priv->spinlock);
+      dev->epinfo[xhci_epno_get(epinfo) - 1] = NULL;
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+    }
 
   /* Free ring */
 
   xhci_ring_deinit(&epinfo->td);
+  nxsem_destroy(&epinfo->iocsem);
 
   /* Free the container */
 
