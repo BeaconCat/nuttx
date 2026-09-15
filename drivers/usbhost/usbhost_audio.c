@@ -39,6 +39,8 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/usb/audio.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
@@ -104,7 +106,9 @@ struct usbhost_audio_stream_s
   FAR struct usbhost_audio_s *audio;
   struct usbhost_audio_format_s format[USBHOST_AUDIO_NFORMATS];
   dq_queue_t pendq;
+  spinlock_t queuelock;
   mutex_t lock;
+  mutex_t lifecyclelock;
   sem_t sem;
   pthread_t thread;
   pthread_t feedbackthread;
@@ -1202,10 +1206,11 @@ static FAR struct ap_buffer_s *
 usbhost_audio_dequeue(FAR struct usbhost_audio_stream_s *stream)
 {
   FAR dq_entry_t *entry;
+  irqstate_t flags;
 
-  nxmutex_lock(&stream->lock);
+  flags = spin_lock_irqsave(&stream->queuelock);
   entry = dq_remfirst(&stream->pendq);
-  nxmutex_unlock(&stream->lock);
+  spin_unlock_irqrestore(&stream->queuelock, flags);
   return entry == NULL ? NULL :
          container_of(entry, struct ap_buffer_s, dq_entry);
 }
@@ -1374,6 +1379,7 @@ static FAR void *usbhost_audio_worker(FAR void *arg)
 {
   FAR struct usbhost_audio_stream_s *stream = arg;
   FAR struct ap_buffer_s *apb;
+  bool final;
   int ret;
 
   while (!stream->terminate)
@@ -1394,6 +1400,7 @@ static FAR void *usbhost_audio_worker(FAR void *arg)
           nxmutex_lock(&stream->lock);
           stream->active = NULL;
           nxmutex_unlock(&stream->lock);
+          final = (apb->flags & AUDIO_APB_FINAL) != 0;
           usbhost_audio_callback(stream, AUDIO_CALLBACK_DEQUEUE, apb, ret);
           if (ret < 0)
             {
@@ -1401,7 +1408,7 @@ static FAR void *usbhost_audio_worker(FAR void *arg)
                                      ret);
             }
 
-          if ((apb->flags & AUDIO_APB_FINAL) != 0)
+          if (final)
             {
               usbhost_audio_callback(stream, AUDIO_CALLBACK_COMPLETE, NULL,
                                      ret);
@@ -1429,12 +1436,14 @@ static FAR void *usbhost_audio_feedback_worker(FAR void *arg)
                             stream->feedbackbuf, length);
       if (nbytes < 0)
         {
-          if (!stream->feedbackstop && !stream->audio->disconnected)
+          if (stream->feedbackstop || stream->audio->disconnected)
             {
-              uerr("feedback transfer failed: %zd\n", nbytes);
+              break;
             }
 
-          break;
+          uerr("feedback transfer failed: %zd\n", nbytes);
+          nxsig_usleep(10000);
+          continue;
         }
 
       if (nbytes == 3)
@@ -1642,7 +1651,7 @@ static int usbhost_audio_configure(FAR struct audio_lowerhalf_s *dev,
   return usbhost_audio_configure_common(stream, caps);
 }
 
-static int usbhost_audio_start_common(
+static int usbhost_audio_start_locked(
   FAR struct usbhost_audio_stream_s *stream)
 {
   FAR struct usbhost_audio_format_s *format;
@@ -1751,6 +1760,11 @@ static int usbhost_audio_start_common(
     }
 
   pthread_attr_destroy(&attr);
+  if (ret > 0)
+    {
+      ret = -ret;
+    }
+
   if (ret != OK)
     {
       stream->terminate = true;
@@ -1785,11 +1799,21 @@ static int usbhost_audio_start(FAR struct audio_lowerhalf_s *dev,
 static int usbhost_audio_start(FAR struct audio_lowerhalf_s *dev)
 #endif
 {
-  return usbhost_audio_start_common(
-    (FAR struct usbhost_audio_stream_s *)dev);
+  FAR struct usbhost_audio_stream_s *stream =
+    (FAR struct usbhost_audio_stream_s *)dev;
+  int ret = nxmutex_lock(&stream->lifecyclelock);
+
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = usbhost_audio_start_locked(stream);
+  nxmutex_unlock(&stream->lifecyclelock);
+  return ret;
 }
 
-static int usbhost_audio_stop_common(
+static int usbhost_audio_stop_locked(
   FAR struct usbhost_audio_stream_s *stream)
 {
   FAR struct usbhost_audio_format_s *format;
@@ -1873,6 +1897,21 @@ drain:
   return OK;
 }
 
+static int usbhost_audio_stop_common(
+  FAR struct usbhost_audio_stream_s *stream)
+{
+  int ret = nxmutex_lock(&stream->lifecyclelock);
+
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  ret = usbhost_audio_stop_locked(stream);
+  nxmutex_unlock(&stream->lifecyclelock);
+  return ret;
+}
+
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
 #  ifdef CONFIG_AUDIO_MULTI_SESSION
 static int usbhost_audio_stop(FAR struct audio_lowerhalf_s *dev,
@@ -1897,15 +1936,16 @@ static int usbhost_audio_enqueue(FAR struct audio_lowerhalf_s *dev,
 {
   FAR struct usbhost_audio_stream_s *stream =
     (FAR struct usbhost_audio_stream_s *)dev;
+  irqstate_t flags;
 
   if (apb == NULL || stream->audio->disconnected)
     {
       return -ENODEV;
     }
 
-  nxmutex_lock(&stream->lock);
+  flags = spin_lock_irqsave(&stream->queuelock);
   dq_addlast(&apb->dq_entry, &stream->pendq);
-  nxmutex_unlock(&stream->lock);
+  spin_unlock_irqrestore(&stream->queuelock, flags);
   nxsem_post(&stream->sem);
   return OK;
 }
@@ -1918,9 +1958,11 @@ static int usbhost_audio_cancel(FAR struct audio_lowerhalf_s *dev,
   FAR dq_entry_t *entry;
   bool found = false;
   bool active;
+  irqstate_t flags;
 
   nxmutex_lock(&stream->lock);
   active = stream->active == apb;
+  flags = spin_lock_irqsave(&stream->queuelock);
   for (entry = dq_peek(&stream->pendq); entry != NULL;
        entry = dq_next(entry))
     {
@@ -1932,6 +1974,7 @@ static int usbhost_audio_cancel(FAR struct audio_lowerhalf_s *dev,
         }
     }
 
+  spin_unlock_irqrestore(&stream->queuelock, flags);
   nxmutex_unlock(&stream->lock);
 
   if (active && stream->ep != NULL)
@@ -2050,7 +2093,10 @@ static void usbhost_audio_destroy(FAR void *arg)
   FAR struct usbhost_audio_s *audio = arg;
   FAR struct usbhost_audio_stream_s *stream;
   char devname[8];
+  int ret;
   int i;
+
+  /* Keep both lower halves alive while either upper half has open files. */
 
   for (i = 0; i < USBHOST_AUDIO_NSTREAMS; i++)
     {
@@ -2061,17 +2107,36 @@ static void usbhost_audio_destroy(FAR void *arg)
           snprintf(devname, sizeof(devname), "usb%c%u",
                    stream->direction == USBHOST_AUDIO_PLAYBACK ? 'p' : 'c',
                    stream->devno);
-          audio_unregister(devname, &stream->dev);
+          ret = audio_unregister(devname, &stream->dev);
+          if (ret < 0)
+            {
+              work_queue(LPWORK, &audio->destroywork,
+                         usbhost_audio_destroy, audio, MSEC2TICK(100));
+              return;
+            }
+
+          stream->registered = false;
           usbhost_audio_freedevno(stream->devno);
         }
+    }
+
+  for (i = 0; i < USBHOST_AUDIO_NSTREAMS; i++)
+    {
+      stream = &audio->stream[i];
 
       if (stream->ep != NULL)
         {
           DRVR_EPFREE(audio->usbclass.hport->drvr, stream->ep);
         }
 
+      if (stream->packetbuf != NULL)
+        {
+          DRVR_IOFREE(audio->usbclass.hport->drvr, stream->packetbuf);
+        }
+
       nxsem_destroy(&stream->sem);
       nxmutex_destroy(&stream->lock);
+      nxmutex_destroy(&stream->lifecyclelock);
     }
 
   if (audio->ctrlbuf != NULL)
@@ -2226,7 +2291,9 @@ usbhost_audio_create(FAR struct usbhost_hubport_s *hport,
       stream->audio = audio;
       stream->direction = i;
       dq_init(&stream->pendq);
+      spin_lock_init(&stream->queuelock);
       nxmutex_init(&stream->lock);
+      nxmutex_init(&stream->lifecyclelock);
       nxsem_init(&stream->sem, 0, 0);
     }
 
