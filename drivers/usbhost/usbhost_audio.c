@@ -64,6 +64,8 @@
 #define USBHOST_AUDIO_GET_MAX    0x83
 #define USBHOST_AUDIO_UAC2_MUTE_CONTROL_MASK   0x03
 #define USBHOST_AUDIO_UAC2_VOLUME_CONTROL_MASK 0x0c
+#define USBHOST_AUDIO_NLINKS                  256
+#define USBHOST_AUDIO_CONTROL_CHANNELS        32
 
 /****************************************************************************
  * Private Types
@@ -89,6 +91,12 @@ struct usbhost_audio_format_s
 };
 
 struct usbhost_audio_s;
+
+struct usbhost_audio_link_s
+{
+  uint8_t sink;
+  uint8_t source;
+};
 
 struct usbhost_audio_stream_s
 {
@@ -131,9 +139,12 @@ struct usbhost_audio_s
   uint8_t protocol;
   uint8_t controlif;
   uint8_t clockmap[UINT8_MAX + 1];
-  uint8_t source[UINT8_MAX + 1];
+  struct usbhost_audio_link_s links[USBHOST_AUDIO_NLINKS];
+  uint16_t nlinks;
   bool feature[UINT8_MAX + 1];
   uint8_t featurecontrols[UINT8_MAX + 1];
+  uint32_t mutechannels[UINT8_MAX + 1];
+  uint32_t volumechannels[UINT8_MAX + 1];
   volatile bool disconnected;
   bool controlpresent;
 };
@@ -141,6 +152,12 @@ struct usbhost_audio_s
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+static int usbhost_audio_addsource(FAR struct usbhost_audio_s *audio,
+                                    uint8_t sink, uint8_t source);
+static int usbhost_audio_setchannelvolume(
+  FAR struct usbhost_audio_stream_s *stream, uint8_t channel,
+  uint16_t volume);
 
 static FAR struct usbhost_class_s *
   usbhost_audio_create(FAR struct usbhost_hubport_s *hport,
@@ -349,8 +366,36 @@ static int usbhost_audio_addformat(FAR struct usbhost_audio_s *audio,
   return OK;
 }
 
+static int usbhost_audio_addsource(FAR struct usbhost_audio_s *audio,
+                                    uint8_t sink, uint8_t source)
+{
+  unsigned int i;
+
+  if (sink == 0 || source == 0)
+    {
+      return -EINVAL;
+    }
+
+  for (i = 0; i < audio->nlinks; i++)
+    {
+      if (audio->links[i].sink == sink && audio->links[i].source == source)
+        {
+          return OK;
+        }
+    }
+
+  if (audio->nlinks == USBHOST_AUDIO_NLINKS)
+    {
+      return -E2BIG;
+    }
+
+  audio->links[audio->nlinks].sink = sink;
+  audio->links[audio->nlinks++].source = source;
+  return OK;
+}
+
 static uint8_t usbhost_audio_findfeature(FAR struct usbhost_audio_s *audio,
-                                         uint8_t terminal)
+                                         uint8_t terminal, bool capture)
 {
   bool visited[UINT8_MAX + 1];
   uint8_t queue[UINT8_MAX + 1];
@@ -376,19 +421,17 @@ static uint8_t usbhost_audio_findfeature(FAR struct usbhost_audio_s *audio,
           return entity;
         }
 
-      if (audio->source[entity] != 0 &&
-          !visited[audio->source[entity]])
+      for (i = 0; i < audio->nlinks; i++)
         {
-          visited[audio->source[entity]] = true;
-          queue[tail++] = audio->source[entity];
-        }
+          unsigned int from = capture ? audio->links[i].sink :
+                                        audio->links[i].source;
+          unsigned int to = capture ? audio->links[i].source :
+                                      audio->links[i].sink;
 
-      for (i = 1; i <= UINT8_MAX; i++)
-        {
-          if (audio->source[i] == entity && !visited[i])
+          if (from == entity && !visited[to])
             {
-              visited[i] = true;
-              queue[tail++] = i;
+              visited[to] = true;
+              queue[tail++] = to;
             }
         }
     }
@@ -468,7 +511,13 @@ static int usbhost_audio_parse(FAR struct usbhost_audio_s *audio,
             }
           else if (subtype == ADC_AC_OUTPUT_TERMINAL && desc->len >= 8)
             {
-              audio->source[terminal] = configdesc[offset + 7];
+              ret = usbhost_audio_addsource(audio, terminal,
+                                             configdesc[offset + 7]);
+              if (ret < 0)
+                {
+                  return ret;
+                }
+
               if (audio->protocol == USBHOST_AUDIO_PROTOCOL_2 &&
                   desc->len >= 9)
                 {
@@ -477,31 +526,114 @@ static int usbhost_audio_parse(FAR struct usbhost_audio_s *audio,
             }
           else if (subtype == ADC_AC_FEATURE_UNIT && desc->len >= 5)
             {
-              audio->feature[terminal] = true;
-              audio->source[terminal] = configdesc[offset + 4];
-              if (audio->protocol == USBHOST_AUDIO_PROTOCOL_2 &&
-                  desc->len >= 9)
-                {
-                  uint32_t controls =
-                    usbhost_audio_getle32(&configdesc[offset + 5]);
+              unsigned int start;
+              unsigned int size;
+              unsigned int count;
+              unsigned int channel;
 
-                  if ((controls & USBHOST_AUDIO_UAC2_MUTE_CONTROL_MASK) ==
-                      USBHOST_AUDIO_UAC2_MUTE_CONTROL_MASK)
+              audio->feature[terminal] = true;
+              ret = usbhost_audio_addsource(audio, terminal,
+                                             configdesc[offset + 4]);
+              if (ret < 0)
+                {
+                  return ret;
+                }
+
+              if (audio->protocol == USBHOST_AUDIO_PROTOCOL_2)
+                {
+                  start = 5;
+                  size = 4;
+                }
+              else if (desc->len >= 7)
+                {
+                  start = 6;
+                  size = configdesc[offset + 5];
+                }
+              else
+                {
+                  return -EINVAL;
+                }
+
+              if (size == 0 || desc->len < start + size + 1 ||
+                  (desc->len - start - 1) % size != 0)
+                {
+                  return -EINVAL;
+                }
+
+              count = (desc->len - start - 1) / size;
+              if (count > USBHOST_AUDIO_CONTROL_CHANNELS)
+                {
+                  return -ENOTSUP;
+                }
+
+              for (channel = 0; channel < count; channel++)
+                {
+                  FAR const uint8_t *data =
+                    &configdesc[offset + start + channel * size];
+                  uint8_t controls;
+
+                  if (audio->protocol == USBHOST_AUDIO_PROTOCOL_2)
                     {
-                      audio->featurecontrols[terminal] |= AUDIO_FU_MUTE;
+                      uint32_t bitmap = usbhost_audio_getle32(data);
+
+                      controls = 0;
+                      if ((bitmap & USBHOST_AUDIO_UAC2_MUTE_CONTROL_MASK) ==
+                          USBHOST_AUDIO_UAC2_MUTE_CONTROL_MASK)
+                        {
+                          controls |= AUDIO_FU_MUTE;
+                        }
+
+                      if ((bitmap &
+                           USBHOST_AUDIO_UAC2_VOLUME_CONTROL_MASK) ==
+                          USBHOST_AUDIO_UAC2_VOLUME_CONTROL_MASK)
+                        {
+                          controls |= AUDIO_FU_VOLUME;
+                        }
+                    }
+                  else
+                    {
+                      controls = data[0] & (AUDIO_FU_MUTE | AUDIO_FU_VOLUME);
                     }
 
-                  if ((controls & USBHOST_AUDIO_UAC2_VOLUME_CONTROL_MASK) ==
-                      USBHOST_AUDIO_UAC2_VOLUME_CONTROL_MASK)
+                  audio->featurecontrols[terminal] |= controls;
+                  if ((controls & AUDIO_FU_MUTE) != 0)
                     {
-                      audio->featurecontrols[terminal] |= AUDIO_FU_VOLUME;
+                      audio->mutechannels[terminal] |=
+                        UINT32_C(1) << channel;
+                    }
+
+                  if ((controls & AUDIO_FU_VOLUME) != 0)
+                    {
+                      audio->volumechannels[terminal] |=
+                        UINT32_C(1) << channel;
                     }
                 }
-              else if (desc->len >= 7 && configdesc[offset + 5] > 0)
+            }
+          else if (subtype == ADC_AC_MIXER_UNIT ||
+                   subtype == ADC_AC_SELECTOR_UNIT)
+            {
+              unsigned int pins;
+              unsigned int pin;
+
+              if (desc->len < 5)
                 {
-                  audio->featurecontrols[terminal] =
-                    configdesc[offset + 6] &
-                    (AUDIO_FU_MUTE | AUDIO_FU_VOLUME);
+                  return -EINVAL;
+                }
+
+              pins = configdesc[offset + 4];
+              if (pins == 0 || desc->len < 5 + pins)
+                {
+                  return -EINVAL;
+                }
+
+              for (pin = 0; pin < pins; pin++)
+                {
+                  ret = usbhost_audio_addsource(audio, terminal,
+                                               configdesc[offset + 5 + pin]);
+                  if (ret < 0)
+                    {
+                      return ret;
+                    }
                 }
             }
         }
@@ -674,7 +806,8 @@ static int usbhost_audio_parse(FAR struct usbhost_audio_s *audio,
         {
           format = audio->stream[i].format[j];
           audio->stream[i].format[j].feature =
-            usbhost_audio_findfeature(audio, format.terminal);
+            usbhost_audio_findfeature(audio, format.terminal,
+                                       i == USBHOST_AUDIO_CAPTURE);
         }
     }
 
@@ -855,12 +988,13 @@ static int usbhost_audio_getrates(
 
 static int usbhost_audio_feature_request(
   FAR struct usbhost_audio_stream_s *stream, bool in, uint8_t request,
-  uint8_t selector, FAR uint8_t *data, size_t length)
+  uint8_t selector, uint8_t channel, FAR uint8_t *data, size_t length)
 {
   FAR struct usbhost_audio_s *audio = stream->audio;
   FAR struct usbhost_audio_format_s *format =
     &stream->format[stream->current];
   FAR struct usbhost_hubport_s *hport = audio->usbclass.hport;
+  uint32_t channels;
   int ret;
 
   if (format->feature == 0 || length > audio->ctrlbuflen)
@@ -868,9 +1002,11 @@ static int usbhost_audio_feature_request(
       return -ENOTSUP;
     }
 
-  if ((audio->featurecontrols[format->feature] &
-       (selector == USBHOST_AUDIO_FU_MUTE ? AUDIO_FU_MUTE :
-        AUDIO_FU_VOLUME)) == 0)
+  channels = selector == USBHOST_AUDIO_FU_MUTE ?
+             audio->mutechannels[format->feature] :
+             audio->volumechannels[format->feature];
+  if (channel >= USBHOST_AUDIO_CONTROL_CHANNELS ||
+      (channels & (UINT32_C(1) << channel)) == 0)
     {
       return -ENOTSUP;
     }
@@ -886,7 +1022,8 @@ static int usbhost_audio_feature_request(
                          USB_REQ_TYPE_CLASS |
                          USB_REQ_RECIPIENT_INTERFACE;
   audio->ctrlreq->req = request;
-  usbhost_audio_putle16(audio->ctrlreq->value, (uint16_t)selector << 8);
+  usbhost_audio_putle16(audio->ctrlreq->value,
+                       ((uint16_t)selector << 8) | channel);
   usbhost_audio_putle16(audio->ctrlreq->index,
                        ((uint16_t)format->feature << 8) |
                        audio->controlif);
@@ -910,8 +1047,9 @@ static int usbhost_audio_feature_request(
   return ret;
 }
 
-static int usbhost_audio_setvolume(
-  FAR struct usbhost_audio_stream_s *stream, uint16_t volume)
+static int usbhost_audio_setchannelvolume(
+  FAR struct usbhost_audio_stream_s *stream, uint8_t channel,
+  uint16_t volume)
 {
   FAR struct usbhost_audio_s *audio = stream->audio;
   int16_t minimum;
@@ -928,7 +1066,8 @@ static int usbhost_audio_setvolume(
   if (audio->protocol == USBHOST_AUDIO_PROTOCOL_2)
     {
       ret = usbhost_audio_feature_request(stream, true, ADC_REQUEST_RANGE,
-                                          USBHOST_AUDIO_FU_VOLUME, data, 8);
+                                          USBHOST_AUDIO_FU_VOLUME, channel,
+                                          data, 8);
       if (ret < 0 || usbhost_audio_getle16(data) == 0)
         {
           return ret < 0 ? ret : -ERANGE;
@@ -941,7 +1080,8 @@ static int usbhost_audio_setvolume(
     {
       ret = usbhost_audio_feature_request(stream, true,
                                           USBHOST_AUDIO_GET_MIN,
-                                          USBHOST_AUDIO_FU_VOLUME, data, 2);
+                                          USBHOST_AUDIO_FU_VOLUME, channel,
+                                          data, 2);
       if (ret < 0)
         {
           return ret;
@@ -950,7 +1090,8 @@ static int usbhost_audio_setvolume(
       minimum = (int16_t)usbhost_audio_getle16(data);
       ret = usbhost_audio_feature_request(stream, true,
                                           USBHOST_AUDIO_GET_MAX,
-                                          USBHOST_AUDIO_FU_VOLUME, data, 2);
+                                          USBHOST_AUDIO_FU_VOLUME, channel,
+                                          data, 2);
       if (ret < 0)
         {
           return ret;
@@ -959,19 +1100,79 @@ static int usbhost_audio_setvolume(
       maximum = (int16_t)usbhost_audio_getle16(data);
     }
 
+  if (maximum < minimum)
+    {
+      return -ERANGE;
+    }
+
   value = minimum + ((int32_t)(maximum - minimum) * volume) / 1000;
   usbhost_audio_putle16(data, value);
   return usbhost_audio_feature_request(stream, false, ADC_REQUEST_CUR,
-                                       USBHOST_AUDIO_FU_VOLUME, data, 2);
+                                       USBHOST_AUDIO_FU_VOLUME, channel,
+                                       data, 2);
+}
+
+static int usbhost_audio_setvolume(FAR struct usbhost_audio_stream_s *stream,
+                                   uint16_t volume)
+{
+  uint8_t feature = stream->format[stream->current].feature;
+  uint32_t channels = stream->audio->volumechannels[feature];
+  unsigned int channel;
+  int ret = -ENOTSUP;
+
+  /* Prefer a master control; otherwise update each implemented channel. */
+
+  if ((channels & 1) != 0)
+    {
+      return usbhost_audio_setchannelvolume(stream, 0, volume);
+    }
+
+  for (channel = 1; channel < USBHOST_AUDIO_CONTROL_CHANNELS; channel++)
+    {
+      if ((channels & (UINT32_C(1) << channel)) != 0)
+        {
+          ret = usbhost_audio_setchannelvolume(stream, channel, volume);
+          if (ret < 0)
+            {
+              return ret;
+            }
+        }
+    }
+
+  return ret;
 }
 
 static int usbhost_audio_setmute(FAR struct usbhost_audio_stream_s *stream,
                                  bool mute)
 {
+  uint8_t feature = stream->format[stream->current].feature;
+  uint32_t channels = stream->audio->mutechannels[feature];
   uint8_t data = mute;
+  unsigned int channel;
+  int ret = -ENOTSUP;
 
-  return usbhost_audio_feature_request(stream, false, ADC_REQUEST_CUR,
-                                       USBHOST_AUDIO_FU_MUTE, &data, 1);
+  if ((channels & 1) != 0)
+    {
+      return usbhost_audio_feature_request(stream, false, ADC_REQUEST_CUR,
+                                           USBHOST_AUDIO_FU_MUTE, 0,
+                                           &data, 1);
+    }
+
+  for (channel = 1; channel < USBHOST_AUDIO_CONTROL_CHANNELS; channel++)
+    {
+      if ((channels & (UINT32_C(1) << channel)) != 0)
+        {
+          ret = usbhost_audio_feature_request(stream, false, ADC_REQUEST_CUR,
+                                               USBHOST_AUDIO_FU_MUTE,
+                                               channel, &data, 1);
+          if (ret < 0)
+            {
+              return ret;
+            }
+        }
+    }
+
+  return ret;
 }
 
 static void usbhost_audio_callback(FAR struct usbhost_audio_stream_s *stream,
