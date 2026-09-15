@@ -255,6 +255,7 @@ static int audio_close(FAR struct file *filep)
     }
 
   kmm_free(priv);
+  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   /*  If the reference head decrement to NULL,
    *  then uninitialize the driver.
@@ -273,8 +274,6 @@ static int audio_close(FAR struct file *filep)
       kumm_free(upper->status);
       upper->status = NULL;
     }
-
-  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   ret = OK;
   nxmutex_unlock(&upper->lock);
@@ -1953,14 +1952,28 @@ int audio_unregister(FAR const char *name, FAR struct audio_lowerhalf_s *dev)
 
   audio_get_path(name, path, sizeof(path));
 
+  upper = dev->priv;
+  ret = nxmutex_lock(&upper->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (upper->head != NULL)
+    {
+      nxmutex_unlock(&upper->lock);
+      return -EBUSY;
+    }
+
   ret = unregister_driver(path);
   if (ret < 0)
     {
+      nxmutex_unlock(&upper->lock);
       auderr("Failed to unregister %s\n", path);
       return ret;
     }
 
-  upper = dev->priv;
+  nxmutex_unlock(&upper->lock);
   nxmutex_destroy(&upper->lock);
   kmm_free(upper);
   dev->priv = NULL;
