@@ -4566,20 +4566,23 @@ static int xhci_free(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
 static int xhci_ioalloc(FAR struct usbhost_driver_s *drvr,
                         FAR uint8_t **buffer, size_t buflen)
 {
+  size_t align;
   int ret = -ENOMEM;
 
   DEBUGASSERT(drvr && buffer && buflen > 0);
 
-  /* Large transfers are not supported now */
+  /* Transfer() maps class buffers through a controller-owned DMA bounce
+   * buffer, so a class I/O buffer neither needs to fit in one page nor stay
+   * physically contiguous.  Keep cache-line alignment for efficient copies.
+   */
 
-  if (buflen > XHCI_PAGE_SIZE)
+  align = up_get_dcache_linesize();
+  if (align == 0)
     {
-      return -ENOMEM;
+      align = sizeof(uintptr_t);
     }
 
-  /* Allocated buffer must not cross page boundaries */
-
-  *buffer = (FAR uint8_t *)kmm_memalign((XHCI_PAGE_SIZE / 2) , buflen);
+  *buffer = (FAR uint8_t *)kmm_memalign(align, buflen);
   if (*buffer)
     {
       ret = OK;
