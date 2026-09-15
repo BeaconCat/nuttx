@@ -36,6 +36,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
+#include <nuttx/usb/audio.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/hub.h>
@@ -524,6 +525,54 @@ int usbhost_enumerate(FAR struct usbhost_hubport_s *hport,
   /* Some devices may require some delay before initialization */
 
   nxsig_usleep(100 * 1000);
+
+#if defined(CONFIG_USBHOST_AUDIO) && defined(CONFIG_USBHOST_COMPOSITE)
+  /* Audio streaming interfaces belong to their control function.  Binding
+   * the complete configuration once per interface duplicates each stream
+   * and loses ownership of earlier class instances.  Let the composite
+   * wrapper own the audio collection and any independent HID interfaces.
+   */
+
+  if (id.base == USB_CLASS_PER_INTERFACE)
+    {
+      unsigned int offset = 0;
+
+      while (offset + sizeof(struct usb_desc_s) <= cfglen)
+        {
+          FAR const struct usb_desc_s *desc =
+            (FAR const struct usb_desc_s *)&buffer[offset];
+
+          if (desc->len < sizeof(struct usb_desc_s) ||
+              offset + desc->len > cfglen)
+            {
+              ret = -EINVAL;
+              goto errout;
+            }
+
+          if (desc->type == USB_DESC_TYPE_INTERFACE &&
+              desc->len >= USB_SIZEOF_IFDESC)
+            {
+              FAR const struct usb_ifdesc_s *ifdesc =
+                (FAR const struct usb_ifdesc_s *)desc;
+
+              if (ifdesc->alt == 0 && ifdesc->classid == USB_CLASS_AUDIO &&
+                  ifdesc->subclass == ADC_SUBCLASS_AUDIOCONTROL)
+                {
+                  ret = usbhost_composite(hport, buffer, cfglen, &id,
+                                          devclass);
+                  if (ret != -ENOENT)
+                    {
+                      goto errout;
+                    }
+
+                  break;
+                }
+            }
+
+          offset += desc->len;
+        }
+    }
+#endif
 
   /* Was the class identification information provided in the device
    * descriptor? Or do we need to find it in the interface descriptor(s)?
