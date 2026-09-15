@@ -111,6 +111,10 @@ struct usbhost_audio_stream_s
   usbhost_ep_t ep;
   usbhost_ep_t feedbackep;
   FAR struct ap_buffer_s *active;
+  FAR uint8_t *packetbuf;
+  size_t packetsize;
+  size_t captureused;
+  size_t captureoffset;
   uint32_t rate;
   uint32_t accumulator;
   volatile uint32_t feedbackrate;
@@ -1222,7 +1226,9 @@ static int usbhost_audio_transfer(FAR struct usbhost_audio_stream_s *stream,
   ssize_t nbytes;
 
   maxpayload = (format->epdesc.mxpacketsize & USB_EP_MAX_PACKET_MASK) *
-               (USB_EP_MAX_PACKET_MULT(format->epdesc.mxpacketsize) + 1);
+               (USB_EP_MAX_PACKET_MULT(format->epdesc.mxpacketsize) + 1) *
+               (hport->speed >= USB_SPEED_SUPER ?
+                format->epdesc.maxburst + 1 : 1);
   framebytes = format->channels * format->subslot;
   if (maxpayload == 0 || framebytes == 0)
     {
@@ -1269,6 +1275,47 @@ static int usbhost_audio_transfer(FAR struct usbhost_audio_stream_s *stream,
   while (remaining > 0 && !stream->terminate &&
          !stream->audio->disconnected)
     {
+      if (stream->direction == USBHOST_AUDIO_CAPTURE)
+        {
+          if (stream->captureoffset == stream->captureused)
+            {
+              nbytes = DRVR_TRANSFER(hport->drvr, stream->ep,
+                                    stream->packetbuf, stream->packetsize);
+              if (nbytes < 0)
+                {
+                  apb->nbytes = offset;
+                  return nbytes;
+                }
+
+              if ((size_t)nbytes > stream->packetsize ||
+                  nbytes % framebytes != 0)
+                {
+                  apb->nbytes = offset;
+                  return -EPROTO;
+                }
+
+              stream->captureoffset = 0;
+              stream->captureused = nbytes;
+              if (nbytes == 0)
+                {
+                  continue;
+                }
+            }
+
+          packet = stream->captureused - stream->captureoffset;
+          if (packet > remaining)
+            {
+              packet = remaining;
+            }
+
+          memcpy(&apb->samp[offset],
+                 stream->packetbuf + stream->captureoffset, packet);
+          stream->captureoffset += packet;
+          offset += packet;
+          remaining -= packet;
+          continue;
+        }
+
       stream->accumulator += stream->feedbackrate != 0 ?
                              stream->feedbackrate : stream->rate;
       frames = stream->accumulator / service;
@@ -1647,6 +1694,26 @@ static int usbhost_audio_start_common(
   stream->feedbackstop = false;
   stream->feedbackrate = 0;
   stream->accumulator = 0;
+  stream->captureoffset = 0;
+  stream->captureused = 0;
+  if (stream->direction == USBHOST_AUDIO_CAPTURE &&
+      stream->packetbuf == NULL)
+    {
+      stream->packetsize =
+        (format->epdesc.mxpacketsize & USB_EP_MAX_PACKET_MASK) *
+        (USB_EP_MAX_PACKET_MULT(format->epdesc.mxpacketsize) + 1) *
+        (stream->audio->usbclass.hport->speed >= USB_SPEED_SUPER ?
+         format->epdesc.maxburst + 1 : 1);
+      ret = DRVR_IOALLOC(stream->audio->usbclass.hport->drvr,
+                         &stream->packetbuf, stream->packetsize);
+      if (ret < 0)
+        {
+          usbhost_audio_setinterface(stream->audio, format->ifno, 0);
+          nxmutex_unlock(&stream->lock);
+          return ret;
+        }
+    }
+
   pthread_attr_init(&attr);
   sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 3;
   pthread_attr_setschedparam(&attr, &sparam);
@@ -1779,6 +1846,14 @@ static int usbhost_audio_stop_common(
     {
       DRVR_EPFREE(stream->audio->usbclass.hport->drvr, stream->ep);
       stream->ep = NULL;
+    }
+
+  if (stream->packetbuf != NULL)
+    {
+      DRVR_IOFREE(stream->audio->usbclass.hport->drvr, stream->packetbuf);
+      stream->packetbuf = NULL;
+      stream->captureused = 0;
+      stream->captureoffset = 0;
     }
 
   nxmutex_unlock(&stream->lock);
