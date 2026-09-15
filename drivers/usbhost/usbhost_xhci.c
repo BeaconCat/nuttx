@@ -143,7 +143,8 @@ struct xhci_epinfo_s
   uint16_t           maxpacket;    /* Endpoint maximum packet size */
   uint8_t            maxburst;     /* Maximum burst value */
   uint8_t            speed;        /* Device speed */
-  bool               iocwait;      /* TRUE: Thread is waiting for transfer completion */
+  volatile bool      iocwait;      /* TRUE: Thread is waiting for completion */
+  bool               cancelling;  /* DMA quiescence is in progress */
   uint8_t            xfrtype:2;    /* See USB_EP_ATTR_XFER_* definitions in usb.h */
   int                result;       /* The result of the transfer */
   size_t             xfrd;         /* On completion, will hold the number of bytes transferred */
@@ -218,6 +219,7 @@ struct usbhost_xhci_s
   bool                          pscwait;    /* TRUE: Thread is waiting for port status change event */
   sem_t                         pscsem;     /* Semaphore to wait for port status change events */
   mutex_t                       lock;       /* Support mutually exclusive access */
+  bool                          failed;     /* Controller halted after failure */
   spinlock_t                    spinlock;
 
   /* xHCI parameters */
@@ -2623,6 +2625,16 @@ static int xhci_ep_recover(FAR struct usbhost_xhci_s *priv,
       ret = xhci_cmd_resetep(priv, epinfo->slot, ep);
       if (ret < 0)
         {
+          /* DMA buffers cannot be returned to callers until the controller
+           * has stopped.  Quiesce the entire host on command-ring failure.
+           */
+
+          priv->failed = true;
+          if (xhci_ctrl_halt(priv) < 0)
+            {
+              PANIC();
+            }
+
           return ret;
         }
     }
@@ -2717,14 +2729,27 @@ static int xhci_ioc_setup(FAR struct xhci_rhport_s *rhport,
   irqstate_t                 flags;
   int                        ret  = -ENODEV;
 
-  DEBUGASSERT(rhport && epinfo && !epinfo->iocwait);
-#ifdef CONFIG_USBHOST_ASYNCH
-  DEBUGASSERT(epinfo->callback == NULL);
-#endif
+  DEBUGASSERT(rhport && epinfo);
 
   /* Is the device still connected? */
 
   flags = spin_lock_irqsave(&priv->spinlock);
+  if (epinfo->cancelling || epinfo->iocwait
+#ifdef CONFIG_USBHOST_ASYNCH
+      || epinfo->callback != NULL
+#endif
+     )
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return -EBUSY;
+    }
+
+  if (priv->failed)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return -ESHUTDOWN;
+    }
+
   if (epinfo->hport != NULL && epinfo->hport->connected)
     {
       /* Then set iocwait to indicate that we expect to be informed when
@@ -3167,7 +3192,6 @@ static ssize_t xhci_transfer_wait(FAR struct usbhost_xhci_s *priv,
   if (ret < 0)
     {
       usbhost_trace1(XHCI_TRACE1_TRANSFER_FAILED, -ret);
-      epinfo->iocwait = false;
 
       /* A timed-out TD remains owned by the controller until the endpoint
        * is stopped and its dequeue pointer is advanced.  Leaving it in the
@@ -3177,7 +3201,7 @@ static ssize_t xhci_transfer_wait(FAR struct usbhost_xhci_s *priv,
 
       if (ret == -ETIMEDOUT)
         {
-          int recover = xhci_ep_recover(priv, epinfo);
+          int recover = xhci_cancel(epinfo->hport->drvr, epinfo);
 
           if (recover < 0)
             {
@@ -3226,12 +3250,23 @@ static inline int xhci_ioc_async_setup(FAR struct xhci_rhport_s *rhport,
   irqstate_t                 flags;
   int                        ret  = -ENODEV;
 
-  DEBUGASSERT(rhport && epinfo && !epinfo->iocwait &&
-              epinfo->callback == NULL);
+  DEBUGASSERT(rhport && epinfo);
 
   /* Is the device still connected? */
 
   flags = spin_lock_irqsave(&priv->spinlock);
+  if (epinfo->cancelling || epinfo->iocwait || epinfo->callback != NULL)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return -EBUSY;
+    }
+
+  if (priv->failed)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return -ESHUTDOWN;
+    }
+
   if (epinfo->hport != NULL && epinfo->hport->connected)
     {
       /* Then save callback information to used when either (1) the
@@ -3449,6 +3484,23 @@ static void xhci_transfer_complete(FAR struct usbhost_xhci_s *priv,
     }
 
   flags = spin_lock_irqsave(&priv->spinlock);
+
+  if (epinfo->cancelling)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return;
+    }
+
+  /* A short control data packet is not the end of the control transfer.
+   * The status-stage IOC must retire before the request buffer is released.
+   */
+
+  if (epinfo->xfrtype == USB_EP_ATTR_XFER_CONTROL &&
+      ret == XHCI_TRB_CC_SHORT_PKT)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      return;
+    }
 
   /* Get transfered legnth */
 
@@ -5177,27 +5229,22 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
   DEBUGASSERT(epinfo);
 
-  /* Sample and reset all transfer termination information.  This will
-   * prevent any callbacks from occurring while are performing the
-   * cancellation.  The transfer may still be in progress, however, so this
-   * does not eliminate other DMA-related race conditions.
-   */
+  /* Keep synchronous waiters blocked until DMA has stopped. */
 
+retry:
   flags = spin_lock_irqsave(&priv->spinlock);
+  if (epinfo->cancelling)
+    {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
+      nxsig_usleep(1000);
+      goto retry;
+    }
+
 #ifdef CONFIG_USBHOST_ASYNCH
   callback         = epinfo->callback;
   arg              = epinfo->arg;
 #endif
   iocwait          = epinfo->iocwait;
-
-#ifdef CONFIG_USBHOST_ASYNCH
-  epinfo->callback = NULL;
-  epinfo->arg      = NULL;
-  epinfo->asyncbuffer = NULL;
-  epinfo->asynclen = 0;
-#endif
-  epinfo->iocwait  = false;
-  spin_unlock_irqrestore(&priv->spinlock, flags);
 
   /* Bail if there is no transfer in progress for this endpoint */
 
@@ -5207,8 +5254,12 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   if (!iocwait)
 #endif
     {
+      spin_unlock_irqrestore(&priv->spinlock, flags);
       return OK;
     }
+
+  epinfo->cancelling = true;
+  spin_unlock_irqrestore(&priv->spinlock, flags);
 
   /* Stop the endpoint and remove the cancelled TDs from its transfer ring
    * before allowing a class driver to queue another request.
@@ -5220,7 +5271,16 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
       uerr("endpoint recovery failed: %d\n", ret);
     }
 
+  flags = spin_lock_irqsave(&priv->spinlock);
   epinfo->result = -ESHUTDOWN;
+#ifdef CONFIG_USBHOST_ASYNCH
+  epinfo->callback = NULL;
+  epinfo->arg = NULL;
+  epinfo->asyncbuffer = NULL;
+  epinfo->asynclen = 0;
+#endif
+  epinfo->cancelling = false;
+  epinfo->iocwait = false;
 
   if (iocwait)
     {
@@ -5228,11 +5288,12 @@ static int xhci_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
       nxsem_post(&epinfo->iocsem);
     }
+  spin_unlock_irqrestore(&priv->spinlock, flags);
 
 #ifdef CONFIG_USBHOST_ASYNCH
   /* No.. Is there a pending asynchronous transfer? */
 
-  else
+  if (!iocwait)
     {
       /* Yes.. perform the callback */
 
