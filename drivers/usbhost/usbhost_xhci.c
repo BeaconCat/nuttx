@@ -2024,8 +2024,11 @@ static int xhci_slot_init(FAR struct usbhost_xhci_s *priv,
             }
 
           ctx2 = XHCI_ST_CTX2_TTHUB_SET(ttdev->slot) |
-                 XHCI_ST_CTX2_TTPORT_SET(child->port + 1) |
-                 XHCI_ST_CTX2_TTT_SET(ttdev->ttthink);
+                 XHCI_ST_CTX2_TTPORT_SET(child->port + 1);
+
+          /* TT Think Time belongs to the high-speed hub context, not
+           * to the full/low-speed device using its transaction translator.
+           */
         }
     }
 #endif
@@ -5271,7 +5274,11 @@ static int xhci_hubconfigure(FAR struct usbhost_driver_s *drvr,
 
   regval = le32toh(slotctx->ctx[2]);
   regval &= ~XHCI_ST_CTX2_TTT_MASK;
-  regval |= XHCI_ST_CTX2_TTT_SET(ttthink);
+  if (hport->speed == USB_SPEED_HIGH)
+    {
+      regval |= XHCI_ST_CTX2_TTT_SET(ttthink);
+    }
+
   slotctx->ctx[2] = htole32(regval);
 
   xhci_context_ctrl(priv, dev, 0, XHCI_IN_CTX1_A(XHCI_SLOT_FLAG));
