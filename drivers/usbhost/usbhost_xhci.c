@@ -2842,7 +2842,7 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
 
   /* Preapera Setup Stage TRB */
 
-  trb[i].d0 = *((FAR uint64_t *)req);
+  memcpy(&trb[i].d0, req, sizeof(trb[i].d0));
   trb[i].d1 = XHCI_TRB_D1_TXLEN_SET(8);
   trb[i].d2 = XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_SETUP_STAGE) |
               XHCI_TRB_D2_IDT;
@@ -2852,17 +2852,17 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
    *                TRB mapping
    */
 
-  if (req->type & USB_REQ_DIR_IN)
+  if (buflen == 0)
+    {
+      trt = XHCI_TRB_D2_TRT_NODATA;
+    }
+  else if (req->type & USB_REQ_DIR_IN)
     {
       trt = XHCI_TRB_D2_TRT_INDATA;
     }
-  else if (req->type & USB_REQ_DIR_OUT)
-    {
-      trt = XHCI_TRB_D2_TRT_OUTDATA;
-    }
   else
     {
-      trt = XHCI_TRB_D2_TRT_NODATA;
+      trt = XHCI_TRB_D2_TRT_OUTDATA;
     }
 
   trb[i].d2 |= XHCI_TRB_D2_TRT_SET(trt);
@@ -2873,7 +2873,7 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
 
   /* Preapera Data Stage TRB */
 
-  if (buffer)
+  if (buflen != 0)
     {
       trb[i].d0 = up_addrenv_va_to_pa(buffer);
       trb[i].d1 = XHCI_TRB_D1_TXLEN_SET(buflen);
@@ -2896,7 +2896,7 @@ static int xhci_control_setup(FAR struct xhci_rhport_s *rhport,
   trb[i].d2 = XHCI_TRB_D2_IOC |
               XHCI_TRB_D2_TYPE_SET(XHCI_TRB_TYPE_STAT_STAGE);
 
-  if (!(req->type & USB_REQ_DIR_IN))
+  if (buflen == 0 || !(req->type & USB_REQ_DIR_IN))
     {
       trb[i].d2 |= XHCI_TRB_D2_DIR;
     }
@@ -4762,6 +4762,10 @@ static int xhci_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   /* And wait for the transfer to complete */
 
   nbytes = xhci_transfer_wait(priv, ep0info);
+  if (nbytes >= 0 && len != 0 && (req->type & USB_REQ_DIR_IN) != 0)
+    {
+      up_invalidate_dcache((uintptr_t)buffer, (uintptr_t)buffer + len);
+    }
   return nbytes >= 0 ? OK : (int)nbytes;
 
 errout_with_iocwait:
