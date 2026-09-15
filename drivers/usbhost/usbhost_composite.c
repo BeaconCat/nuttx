@@ -32,6 +32,7 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/usb/audio.h>
 #include <nuttx/usb/usbhost.h>
 
 #include "usbhost_composite.h"
@@ -66,6 +67,7 @@ struct usbhost_member_s
 
   uint8_t firstif;     /* First interface */
   uint8_t nifs;        /* Number of interfaces */
+  uint32_t ifset;      /* Associated interfaces, including non-adjacent ones */
 };
 
 /* This structure contains the internal, private state of the USB host
@@ -102,10 +104,28 @@ struct usbhost_composite_s
 static int  usbhost_connect(FAR struct usbhost_class_s *usbclass,
               FAR const uint8_t *configdesc, int desclen);
 static int  usbhost_disconnected(FAR struct usbhost_class_s *usbclass);
+static uint8_t usbhost_countinterfaces(uint32_t ifset);
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: usbhost_countinterfaces
+ ****************************************************************************/
+
+static uint8_t usbhost_countinterfaces(uint32_t ifset)
+{
+  uint8_t count = 0;
+
+  while (ifset != 0)
+    {
+      ifset &= ifset - 1;
+      count++;
+    }
+
+  return count;
+}
 
 /****************************************************************************
  * Name: usbhost_disconnect_all
@@ -396,7 +416,6 @@ static int usbhost_createconfig(FAR struct usbhost_member_s *member,
   int cfgsize;
   int ifsize;
   int ifno;
-  int nifs;
 
   /* Copy and modify the original configuration descriptor */
 
@@ -418,8 +437,13 @@ static int usbhost_createconfig(FAR struct usbhost_member_s *member,
 
   /* Then copy all of the interfaces to the configuration buffer */
 
-  for (nifs = 0, ifno = member->firstif; nifs < member->nifs; nifs++, ifno++)
+  for (ifno = 0; ifno < 32; ifno++)
     {
+      if ((member->ifset & (UINT32_C(1) << ifno)) == 0)
+        {
+          continue;
+        }
+
       ifsize = usbhost_copyinterface(ifno, configdesc, desclen,
                                      buffer, buflen);
       if (ifsize < 0)
@@ -487,12 +511,16 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
   FAR const struct usbhost_registry_s *reg;
   FAR struct usb_desc_s *desc;
   FAR uint8_t *cfgbuffer;
+  uint32_t audiogroups[32];
+  uint32_t interfaces = 0;
+  uint32_t audiostreams = 0;
   uint32_t mergeset;
   uint16_t nintfs;
   uint16_t nmerged;
   uint16_t nclasses;
   int cfgsize;
   int offset;
+  int controlif = -1;
   int ret;
   int i;
 
@@ -532,11 +560,17 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
   mergeset = 0;
   nintfs   = 0;
   nmerged  = 0;
+  memset(audiogroups, 0, sizeof(audiogroups));
 
-  for (offset = 0; offset < desclen - sizeof(struct usb_desc_s); )
+  for (offset = 0; offset <= desclen - sizeof(struct usb_desc_s); )
     {
       desc = (FAR struct usb_desc_s *)&configdesc[offset];
       int len = desc->len;
+
+      if (len < sizeof(struct usb_desc_s) || offset + len > desclen)
+        {
+          return -EINVAL;
+        }
 
       if (offset + len <= desclen)
         {
@@ -547,14 +581,74 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
               FAR struct usb_ifdesc_s *ifdesc =
                 (FAR struct usb_ifdesc_s *)desc;
 
-              DEBUGASSERT(ifdesc->ifno < 32);
+              if (len < USB_SIZEOF_IFDESC || ifdesc->ifno >= 32)
+                {
+                  return -EINVAL;
+                }
+
+              controlif = -1;
 
               /* Increment the count of interfaces */
 
               if (ifdesc->alt == 0)
                 {
+                  uint32_t bit = UINT32_C(1) << ifdesc->ifno;
+
+                  if ((interfaces & bit) != 0)
+                    {
+                      return -EINVAL;
+                    }
+
+                  interfaces |= bit;
                   nintfs++;
+                  if (ifdesc->classid == USB_CLASS_AUDIO)
+                    {
+                      if (ifdesc->subclass == ADC_SUBCLASS_AUDIOSTREAMING)
+                        {
+                          audiostreams |= bit;
+                        }
+                      else if (ifdesc->subclass ==
+                               ADC_SUBCLASS_AUDIOCONTROL &&
+                               ifdesc->protocol == ADC_PROTOCOL_UNDEF)
+                        {
+                          controlif = ifdesc->ifno;
+                        }
+                    }
                 }
+            }
+
+          /* UAC1 uses its AudioControl collection instead of an IAD.
+           * Its streaming interfaces need not be adjacent to the control
+           * interface and must be handed to a single class instance.
+           */
+
+          else if (controlif >= 0 && desc->type == ADC_CS_INTERFACE &&
+                   len >= 3 && configdesc[offset + 2] == ADC_AC_HEADER)
+            {
+              uint32_t mask = UINT32_C(1) << controlif;
+              int count;
+              int j;
+
+              if (len < 8 || len < 8 + configdesc[offset + 7] ||
+                  audiogroups[controlif] != 0)
+                {
+                  return -EINVAL;
+                }
+
+              count = configdesc[offset + 7];
+              for (j = 0; j < count; j++)
+                {
+                  uint8_t ifno = configdesc[offset + 8 + j];
+
+                  if (ifno >= 32 || (mask & (UINT32_C(1) << ifno)) != 0)
+                    {
+                      return -EINVAL;
+                    }
+
+                  mask |= UINT32_C(1) << ifno;
+                }
+
+              audiogroups[controlif] = mask;
             }
 
           /* Check for IAD descriptors that will be used when it is
@@ -568,19 +662,66 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
                 (FAR struct usb_iaddesc_s *)desc;
               uint32_t mask;
 
+              if (len < USB_SIZEOF_IADDESC || iad->nifs == 0 ||
+                  iad->firstif >= 32 || iad->nifs > 32 - iad->firstif)
+                {
+                  return -EINVAL;
+                }
+
               /* Keep count of the number of interfaces that will be merged */
 
               nmerged += (iad->nifs - 1);
 
               /* Keep track of which interfaces will be merged */
 
-              DEBUGASSERT(iad->firstif + iad->nifs < 32);
-              mask      = (1 << iad->nifs) - 1;
-              mergeset |= mask << iad->firstif;
+              mask = (UINT32_MAX >> (32 - iad->nifs)) << iad->firstif;
+              if ((mergeset & mask) != 0)
+                {
+                  return -EINVAL;
+                }
+
+              mergeset |= mask;
             }
         }
 
       offset += len;
+    }
+
+  if ((mergeset & ~interfaces) != 0)
+    {
+      return -EINVAL;
+    }
+
+  for (i = 0; i < 32; i++)
+    {
+      uint32_t mask = audiogroups[i];
+
+      if (mask == 0)
+        {
+          continue;
+        }
+
+      if ((mask & ~interfaces) != 0 ||
+          (mask & ~(UINT32_C(1) << i) & ~audiostreams) != 0)
+        {
+          return -EINVAL;
+        }
+
+      if ((mergeset & (UINT32_C(1) << i)) != 0)
+        {
+          /* An explicit IAD already owns this function. */
+
+          audiogroups[i] = 0;
+          continue;
+        }
+
+      if ((mergeset & mask) != 0)
+        {
+          return -EINVAL;
+        }
+
+      nmerged += usbhost_countinterfaces(mask) - 1;
+      mergeset |= mask;
     }
 
   if (nintfs < 2)
@@ -670,7 +811,8 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
 
               DEBUGASSERT(ifdesc->ifno < 32);
               if (ifdesc->alt == 0 &&
-                  (mergeset & (1 << ifdesc->ifno)) == 0)
+                  (audiogroups[ifdesc->ifno] != 0 ||
+                   (mergeset & (UINT32_C(1) << ifdesc->ifno)) == 0))
                 {
                   /* No, this interface was not merged.  Save the registry
                    * lookup information from the interface descriptor.
@@ -685,7 +827,10 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
                   member->id.pid      = id->pid;
 
                   member->firstif     = ifdesc->ifno;
-                  member->nifs        = 1;
+                  member->ifset       = audiogroups[ifdesc->ifno] != 0 ?
+                    audiogroups[ifdesc->ifno] :
+                    UINT32_C(1) << ifdesc->ifno;
+                  member->nifs = usbhost_countinterfaces(member->ifset);
 
                   /* Increment the member index */
 
@@ -715,6 +860,8 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
 
               member->firstif     = iad->firstif;
               member->nifs        = iad->nifs;
+              member->ifset       =
+                (UINT32_MAX >> (32 - iad->nifs)) << iad->firstif;
 
               /* Increment the member index */
 
@@ -771,7 +918,7 @@ int usbhost_composite(FAR struct usbhost_hubport_s *hport,
        * interface.
        */
 
-      member->usbclass = CLASS_CREATE(reg, hport, id);
+      member->usbclass = CLASS_CREATE(reg, hport, &member->id);
       if (member->usbclass == NULL)
         {
           uerr("ERROR: CLASS_CREATE failed\n");
